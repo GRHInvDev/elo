@@ -5,28 +5,39 @@ import { usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 import { LucideLink } from "lucide-react"
+import { api } from "@/trpc/react"
 
-const items = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-  },
-  {
-    title: "Salas",
-    href: "/rooms",
-  },
-  {
-    title: "Eventos",
-    href: "/events",
-  },
-  {
-    title: "Encartes",
-    href: "/flyers",
-  },
-]
 
 export function MainNav() {
   const pathname = usePathname()
+  const { data: user } = api.user.me.useQuery()
+
+  const items = [
+    {
+      title: "Dashboard",
+      href: "/dashboard",
+    },
+    {
+      title: "Salas",
+      href: "/rooms",
+    },
+    {
+      title: "Eventos",
+      href: "/events",
+    },
+    {
+      title: "Encartes",
+      href: "/flyers",
+    },
+  ]
+
+  if (user?.role === "ADMIN") {
+    items.push({
+      title: "Admin",
+      href: "/admin/rooms",
+    })
+  }
+
 
   return (
     <nav className="flex items-center space-x-4 lg:space-x-6">

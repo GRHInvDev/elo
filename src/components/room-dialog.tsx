@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { addHours, format, parse } from "date-fns"
 import { Calendar } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,57 +16,66 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { api } from "@/trpc/react"
 
-interface Room {
+export interface Room {
   id: string
   name: string
   capacity: number
   floor: number
-  available: boolean
+  description?: string | undefined
 }
 
 interface RoomDialogProps {
-  room: Room | null
+  room: Room | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-
-  if (!room) return null
-
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setIsLoading(true)
-
-    const formData = new FormData(event.currentTarget)
-    const data = {
-      roomId: room?.id,
-      title: formData.get("title"),
-      date: formData.get("date"),
-      time: formData.get("time"),
-      duration: formData.get("duration"),
-    }
-
-    // Aqui você faria a chamada para sua API
-    try {
-      // await createBooking(data)
+  const utils = api.useUtils()
+  const createBooking = api.booking.create.useMutation({
+    onSuccess: async () => {
       toast({
         title: "Reserva confirmada",
         description: `Sala ${room?.name} reservada com sucesso.`,
       })
       onOpenChange(false)
-    } catch (error) {
+      // Invalida as queries que dependem dos agendamentos
+      await utils.booking.list.invalidate()
+      await utils.booking.listMine.invalidate()
+      await utils.room.list.invalidate()
+    },
+    onError: (error) => {
       toast({
         title: "Erro ao reservar",
-        description: "Não foi possível completar sua reserva. Tente novamente.",
+        description: error.message,
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
-    }
+    },
+  })
+
+  if (!room) return undefined
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+
+    const date = parse(formData.get("date") as string, "yyyy-MM-dd", new Date())
+    const time = parse(formData.get("time") as string, "HH:mm", new Date())
+    const duration = Number(formData.get("duration"))
+
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.getHours(), time.getMinutes())
+
+    const end = addHours(start, duration)
+
+    createBooking.mutate({
+      roomId: room?.id ?? "",
+      title: formData.get("title") as string,
+      start,
+      end,
+    })
   }
 
   return (
@@ -75,7 +83,10 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Reservar Sala</DialogTitle>
-          <DialogDescription>Preencha os detalhes da sua reserva para {room.name}</DialogDescription>
+          <DialogDescription>
+            Preencha os detalhes da sua reserva para {room.name}
+            {room.description && <span className="block text-xs">{room.description}</span>}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid gap-2">
@@ -85,7 +96,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="date">Data</Label>
-              <Input id="date" name="date" type="date" required min={new Date().toISOString().split("T")[0]} />
+              <Input id="date" name="date" type="date" required min={format(new Date(), "yyyy-MM-dd")} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="time">Horário</Label>
@@ -103,9 +114,9 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
             <Input id="duration" name="duration" type="number" min="1" max="4" defaultValue="1" required />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={createBooking.isPending}>
               <Calendar className="mr-2 h-4 w-4" />
-              {isLoading ? "Reservando..." : "Confirmar Reserva"}
+              {createBooking.isPending ? "Reservando..." : "Confirmar Reserva"}
             </Button>
           </DialogFooter>
         </form>

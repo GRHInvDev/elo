@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-interface RoomsListProps extends React.HTMLAttributes<HTMLDivElement> {}
+type RoomsListProps = React.HTMLAttributes<HTMLDivElement>
 
 // Dados mockados - substituir por dados reais do banco
 const rooms = [
@@ -47,7 +47,7 @@ const rooms = [
 ]
 
 export function RoomsList({ className, ...props }: RoomsListProps) {
-  const [selectedRoom, setSelectedRoom] = useState<(typeof rooms)[0] | null>(null)
+  const [, setSelectedRoom] = useState<(typeof rooms)[0] | null>(null)
 
   return (
     <div className={className} {...props}>

@@ -1,7 +1,7 @@
 import type React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-interface PostsListProps extends React.HTMLAttributes<HTMLDivElement> {}
+type PostsListProps = React.HTMLAttributes<HTMLDivElement>
 
 export function PostsList({ className, ...props }: PostsListProps) {
   return (

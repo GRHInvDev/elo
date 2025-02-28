@@ -5,49 +5,56 @@ import type React from "react"
 import { useState } from "react"
 import { useTheme } from "next-themes"
 
-import { RoomDialog } from "@/components/room-dialog"
+import { type Room, RoomDialog } from "@/components/room-dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { api } from "@/trpc/react"
+import { Skeleton } from "@/components/ui/skeleton"
 
-interface RoomMapProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-// Dados atualizados com coordenadas dentro do viewBox
-const rooms = [
-  {
-    id: "1",
-    name: "Sala de Reunião 1",
-    capacity: 8,
-    floor: 1,
-    available: true,
-    coordinates: { x: 100, y: 100, width: 150, height: 100 },
-  },
-  {
-    id: "2",
-    name: "Sala de Reunião 2",
-    capacity: 12,
-    floor: 1,
-    available: false,
-    coordinates: { x: 500, y: 100, width: 150, height: 100 },
-  },
-  {
-    id: "3",
-    name: "Sala de Conferência",
-    capacity: 20,
-    floor: 1,
-    available: true,
-    coordinates: { x: 300, y: 250, width: 200, height: 120 },
-  },
-]
+type RoomMapProps = React.HTMLAttributes<HTMLDivElement>
 
 export function RoomMap({ className, ...props }: RoomMapProps) {
-  const [selectedRoom, setSelectedRoom] = useState<(typeof rooms)[0] | null>(null)
+  const [selectedFloor, setSelectedFloor] = useState<number>(1)
+  const [selectedRoom, setSelectedRoom] = useState<Room | undefined>(undefined)
   const { theme } = useTheme()
+  const { data: rooms, isLoading } = api.room.list.useQuery()
+
+  const floorRooms = rooms?.filter((room) => room.floor === selectedFloor)
+  const floors = rooms ? Array.from(new Set(rooms.map((room) => room.floor))).sort((a, b) => a - b) : []
+
+  if (isLoading) {
+    return (
+      <div className={className}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Mapa de Salas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[450px] w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className={className} {...props}>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle>Mapa de Salas</CardTitle>
+          <Select value={selectedFloor.toString()} onValueChange={(value) => setSelectedFloor(Number(value))}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Selecione o andar" />
+            </SelectTrigger>
+            <SelectContent>
+              {floors.map((floor) => (
+                <SelectItem key={floor} value={floor.toString()}>
+                  {floor}º Andar
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           <div className="relative w-full aspect-[16/9] border rounded-lg overflow-hidden">
@@ -84,49 +91,68 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
                   strokeDasharray="4"
                 />
 
-                {/* Salas */}
-                {rooms.map((room) => (
-                  <Tooltip key={room.id}>
-                    <TooltipTrigger asChild>
-                      <g
-                        onClick={() => setSelectedRoom(room)}
-                        className={`cursor-pointer transition-colors ${
-                          room.available ? "hover:fill-primary/20" : "hover:fill-muted/30"
-                        }`}
-                        style={{
-                          fill: room.available ? "hsl(var(--background))" : "hsl(var(--muted))",
-                        }}
-                      >
-                        <rect
-                          x={room.coordinates.x}
-                          y={room.coordinates.y}
-                          width={room.coordinates.width}
-                          height={room.coordinates.height}
+                {/* Número do Andar */}
+                <text x="60" y="80" className="text-lg font-semibold fill-foreground">
+                  {selectedFloor}º Andar
+                </text>
+
+                {/* Salas do andar selecionado */}
+                {floorRooms?.map((room) => {
+                  const coordinates = room.coordinates as {
+                    x: number
+                    y: number
+                    width: number
+                    height: number
+                  }
+                  const isAvailable = !room.bookings?.length
+
+                  return (
+                    <Tooltip key={room.id}>
+                      <TooltipTrigger asChild>
+                        <g
+                          onClick={() => setSelectedRoom({
+                          ...room,
+                          description: room.description ?? undefined,
+                          })}
+                          className={`cursor-pointer transition-colors ${
+                          isAvailable ? "hover:fill-primary/20" : "hover:fill-muted/30"
+                          }`}
+                          style={{
+                          fill: isAvailable ? "rgba(var(--primary), 0.1)" : "rgba(var(--muted), 0.2)",
+                          }}
+                        >
+                          <rect
+                          x={coordinates.x}
+                          y={coordinates.y}
+                          width={coordinates.width}
+                          height={coordinates.height}
                           stroke={theme === "dark" ? "#ffffff" : "#000000"}
                           strokeWidth="1"
-                        />
-                        <text
-                          x={room.coordinates.x + room.coordinates.width / 2}
-                          y={room.coordinates.y + room.coordinates.height / 2}
+                          />
+                          <text
+                          x={coordinates.x + coordinates.width / 2}
+                          y={coordinates.y + coordinates.height / 2}
                           textAnchor="middle"
                           dominantBaseline="middle"
                           className="text-xs fill-foreground pointer-events-none"
-                        >
+                          >
                           {room.name}
-                        </text>
-                      </g>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-sm">
-                        <p className="font-medium">{room.name}</p>
-                        <p className="text-muted-foreground">Capacidade: {room.capacity} pessoas</p>
-                        <p className={room.available ? "text-green-500" : "text-red-500"}>
-                          {room.available ? "Disponível" : "Ocupada"}
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
+                          </text>
+                        </g>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-sm">
+                          <p className="font-medium">{room.name}</p>
+                          <p className="text-muted-foreground">Capacidade: {room.capacity} pessoas</p>
+                          {room.description && <p className="text-muted-foreground">{room.description}</p>}
+                          <p className={isAvailable ? "text-green-500" : "text-red-500"}>
+                            {isAvailable ? "Disponível" : "Ocupada"}
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
 
                 {/* Legenda */}
                 <g transform="translate(60, 380)">
@@ -134,7 +160,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
                     width="15"
                     height="15"
                     style={{
-                      fill: "hsl(var(--background))",
+                      fill: "rgba(var(--primary), 0.1)",
                       stroke: "currentColor",
                     }}
                   />
@@ -147,7 +173,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
                       width="15"
                       height="15"
                       style={{
-                        fill: "hsl(var(--muted))",
+                        fill: "rgba(var(--muted), 0.2)",
                         stroke: "currentColor",
                       }}
                     />
@@ -164,7 +190,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
           <RoomDialog
             room={selectedRoom}
             open={!!selectedRoom}
-            onOpenChange={(open) => !open && setSelectedRoom(null)}
+            onOpenChange={(open) => !open && setSelectedRoom(undefined)}
           />
         </CardContent>
       </Card>

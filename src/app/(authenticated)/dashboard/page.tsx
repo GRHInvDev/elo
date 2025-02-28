@@ -1,23 +1,20 @@
 import type { Metadata } from "next"
-import { auth } from "@clerk/nextjs/server"
 
 import { DashboardShell } from "@/components/dashboard-shell"
-import { PostsList } from "@/components/posts-list"
+import { ContentFeed } from "@/components/content-feed"
 import { QuickAccess } from "@/components/quick-access"
 
 export const metadata: Metadata = {
-  title: "Dashboard | Intranet",
-  description: "Dashboard principal da intranet",
+  title: "Dashboard | elo",
+  description: "Dashboard principal da elo",
 }
 
-export default async function DashboardPage() {
-  const { userId } = await auth()
-
+export default function DashboardPage() {
   return (
     <DashboardShell>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <QuickAccess className="col-span-4" />
-        <PostsList className="col-span-3" />
+        <ContentFeed className="col-span-3" />
       </div>
     </DashboardShell>
   )

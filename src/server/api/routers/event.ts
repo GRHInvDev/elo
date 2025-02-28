@@ -2,27 +2,30 @@ import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 
-const createPostSchema = z.object({
+const createEventSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
-  content: z.string().min(1, "Conteúdo é obrigatório"),
+  description: z.string().min(1, "Descrição é obrigatória"),
+  location: z.string().min(1, "Local é obrigatório"),
+  startDate: z.date(),
+  endDate: z.date(),
   published: z.boolean().default(false),
 })
 
-export const postRouter = createTRPCRouter({
-  create: protectedProcedure.input(createPostSchema).mutation(async ({ ctx, input }) => {
-    // Verifica se o usuário já tem um post
-    const existingPost = await ctx.db.post.findFirst({
+export const eventRouter = createTRPCRouter({
+  create: protectedProcedure.input(createEventSchema).mutation(async ({ ctx, input }) => {
+    // Verifica se o usuário já tem um evento
+    const existingEvent = await ctx.db.event.findFirst({
       where: { authorId: ctx.auth.userId },
     })
 
-    if (existingPost) {
+    if (existingEvent) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "Você já criou um post",
+        message: "Você já criou um evento",
       })
     }
 
-    return ctx.db.post.create({
+    return ctx.db.event.create({
       data: {
         ...input,
         authorId: ctx.auth.userId,
@@ -31,44 +34,44 @@ export const postRouter = createTRPCRouter({
   }),
 
   update: protectedProcedure
-    .input(createPostSchema.partial().extend({ id: z.string() }))
+    .input(createEventSchema.partial().extend({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const post = await ctx.db.post.findUnique({
+      const event = await ctx.db.event.findUnique({
         where: { id: input.id },
       })
 
-      if (!post || post.authorId !== ctx.auth.userId) {
+      if (!event || event.authorId !== ctx.auth.userId) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Você não tem permissão para editar este post",
+          message: "Você não tem permissão para editar este evento",
         })
       }
 
-      return ctx.db.post.update({
+      return ctx.db.event.update({
         where: { id: input.id },
         data: input,
       })
     }),
 
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    const post = await ctx.db.post.findUnique({
+    const event = await ctx.db.event.findUnique({
       where: { id: input.id },
     })
 
-    if (!post || post.authorId !== ctx.auth.userId) {
+    if (!event || event.authorId !== ctx.auth.userId) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "Você não tem permissão para deletar este post",
+        message: "Você não tem permissão para deletar este evento",
       })
     }
 
-    return ctx.db.post.delete({
+    return ctx.db.event.delete({
       where: { id: input.id },
     })
   }),
 
   list: protectedProcedure.query(({ ctx }) => {
-    return ctx.db.post.findMany({
+    return ctx.db.event.findMany({
       include: {
         author: {
           select: {
@@ -78,7 +81,7 @@ export const postRouter = createTRPCRouter({
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { startDate: "asc" },
     })
   }),
 })

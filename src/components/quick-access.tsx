@@ -25,7 +25,7 @@ const items = [
   },
 ]
 
-interface QuickAccessProps extends React.HTMLAttributes<HTMLDivElement> {}
+type QuickAccessProps = React.HTMLAttributes<HTMLDivElement>
 
 export function QuickAccess({ className, ...props }: QuickAccessProps) {
   return (

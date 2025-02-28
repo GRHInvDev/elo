@@ -18,12 +18,13 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-} as const
+  ADD_TOAST: "ADD_TOAST" as const,
+  UPDATE_TOAST: "UPDATE_TOAST" as const,
+  DISMISS_TOAST: "DISMISS_TOAST" as const,
+  REMOVE_TOAST: "REMOVE_TOAST" as const,
+}
 
 let count = 0
 
@@ -32,23 +33,21 @@ function genId() {
   return count.toString()
 }
 
-type ActionType = typeof actionTypes
-
 type Action =
   | {
-      type: ActionType["ADD_TOAST"]
+      type: typeof actionTypes.ADD_TOAST
       toast: ToasterToast
     }
   | {
-      type: ActionType["UPDATE_TOAST"]
+      type: typeof actionTypes.UPDATE_TOAST
       toast: Partial<ToasterToast>
     }
   | {
-      type: ActionType["DISMISS_TOAST"]
+      type: typeof actionTypes.DISMISS_TOAST
       toastId?: ToasterToast["id"]
     }
   | {
-      type: ActionType["REMOVE_TOAST"]
+      type: typeof actionTypes.REMOVE_TOAST
       toastId?: ToasterToast["id"]
     }
 
@@ -74,7 +73,7 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
-export const reducer = (state: State, action: Action): State => {
+export const reducer = (state: State, action: Action): State | undefined => {
   switch (action.type) {
     case "ADD_TOAST":
       return {
@@ -86,12 +85,12 @@ export const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
+          t.id === (action.toast as ToasterToast).id ? { ...t, ...action.toast } : t
         ),
       }
 
     case "DISMISS_TOAST": {
-      const { toastId } = action
+      const toastId = action.toastId
 
       // ! Side effects ! - This could be extracted into a dismissToast() action,
       // but I'll keep it here for simplicity
@@ -116,7 +115,9 @@ export const reducer = (state: State, action: Action): State => {
       }
     }
     case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
+      const toastId = action.toastId
+
+      if (toastId === undefined) {
         return {
           ...state,
           toasts: [],
@@ -124,7 +125,7 @@ export const reducer = (state: State, action: Action): State => {
       }
       return {
         ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+        toasts: state.toasts.filter((t) => t.id !== toastId),
       }
   }
 }
@@ -134,7 +135,7 @@ const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
+  memoryState = reducer(memoryState, action)!
   listeners.forEach((listener) => {
     listener(memoryState)
   })

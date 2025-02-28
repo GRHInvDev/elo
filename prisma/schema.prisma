@@ -7,36 +7,96 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String    @id
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  imageUrl      String?
+  role          UserRole  @default(USER)
+  posts         Post[]
+  events        Event[]
+  flyers        Flyer[]
+  bookings      Booking[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
 model Room {
-  id          String       @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
+  description String?   @db.Text
   capacity    Int
   floor       Int
-  coordinates Json         // {lat: number, lng: number}
+  coordinates Json      // {x: number, y: number, width: number, height: number}
   bookings    Booking[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("rooms")
 }
 
 model Booking {
   id        String   @id @default(cuid())
-  roomId    String
-  room      Room     @relation(fields: [roomId], references: [id])
-  userId    String
   title     String
   start     DateTime
   end       DateTime
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("bookings")
 }
 
 model Post {
   id        String   @id @default(cuid())
   title     String
-  content   String
-  authorId  String
+  content   String   @db.Text
   published Boolean  @default(false)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("posts")
 }
 
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String    @db.Text
+  location    String
+  startDate   DateTime
+  endDate     DateTime
+  published   Boolean   @default(false)
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("events")
+}
+
+model Flyer {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  imageUrl    String
+  published   Boolean  @default(false)
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("flyers")
+}
