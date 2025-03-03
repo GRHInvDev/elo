@@ -7,6 +7,11 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { TRPCReactProvider } from "@/trpc/react"
 import { ptBR } from "@clerk/localizations"
+import { type Metadata } from "next"
+
+export const metadata: Metadata = {
+  icons: [{ rel: "icon", url: "/favicon.svg" }]
+}
 
 const inter = Inter({ subsets: ["latin"] })
 
