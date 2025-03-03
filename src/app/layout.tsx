@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { TRPCReactProvider } from "@/trpc/react"
 import { ptBR } from "@clerk/localizations"
 import { type Metadata } from "next"
+import { AnimatedBackground } from "@/components/animated-background"
 
 export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.svg" }]
@@ -26,6 +27,7 @@ export default function RootLayout({
         <html lang="pt-BR" suppressHydrationWarning>
           <body className={cn("min-h-screen bg-background antialiased", inter.className)}>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <AnimatedBackground />
               {children}
               <Toaster />
             </ThemeProvider>
