@@ -4,12 +4,13 @@ import type React from "react"
 
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { FileImage, LucideLink, LucideVerified } from "lucide-react"
+import { LucideLink, LucideVerified } from "lucide-react"
 
 import { api } from "@/trpc/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import Image from "next/image"
 
 export function PostList({ className }: { className?: string }) {
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
@@ -19,7 +20,7 @@ export function PostList({ className }: { className?: string }) {
     <div className={className}>
       <Card>
         <CardContent className="flex gap-2">
-          <div className="mt-4 w-1/2">
+          <div className="p-4 mt-4 w-1/2">
             {isLoadingPosts ? (
               <div className="space-y-4">
                 {Array.from({ length: 3 }).map((_, i) => (
@@ -57,26 +58,29 @@ export function PostList({ className }: { className?: string }) {
               </div>
             )}
           </div>
-          <div className="mt-4 w-1/2 border-l">
+          <div className="p-4 mt-4 w-1/2 border-l">
             {!flyers?.length ? (
               <p className="text-sm text-muted-foreground text-center py-4">Nenhum encarte publicado.</p>
             ) : (
               <div className="space-y-4">
                 {flyers.map((flyer) => (
-                  <div key={flyer.id} className="space-y-2">
+                  <div key={flyer.id} className="space-y-2 border-b pb-2">
                     <div className="flex items-center gap-2">
-                      <Avatar className="size-4">
-                              <AvatarImage src={flyer.author.imageUrl ?? undefined} />
-                              <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                      <Avatar className="size-6">
+                        <AvatarImage src={flyer.author.imageUrl ?? undefined} />
+                        <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <p className="text-sm text-muted-foreground">{flyer.author.firstName}</p>
-                      <p>
-                        {format(flyer.createdAt, "PP", { locale: ptBR })}
+                      <p className="text-md text-foreground flex items-center">
+                          {flyer.author.firstName} {flyer.author.role == "ADMIN" ? 
+                          <LucideVerified className={"ml-2 text-blue-500 size-5"} />
+                          :
+                          <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />}
                       </p>
                     </div>
+                    <p className="text-xs text-muted-foreground">{format(flyer.createdAt, "PPp", { locale: ptBR })}</p>
                     <h3 className="font-medium">{flyer.title}</h3>
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <FileImage className="mr-1 h-4 w-4" />
+                      <Image src={flyer.imageUrl} width={500} height={500} alt='' className="rounded-md"/>
                     </div>
                     <p className="text-sm text-muted-foreground">{flyer.description}</p>
                   </div>

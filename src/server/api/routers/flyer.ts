@@ -11,18 +11,6 @@ const createFlyerSchema = z.object({
 
 export const flyerRouter = createTRPCRouter({
   create: protectedProcedure.input(createFlyerSchema).mutation(async ({ ctx, input }) => {
-    // Verifica se o usuário já tem um encarte
-    const existingFlyer = await ctx.db.flyer.findFirst({
-      where: { authorId: ctx.auth.userId },
-    })
-
-    if (existingFlyer) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Você já criou um encarte",
-      })
-    }
-
     return ctx.db.flyer.create({
       data: {
         ...input,
@@ -76,6 +64,7 @@ export const flyerRouter = createTRPCRouter({
             firstName: true,
             lastName: true,
             imageUrl: true,
+            role: true,
           },
         },
       },
