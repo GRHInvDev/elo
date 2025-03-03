@@ -1,28 +1,91 @@
+"use client"
+
 import type React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-type PostsListProps = React.HTMLAttributes<HTMLDivElement>
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { FileImage, LucideLink, LucideVerified } from "lucide-react"
 
-export function PostsList({ className, ...props }: PostsListProps) {
+import { api } from "@/trpc/react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+
+export function PostList({ className }: { className?: string }) {
+  const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
+  const { data: flyers } = api.flyer.list.useQuery()
+
   return (
-    <div className={className} {...props}>
+    <div className={className}>
       <Card>
-        <CardHeader>
-          <CardTitle>Últimas Notícias</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-8">
-            {/* Aqui viriam os posts do banco de dados */}
-            <div className="flex items-center">
-              <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">Novo Sistema de Reservas</p>
-                <p className="text-sm text-muted-foreground">Conheça o novo sistema de reserva de salas</p>
+        <CardContent className="flex gap-2">
+          <div className="mt-4 w-1/2">
+            {isLoadingPosts ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                ))}
               </div>
-            </div>
+            ) : !posts?.length ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum post publicado ainda.</p>
+            ) : (
+              <div className="space-y-4">
+                {posts.map((post) => (
+                  <div key={post.id} className="space-y-2 border-b pb-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="size-6">
+                          <AvatarImage src={post.author.imageUrl ?? undefined} />
+                          <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <p className="text-md text-foreground flex items-center">
+                          {post.author.firstName} {post.author.role == "ADMIN" ? 
+                          <LucideVerified className={"ml-2 text-blue-500 size-5"} />
+                          :
+                          <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{format(post.createdAt, "PPp", { locale: ptBR })}</p>
+                    <h3 className="font-semibold">{post.title}</h3>
+                    <p className="text-sm text-foreground">{post.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="mt-4 w-1/2 border-l">
+            {!flyers?.length ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum encarte publicado.</p>
+            ) : (
+              <div className="space-y-4">
+                {flyers.map((flyer) => (
+                  <div key={flyer.id} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="size-4">
+                              <AvatarImage src={flyer.author.imageUrl ?? undefined} />
+                              <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <p className="text-sm text-muted-foreground">{flyer.author.firstName}</p>
+                      <p>
+                        {format(flyer.createdAt, "PP", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <h3 className="font-medium">{flyer.title}</h3>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <FileImage className="mr-1 h-4 w-4" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{flyer.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   )
 }
-
