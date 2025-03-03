@@ -118,7 +118,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
                           isAvailable ? "hover:fill-primary/20" : "hover:fill-muted/30"
                           }`}
                           style={{
-                          fill: isAvailable ? "rgba(var(--primary), 0.1)" : "rgba(var(--muted), 0.2)",
+                          fill: isAvailable ? "hsl(var(--background))" : "hsl(var(--secondary))",
                           }}
                         >
                           <rect
@@ -160,7 +160,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
                     width="15"
                     height="15"
                     style={{
-                      fill: "rgba(var(--primary), 0.1)",
+                      fill: "hsl(var(--background))",
                       stroke: "currentColor",
                     }}
                   />
@@ -173,7 +173,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
                       width="15"
                       height="15"
                       style={{
-                        fill: "rgba(var(--muted), 0.2)",
+                        fill: "hsl(var(--secondary))",
                         stroke: "currentColor",
                       }}
                     />

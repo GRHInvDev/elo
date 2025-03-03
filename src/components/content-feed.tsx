@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Calendar, FileImage, Loader2, MessageSquarePlus } from "lucide-react"
+import { Calendar, FileImage, Loader2, LucideLink, MessageSquarePlus } from "lucide-react"
 
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
@@ -128,16 +128,21 @@ export function ContentFeed({ className }: { className?: string }) {
                 <div className="space-y-4">
                   {posts.map((post) => (
                     <div key={post.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="size-4">
-                                <AvatarImage src={post.author.imageUrl ?? undefined} />
-                                <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <p className="text-sm text-muted-foreground">{post.author.firstName}</p>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="size-6">
+                                  <AvatarImage src={post.author.imageUrl ?? undefined} />
+                                  <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <p className="text-md text-muted-foreground flex items-center">
+                            {post.author.firstName}
+                          </p>
+                        </div>
+                        <LucideLink className="-rotate-45 size-3 text-muted-foreground" />
                       </div>
+                      <p className="text-xs text-muted-foreground">{format(post.createdAt, "PPp", { locale: ptBR })}</p>
                       <h3 className="font-medium">{post.title}</h3>
                       <p className="text-sm text-muted-foreground">{post.content}</p>
-                      <p className="text-xs text-muted-foreground">{format(post.createdAt, "PPp", { locale: ptBR })}</p>
                     </div>
                   ))}
                 </div>
@@ -181,11 +186,13 @@ export function ContentFeed({ className }: { className?: string }) {
                                 <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <p className="text-sm text-muted-foreground">{flyer.author.firstName}</p>
+                        <p>
+                          {format(flyer.createdAt, "PP", { locale: ptBR })}
+                        </p>
                       </div>
                       <h3 className="font-medium">{flyer.title}</h3>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <FileImage className="mr-1 h-4 w-4" />
-                        {format(flyer.createdAt, "PP", { locale: ptBR })}
                       </div>
                       <p className="text-sm text-muted-foreground">{flyer.description}</p>
                     </div>
