@@ -104,7 +104,10 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
                     width: number
                     height: number
                   }
-                  const isAvailable = !room.bookings?.length
+                  const isAvailable = !room.bookings?.filter(({start, end})=>{
+                    const hoje = new Date();
+                    return hoje >= start && hoje <= end;
+                  })?.length
 
                   return (
                     <Tooltip key={room.id}>
