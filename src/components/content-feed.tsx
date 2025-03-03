@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Calendar, FileImage, Loader2, LucideLink, MessageSquarePlus } from "lucide-react"
+import { Calendar, FileImage, Loader2, LucideEllipsis, LucideLink, LucidePencil, LucideTrash2, LucideVerified, MessageSquarePlus } from "lucide-react"
 
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
@@ -26,11 +26,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { useAuth } from "@clerk/nextjs"
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 
 export function ContentFeed({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
   const utils = api.useUtils()
+  const auth = useAuth();
 
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
   const { data: events } = api.event.list.useQuery()
@@ -53,6 +56,23 @@ export function ContentFeed({ className }: { className?: string }) {
       })
     },
   })
+
+  const deletePost = api.post.delete.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: "Post excluído",
+        description: "Seu post foi excluído com sucesso."
+      });
+      await utils.post.list.invalidate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  });
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -127,22 +147,48 @@ export function ContentFeed({ className }: { className?: string }) {
               ) : (
                 <div className="space-y-4">
                   {posts.map((post) => (
-                    <div key={post.id} className="space-y-2">
+                    <div key={post.id} className="space-y-2 border-b pb-4">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <Avatar className="size-6">
-                                  <AvatarImage src={post.author.imageUrl ?? undefined} />
-                                  <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                            <AvatarImage src={post.author.imageUrl ?? undefined} />
+                            <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          <p className="text-md text-muted-foreground flex items-center">
-                            {post.author.firstName}
+                          <p className="text-md text-foreground flex items-center">
+                            {post.author.firstName} {post.author.role == "ADMIN" ? 
+                            <LucideVerified className={"ml-2 text-blue-500 size-5"} />
+                            :
+                            <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />}
                           </p>
                         </div>
-                        <LucideLink className="-rotate-45 size-3 text-muted-foreground" />
+                        {
+                          auth.userId === post.authorId && 
+                          <div>
+                            <Popover>
+                              <PopoverTrigger>
+                                <Button size="icon" variant="ghost">
+                                  <LucideEllipsis className="size-3" /> 
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-36 flex flex-col p-1">
+                                <UpdatePostDialog {...post} />
+                                <Button size="sm" disabled={deletePost.isPending} className="text-red-500 hover:text-red-800" variant="ghost" onClick={()=>deletePost.mutate({id: post.id})}>
+                                  {
+                                  deletePost.isPending ? 
+                                    <Loader2 className="size-4 animate-spin" />
+                                      :
+                                    <LucideTrash2 className="size-4"/>
+                                  }
+                                  Excluir
+                                </Button>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        }
                       </div>
                       <p className="text-xs text-muted-foreground">{format(post.createdAt, "PPp", { locale: ptBR })}</p>
-                      <h3 className="font-medium">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground">{post.content}</p>
+                      <h3 className="font-semibold">{post.title}</h3>
+                      <p className="text-sm text-foreground">{post.content}</p>
                     </div>
                   ))}
                 </div>
@@ -207,3 +253,84 @@ export function ContentFeed({ className }: { className?: string }) {
   )
 }
 
+interface UpdatePostDialogProps {
+  id: string,
+  title: string,
+  content: string
+} 
+
+function UpdatePostDialog({
+  id,
+  title,
+  content
+}:UpdatePostDialogProps){
+  const utils = api.useUtils();
+  const [open, setOpen] = useState(false)
+  const { toast } = useToast()
+
+  const updatePost = api.post.update.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: "Post alterado",
+        description: "Seu post foi alterado com sucesso.",
+      })
+      setOpen(false)
+      await utils.post.list.invalidate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+
+    updatePost.mutate({
+      id,
+      title: formData.get("title") as string,
+      content: formData.get("content") as string,
+      published: true,
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <LucidePencil className="h-4 w-4" />
+          Editar Post
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <form onSubmit={onSubmit}>
+          <DialogHeader>
+            <DialogTitle>Editar Post</DialogTitle>
+            <DialogDescription>Compartilhe uma novidade com a equipe</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Título</Label>
+              <Input id="title" name="title" defaultValue={title} placeholder="Digite o título do post" required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="content">Conteúdo</Label>
+              <Textarea id="content" name="content" defaultValue={content} placeholder="Digite o conteúdo do post" required />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={updatePost.isPending}>
+              {updatePost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Publicar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

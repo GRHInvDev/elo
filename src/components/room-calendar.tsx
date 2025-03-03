@@ -12,11 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { AvatarFallback, AvatarImage, Avatar } from "./ui/avatar"
 
 export function RoomCalendar({ className }: { className?: string }) {
   const [date, setDate] = useState<Date>(startOfToday())
   const { toast } = useToast()
-  const utils = api.useContext()
+  const utils = api.useUtils()
 
   const { data: bookings, isLoading } = api.booking.list.useQuery({
     startDate: startOfToday(),
@@ -98,9 +99,15 @@ export function RoomCalendar({ className }: { className?: string }) {
                       <div className="mt-1 flex items-center gap-2">
                         <p className="text-sm text-muted-foreground">{booking.title}</p>
                         <span className="text-sm text-muted-foreground">•</span>
-                        <p className="text-sm text-muted-foreground">
-                          {booking.user.firstName} {booking.user.lastName}
-                        </p>
+                        <div className="flex gap-2 items-center">
+                          <Avatar className="size-6">
+                            <AvatarFallback>{booking.user.firstName?.at(0)?.toUpperCase()}</AvatarFallback>
+                            <AvatarImage src={booking.user.imageUrl ?? undefined}/>
+                          </Avatar>
+                          <p className="text-sm text-muted-foreground">
+                            {booking.user.firstName} {booking.user.lastName}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <Button

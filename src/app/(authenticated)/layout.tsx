@@ -21,7 +21,7 @@ export default async function AuthenticatedLayout({
       <header className="border-b">
         <div className="fixed flex h-16 items-center px-4 w-full z-50 bg-background/70 backdrop-blur-md">
           <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
+          <div className="ml-4 flex items-center space-x-4">
             <UserNav />
           </div>
         </div>

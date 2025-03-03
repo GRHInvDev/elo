@@ -9,20 +9,11 @@ const createPostSchema = z.object({
 })
 
 export const postRouter = createTRPCRouter({
-  create: protectedProcedure.input(createPostSchema).mutation(async ({ ctx, input }) => {
-    // Verifica se o usuário já tem um post
-    const existingPost = await ctx.db.post.findFirst({
-      where: { authorId: ctx.auth.userId },
-    })
-
-    if (existingPost) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Você já criou um post",
-      })
-    }
-
-    return ctx.db.post.create({
+  create: protectedProcedure
+  .input(createPostSchema)
+  .mutation(async ({ ctx, input }) => {
+    console.log("user Id", ctx.auth.userId)
+    return await ctx.db.post.create({
       data: {
         ...input,
         authorId: ctx.auth.userId,
@@ -75,6 +66,7 @@ export const postRouter = createTRPCRouter({
             firstName: true,
             lastName: true,
             imageUrl: true,
+            role: true,
           },
         },
       },

@@ -12,7 +12,7 @@ export default function SignUpPage() {
         <SignUp
           appearance={{
             elements: {
-              rootBox: "w-full bg-background",
+              rootBox: "w-full bg-background shadow-none",
               cardBox: "rounded-none",
               card: "w-full shadow-none rounded-none p-0 bg-background",
               header: "hidden",
@@ -20,6 +20,9 @@ export default function SignUpPage() {
               main: "rounded-none",
               formButtonPrimary: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
               socialButtons: "text-primary",
+              otpCodeField: "border-primary border-1",
+              otpCodeFieldInputs: "border-primary border-1",
+              otpCodeFieldInput: "border-primary border-1 bg-muted",
               formFieldInput:
                 "flex h-10 w-full text-primary border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
               socialButtonsRoot: "text-primary hover:bg-primary/30",
