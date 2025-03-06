@@ -9,6 +9,8 @@ import { TRPCReactProvider } from "@/trpc/react"
 import { ptBR } from "@clerk/localizations"
 import { type Metadata } from "next"
 import { AnimatedBackground } from "@/components/animated-background"
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.svg" }]
@@ -28,6 +30,8 @@ export default function RootLayout({
           <body className={cn("min-h-screen bg-background antialiased", inter.className)}>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
               <AnimatedBackground />
+              <Analytics/>
+              <SpeedInsights/>
               {children}
               <Toaster />
             </ThemeProvider>
