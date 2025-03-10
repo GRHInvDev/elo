@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { ContentFeed } from "@/components/content-feed"
 import { QuickAccess } from "@/components/quick-access"
 import { api } from "@/trpc/server"
+import { MonthlyBirthdays } from "@/components/monthly-birthdays"
 
 export const metadata: Metadata = {
   title: "Dashboard | elo",
@@ -30,8 +31,11 @@ export default async function DashboardPage() {
         }
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <QuickAccess className="col-span-4" />
-        <ContentFeed className="col-span-3" />
+        <div className="col-span-4 space-y-4">
+          <QuickAccess className="w-full" />
+          <ContentFeed className="w-full" />
+        </div>
+        <MonthlyBirthdays className="col-span-3"/>
       </div>
     </DashboardShell>
   )
