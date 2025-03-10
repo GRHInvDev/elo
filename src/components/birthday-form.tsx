@@ -37,7 +37,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
   const { toast } = useToast()
   const utils = api.useUtils()
 
-  const { data: users, isLoading: isLoadingUsers } = api.user.listAll.useQuery()
+  const { data: users } = api.user.listAll.useQuery()
 
   const createBirthday = api.birthday.create.useMutation({
     onSuccess: () => {
@@ -45,7 +45,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
         title: "Aniversário adicionado",
         description: "O aniversário foi adicionado com sucesso.",
       })
-      utils.birthday.list.invalidate()
+      void utils.birthday.list.invalidate()
       if (onSuccess) onSuccess()
     },
     onError: (error) => {
@@ -63,7 +63,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
         title: "Aniversário atualizado",
         description: "O aniversário foi atualizado com sucesso.",
       })
-      utils.birthday.list.invalidate()
+      void utils.birthday.list.invalidate()
       if (onSuccess) onSuccess()
     },
     onError: (error) => {
@@ -125,7 +125,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-2">
         <Label htmlFor="name">Nome</Label>
-        <Input id="name" name="name" defaultValue={birthday?.name || ""} placeholder="Nome da pessoa" required />
+        <Input id="name" name="name" defaultValue={birthday?.name ?? ""} placeholder="Nome da pessoa" required />
       </div>
 
       <div className="grid gap-2">
@@ -142,7 +142,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
       {birthday && (
         <div className="grid gap-2">
           <Label htmlFor="userId">Usuário (opcional)</Label>
-          <Select name="userId" defaultValue={birthday.userId || "none"}>
+          <Select name="userId" defaultValue={birthday.userId ?? "none"}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione um usuário (opcional)" />
             </SelectTrigger>

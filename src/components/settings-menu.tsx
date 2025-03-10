@@ -1,6 +1,6 @@
 "use client"
 
-import { Moon, Sun, Play, Pause, Settings, LucideComputer, LucideSunMoon } from "lucide-react"
+import { Moon, Sun, Play, Pause, LucideComputer, LucideSunMoon } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useAnimation } from "@/contexts/animation-context"
 import {

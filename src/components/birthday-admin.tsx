@@ -20,10 +20,11 @@ import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BirthdayForm } from "@/components/birthday-form"
 import { BirthdayImport } from "@/components/birthday-import"
+import { type Birthday } from "@prisma/client"
 
 export function BirthdayAdmin() {
   const [open, setOpen] = useState(false)
-  const [editingBirthday, setEditingBirthday] = useState<any>(null)
+  const [editingBirthday, setEditingBirthday] = useState<Birthday|null>(null)
   const { toast } = useToast()
   const utils = api.useUtils()
 
@@ -35,7 +36,7 @@ export function BirthdayAdmin() {
         title: "Aniversário removido",
         description: "O aniversário foi removido com sucesso.",
       })
-      utils.birthday.list.invalidate()
+      void utils.birthday.list.invalidate()
     },
     onError: (error) => {
       toast({

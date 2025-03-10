@@ -2,7 +2,6 @@ import { AvailableRooms } from "@/components/avalible-rooms";
 import { EventsList } from "@/components/events-list";
 import { MonthlyBirthdays } from "@/components/monthly-birthdays";
 import { PostList } from "@/components/posts-list";
-import { Card } from "@/components/ui/card";
 
 export default function Page() {
     return (

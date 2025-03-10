@@ -23,7 +23,7 @@ export function BirthdayImport() {
         description: "Os aniversários foram importados com sucesso.",
       })
       setCsvData("")
-      utils.birthday.list.invalidate()
+      void utils.birthday.list.invalidate()
     },
     onError: (error) => {
       toast({
@@ -51,7 +51,7 @@ export function BirthdayImport() {
         }
 
         const name = parts[0]
-        const dateStr = parts[1] as string
+        const dateStr = parts[1]!
 
         // Parse date (assuming format is DD/MM/YYYY)
         const dateParts = dateStr.split("/").map(Number)
