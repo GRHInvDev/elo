@@ -20,6 +20,8 @@ model User {
   bookings      Booking[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  birthDay      Birthday?
+  news          News[]
 
   @@map("users")
 }
@@ -99,4 +101,27 @@ model Flyer {
   updatedAt   DateTime @updatedAt
 
   @@map("flyers")
+}
+
+model Birthday {
+  id        String   @id @default(cuid())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?  @unique
+  name      String
+  data      DateTime
+
+  @@map("birthdays")
+}
+
+model News {
+  id          String    @id @default(cuid())
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  title       String
+  body        String
+  imageUrl    String
+  published   Boolean   @default(false)
+  data        DateTime  @default(now())
+
+  @@map("news")
 }

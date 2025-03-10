@@ -13,18 +13,6 @@ const createEventSchema = z.object({
 
 export const eventRouter = createTRPCRouter({
   create: protectedProcedure.input(createEventSchema).mutation(async ({ ctx, input }) => {
-    // Verifica se o usuário já tem um evento
-    const existingEvent = await ctx.db.event.findFirst({
-      where: { authorId: ctx.auth.userId },
-    })
-
-    if (existingEvent) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Você já criou um evento",
-      })
-    }
-
     return ctx.db.event.create({
       data: {
         ...input,

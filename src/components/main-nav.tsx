@@ -37,7 +37,7 @@ export function MainNav() {
   if (user?.role === "ADMIN") {
     items.push({
       title: "Admin",
-      href: "/admin/rooms",
+      href: "/admin",
     })
   }
 

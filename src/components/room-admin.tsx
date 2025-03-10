@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { type Room } from "./room-dialog"
+import { Card } from "./ui/card"
 
 interface DrawingState {
   isDrawing: boolean
@@ -308,7 +309,7 @@ export function RoomAdmin() {
         </Dialog>
       </div>
 
-      <div className="rounded-md border">
+      <Card className="rounded-md border">
         {isLoading ? (
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -351,7 +352,7 @@ export function RoomAdmin() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

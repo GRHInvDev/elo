@@ -11,6 +11,7 @@ import { type Metadata } from "next"
 import { AnimatedBackground } from "@/components/animated-background"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { AnimationProvider } from "@/contexts/animation-context"
 
 export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.svg" }]
@@ -27,14 +28,20 @@ export default function RootLayout({
     <ClerkProvider localization={ptBR}>
       <TRPCReactProvider>
         <html lang="pt-BR" suppressHydrationWarning>
+          {/* Debug react scan */}
+          {/* <head>
+            <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+          </head> */}
           <body className={cn("min-h-screen bg-background antialiased", inter.className)}>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <AnimatedBackground />
-              <Analytics/>
-              <SpeedInsights/>
-              {children}
-              <Toaster />
-            </ThemeProvider>
+            <AnimationProvider>
+              <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+                <AnimatedBackground />
+                <Analytics/>
+                <SpeedInsights/>
+                {children}
+                <Toaster />
+              </ThemeProvider>
+            </AnimationProvider>
           </body>
         </html>
       </TRPCReactProvider>
