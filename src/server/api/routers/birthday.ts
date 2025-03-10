@@ -12,7 +12,7 @@ export const birthdayRouter = createTRPCRouter({
   // Criar um aniversário
   create: protectedProcedure.input(createBirthdaySchema).mutation(async ({ ctx, input }) => {
     // Se não for especificado um userId, usa o do usuário atual
-    const userId = input.userId || ctx.auth.userId
+    const userId = input.userId
 
     // Verifica se já existe um aniversário para este usuário
     if (input.userId) {
@@ -44,38 +44,16 @@ export const birthdayRouter = createTRPCRouter({
         id: z.string(),
         name: z.string().min(1, "Nome é obrigatório").optional(),
         data: z.date().optional(),
+        userId: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const birthday = await ctx.db.birthday.findUnique({
-        where: { id: input.id },
-        include: { user: true },
-      })
-
-      if (!birthday) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Aniversário não encontrado",
-        })
-      }
-
-      // Verifica se o usuário é o dono do aniversário ou um admin
-      const user = await ctx.db.user.findUnique({
-        where: { id: ctx.auth.userId },
-      })
-
-      if (birthday.userId !== ctx.auth.userId && user?.role !== "ADMIN") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Você não tem permissão para editar este aniversário",
-        })
-      }
-
       return ctx.db.birthday.update({
         where: { id: input.id },
         data: {
           name: input.name,
           data: input.data,
+          userId: input.userId
         },
       })
     }),

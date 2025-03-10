@@ -110,6 +110,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
         id: birthday.id,
         name,
         data: date,
+        userId: userId === "none" ? undefined : userId ?? undefined,
       })
     } else {
       createBirthday.mutate({
