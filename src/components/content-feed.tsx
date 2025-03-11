@@ -228,8 +228,8 @@ export function ContentFeed({ className }: { className?: string }) {
                     <div key={flyer.id} className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Avatar className="size-4">
-                                <AvatarImage src={flyer.author.imageUrl ?? undefined} />
-                                <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                          <AvatarImage src={flyer.author.imageUrl ?? undefined} />
+                          <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <p className="text-sm text-muted-foreground">{flyer.author.firstName}</p>
                         <p>
@@ -240,7 +240,7 @@ export function ContentFeed({ className }: { className?: string }) {
                       <div className="flex items-center text-sm text-muted-foreground">
                         <FileImage className="mr-1 h-4 w-4" />
                       </div>
-                      <p className="text-sm text-muted-foreground">{flyer.description}</p>
+                      <p className="text-sm text-muted-foreground overflow-hidden overflow-ellipsis">{flyer.description}</p>
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { utapi } from "@/server/uploadthing";
 
 const createFlyerSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -33,6 +34,8 @@ export const flyerRouter = createTRPCRouter({
         })
       }
 
+      await utapi.deleteFiles(flyer.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
+
       return ctx.db.flyer.update({
         where: { id: input.id },
         data: input,
@@ -50,6 +53,8 @@ export const flyerRouter = createTRPCRouter({
         message: "Você não tem permissão para deletar este encarte",
       })
     }
+
+    await utapi.deleteFiles(flyer.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
 
     return ctx.db.flyer.delete({
       where: { id: input.id },

@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Loader2, LucideEllipsis, LucidePencil, LucideTrash2 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Label } from "./ui/label"
 import { Input } from "./ui/input"
 import { Textarea } from "./ui/textarea"
+import { UPLTButton } from "./ui/uplt-button"
 
 export function FlyersList() {
   const { data: flyers, isLoading } = api.flyer.list.useQuery()
@@ -79,7 +80,7 @@ export function FlyersList() {
               {auth.userId === flyer.authorId && (
                 <div>
                   <Popover>
-                    <PopoverTrigger>
+                    <PopoverTrigger asChild>
                       <Button size="icon" variant="ghost">
                         <LucideEllipsis className="size-3" /> 
                       </Button>
@@ -130,6 +131,7 @@ function UpdateFlyerDialog({
   const utils = api.useUtils();
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
+  const fileUrlRef = useRef<HTMLInputElement>(null);
 
   const updateFlyer = api.flyer.update.useMutation({
     onSuccess: async () => {
@@ -188,7 +190,19 @@ function UpdateFlyerDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="image">imagem</Label>
-              <Input id="image" name="imageUrl" defaultValue={imageUrl} placeholder="https://linkparaaimagem.com/encarte.png" required />
+              <UPLTButton
+                onClientUploadComplete={(res) => {
+                  if (fileUrlRef.current){
+                    fileUrlRef.current.defaultValue = res.at(0)?.ufsUrl ?? "";
+                  }
+                  alert("Upload Completed");
+                }}
+                onUploadError={(error: Error) => {
+                  // Do something with the error.
+                  alert(`ERRO! ${error.message}`);
+                }}
+              />
+              <Input id="image" ref={fileUrlRef} name="imageUrl" className="hidden" defaultValue={imageUrl} placeholder="https://linkparaaimagem.com/encarte.png" required />
             </div>
           </div>
           <DialogFooter>

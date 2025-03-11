@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { FileImage, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -20,12 +20,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
+import { UPLTButton } from "./ui/uplt-button"
 
 export function CreateFlyerButton() {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
   const utils = api.useUtils()
-
+  const fileUrlRef = useRef<HTMLInputElement>(null);
   const createFlyer = api.flyer.create.useMutation({
     onSuccess: async () => {
       toast({
@@ -80,8 +81,20 @@ export function CreateFlyerButton() {
               <Textarea id="description" name="description" placeholder="Digite a descrição do encarte" required />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="imageUrl">URL da Imagem</Label>
-              <Input id="imageUrl" name="imageUrl" type="url" placeholder="https://exemplo.com/imagem.jpg" required />
+              <Label htmlFor="imageUrl">Imagem</Label>
+              <UPLTButton
+                onClientUploadComplete={(res) => {
+                  if (fileUrlRef.current){
+                    fileUrlRef.current.defaultValue = res.at(0)?.ufsUrl ?? "";
+                  }
+                  toast({title: "Imagem carregada!", description: "Sua imagem foi carregada com sucesso!"});
+                }}
+                onUploadError={(error: Error) => {
+                  // Do something with the error.
+                  alert(`ERRO! ${error.message}`);
+                }}
+              />
+              <Input id="imageUrl" ref={fileUrlRef} className="hidden" name="imageUrl" type="url" required />
             </div>
           </div>
           <DialogFooter>
