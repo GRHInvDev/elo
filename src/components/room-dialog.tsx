@@ -105,13 +105,12 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
                 name="time"
                 type="time"
                 required
-                step="1800" // Intervalos de 30 minutos
               />
             </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="duration">Duração (horas)</Label>
-            <Input id="duration" name="duration" type="number" min="1" max="4" defaultValue="1" required />
+            <Input id="duration" name="duration" type="number" defaultValue="1" required />
           </div>
           <DialogFooter>
             <Button type="submit" disabled={createBooking.isPending}>

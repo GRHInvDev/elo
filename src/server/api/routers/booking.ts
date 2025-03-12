@@ -2,7 +2,8 @@ import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 
-const createBookingSchema = z.object({
+export const createBookingSchema = z.object({
+  id: z.string().optional(),
   roomId: z.string(),
   title: z.string().min(1, "Título é obrigatório"),
   start: z.date(),
@@ -30,10 +31,10 @@ export const bookingRouter = createTRPCRouter({
         OR: [
           {
             start: {
-              lte: input.end,
+              lt: input.end,
             },
             end: {
-              gte: input.start,
+              gt: input.start,
             },
           },
         ],
@@ -76,6 +77,58 @@ export const bookingRouter = createTRPCRouter({
 
     return ctx.db.booking.delete({
       where: { id: input.id },
+    })
+  }),
+
+  update: protectedProcedure.input(createBookingSchema)
+    .mutation(async ({ ctx, input }) => {
+    // Verifica se a sala existe
+    const room = await ctx.db.room.findUnique({
+      where: { id: input.roomId, },
+    })
+
+    if (!room) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Sala não encontrada",
+      })
+    }
+
+    // Verifica se há conflito de horário
+    const conflictingBooking = await ctx.db.booking.findFirst({
+      where: {
+        roomId: input.roomId,
+        id: {
+          not: input.id
+        }, 
+        OR: [
+          {
+            start: {
+              lt: input.end,
+            },
+            end: {
+              gt: input.start,
+            },
+          },
+        ],
+      },
+    })
+
+    if (conflictingBooking) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "Esta sala já está reservada para este horário",
+      })
+    }
+
+    return ctx.db.booking.update({
+      where:{
+        id: input.id!,
+      },
+      data: {
+        ...input,
+        userId: ctx.auth.userId,
+      },
     })
   }),
 

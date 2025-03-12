@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { RoomMap } from "@/components/room-map"
 import { RoomCalendar } from "@/components/room-calendar"
 import { AvailableRooms } from "@/components/avalible-rooms"
+import { MyBookings } from "@/components/my-bookings"
 
 export const metadata: Metadata = {
   title: "Salas | elo",
@@ -14,7 +15,11 @@ export default function RoomsPage() {
   return (
     <DashboardShell>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <RoomMap className="col-span-4" />
+        <div className="space-y-4 col-span-4">
+          <RoomMap />
+          <MyBookings/>
+        </div>
+
         <div className="col-span-3 space-y-4">
           <AvailableRooms />
           <RoomCalendar />
