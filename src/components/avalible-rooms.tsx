@@ -33,6 +33,11 @@ export function AvailableRooms({ className }: { className?: string }) {
   return (
     <>
       <Card className={className}>
+        <CardHeader>
+          <CardTitle>
+            Salas Disponíveis Agora:
+          </CardTitle>
+        </CardHeader>
         <CardContent className="pt-6">
           {!rooms?.length ? (
             <p className="text-sm text-muted-foreground">Nenhuma sala disponível no momento.</p>

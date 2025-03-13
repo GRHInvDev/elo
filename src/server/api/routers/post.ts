@@ -69,6 +69,9 @@ export const postRouter = createTRPCRouter({
             role: true,
           },
         },
+        reactions: {
+          distinct: ["emoji"]
+        }
       },
       orderBy: { createdAt: "desc" },
     })

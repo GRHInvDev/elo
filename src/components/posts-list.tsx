@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { LucideLink, LucideVerified } from "lucide-react"
 import { type inferRouterOutputs } from "@trpc/server";
-
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { api } from "@/trpc/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -15,7 +16,8 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { type AppRouter } from "@/server/api/root"
 
 // The number of seconds each slide will be displayed
-const ROTATION_INTERVAL = 20 * 1000 // 10 seconds
+const ROTATION_INTERVAL = 20 * 1000
+
 type Post = inferRouterOutputs<AppRouter>["post"]["list"][number];
 type Flyer = inferRouterOutputs<AppRouter>["flyer"]["list"][number];
 type PostFlyerArr = {
@@ -110,11 +112,15 @@ export function PostList({ className }: { className?: string }) {
         }}
       >
         <CarouselContent>
-          {combinedItems.map((item) => (
-            <CarouselItem key={`${item.type}-${item.type === "post" ? item.data.id : item.data.id}`}>
+          {combinedItems.map((item, index) => (
+            <CarouselItem key={`${item.type}-${item.data.id}`}>
               <div>
                 <CardContent className="p-6">
-                  {item.type === "post" ? <PostContent post={item.data as Post} /> : <FlyerContent flyer={item.data as Flyer} />}
+                  {item.type === "post" ? (
+                    <PostContent post={item.data as Post} isActive={index === current} />
+                  ) : (
+                    <FlyerContent flyer={item.data as Flyer} />
+                  )}
                 </CardContent>
               </div>
             </CarouselItem>
@@ -139,7 +145,44 @@ export function PostList({ className }: { className?: string }) {
   )
 }
 
-function PostContent({ post }: { post: Post }) {
+function PostContent({ post, isActive }: { post: Post; isActive: boolean }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollSpeed, setScrollSpeed] = useState(1); // Pixels por movimento
+
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    if (isActive) {
+      // Reseta o scroll para o topo antes de mostrar
+      scrollContainer.scrollTop = 0;
+
+      // Aguarda um pequeno tempo para calcular a altura do conteúdo
+      setTimeout(() => {
+        const contentHeight = scrollContainer.scrollHeight;
+        const containerHeight = scrollContainer.clientHeight;
+        const scrollableHeight = contentHeight - containerHeight;
+
+        if (scrollableHeight > 0) {
+          const scrollSteps = ROTATION_INTERVAL / 50; // Quantos passos no tempo total do slide
+          setScrollSpeed(scrollableHeight / scrollSteps); // Define a quantidade de pixels por intervalo
+        }
+      }, 100); // Pequeno delay para garantir que a altura seja calculada corretamente
+    }
+  }, [isActive]);
+
+  useEffect(() => {
+    if (!isActive || scrollSpeed <= 0) return; // Apenas inicia o scroll se ativo e necessário
+    const interval = setInterval(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollBy({ top: Math.floor(scrollSpeed*10), behavior: "smooth" });
+        console.log(scrollSpeed)
+      }
+    }, 250);
+  
+      return () => clearInterval(interval); // Para o scroll ao mudar de slide
+  }, [isActive, scrollSpeed]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -162,13 +205,32 @@ function PostContent({ post }: { post: Post }) {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div
+        ref={scrollRef}
+        className="space-y-4 max-h-[30em] overflow-auto"
+      >
         <h2 className="text-2xl font-bold">{post.title}</h2>
-        <p className="text-lg leading-relaxed">{post.content}</p>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {post.content}
+        </ReactMarkdown>
       </div>
+      {
+        post.reactionCount > 0 &&(
+          <div className="rounded-full p-2 bg-muted border max-w-fit flex items-center place-self-end">
+            <span className="mr-2">{post.reactionCount}</span>
+            {post.reactions.map((r, i)=>(
+              <div key={i} className="relative" style={{ marginLeft: i > 0 ? "-10px" : "0", zIndex: 3 - i }}>
+                {r.emoji}
+              </div>
+            ))}
+          </div>
+        ) 
+      }
     </div>
-  )
+  );
 }
+
+
 
 function FlyerContent({ flyer }: { flyer: Flyer }) {
   return (
@@ -195,17 +257,17 @@ function FlyerContent({ flyer }: { flyer: Flyer }) {
 
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">{flyer.title}</h2>
+        <p className="text-lg leading-relaxed">{flyer.description}</p>
         <div className="flex justify-center">
           <Image
             src={flyer.imageUrl || "/placeholder.svg?height=600&width=800"}
-            width={800}
-            height={600}
+            width={300}
+            height={300}
             alt={flyer.title}
             className="rounded-lg object-contain max-h-[50vh]"
             priority
           />
         </div>
-        <p className="text-lg leading-relaxed">{flyer.description}</p>
       </div>
     </div>
   )
