@@ -35,7 +35,7 @@ export function QuickAccess({ className, ...props }: QuickAccessProps) {
           <CardTitle>Acesso Rápido</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1">
             {items.map((item) => (
               <Link key={item.href} href={item.href} className="group relative rounded-lg border p-4 hover:bg-muted">
                 <div className="flex h-full flex-col justify-between">

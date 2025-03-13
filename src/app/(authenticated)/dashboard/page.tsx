@@ -30,12 +30,12 @@ export default async function DashboardPage() {
           </div>
         }
       </div>
-      <div className="flex flex-col md:grid gap-4 md:grid-cols-2 lg:grid-cols-7 w-full">
-        <div className="col-span-4 space-y-4 w-full">
+      <div className="flex flex-col-reverse md:grid gap-4 md:grid-cols-2 lg:grid-cols-7 w-full">
+        <ContentFeed className="col-span-5 w-full" />
+        <div className="col-span-2 space-y-4 w-full">
           <QuickAccess className="w-full" />
           <MonthlyBirthdays className="w-full"/>
         </div>
-          <ContentFeed className="col-span-3 w-full" />
       </div>
     </DashboardShell>
   )
