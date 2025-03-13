@@ -22,6 +22,8 @@ model User {
   updatedAt     DateTime  @updatedAt
   birthDay      Birthday?
   news          News[]
+  reactions     Reaction[]
+  comments      Coment[]
 
   @@map("users")
 }
@@ -61,16 +63,42 @@ model Booking {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.Text
-  published Boolean  @default(false)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  title         String
+  content       String   @db.Text
+  published     Boolean  @default(false)
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  reactions     Reaction[]
+  comments      Coment[]
+  reactionCount Int     @default(0)
+  commentsCount Int     @default(0)
 
   @@map("posts")
+}
+
+model Reaction {
+  id      String  @id @default(cuid())
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId  String 
+  emoji   String
+
+  @@unique([userId, postId])
+}
+
+model Coment {
+  id      String  @id @default(cuid())
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId  String 
+  comment String
+
+  @@unique([userId, postId])
 }
 
 model Event {
@@ -94,6 +122,7 @@ model Flyer {
   title       String
   description String   @db.Text
   imageUrl    String
+  iframe      String?
   published   Boolean  @default(false)
   author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId    String

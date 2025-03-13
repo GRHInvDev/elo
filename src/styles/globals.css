@@ -66,3 +66,84 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.markdown{
+  font-size: 8pt;
+}
+
+.markdown>h1 {
+  font-size: 22pt;
+  margin-top: 1em;
+}
+
+.markdown>h2 {
+  font-size: 18pt;
+  margin-top: 1em;
+}
+
+.markdown>h3 {
+  font-size: 15pt;
+}
+
+.markdown>p{
+  font-size: 8pt;
+}
+
+.markdown>ul{
+  list-style: disc;
+  padding-left: 2em;
+}
+
+.markdown>ol{
+  list-style: decimal;
+  padding-left: 2em;
+}
+
+.markdown table {
+  @apply w-full border-collapse border border-gray-200 dark:border-gray-700;
+}
+
+.markdown thead {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+.markdown th {
+  @apply border border-gray-300 dark:border-gray-600 px-4 py-2 text-left font-semibold;
+}
+
+.markdown td {
+  @apply border border-gray-200 dark:border-gray-700 px-4 py-2;
+}
+
+.markdown tr:nth-child(even) {
+  @apply bg-gray-50 dark:bg-gray-900/50;
+}
+
+.markdown tr:hover {
+  @apply bg-gray-100 dark:bg-gray-800/50 transition-colors duration-200;
+}
+
+.markdown {
+  @apply space-y-4;
+}
+
+.markdown pre{
+  @apply m-2 p-2 rounded-md font-mono text-sm border-muted-foreground;
+}
+
+.animate-wind{
+  animation: wind 4s ease-in-out infinite;
+}
+
+@keyframes wind {
+  0% {
+    transform: rotateY(-15deg) rotateZ(3deg);
+  }
+  50% {
+    transform: rotateY(0deg) rotateZ(-3deg);
+  }
+  100% {
+    transform: rotateY(-15deg) rotateZ(3deg);
+  }
+}

@@ -66,6 +66,7 @@ export const eventRouter = createTRPCRouter({
             firstName: true,
             lastName: true,
             imageUrl: true,
+            role: true,
           },
         },
       },

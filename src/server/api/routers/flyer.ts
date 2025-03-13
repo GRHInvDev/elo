@@ -7,6 +7,7 @@ const createFlyerSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   description: z.string().min(1, "Descrição é obrigatória"),
   imageUrl: z.string().url("URL da imagem inválida"),
+  iframe: z.string().optional(),
   published: z.boolean().default(false),
 })
 
