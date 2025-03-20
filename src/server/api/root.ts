@@ -9,6 +9,8 @@ import { birthdayRouter } from "./routers/birthday";
 import { newsRouter } from "./routers/news";
 import { reactionRouter } from "./routers/reaction";
 import { commentRouter } from "./routers/comment";
+import { vehicleRouter } from "./routers/vehicle";
+import { vehicleRentRouter } from "./routers/vehicle-rent";
 
 /**
  * This is the primary router for your server.
@@ -26,6 +28,8 @@ export const appRouter = createTRPCRouter({
   news: newsRouter,
   reaction: reactionRouter,
   comment: commentRouter,
+  vehicle: vehicleRouter,
+  vehicleRent: vehicleRentRouter,
 });
 
 // export type definition of API

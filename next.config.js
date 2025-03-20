@@ -11,8 +11,6 @@ const config = {
           {
             protocol: 'https',
             hostname: '**',
-            port: '',
-            search: '',
           },
         ],
       },

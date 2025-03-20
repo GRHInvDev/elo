@@ -21,9 +21,10 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   birthDay      Birthday?
-  news          News[]
   reactions     Reaction[]
   comments      Coment[]
+  enterprise    Enterprise @default(NA)
+  vehicleRents  VehicleRent[]
 
   @@map("users")
 }
@@ -31,6 +32,13 @@ model User {
 enum UserRole {
   ADMIN
   USER
+}
+
+enum Enterprise {
+  NA
+  Box
+  RHenz
+  Cristallux
 }
 
 model Room {
@@ -142,15 +150,31 @@ model Birthday {
   @@map("birthdays")
 }
 
-model News {
-  id          String    @id @default(cuid())
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId    String
-  title       String
-  body        String
+model Vehicle {
+  id          String   @id @default(cuid())
+  model       String
+  plate       String   @unique
   imageUrl    String
-  published   Boolean   @default(false)
-  data        DateTime  @default(now())
+  enterprise  Enterprise
+  kilometers  BigInt
+  availble    Boolean  @default(true)
+  rents       VehicleRent[]
 
-  @@map("news")
+  @@map("vehicles")
+}
+
+model VehicleRent {
+  id          String      @id @default(cuid())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  vehicle     Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId   String
+  startDate   DateTime    @default(now())
+  endDate     DateTime?
+  finished    Boolean     @default(false)
+  initialKm   BigInt?
+  finalKm     BigInt?
+  endLocation Json?
+
+  @@map("vehicle_rents")
 }

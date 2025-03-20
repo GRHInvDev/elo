@@ -32,6 +32,10 @@ export function MainNav() {
       title: "Encartes",
       href: "/flyers",
     },
+    {
+      title: "Carros",
+      href: "/cars",
+    },
   ]
 
   if (user?.role === "ADMIN") {

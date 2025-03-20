@@ -49,7 +49,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
     },
     onError: (error) => {
       toast({
-        title: "Erro ao reservar",
+        title: "Erro aa reservar",
         description: error.message,
         variant: "destructive",
       })
