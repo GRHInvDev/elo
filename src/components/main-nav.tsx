@@ -36,6 +36,10 @@ export function MainNav() {
       title: "Carros",
       href: "/cars",
     },
+    {
+      title: "Shop",
+      href: "/shop",
+    },
   ]
 
   if (user?.role === "ADMIN") {

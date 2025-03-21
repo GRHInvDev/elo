@@ -10,6 +10,7 @@ import { reactionRouter } from "./routers/reaction";
 import { commentRouter } from "./routers/comment";
 import { vehicleRouter } from "./routers/vehicle";
 import { vehicleRentRouter } from "./routers/vehicle-rent";
+import { productRouter } from "./routers/product";
 
 /**
  * This is the primary router for your server.
@@ -28,6 +29,7 @@ export const appRouter = createTRPCRouter({
   comment: commentRouter,
   vehicle: vehicleRouter,
   vehicleRent: vehicleRentRouter,
+  product: productRouter,
 });
 
 // export type definition of API
