@@ -25,6 +25,8 @@ model User {
   comments      Coment[]
   enterprise    Enterprise @default(NA)
   vehicleRents  VehicleRent[]
+  shopCart      ShopCart?
+  sells         Sell[]
 
   @@map("users")
 }
@@ -39,6 +41,11 @@ enum Enterprise {
   Box
   RHenz
   Cristallux
+}
+
+model GlobalConfig  {
+  id            String    @unique @default(cuid())
+  shopWebhook   String
 }
 
 model Room {
@@ -177,4 +184,44 @@ model VehicleRent {
   endLocation Json?
 
   @@map("vehicle_rents")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  enterprise  Enterprise
+  imageUrl    String[]
+  price       Float
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  shopCarts   ShopCart[]
+  sells       Sell[]
+
+  @@map("products")
+}
+
+model ShopCart {
+  id          String      @id @default(cuid())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String      @unique
+  products    Product[]
+  totalPrice  Float
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("shop_cart")
+}
+
+model Sell {
+  id              String      @id @default(cuid())
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String      @unique
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  products        Product[]
+  totalPrice      Float
+  nfeId           Int?
+
+  @@map("sells")
 }
