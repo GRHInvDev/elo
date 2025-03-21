@@ -5,17 +5,18 @@ import { db } from '@/server/db';
 import { NextResponse } from 'next/server';
 import cron from "node-cron";
 
-cron.schedule("36 15 * * *", async () => {
+cron.schedule("36 15 * * *", () => {
     console.log("Executando limpeza de eventos...");
     try {
-      const res = await db.event.deleteMany({
+      const res = async () => await db.event.deleteMany({
         where: {
             endDate: {
                 lt: new Date()
             }
         }
       });
-      console.log(`Eventos deletados: ${res.count}`);
+      void res()
+      console.log(`Eventos deletados`);
     } catch (err) {
       console.error("Erro ao deletar eventos:", err);
     }

@@ -11,11 +11,11 @@ export function RentVehicleButton({ vehicleId }: { vehicleId: string }) {
   const handleRentClick = () => {
     if (!isSignedIn) {
       // Redirecionar para login com callback para a página de reserva
-      router.push(`/sign-in?redirect_url=/vehicles/${vehicleId}/rent`)
+      router.push(`/sign-in?redirect_url=/cars/details/${vehicleId}/rent`)
       return
     }
 
-    router.push(`/vehicles/${vehicleId}/rent`)
+    router.push(`/cars/details/${vehicleId}/rent`)
   }
 
   return (

@@ -265,6 +265,7 @@ interface PostItemProps {
       lastName: string | null
       imageUrl: string | null
       role?: string
+      enterprise?: string
     }
     createdAt: Date
   }
@@ -420,7 +421,7 @@ function PostItem({ post }: PostItemProps) {
           <p className="text-md text-foreground flex items-center">
             {post.author.firstName}{" "}
             <Image
-              src={post.author.enterprise?.toLowerCase() == "box" ?"/LOGO BOX.png": post.author.enterprise.toLowerCase() == "cristallux" ? "/icon_cristal.svg" : "/Logo R Henz.png"}
+              src={post.author.enterprise?.toLowerCase() == "box" ?"/LOGO BOX.png": post.author.enterprise?.toLowerCase() == "cristallux" ? "/icon_cristal.svg" : "/Logo R Henz.png"}
               alt={post.author.enterprise?? ""}
               height={20}
               width={20}
