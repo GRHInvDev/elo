@@ -419,10 +419,15 @@ function PostItem({ post }: PostItemProps) {
           </Avatar>
           <p className="text-md text-foreground flex items-center">
             {post.author.firstName}{" "}
-            {post.author.role === "ADMIN" ? (
+            <Image
+              src={post.author.enterprise?.toLowerCase() == "box" ?"/LOGO BOX.png": post.author.enterprise.toLowerCase() == "cristallux" ? "/icon_cristal.svg" : "/Logo R Henz.png"}
+              alt={post.author.enterprise?? ""}
+              height={20}
+              width={20}
+              className="ml-2"
+            />
+            {post.author.role === "ADMIN" && (
               <LucideVerified className={"ml-2 text-blue-500 size-5"} />
-            ) : (
-              <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
             )}
           </p>
         </div>

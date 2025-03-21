@@ -51,7 +51,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   const finishRent = api.vehicleRent.finish.useMutation({
     onSuccess: () => {
       toast({
-        title: "Aluguel finalizado com sucesso!",
+        title: "Reserva finalizada com sucesso!",
         description: "O veículo foi devolvido com sucesso.",
       })
 
@@ -60,7 +60,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
     },
     onError: (error) => {
       toast({
-        title: "Erro ao finalizar aluguel",
+        title: "Erro ao finalizar reserva",
         description: error.message,
         variant: "destructive",
       })
@@ -82,7 +82,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
 
       if (!isDistanceOk) {
         setDistanceError(
-          `Você precisa estar a pelo menos ${MIN_DISTANCE}km do local de devolução (${REFERENCE_LOCATION.name}) para finalizar o aluguel.`,
+          `Você precisa estar próximo da Box para finalizar a reserva.`,
         )
       } else {
         setDistanceError(null)
@@ -168,7 +168,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   const handleConfirmFinish = () => {
     // Validar localização
     if (!location) {
-      setLocationError("É necessário compartilhar sua localização para finalizar o aluguel.")
+      setLocationError("É necessário compartilhar sua localização para finalizar a reserva.")
       return
     }
 
@@ -182,7 +182,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
 
     if (!isDistanceOk) {
       setDistanceError(
-        `Você precisa estar a pelo menos ${MIN_DISTANCE}km do local de devolução para finalizar o aluguel.`,
+        `Você precisa estar próximo da Box para finalizar a reserva.`,
       )
       return
     }
@@ -231,7 +231,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Atenção</AlertTitle>
               <AlertDescription>
-                Para finalizar o aluguel, você precisa estar a pelo menos {MIN_DISTANCE}km do local de devolução.
+                Para finalizar a reserva, você precisa estar próximo da Box.
               </AlertDescription>
             </Alert>
             {/* Seção de localização */}
@@ -289,7 +289,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex gap-4">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
               Cancelar
             </Button>

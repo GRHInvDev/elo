@@ -5,6 +5,7 @@ import { Car, Calendar, ArrowLeft } from "lucide-react"
 import { api } from "@/trpc/server"
 import { Badge } from "@/components/ui/badge"
 import { RentVehicleButton } from "@/components/rent-vehicle-button"
+import { Card } from "@/components/ui/card"
 
 export default async function VehicleDetailsPage({
   params,
@@ -21,14 +22,14 @@ export default async function VehicleDetailsPage({
   return (
     <div className="container py-8">
       <Link
-        href="/vehicles"
+        href="/cars/details"
         className="mb-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Voltar para lista de veículos
       </Link>
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <Card className="grid gap-8 md:grid-cols-2 p-4">
         <div className="relative aspect-video overflow-hidden rounded-lg md:aspect-square">
           <Image
             src={vehicle.imageUrl || "/placeholder.svg"}
@@ -66,15 +67,15 @@ export default async function VehicleDetailsPage({
             <RentVehicleButton vehicleId={vehicle.id} />
           </div>
         </div>
-      </div>
+      </Card>
 
       {vehicle.rents.length > 0 && (
-        <div className="mt-12">
+        <Card className="mt-12 p-4">
           <h2 className="mb-4 text-2xl font-bold">Histórico de reservas</h2>
           <div className="space-y-4">
             {vehicle.rents.map((rent) => (
               <div key={rent.id} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex md:items-center justify-between flex-col md:flex-row p-4 gap-2">
                   <div className="flex items-center gap-3">
                     {rent.user.imageUrl && (
                       <Image
@@ -86,11 +87,10 @@ export default async function VehicleDetailsPage({
                       />
                     )}
                     <div>
-                      <p className="font-medium">{rent.user.firstName}</p>
-                      <p className="text-sm text-muted-foreground">{rent.user.email}</p>
+                      <p className="font-medium">{rent.user.firstName} {rent.user.lastName}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="md:text-right">
                     <p className="font-medium">{new Date(rent.startDate).toLocaleDateString()}</p>
                     <p className="text-sm text-muted-foreground">{rent.finished ? "Finalizado" : "Em andamento"}</p>
                   </div>
@@ -98,7 +98,7 @@ export default async function VehicleDetailsPage({
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   )

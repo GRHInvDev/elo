@@ -19,14 +19,24 @@ export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 
   return (
     <Card className="overflow-hidden">
-      <div className="h-48 w-full">
+      <div className="relative h-48 w-full">
         <Image
           src={vehicle.imageUrl || "/placeholder.svg"}
           alt={vehicle.model}
+          fill
           className="object-cover"
-          width={300}
-          height={300}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
+      </div>
+      <div className="absolute -translate-y-16 w-full bg-gradient-to-t from-card/80 to-transparent h-16"/>
+      <div className="absolute size-20 -translate-y-16 translate-x-2">
+        <Image
+            src={vehicle.enterprise.toLowerCase() == "box" ?"/LOGO BOX.png": vehicle.enterprise.toLowerCase() == "cristallux" ? "/icon_cristal.svg" : "/Logo R Henz.png"}
+            alt={vehicle.model}
+            fill
+            className={"object-cover drop-shadow-md"}
+            sizes="(max-width: 100px) 100vw, (max-width: 200px) 50vw, 33vw"
+          />
       </div>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">

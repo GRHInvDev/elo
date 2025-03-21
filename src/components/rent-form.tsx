@@ -31,10 +31,10 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
   const createRent = api.vehicleRent.create.useMutation({
     onSuccess: () => {
       toast({
-        title: "Veículo alugado com sucesso!",
+        title: "Veículo reservado com sucesso!",
         description: isScheduled
           ? "O veículo foi agendado para a data selecionada."
-          : "Você pode visualizar seus aluguéis ativos no seu perfil.",
+          : "Você pode visualizar suas reservas ativas no seu perfil.",
       })
 
       // Redirecionar para a página de perfil ou dashboard
@@ -43,7 +43,7 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
     },
     onError: (error) => {
       toast({
-        title: "Erro ao alugar veículo",
+        title: "Erro ao reservar veículo",
         description: error.message,
         variant: "destructive",
       })
@@ -87,7 +87,7 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
     if (isModal) {
       router.back()
     } else {
-      router.push(`/vehicles/${vehicle.id}`)
+      router.push(`/cars/details/${vehicle.id}`)
     }
   }
 
@@ -123,13 +123,13 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Ao alugar este veículo, você assume a responsabilidade por ele até a devolução. Certifique-se de verificar as
+          Ao reservar este veículo, você assume a responsabilidade por ele até a devolução. Certifique-se de verificar as
           condições do veículo antes de sair.
         </AlertDescription>
       </Alert>
 
       <div className="rounded-lg border p-4 bg-card/80">
-        <h3 className="mb-4 font-semibold">Detalhes do aluguel</h3>
+        <h3 className="mb-4 font-semibold">Detalhes da reserva</h3>
 
         <div className="mb-4 flex items-center space-x-2">
           <Switch id="scheduled" checked={isScheduled} onCheckedChange={setIsScheduled} />
@@ -155,7 +155,7 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
               <span>Hora de início: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Para devolver o veículo, acesse seu perfil e finalize o aluguel.
+              Para devolver o veículo, acesse seu perfil e finalize a reserva.
             </p>
           </div>
         )}
@@ -166,7 +166,7 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Processando..." : isScheduled ? "Agendar Aluguel" : "Confirmar Aluguel"}
+          {isSubmitting ? "Processando..." : isScheduled ? "Agendar Reserva" : "Confirmar Reserva"}
         </Button>
       </div>
     </form>

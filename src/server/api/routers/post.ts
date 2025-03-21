@@ -67,6 +67,7 @@ export const postRouter = createTRPCRouter({
             lastName: true,
             imageUrl: true,
             role: true,
+            enterprise: true,
           },
         },
         reactions: {

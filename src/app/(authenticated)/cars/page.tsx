@@ -35,7 +35,7 @@ export default async function DashboardPage() {
         <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <Card className="col-span-1 md:col-span-2 lg:col-span-3">
             <CardHeader>
-              <CardTitle>Veículo Alugado</CardTitle>
+              <CardTitle>Veículo Reservado</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-4 md:flex-row">
@@ -78,8 +78,8 @@ export default async function DashboardPage() {
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <h2 className="mb-2 text-xl font-semibold">Nenhum veículo alugado</h2>
-            <p className="mb-6 text-center text-muted-foreground">Você não possui nenhum veículo alugado no momento.</p>
+            <h2 className="mb-2 text-xl font-semibold">Nenhum veículo reservado</h2>
+            <p className="mb-6 text-center text-muted-foreground">Você não possui nenhum veículo reservado no momento.</p>
             <Button asChild>
               <Link href="/cars/details">Ver veículos disponíveis</Link>
             </Button>

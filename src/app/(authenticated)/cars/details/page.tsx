@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 export default async function VehiclesPage({
   searchParams,
 }: {
-  searchParams: { enterprise?: string }
+  searchParams:  Promise<{ enterprise?: "NA" | "Box" | "RHenz" | "Cristallux" }>
 }) {
-  const enterprise = searchParams.enterprise as "NA" | "Box" | "RHenz" | "Cristallux" | undefined
+  const { enterprise } = await searchParams;
 
   return (
     <div className="container py-8">
