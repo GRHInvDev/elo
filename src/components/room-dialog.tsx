@@ -64,7 +64,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
 
     const date = parse(formData.get("date") as string, "yyyy-MM-dd", new Date())
     const time = parse(formData.get("time") as string, "HH:mm", new Date())
-    const duration = Number(formData.get("duration"))
+    const duration = Number((formData.get("duration") as string).replace(",", "."))
 
     const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.getHours(), time.getMinutes())
 
@@ -110,7 +110,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="duration">Duração (horas)</Label>
-            <Input id="duration" name="duration" type="number" defaultValue="1" required />
+            <Input id="duration" name="duration" type="number" step="0.1" required />
           </div>
           <DialogFooter>
             <Button type="submit" disabled={createBooking.isPending}>

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { TimePicker } from "@/components/ui/time-picker"
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form"
+import { useForm } from "react-hook-form"
 
 interface DateTimePickerProps {
   date: Date | undefined
@@ -18,62 +20,98 @@ interface DateTimePickerProps {
 }
 
 export function DateTimePicker({ date, setDate, disabled }: DateTimePickerProps) {
-  const [selectedDateTime, setSelectedDateTime] = React.useState<Date | undefined>(date)
+  // Use React Hook Form to manage form state
+  const form = useForm({
+    defaultValues: {
+      datetime: date,
+    },
+  })
 
-  // Update the parent state when the date changes
+  // Update form value when date prop changes
   React.useEffect(() => {
-    setDate(selectedDateTime)
-  }, [selectedDateTime, setDate])
+    form.reset({ datetime: date })
+  }, [date, form])
 
-  // Update our local state when the parent date changes
-  React.useEffect(() => {
-    setSelectedDateTime(date)
-  }, [date])
-
-  const handleSelect = (selected: Date | undefined) => {
-    if (selected) {
-      const newDate = new Date(selected)
-      if (selectedDateTime) {
-        // Preserve the time when selecting a new date
-        newDate.setHours(selectedDateTime.getHours())
-        newDate.setMinutes(selectedDateTime.getMinutes())
-      } else {
-        // Default to current time if no time was previously selected
-        const now = new Date()
-        newDate.setHours(now.getHours())
-        newDate.setMinutes(now.getMinutes())
-      }
-      setSelectedDateTime(newDate)
-    } else {
-      setSelectedDateTime(undefined)
-    }
+  // Handle form submission
+  function onSubmit(values: { datetime: Date | undefined }) {
+    setDate(values.datetime)
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          disabled={disabled}
-          className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPp", { locale: ptBR }) : <span>Selecione a data e hora</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={selectedDateTime}
-          onSelect={handleSelect}
-          initialFocus
-          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FormField
+          control={form.control}
+          name="datetime"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      disabled={disabled}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !field.value && "text-muted-foreground",
+                      )}
+                      type="button"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {field.value ? (
+                        format(field.value, "PPp", { locale: ptBR })
+                      ) : (
+                        <span>Selecione a data e hora</span>
+                      )}
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <div className="p-0">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={(date) => {
+                        if (date) {
+                          const newDate = new Date(date)
+                          if (field.value) {
+                            // Preserve the time when selecting a new date
+                            newDate.setHours(field.value.getHours())
+                            newDate.setMinutes(field.value.getMinutes())
+                          } else {
+                            // Default to current time if no time was previously selected
+                            const now = new Date()
+                            newDate.setHours(now.getHours())
+                            newDate.setMinutes(now.getMinutes())
+                          }
+                          field.onChange(newDate)
+                        } else {
+                          field.onChange(undefined)
+                        }
+                      }}
+                      initialFocus
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    />
+                    <div className="border-t border-border p-3">
+                      <TimePicker
+                        date={field.value}
+                        setDate={(newDate) => field.onChange(newDate)}
+                        disabled={!field.value}
+                      />
+                    </div>
+                    <div className="flex justify-end p-3 border-t border-border">
+                      <Button type="submit" onClick={() => form.handleSubmit(onSubmit)()}>
+                        Confirmar
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </FormItem>
+          )}
         />
-        <div className="border-t border-border p-3">
-          <TimePicker date={selectedDateTime} setDate={setSelectedDateTime} disabled={!selectedDateTime} />
-        </div>
-      </PopoverContent>
-    </Popover>
+      </form>
+    </Form>
   )
 }
 
