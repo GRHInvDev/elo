@@ -6,6 +6,8 @@ import { api } from "@/trpc/server"
 import { Badge } from "@/components/ui/badge"
 import { RentVehicleButton } from "@/components/rent-vehicle-button"
 import { Card } from "@/components/ui/card"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export default async function VehicleDetailsPage({
   params,
@@ -91,7 +93,7 @@ export default async function VehicleDetailsPage({
                     </div>
                   </div>
                   <div className="md:text-right">
-                    <p className="font-medium">{new Date(rent.startDate).toLocaleDateString()}</p>
+                    <p className="font-medium">{format(new Date(rent.startDate), "Pp", { locale: ptBR })}</p>
                     <p className="text-sm text-muted-foreground">{rent.finished ? "Finalizado" : "Em andamento"}</p>
                   </div>
                 </div>
