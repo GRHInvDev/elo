@@ -27,6 +27,8 @@ model User {
   vehicleRents  VehicleRent[]
   shopCart      ShopCart?
   sells         Sell[]
+  forms         Form[]
+  formResponses FormResponse[]
 
   @@map("users")
 }
@@ -224,4 +226,39 @@ model Sell {
   nfeId           Int?
 
   @@map("sells")
+}
+
+model Form {
+  id              String      @id @default(cuid())
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  title           String
+  description     String?
+  fields          Json[]      @db.Json   
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  responses       FormResponse[]
+
+  @@map("forms")
+}
+
+enum ResponseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model FormResponse {
+  id              String         @id  @default(cuid())
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  form            Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId          String
+  responses       Json[]         @db.Json 
+  status          ResponseStatus @default(NOT_STARTED)
+  statusComment   String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("forms_responses")
 }
