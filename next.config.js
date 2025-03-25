@@ -17,3 +17,8 @@ const config = {
 };
 
 export default config;
+
+/**
+ *  (`¬´)
+ * (|  |) @jdalmeida
+ */
