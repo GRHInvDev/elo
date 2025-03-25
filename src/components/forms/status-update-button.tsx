@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { sendEmail } from "@/lib/mail/email-utils"
+import { mockEmailSituacaoFormulario } from "@/lib/mail/html-mock"
 
 interface StatusUpdateButtonProps {
   responseId: string
@@ -29,12 +31,24 @@ export function StatusUpdateButton({ responseId, currentStatus, currentComment }
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState(currentStatus)
   const [comment, setComment] = useState(currentComment)
+  const user = api.user.me.useQuery()
+  const { data: form } = api.formResponse.getById.useQuery({responseId})
+
   const router = useRouter()
 
   const updateStatus = api.formResponse.updateStatus.useMutation({
-    onSuccess: () => {
+    onSuccess: async (d) => {
       toast.success("Status atualizado com sucesso")
       router.refresh()
+      if(form && user.data){
+        await sendEmail(form.form.user.email, `Resposta ao formulário "${form.form.title}"`, mockEmailSituacaoFormulario(
+          user?.data.firstName??'',
+          d.status,
+          form.id,
+          form.form.id,
+          form.form.title
+        ))
+      }
       setOpen(false)
     },
     onError: (error) => {

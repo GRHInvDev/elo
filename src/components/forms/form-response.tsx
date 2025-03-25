@@ -18,6 +18,8 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { sendEmail } from "@/lib/mail/email-utils"
+import { mockEmailRespostaFormulario } from "@/lib/mail/html-mock"
 
 interface FormResponseComponentProps {
   formId: string
@@ -27,7 +29,8 @@ interface FormResponseComponentProps {
 export function FormResponseComponent({ formId, fields }: FormResponseComponentProps) {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const router = useRouter()
-
+  const {data: form} = api.form.getById.useQuery({id: formId})
+  const user = api.user.me.useQuery()
   // Criar um schema Zod dinâmico baseado nos campos
   const schemaObj: Record<string, z.ZodTypeAny> = {}
   fields.forEach((field) => {
@@ -100,9 +103,16 @@ export function FormResponseComponent({ formId, fields }: FormResponseComponentP
   })
 
   const submitResponse = api.formResponse.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Resposta enviada com sucesso!")
       setIsSubmitted(true)
+      if(form && user.data){
+        await sendEmail(form.user?.email??'', `Resposta ao formulário "${form.title}"`, mockEmailRespostaFormulario(
+          form.user?.firstName??'',
+          formId,
+          form.title
+        ))
+      }
     },
     onError: (error) => {
       toast.error(`Erro ao enviar resposta: ${error.message}`)
@@ -126,6 +136,8 @@ export function FormResponseComponent({ formId, fields }: FormResponseComponentP
       formId,
       responses: [processedData],
     })
+
+
   }
 
   // Função para renderizar mensagens de erro

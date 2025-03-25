@@ -169,6 +169,7 @@ export const formResponseRouter = createTRPCRouter({
               description: true,
               fields: true,
               userId: true,
+              user: true
             },
           },
           user: {
