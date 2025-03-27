@@ -109,13 +109,23 @@ export const vehicleRentRouter = createTRPCRouter({
       where: {
         userId,
         finished: false,
+        AND: [
+          {
+            startDate: {
+              lte: new Date() 
+            },
+            endDate: {
+              gte: new Date()
+            }
+          },
+        ]
       },
     })
 
     if (activeRent) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "Você já possui um veículo alugado",
+        message: "Você já possui um veículo reservado",
       })
     }
 
@@ -131,10 +141,35 @@ export const vehicleRentRouter = createTRPCRouter({
       })
     }
 
-    if (!vehicle.availble) {
+    const activeCarRent = await ctx.db.vehicleRent.findFirst({
+      where: {
+        finished: false,
+        vehicleId: vehicle.id,
+        OR: [
+          {
+            startDate: {
+              lte: input.possibleEnd
+            },
+            endDate: {
+              gte: input.startDate
+            }
+          },
+          {
+            startDate: {
+              lte: input.startDate
+            },
+            endDate: {
+              gte: input.possibleEnd
+            }
+          }
+        ]
+      }
+    });
+    
+    if (activeCarRent){
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "Este veículo não está disponível para reserva",
+        message: "Este veículo não está disponível para reserva nesse período",
       })
     }
 
@@ -152,6 +187,7 @@ export const vehicleRentRouter = createTRPCRouter({
       const rent = await tx.vehicleRent.create({
         data: {
           userId,
+          ...input,
           vehicleId: input.vehicleId,
           initialKm: vehicle?.kilometers
         },
@@ -160,11 +196,13 @@ export const vehicleRentRouter = createTRPCRouter({
         },
       })
 
-      // Atualizar o status do veículo
-      await tx.vehicle.update({
-        where: { id: input.vehicleId },
-        data: { availble: false },
-      })
+      if (!input.startDate || input.startDate <= new Date()){
+        // Atualizar o status do veículo
+        await tx.vehicle.update({
+          where: { id: input.vehicleId },
+          data: { availble: false },
+        })
+      }
 
       return rent
     })
@@ -218,6 +256,7 @@ export const vehicleRentRouter = createTRPCRouter({
           endDate: new Date(),
           finished: true,
           endLocation: input.endLocation,
+          observation: input.observations
         },
         include: {
           vehicle: true,

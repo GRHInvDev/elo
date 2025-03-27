@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { MapPin, Car, AlertTriangle } from "lucide-react"
+import { MapPin, Car, AlertTriangle, LucideInfo, LucideGauge, LucideSparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +12,8 @@ import { api } from "@/trpc/react"
 import { isMinimumDistanceAway } from "@/lib/geoUtils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Textarea } from "./ui/textarea"
+import { Switch } from "./ui/switch"
 
 // Localização de referência (onde o carro deve ser devolvido)
 const REFERENCE_LOCATION = {
@@ -45,8 +49,12 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   const [locationError, setLocationError] = useState<string | null>(null)
   const [finalKilometers, setFinalKilometers] = useState<number>(currentKilometers)
   const [kilometersError, setKilometersError] = useState<string | null>(null)
-  const locationRequested = useRef(false)
   const [distanceError, setDistanceError] = useState<string | null>(null)
+  const [gasLevel, setGasLevel] = useState<"Reserva" | "1/4" | "1/2" | "3/4" | "Cheio">()
+  const [needCleaning, setNeedCleaning] = useState<boolean>()
+  const [considerations, setConsiderations] = useState<string>()
+  
+  const locationRequested = useRef(false)
 
   const finishRent = api.vehicleRent.finish.useMutation({
     onSuccess: () => {
@@ -198,6 +206,16 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
       return
     }
 
+    if(!gasLevel){
+      toast({
+        title: "Nível de combustível inválido",
+        variant: "destructive",
+        description: "É obrigatório informar o nível de gasolina.",
+      })
+      return
+    }
+
+
     setIsSubmitting(true)
 
     finishRent.mutate({
@@ -205,6 +223,11 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
       endLocation: {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
+      },
+      observations: {
+        gasLevel,
+        needCleaning: !!needCleaning,
+        considerations,
       },
       finalKm: finalKilometers,
     })
@@ -286,6 +309,49 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
               <p className="text-sm text-muted-foreground">
                 Quilometragem atual: {currentKilometers} km
               </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="finalKilometers">Nível de combustível</Label>
+              <div className="flex items-center gap-2">
+                <LucideGauge className="h-5 w-5 text-muted-foreground" />
+                <Select name="userId" defaultValue={"Reserva"} value={gasLevel} onValueChange={(v: "Reserva" | "1/4" | "1/2" | "3/4" | "Cheio") =>setGasLevel(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma opção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={"Reserva"}>
+                      Na Reserva
+                    </SelectItem>
+                    <SelectItem value={"1/4"}>
+                      Com 1/4 de tanque
+                    </SelectItem>
+                    <SelectItem value={"1/2"}>
+                      Com 1/2 de tanque
+                    </SelectItem>
+                    <SelectItem value={"3/4"}>
+                      Com 3/4 de tanque
+                    </SelectItem>
+                    <SelectItem value={"Cheio"}>
+                      Cheio
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Necessita de limpeza?</Label>
+              <div className="flex items-center gap-2">
+                <LucideSparkles className="h-5 w-5 text-muted-foreground" />
+                <Switch checked={needCleaning} onCheckedChange={(e)=>setNeedCleaning(e)}/>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="finalKilometers">Considerações</Label>
+              <div className="flex items-center gap-2">
+                <LucideInfo className="h-5 w-5 text-muted-foreground" />
+                <Textarea value={considerations} onChange={(e)=>setConsiderations(e.target.value)}/>
+              </div>
+              <p className="text-muted-foreground text-wrap">Diga se há algum problema com o veículo ou é necessário fazer algum serviço</p>
             </div>
           </div>
 
