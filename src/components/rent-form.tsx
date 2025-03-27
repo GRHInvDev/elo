@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { type Vehicle } from "@prisma/client"
+import { Input } from "./ui/input"
 
 interface RentFormProps {
   vehicle: Vehicle
@@ -26,6 +27,10 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isScheduled, setIsScheduled] = useState(false)
+  const [driver, setDriver] = useState<string>()
+  const [passangers, setPassangers] = useState<string>()
+  const [destiny, setDestiny] = useState<string>()
+  const [endDate, setEndDate] = useState<Date>()
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined)
 
   const createRent = api.vehicleRent.create.useMutation({
@@ -77,9 +82,43 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
       return
     }
 
+    if(!endDate || endDate <= new Date() || (scheduledDate && endDate <= scheduledDate)){
+      toast({
+        title: "Data inválida",
+        description: "A data de devolução deve ser posterior à data atual ou à data de agendamento.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
+    
+    if(!driver || driver.trim().length <= 2){
+      toast({
+        title: "Nome do motorista inválido",
+        description: "É necessário informar o motorista.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
+
+    if(!destiny || destiny.trim().length <= 2){
+      toast({
+        title: "Destino inválido",
+        description: "É necessário informar o destino.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
+
     createRent.mutate({
       vehicleId: vehicle.id,
-      dataInicial: isScheduled ? scheduledDate : undefined,
+      destiny: destiny,
+      driver: driver,
+      possibleEnd: endDate,
+      passangers: passangers,
+      startDate: isScheduled ? scheduledDate : undefined,
     })
   }
 
@@ -144,21 +183,39 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
             </div>
             <p className="text-sm text-muted-foreground">O veículo será reservado para a data e hora selecionadas.</p>
           </div>
-        ) : (
-          <div className="space-y-2">
+        ):(
+          <>
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span>Data de início: {new Date().toLocaleDateString()}</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span>Hora de início: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            <div className="flex items-center gap-2 text-sm mb-6">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span>Hora de início: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            </div>
+          </>
+        )}
+        <div className="space-y-2">
+            <div className="space-y-2">
+              <Label htmlFor="date-time">Data e hora de devolução</Label>
+              <DateTimePicker date={endDate} setDate={setEndDate} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-time">Motorista</Label>
+              <Input required value={driver} onChange={(e)=>setDriver(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-time">Passageiros</Label>
+              <Input value={passangers} onChange={(e)=>setPassangers(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-time">Destino</Label>
+              <Input required value={destiny} onChange={(e)=>setDestiny(e.target.value)} />
             </div>
             <p className="text-sm text-muted-foreground">
               Para devolver o veículo, acesse seu perfil e finalize a reserva.
             </p>
           </div>
-        )}
       </div>
 
       <div className="flex items-center justify-end gap-4">

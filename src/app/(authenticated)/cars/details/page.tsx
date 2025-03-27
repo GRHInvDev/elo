@@ -47,7 +47,6 @@ async function VehiclesList({
   enterprise?: "NA" | "Box" | "RHenz" | "Cristallux"
 }) {
   const vehicles = await api.vehicle.getAll({
-    availble: true,
     enterprise,
   })
 

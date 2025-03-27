@@ -2,7 +2,11 @@ import { z } from "zod"
 
 export const createVehicleRentSchema = z.object({
   vehicleId: z.string().cuid("ID do veículo inválido"),
-  dataInicial: z.date().optional()
+  startDate: z.date().optional(),
+  possibleEnd: z.date(),
+  driver: z.string(),
+  passangers: z.string().optional(),
+  destiny: z.string(),
 })
 
 export const updateVehicleRentSchema = z.object({
@@ -20,6 +24,11 @@ export const updateVehicleRentSchema = z.object({
 export const finishRentSchema = z.object({
   id: z.string().cuid("ID inválido"),
   finalKm: z.number(),
+  observations: z.object({
+    gasLevel: z.enum(["Reserva", "1/4","1/2", "3/4", "Cheio"]),
+    needCleaning: z.boolean(),
+    considerations: z.string().optional()
+  }),
   endLocation: z.object({
     latitude: z.number(),
     longitude: z.number(),
