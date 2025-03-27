@@ -9,6 +9,8 @@ import { ptBR } from "date-fns/locale"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { auth } from "@clerk/nextjs/server"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 export const metadata = {
   title: "Visualizar Formulário",
@@ -41,12 +43,14 @@ export default async function FormPage({ params }: FormPageProps) {
         </Link>
 
         <div className="flex md:items-center gap-y-4 justify-between mt-4 flex-col md:flex-row">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{form.title}</h1>
+          <div className="max-w-2/3 w-2/3">
+            <h1 className="text-3xl text-wrap font-bold tracking-tight">{form.title}</h1>
             <p className="text-muted-foreground mt-2">
               Criado {formatDistanceToNow(new Date(form.createdAt), { addSuffix: true, locale: ptBR })}
             </p>
-            {form.description && <p className="mt-4 text-muted-foreground">{form.description}</p>}
+            <div className="text-wrap">
+              {form.description && <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.description ?? "Sem descrição"}</ReactMarkdown>}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 ">

@@ -1,5 +1,5 @@
 import { api } from "@/trpc/server"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Eye, Pencil, FileText, PlusCircle } from "lucide-react"
 import Link from "next/link"
@@ -34,7 +34,7 @@ export async function FormsList() {
       {forms.map((form) => (
         <Card key={form.id} className="flex flex-col">
           <CardHeader>
-            <CardTitle className="line-clamp-1">{form.title}</CardTitle>
+            <h1 className="min-h-content text-lg text-wrap overflow-visible max-w-full font-bold">{form.title}</h1>
             <CardDescription>
               Criado {formatDistanceToNow(new Date(form.createdAt), { addSuffix: true, locale: ptBR })}
             </CardDescription>

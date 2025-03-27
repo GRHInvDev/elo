@@ -28,7 +28,7 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
   const updateOption = (index: number, key: "label" | "value", value: string) => {
     if (field.type === "combobox" && field.options) {
       const options = [...field.options]
-      options[index] = { value: options[index]?.value ?? "", label: options[index]?.label ?? "" ,  [key]: value ?? "" }
+      options[index] = { value: `${index+1} - ${options[index]?.label ?? ""}`, label: options[index]?.label ?? "" ,  [key]: value ?? "" }
       updateField({ options })
     }
   }
@@ -244,12 +244,6 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
                       value={option.label}
                       onChange={(e) => updateOption(index, "label", e.target.value)}
                       placeholder="Rótulo"
-                      className="flex-1"
-                    />
-                    <Input
-                      value={option.value}
-                      onChange={(e) => updateOption(index, "value", e.target.value)}
-                      placeholder="Valor"
                       className="flex-1"
                     />
                     <Button
