@@ -42,7 +42,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
     <div className={className} {...props}>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>Mapa de Salas</CardTitle>
+          <CardTitle className="text-md md:text-xl">Mapa de Salas</CardTitle>
           <Select value={selectedFloor.toString()} onValueChange={(value) => setSelectedFloor(Number(value))}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Selecione o andar" />
@@ -57,7 +57,7 @@ export function RoomMap({ className, ...props }: RoomMapProps) {
           </Select>
         </CardHeader>
         <CardContent>
-          <div className="relative w-full aspect-[16/9] border rounded-lg overflow-hidden">
+          <div className="relative w-full aspect-video border rounded-lg overflow-hidden">
             <TooltipProvider>
               <svg
                 width="100%"
