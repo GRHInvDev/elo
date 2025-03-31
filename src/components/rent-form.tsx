@@ -197,19 +197,19 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
         )}
         <div className="space-y-2">
             <div className="space-y-2">
-              <Label htmlFor="date-time">Data e hora de devolução</Label>
+              <Label htmlFor="date-time">Data e hora prevista para devolução</Label>
               <DateTimePicker date={endDate} setDate={setEndDate} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date-time">Motorista</Label>
+              <Label htmlFor="date-time">Quem vai estar dirigindo?</Label>
               <Input required value={driver} onChange={(e)=>setDriver(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date-time">Passageiros</Label>
+              <Label htmlFor="date-time">Haverão passageiros na viagem? Se sim, colocar todos os nomes.</Label>
               <Input value={passangers} onChange={(e)=>setPassangers(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date-time">Destino</Label>
+              <Label htmlFor="date-time">Qual é o destino previsto?</Label>
               <Input required value={destiny} onChange={(e)=>setDestiny(e.target.value)} />
             </div>
             <p className="text-sm text-muted-foreground">

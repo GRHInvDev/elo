@@ -240,7 +240,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Finalizar Reserva</DialogTitle>
             <DialogDescription>
