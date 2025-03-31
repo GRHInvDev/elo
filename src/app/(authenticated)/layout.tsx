@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server"
 
 import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
+import FloatingChatButton from "@/components/ai/floating-chat-button"
 
 export default async function AuthenticatedLayout({
   children,
@@ -27,6 +28,7 @@ export default async function AuthenticatedLayout({
         </div>
       </header>
       <main className="flex-1 mt-16">{children}</main>
+      <FloatingChatButton/>
     </div>
   )
 }
