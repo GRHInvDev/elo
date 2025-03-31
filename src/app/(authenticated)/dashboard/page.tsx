@@ -1,8 +1,11 @@
 import type { Metadata } from "next"
 
-import { DashboardShell } from "@/components/dashboard-shell"
 import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
+import { api } from "@/trpc/server"
+import { cn } from "@/lib/utils"
+import { LucidePlane } from "lucide-react"
+import Image from "next/image"
 
 export const metadata: Metadata = {
   title: "Dashboard | elo",
@@ -10,32 +13,39 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardPage() {
-
+  const birthdays = await api.birthday.listCurrentMonth();
+  const posts = []
 
   return (
-    <DashboardShell>
-      <div className="grid grid-cols-1 md:grid-cols-3">
-        <MainCarousel className="col-span-1 md:col-span-2" itens={[
-          {
-            imageRef: 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fc8.alamy.com%2Fcomp%2F2CA8TE1%2Fdesign-label-2CA8TE1.jpg&f=1&nofb=1&ipt=fc122be5b7acb593ce1a4c07149a912616e8d4af5515952924c6bd5de6c43726&ipo=images',
-            title: 'something'
-          },
-          {
-            imageRef: 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fc8.alamy.com%2Fcomp%2F2HD6CE3%2Fpresentation-templates-elements-template-design-for-print-banner-web-set-of-cover-header-brochure-2HD6CE3.jpg&f=1&nofb=1&ipt=e7f318f74d93debaa155704c1843c44f031c7fb48cc00f4c60f249b192caa80b&ipo=images',
-            title: '2'
-          },
-        ]}/>
-        <BirthdaysCarousel className="col-span-1 md:col-span-1" itens={[
-          {
-            imageRef: 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fc8.alamy.com%2Fcomp%2F2CA8TE1%2Fdesign-label-2CA8TE1.jpg&f=1&nofb=1&ipt=fc122be5b7acb593ce1a4c07149a912616e8d4af5515952924c6bd5de6c43726&ipo=images',
-            title: 'something'
-          },
-          {
-            imageRef: 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fc8.alamy.com%2Fcomp%2F2HD6CE3%2Fpresentation-templates-elements-template-design-for-print-banner-web-set-of-cover-header-brochure-2HD6CE3.jpg&f=1&nofb=1&ipt=e7f318f74d93debaa155704c1843c44f031c7fb48cc00f4c60f249b192caa80b&ipo=images',
-            title: '2'
-          },
-        ]}/>
+    <div>
+      <div className={cn("grid grid-cols-1 md:grid-cols-3", (birthdays?.length>0 || posts.length>0 ) && "md:grid-cols-1")}>
+        {
+          posts?.length > 0 &&
+          <MainCarousel className={cn("col-span-1 md:col-span-2", (birthdays?.length>0) && "md:col-span-1")} itens={posts}/>
+        }
+        {
+          birthdays?.length> 0 &&
+          <BirthdaysCarousel className="col-span-1" itens={birthdays?.map((b)=>({
+            imageRef: b.imageUrl,
+            title: b.Name,
+          }))}/>
+        }
       </div>
-    </DashboardShell>
+      <div>
+        <div className="ml-16 mt-16">
+          <div className="flex items-center gap-8">
+            <div className="p-2 bg-foreground size-28 flex items-center justify-center">
+              <LucidePlane className="text-background size-20 rotate-45"/>
+            </div>
+            <h1 className="text-4xl font-semibold">
+              OnBoarding
+            </h1>
+          </div>
+          <div>
+            <Image alt='' fill src={'/placeholder.svg'}/>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
