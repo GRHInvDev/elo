@@ -260,6 +260,7 @@ interface PostItemProps {
     title: string
     content: string
     authorId: string
+    imageUrl: string | null
     author: {
       firstName: string | null
       lastName: string | null
@@ -277,6 +278,7 @@ function PostItem({ post }: PostItemProps) {
   const { toast } = useToast()
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showCommentDialog, setShowCommentDialog] = useState(false)
+  const [showMore, setShowMore] = useState(false)
   const [newComment, setNewComment] = useState("")
   const { theme } = useTheme()
   const { data: userMe } = api.user.me.useQuery()
@@ -456,7 +458,24 @@ function PostItem({ post }: PostItemProps) {
       </div>
       <p className="text-xs text-muted-foreground">{format(post.createdAt, "PPp", { locale: ptBR })}</p>
       <h3 className="font-semibold">{post.title}</h3>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+      {
+        post.imageUrl &&
+        <div className="w-full relative aspect-square">
+          <Image src={post.imageUrl} fill alt={post.title} className="object-cover"/>
+        </div>
+      }
+      {
+        showMore ? 
+        <div>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+          <button className="font-bold" onClick={()=>setShowMore(false)}>Ler menos...</button>
+        </div>
+        :
+        <div>
+          <p className="line-clamp-3">{post.content}</p>
+          <button className="font-bold" onClick={()=>setShowMore(true)}>Ler mais...</button>
+        </div>
+      }
 
       {/* Reactions and Comments Section */}
       <div className="flex items-center justify-between mt-4 pt-2">
@@ -737,4 +756,3 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
     </Dialog>
   )
 }
-
