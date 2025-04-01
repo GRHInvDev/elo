@@ -17,7 +17,7 @@ export default function FloatingChatButton() {
       {isOpen && (
         <div className="absolute bottom-16 right-0 w-80 md:w-96 h-[500px] bg-muted rounded-lg shadow-lg overflow-hidden border flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="font-medium">INA</h3>
+            <h3 className="font-medium">Assistente RHenz</h3>
             <Button variant="ghost" size="icon" onClick={toggleChat} aria-label="Fechar chat">
               <X className="h-4 w-4" />
             </Button>
