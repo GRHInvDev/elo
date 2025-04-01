@@ -1,0 +1,79 @@
+"use client"
+
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
+import { cn } from "@/lib/utils"
+import Image from "next/image"
+import { useEffect, useState } from "react"
+
+interface BirthdayCarouselProps {
+  itens: {
+    imageRef: string
+    title: string
+  }[],
+  className?: string
+}
+
+export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>()
+  const [current, setCurrent] = useState(0)
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (!carouselApi) {
+      return
+    }
+
+    setCount(carouselApi.scrollSnapList().length)
+    setCurrent(carouselApi.selectedScrollSnap())
+
+    carouselApi.on("select", () => {
+      setCurrent(carouselApi.selectedScrollSnap())
+    })
+  }, [carouselApi])
+
+  return (
+    <div className={cn(className)}>
+      <Carousel
+        className="w-full"
+        setApi={setCarouselApi}
+        opts={{
+          loop: true,
+          align: "center",
+        }}
+      >
+        <CarouselContent>
+          {itens.map((item, index) => (
+            <CarouselItem key={index} className="md:aspect-square md:h-96 aspect-video">
+              <div className="relative w-full h-full">
+                <Image
+                  alt={item.title}
+                  src={item.imageRef || "/placeholder.svg"}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+
+      {/* Indicators */}
+      {count > 0 && (
+        <div className="flex justify-center gap-2 relative -translate-y-8">
+          <div className="rounded-full bg-muted/50 flex items-center gap-2 p-1">
+            {Array.from({ length: count }).map((_, index) => (
+              <button
+                key={index}
+                className={`size-2 md:size-3 rounded-full transition-colors ${current === index ? "bg-foreground" : "bg-muted-foreground"}`}
+                onClick={() => carouselApi?.scrollTo(index)}
+                aria-label={`Ir para slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+

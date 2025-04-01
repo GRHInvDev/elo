@@ -22,11 +22,6 @@ export default async function RentVehiclePage({
     notFound()
   }
 
-  // Verificar se o veículo está disponível
-  if (!vehicle.availble) {
-    redirect(`/vehicles/${id}?error=not_available`)
-  }
-
   // Verificar se o usuário já tem um reserva ativo
   const activeRent = await api.vehicleRent.getMyActiveRent()
 

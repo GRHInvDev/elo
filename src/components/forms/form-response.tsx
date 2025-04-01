@@ -20,6 +20,8 @@ import { CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailRespostaFormulario } from "@/lib/mail/html-mock"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface FormResponseComponentProps {
   formId: string
@@ -277,7 +279,7 @@ export function FormResponseComponent({ formId, fields }: FormResponseComponentP
             />
           )}
 
-          {field.helpText && <p className="text-sm text-muted-foreground">{field.helpText}</p>}
+          {field.helpText && <ReactMarkdown remarkPlugins={[remarkGfm]}>{field.helpText}</ReactMarkdown>}
 
           {renderError(field.name)}
         </div>

@@ -6,6 +6,8 @@ import { notFound } from "next/navigation"
 import { FormResponseComponent } from "@/components/forms/form-response"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 export const metadata = {
   title: "Responder Formulário",
@@ -36,7 +38,7 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
           </Button>
         </Link>
         <h1 className="text-3xl font-bold tracking-tight mt-4">{form.title}</h1>
-        {form.description && <p className="text-muted-foreground mt-2">{form.description}</p>}
+        {form.description && <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.description}</ReactMarkdown>}
       </div>
 
       <div className="bg-card p-6 rounded-lg border">

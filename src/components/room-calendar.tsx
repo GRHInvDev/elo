@@ -71,7 +71,7 @@ export function RoomCalendar({ className }: { className?: string }) {
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center flex-col md:flex-row gap-y-4 justify-between">
           <CardTitle>Calendário de Reservas</CardTitle>
           <Popover>
             <PopoverTrigger asChild>
