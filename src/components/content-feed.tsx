@@ -45,12 +45,15 @@ import Image from "next/image"
 import type { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "next-themes"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
+import { UPLTButton } from "./ui/uplt-button"
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })
 
 export function ContentFeed({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
+  const [fileUrl, setFileUrl] = useState<string | undefined>(undefined)
+  const [loading, setLoading] = useState(false)
   const { toast } = useToast()
   const utils = api.useUtils()
 
@@ -76,6 +79,15 @@ export function ContentFeed({ className }: { className?: string }) {
     },
   })
 
+  const handleImageUrlGenerated = (url: string) => {
+    setFileUrl(url)
+    toast({
+      title: "Imagem carregada",
+      description: "A imagem foi carregada com sucesso.",
+    })
+    setLoading(false)
+  }
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
@@ -84,6 +96,7 @@ export function ContentFeed({ className }: { className?: string }) {
       title: formData.get("title") as string,
       content: formData.get("content") as string,
       published: true,
+      imageUrl: fileUrl,
     })
   }
 
@@ -112,12 +125,32 @@ export function ContentFeed({ className }: { className?: string }) {
                       <Input id="title" name="title" placeholder="Digite o título do post" required />
                     </div>
                     <div className="grid gap-2">
+                      <Label>Imagem</Label>
+                      <UPLTButton
+                        onImageUrlGenerated={handleImageUrlGenerated}
+                        onUploadBegin={()=>{
+                          setLoading(true)
+                          toast({
+                            title: "Anexando imagem",
+                            description: "Estamos anexando sua imagem.",
+                          })
+                        }}
+                        onUploadError={(error: Error) => {
+                          toast({
+                            title: "Erro",
+                            description: error.message,
+                            variant: "destructive",
+                          })
+                        }}
+                      />
+                    </div>
+                    <div className="grid gap-2">
                       <Label htmlFor="content">Conteúdo</Label>
                       <Textarea id="content" name="content" placeholder="Digite o conteúdo do post" required />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit" disabled={createPost.isPending}>
+                    <Button type="submit" disabled={createPost.isPending || loading}>
                       {createPost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Publicar
                     </Button>

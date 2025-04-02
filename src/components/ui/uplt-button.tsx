@@ -1,3 +1,4 @@
+"use client"
 import { useDropzone } from "@uploadthing/react";
 import {
   generateClientDropzoneAccept,
@@ -11,6 +12,7 @@ import { type UploadThingError } from "uploadthing/server";
 import { Button } from "./button";
 import { LucideImagePlus, LucideLoader2, LucideTrash2, LucideUpload } from 'lucide-react';
 import { type MaybePromise } from "@trpc/server/unstable-core-do-not-import";
+import { deleteFiles } from "@/server/upltActions";
 
 type JsonValue = string | number | boolean | null | undefined;
 type JsonObject = {
@@ -34,12 +36,13 @@ export function UPLTButton({
     onImageUrlGenerated
 }: UPLTButtonProps) {
   const [files, setFiles] = useState<File[]>([]);
-  
+  const [fileUrl, setFileUrl] = useState("")
   const { startUpload, routeConfig, isUploading } = useUploadThing("imageUploader", {
     onClientUploadComplete: (res) => {
       // Quando o upload for concluído, extrair a URL e passar para o componente pai
       if (res && res.length > 0 && res[0]?.ufsUrl) {
         onImageUrlGenerated(res[0].ufsUrl);
+        setFileUrl(res[0].ufsUrl)
       }
       // Ainda chama o callback original se existir
       onClientUploadComplete?.(res);
@@ -60,6 +63,12 @@ export function UPLTButton({
     ),
   });
 
+  const handleRemove = async () => {
+    if (fileUrl.trim() !== ""){
+      await deleteFiles(fileUrl)
+    }
+    setFiles([])
+  }
   return (
     <div {...getRootProps()}>
       <input {...getInputProps()} />
@@ -67,7 +76,7 @@ export function UPLTButton({
         { files.length > 0 ? isUploading? <LucideLoader2 className="animate-spin"/>: <>Arquivo carregado <LucideImagePlus/></> : <>Arraste ou clique para adicionar a imagem <LucideUpload/></> }
       </div>
       {files.length > 0 &&
-        <Button variant='destructive' className="w-full mt-2" size='sm' onClick={() => setFiles([])}>
+        <Button variant='destructive' className="w-full mt-2" size='sm' onClick={handleRemove}>
             Remover arquivos <LucideTrash2/>
         </Button>
       }

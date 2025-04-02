@@ -1,10 +1,12 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { utapi } from "@/server/uploadthing"
 
 const createPostSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   content: z.string().min(1, "Conteúdo é obrigatório"),
+  imageUrl: z.string().optional(),
   published: z.boolean().default(false),
 })
 
@@ -51,6 +53,10 @@ export const postRouter = createTRPCRouter({
         code: "FORBIDDEN",
         message: "Você não tem permissão para deletar este post",
       })
+    }
+
+    if (post.imageUrl){
+      await utapi.deleteFiles(post.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
     }
 
     return ctx.db.post.delete({
