@@ -9,7 +9,7 @@ import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import NewsDisplay from "@/components/dashboard/news-displ"
 import { routeItems } from "@/const/routes"
-
+import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 
 export const metadata: Metadata = {
   title: "Dashboard | elo",
@@ -150,10 +150,29 @@ export default async function DashboardPage() {
         <NewsDisplay/>
       </div>
       <div className="flex p-1 flex-col mt-8 h-36 bg-muted">
-        <div className="flex-1">
-          
+        <div className="flex-1 flex justify-center md:justify-start">
+          <div className="p-4 md:ml-8 space-y-2">
+            <div className="flex items-center gap-x-2">
+              <FaInstagram className="mr-2"/>
+              <Link href={'https://instagram.com/boxdistribuidor'}>@boxdistribuidor</Link>
+              {' | '}
+              <Link href={'https://instagram.com/cristalluxled'}>@cristallux</Link>
+            </div>
+            <div className="flex items-center gap-x-2">
+              <FaFacebook className="mr-2"/>
+              <Link href={'https://facebook.com/boxdistribuidor'}>@boxdistribuidor</Link>
+              {' | '}
+              <Link href={'https://facebook.com/cristallux'}>@cristallux</Link>
+            </div>
+            <div className="flex items-center gap-x-2">
+              <FaYoutube className="mr-2"/>
+              <Link href={'https://youtube.com/@boxdistribuidor'}>@boxdistribuidor</Link>
+              {' | '}
+              <Link href={'https://youtube.com/@cristallux'}>@cristallux</Link>
+            </div>
+          </div>
         </div>
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-8">
               Allpines &copy; elo
         </div>
       </div>
