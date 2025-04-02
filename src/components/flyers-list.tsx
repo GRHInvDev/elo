@@ -234,6 +234,9 @@ function UpdateFlyerDialog({
             <div className="grid gap-2">
               <Label htmlFor="image">imagem</Label>
               <UPLTButton
+                onImageUrlGenerated={(ufsUrl)=>{
+                  setFileUrl(ufsUrl)
+                }}
                 sendRef={sendRef}
                 onClientUploadComplete={(res) => {
                   setFileUrl(res.at(0)?.ufsUrl ?? "")
