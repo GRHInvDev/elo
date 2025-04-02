@@ -30,7 +30,7 @@ export default function RootLayout({
           {/* <head>
             <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
           </head> */}
-          <body className={cn("min-h-screen bg-zinc-100 antialiased", inter.className)}>
+          <body className={cn("min-h-screen bg-zinc-100 dark:bg-background antialiased", inter.className)}>
               <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
                 <Analytics/>
                 <SpeedInsights/>
