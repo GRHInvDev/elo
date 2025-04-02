@@ -2,7 +2,6 @@
 
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
 import { useEffect, useState } from "react"
 
 interface MainCarouselProps {
@@ -44,15 +43,11 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
       >
         <CarouselContent className="p-4">
           {itens.map((item, index) => (
-            <CarouselItem key={index} className="w-full h-96 p-4 md:basis-1/2">
+            <CarouselItem key={index} className="w-full h-96 p-4 aspect-video md:basis-1/2">
               <div className="relative w-full h-full">
-                <Image
-                  alt={item.title}
-                  src={item.imageRef || "/placeholder.svg"}
-                  fill
-                  className="object-cover rounded-lg aspect-video"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
+                <iframe src={item.imageRef} title={item.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" className="size-full rounded-lg aspect-video" onPlay={async (e)=>{
+                  await e.currentTarget.requestFullscreen()
+                }} allowFullScreen></iframe>
               </div>
             </CarouselItem>
           ))}
