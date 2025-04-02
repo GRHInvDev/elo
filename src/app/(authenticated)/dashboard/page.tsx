@@ -4,7 +4,7 @@ import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
 import { api } from "@/trpc/server"
 import { cn } from "@/lib/utils"
-import { LinkIcon, LucideArrowRight, LucidePlane, LucidePlay } from "lucide-react"
+import { LinkIcon, LucideArrowRight, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
 import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import NewsDisplay from "@/components/dashboard/news-displ"
@@ -53,6 +53,10 @@ export default async function DashboardPage() {
      imageRef: 'https://www.youtube.com/embed/AIlQ-EM35UQ?si=RomGdNhQLn6CuzCw',
      title: 'Institucional Cristallux',
     },
+    // {
+    //  imageRef: 'https://www.instagram.com/62fcede2-e9c5-477f-821d-17cc5f83040d',
+    //  title: 'Institucional Box',
+    // },
   ]
 
   return (
@@ -144,7 +148,8 @@ export default async function DashboardPage() {
         </div>
       </div>
       <div className="place-self-center w-full max-w-6xl mt-4 md:px-4">
-        <h1 className="text-4xl mb-6 ml-6 font-semibold">
+        <h1 className="flex items-center gap-x-2 text-4xl mb-6 ml-6 font-semibold">
+          <LucideNewspaper/>
           News
         </h1>
         <NewsDisplay/>

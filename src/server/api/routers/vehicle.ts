@@ -37,7 +37,10 @@ export const vehicleRouter = createTRPCRouter({
       }
 
       return {
-        items: vehicles,
+        items: vehicles.map((v)=>({
+          ...v,
+          kilometers: parseInt(v.kilometers.toString())
+        })),
         nextCursor,
       }
     }),

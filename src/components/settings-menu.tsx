@@ -1,6 +1,6 @@
 "use client"
 
-import { Moon, Sun, LucideComputer, Cog } from "lucide-react"
+import { Moon, Sun, LucideComputer, Cog, LucideSunMoon } from "lucide-react"
 import { useTheme } from "next-themes"
 import {
   DropdownMenu,
@@ -11,16 +11,24 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 
-export function SettingsMenu() {
+export function SettingsMenu({size}:{size?: "small"}) {
   const { setTheme, theme } = useTheme()
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="justify-start text-muted-foreground">
-          <Cog className="size-7" />
-          <span>Configurações</span>
-        </Button>
+        {
+          size==="small" ? (
+            <Button variant="ghost" size="icon">
+              <LucideSunMoon/>
+            </Button>
+          ) :(
+          <Button variant="ghost" className="justify-start text-muted-foreground">
+            <Cog className="size-7" />
+            <span>Configurações</span>
+          </Button>
+          )
+        }
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center"  className="sm:max-w-sm w-[220px] sm:w-[280px]">
         <DropdownMenuLabel>Aparência</DropdownMenuLabel>
