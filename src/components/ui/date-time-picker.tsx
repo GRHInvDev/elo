@@ -20,21 +20,22 @@ interface DateTimePickerProps {
 }
 
 export function DateTimePicker({ date, setDate, disabled }: DateTimePickerProps) {
-  // Use React Hook Form to manage form state
+  // Adicionar estado para controlar a abertura do popover
+  const [isOpen, setIsOpen] = React.useState(false)
+
   const form = useForm({
     defaultValues: {
       datetime: date,
     },
   })
 
-  // Update form value when date prop changes
   React.useEffect(() => {
     form.reset({ datetime: date })
   }, [date, form])
 
-  // Handle form submission
   function onSubmit(values: { datetime: Date | undefined }) {
     setDate(values.datetime)
+    setIsOpen(false)
   }
 
   return (
@@ -45,7 +46,7 @@ export function DateTimePicker({ date, setDate, disabled }: DateTimePickerProps)
           name="datetime"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <Popover>
+              <Popover open={isOpen} onOpenChange={setIsOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
@@ -100,7 +101,12 @@ export function DateTimePicker({ date, setDate, disabled }: DateTimePickerProps)
                       />
                     </div>
                     <div className="flex justify-end p-3 border-t border-border">
-                      <Button type="submit" onClick={() => form.handleSubmit(onSubmit)()}>
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          await form.handleSubmit(onSubmit)()
+                        }}
+                      >
                         Confirmar
                       </Button>
                     </div>

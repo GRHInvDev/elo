@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server"
 
 import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
+import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { routeItems } from "@/const/routes"
 import Link from "next/link"
 
@@ -42,6 +43,7 @@ export default async function AuthenticatedLayout({
         </div>
       </header>
       <main className="flex-1 md:mt-32 mt-16">{children}</main>
+      <FloatingChatButton/>
     </div>
   )
 }
