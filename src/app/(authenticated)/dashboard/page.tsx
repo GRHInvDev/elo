@@ -154,21 +154,21 @@ export default async function DashboardPage() {
           <div className="p-4 md:ml-8 space-y-2">
             <div className="flex items-center gap-x-2">
               <FaInstagram className="mr-2"/>
-              <Link href={'https://instagram.com/boxdistribuidor'}>@boxdistribuidor</Link>
+              <Link href={'https://instagram.com/box.distribuidor'}>@box.distribuidor</Link>
               {' | '}
-              <Link href={'https://instagram.com/cristalluxled'}>@cristallux</Link>
+              <Link href={'https://instagram.com/cristalluxled'}>@cristalluxled</Link>
             </div>
             <div className="flex items-center gap-x-2">
               <FaFacebook className="mr-2"/>
-              <Link href={'https://facebook.com/boxdistribuidor'}>@boxdistribuidor</Link>
+              <Link href={'https://facebook.com/fiosecia.boxdistribuidor'}>@fiosecia.boxdistribuidor</Link>
               {' | '}
-              <Link href={'https://facebook.com/cristallux'}>@cristallux</Link>
+              <Link href={'https://facebook.com/cristalluxled'}>@cristalluxled</Link>
             </div>
             <div className="flex items-center gap-x-2">
               <FaYoutube className="mr-2"/>
               <Link href={'https://youtube.com/@boxdistribuidor'}>@boxdistribuidor</Link>
               {' | '}
-              <Link href={'https://youtube.com/@cristallux'}>@cristallux</Link>
+              <Link href={'https://youtube.com/@cristallux'}>@cristalluxled</Link>
             </div>
           </div>
         </div>
