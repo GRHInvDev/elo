@@ -2,10 +2,9 @@
 
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
 import { useEffect, useState } from "react"
 
-interface BirthdayCarouselProps {
+interface MainCarouselProps {
   itens: {
     imageRef: string
     title: string
@@ -13,7 +12,7 @@ interface BirthdayCarouselProps {
   className?: string
 }
 
-export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
+export function VideosCarousel({ itens, className }: MainCarouselProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
@@ -39,18 +38,16 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
         opts={{
           loop: true,
           align: "center",
+          inViewThreshold: 1
         }}
       >
-        <CarouselContent>
+        <CarouselContent className="p-4">
           {itens.map((item, index) => (
-            <CarouselItem key={index} className="md:aspect-square md:h-96 aspect-video">
+            <CarouselItem key={index} className="w-full h-96 p-4 aspect-video md:basis-1/2">
               <div className="relative w-full h-full">
-                <Image
-                  alt={item.title}
-                  src={item.imageRef || "/placeholder.svg"}
-                  fill
-                  className="object-cover"
-                />
+                <iframe src={item.imageRef} title={item.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" className="size-full rounded-lg aspect-video" onPlay={async (e)=>{
+                  await e.currentTarget.requestFullscreen()
+                }} allowFullScreen></iframe>
               </div>
             </CarouselItem>
           ))}
@@ -59,7 +56,7 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
 
       {/* Indicators */}
       {count > 0 && (
-        <div className="flex justify-center gap-2 relative -translate-y-8">
+        <div className="md:hidden flex justify-center gap-2 relative -translate-y-8">
           <div className="rounded-full bg-muted/50 flex items-center gap-2 p-1">
             {Array.from({ length: count }).map((_, index) => (
               <button

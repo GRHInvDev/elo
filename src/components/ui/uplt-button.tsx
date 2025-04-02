@@ -9,7 +9,7 @@ import { useCallback, useState } from "react";
 import { type ClientUploadedFileData } from "uploadthing/types";
 import { type UploadThingError } from "uploadthing/server";
 import { Button } from "./button";
-import { LucideImagePlus, LucideLoader2, LucideTrash2, LucideUpload } from "lucide-react";
+import { LucideImagePlus, LucideLoader2, LucideTrash2, LucideUpload } from 'lucide-react';
 import { type MaybePromise } from "@trpc/server/unstable-core-do-not-import";
 
 type JsonValue = string | number | boolean | null | undefined;
@@ -23,25 +23,35 @@ interface UPLTButtonProps {
     onClientUploadComplete?: (res: ClientUploadedFileData<unknown>[]) => void,
     onUploadError?: (e: UploadThingError<Json>) => MaybePromise<void>,
     onUploadBegin?: (filename: string) => void, 
-    sendRef?: React.MutableRefObject<(()=>Promise<void>) | undefined>
+    sendRef?: React.MutableRefObject<(()=>Promise<void>) | undefined>,
+    onImageUrlGenerated: (url: string) => void // Nova prop para receber a URL da imagem
 }
 
 export function UPLTButton({
     onClientUploadComplete,
     onUploadBegin,
     onUploadError,
-    sendRef
-}:UPLTButtonProps) {
+    onImageUrlGenerated
+}: UPLTButtonProps) {
   const [files, setFiles] = useState<File[]>([]);
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles(acceptedFiles);
-  }, []);
-
+  
   const { startUpload, routeConfig, isUploading } = useUploadThing("imageUploader", {
-    onClientUploadComplete,
+    onClientUploadComplete: (res) => {
+      // Quando o upload for concluído, extrair a URL e passar para o componente pai
+      if (res && res.length > 0 && res[0]?.ufsUrl) {
+        onImageUrlGenerated(res[0].ufsUrl);
+      }
+      // Ainda chama o callback original se existir
+      onClientUploadComplete?.(res);
+    },
     onUploadError,
     onUploadBegin,
   });
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles(acceptedFiles);
+    void startUpload(acceptedFiles)
+  }, [startUpload]);
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -49,13 +59,6 @@ export function UPLTButton({
       generatePermittedFileTypes(routeConfig).fileTypes,
     ),
   });
-
-  if(sendRef) sendRef.current = async () => {
-    await startUpload(files)
-    while (isUploading) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  };
 
   return (
     <div {...getRootProps()}>
