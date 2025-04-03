@@ -7,11 +7,20 @@ import { Car, LucideInfo } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { type Vehicle } from "@prisma/client"
+import { type Enterprise } from "@prisma/client"
 import { cn } from "@/lib/utils"
 
+interface NVehicleType {
+  id: string;
+  model: string;
+  plate: string;
+  imageUrl: string;
+  enterprise: Enterprise;
+  kilometers: number; // Keep as number
+  availble: boolean;
+}
 
-export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
+export function VehicleCard({ vehicle }: { vehicle: NVehicleType }) {
   const router = useRouter()
 
   const handleRentClick = () => {
