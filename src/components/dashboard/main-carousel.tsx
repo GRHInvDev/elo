@@ -3,6 +3,7 @@
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import Link from "next/link"
 import { useEffect, useState } from "react"
 
 interface MainCarouselProps {
@@ -42,6 +43,13 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
         }}
       >
         <CarouselContent>
+          <CarouselItem className="object-contain w-full h-96 aspect-video">
+            <div className="size-full">
+              <Link className="relative size-full flex items-center" href="https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5">
+                <Image className="object-cover" fill src="/banners/banner box wide.png" alt="box" sizes="(max-width: 1920px) 100vw, 256px"/>
+              </Link>
+            </div>
+          </CarouselItem>
           {itens.map((item, index) => (
             <CarouselItem key={index} className="w-full h-96">
               <div className="relative w-full h-full">

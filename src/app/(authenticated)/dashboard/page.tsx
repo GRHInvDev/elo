@@ -4,12 +4,13 @@ import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
 import { api } from "@/trpc/server"
 import { cn } from "@/lib/utils"
-import { LinkIcon, LucideArrowRight, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
+import { LinkIcon, LucideGraduationCap, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
 import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import NewsDisplay from "@/components/dashboard/news-displ"
 import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
+import Image from "next/image"
 
 export const metadata: Metadata = {
   title: "Dashboard | elo",
@@ -31,10 +32,10 @@ export default async function DashboardPage() {
      imageRef: '/banners/Banners-intranet-2.png',
      title: 'Banners-intranet-2',
     },
-    {
-     imageRef: '/banners/Banners-intranet-3.png',
-     title: 'Banners-intranet-3',
-    },
+    // {
+    //  imageRef: '/banners/Banners-intranet-3.png',
+    //  title: 'Banners-intranet-3',
+    // },
     {
      imageRef: '/banners/Banners-intranet-4.png',
      title: 'Banners-intranet-4',
@@ -102,24 +103,24 @@ export default async function DashboardPage() {
                 Links
               </div>
               <div className="flex flex-col gap-y-4 mt-4">
-                <Link href={'https://umentor.com.br'}>
-                  <LucideArrowRight className="mr-2 size-4 inline-block"/>
+                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                  <Image src="/umentor.jpg" height={40} width={40} className="rounded-md mr-2" alt="umentor"/>
                   Umentor 
                 </Link>
-                <Link href={'https://udemy.com'}>
-                  <LucideArrowRight className="mr-2 size-4 inline-block"/>
+                <Link href={'https://udemy.com'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                  <Image src="/udemy.jpg" height={40} width={40} className="rounded-md mr-2" alt="udemy"/>
                   Udemy 
                 </Link>
-                <Link href={'https://cristaluni.com.br'}>
-                  <LucideArrowRight className="mr-2 size-4 inline-block"/>
+                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                  <LucideGraduationCap className="size-10 mr-2"/>
                   CristalUni 
                 </Link>
-                <Link href={'https://boxdistribuidor.com.br'}>
-                  <LucideArrowRight className="mr-2 size-4 inline-block"/>
+                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                  <Image src="/LOGO BOX.png" height={40} width={40} className="rounded-md mr-2" alt="Site Box"/>
                   Site Box 
                 </Link>
-                <Link href={'https://cristallux.com.br'}>
-                  <LucideArrowRight className="mr-2 size-4 inline-block"/>
+                <Link href={'https://cristallux.com.br'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                  <Image src="/icon_cristal.svg" height={40} width={40} className="rounded-md mr-2" alt="Cristaluni"/>
                   Site Cristallux 
                 </Link>
               </div>

@@ -2,6 +2,8 @@
 
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
+import Link from "next/link"
 import { useEffect, useState } from "react"
 
 interface MainCarouselProps {
@@ -42,15 +44,22 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
         }}
       >
         <CarouselContent className="p-4">
-          {itens.map((item, index) => (
-            <CarouselItem key={index} className="w-full h-96 p-4 aspect-video md:basis-1/2">
+          {/* {itens.map((item, index) => ( */}
+            <CarouselItem /*key={index}*/ className="w-full h-96 p-4 aspect-video md:basis-1/2">
               <div className="relative w-full h-full">
-                <iframe src={item.imageRef} title={item.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" className="size-full rounded-lg aspect-video" onPlay={async (e)=>{
+                <iframe src={itens.at(0)?.imageRef} title={itens.at(0)?.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" className="size-full rounded-lg aspect-video" onPlay={async (e)=>{
                   await e.currentTarget.requestFullscreen()
                 }} allowFullScreen></iframe>
               </div>
             </CarouselItem>
-          ))}
+          {/* ))} */}
+          <CarouselItem className="object-contain w-full h-96 p-4 aspect-video md:basis-1/2">
+            <div className="size-full">
+              <Link className="rounded-md relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
+                <Image className="object-cover rounded-md" fill src="/banners/Banners-intranet-3.png" alt="box"/>
+              </Link>
+            </div>
+          </CarouselItem>
         </CarouselContent>
       </Carousel>
 
