@@ -74,7 +74,7 @@ export default async function DashboardPage() {
             title: b.name
           }))}/>
         }
-        <div className="grid grid-cols-1 md:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-3">
           {
             videos.length> 0 &&
             <VideosCarousel className="col-span-1 md:col-span-2" itens={videos}/>
