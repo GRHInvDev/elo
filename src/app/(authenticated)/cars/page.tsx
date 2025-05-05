@@ -2,13 +2,14 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Car, Calendar } from "lucide-react"
+import { Car, Calendar, LucideFileVideo } from "lucide-react"
 import { api } from "@/trpc/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { currentUser } from "@clerk/nextjs/server"
 import { FinishRentButton } from "@/components/finish-rent-button"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 export const metadata: Metadata = {
   title: "Dashboard | Intranet",
@@ -25,10 +26,29 @@ export default async function DashboardPage() {
   const activeRent = await api.vehicleRent.getMyActiveRent()
 
   return (
-    <div className="container py-8">
-      <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">Reserva de Veículos</h1>
-        <p className="text-muted-foreground">Gerencie suas reservas de veículos</p>
+    <div className="place-self-center container py-8">
+      <div className="mb-8 flex justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold">Reserva de Veículos</h1>
+          <p className="text-muted-foreground">Gerencie suas reservas de veículos</p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              Tutorial <LucideFileVideo className="size-4"/>
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                Tutorial: Reserva de carros
+              </DialogTitle>
+            </DialogHeader>
+            <DialogFooter>
+              <iframe className="w-full aspect-video" src="https://www.youtube.com/embed/oNtTySjnJSw?si=M8ZcgXk1ox0vpYMd" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {activeRent ? (
