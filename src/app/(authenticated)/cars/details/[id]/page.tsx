@@ -5,7 +5,7 @@ import { Car, Calendar, ArrowLeft, MapPin, Users, Clock, Fuel, Sparkles, AlertTr
 import { api } from "@/trpc/server"
 import { Badge } from "@/components/ui/badge"
 import { RentVehicleButton } from "@/components/rent-vehicle-button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -102,11 +102,11 @@ export default async function VehicleDetailsPage({
           <h2 className="text-2xl font-bold mb-6">Histórico de reservas</h2>
           <div className="space-y-4">
             {vehicle.rents.map((rent) => {
-              const observation: {
+              const observation = rent.observation ? JSON.parse(JSON.stringify(rent.observation)) as {
                 gasLevel: "Reserva" | "1/4" |"1/2" | "3/4" | "Cheio",
                 needCleaning: boolean,
                 considerations?: string
-              } = rent.observation ? JSON.parse(JSON.stringify(rent.observation)) : null
+              } : null
 
               return (
                 <Card key={rent.id} className="overflow-hidden">

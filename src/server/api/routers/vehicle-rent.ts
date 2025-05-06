@@ -4,7 +4,7 @@ import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema } from "@/schemas/vehicle-rent.schema"
 import { sendEmail } from "@/lib/mail/email-utils"
-import { mockEmailReservaCarro, mockEmailRespostaFormulario } from "@/lib/mail/html-mock"
+import { mockEmailReservaCarro } from "@/lib/mail/html-mock"
 
 export const vehicleRentRouter = createTRPCRouter({
   getAll: protectedProcedure

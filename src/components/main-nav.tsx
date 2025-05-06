@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { SettingsMenu } from "./settings-menu"
 import { Separator } from "./ui/separator"
 import { routeItems } from "@/const/routes"
+import { DialogTitle } from "./ui/dialog"
 
 export function MainNav() {
   const pathname = usePathname()
@@ -31,6 +32,7 @@ export function MainNav() {
       <div className="flex items-center gap-2">
         {/* Mobile navigation */}
         <Sheet open={isOpen} onOpenChange={setIsOpen} >
+          <DialogTitle className="hidden"/>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 p-0 md:hidden">
               <Menu className="h-5 w-5" />

@@ -1,5 +1,4 @@
-import type { Metadata } from "next"
-
+"use server"
 import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
 import { api } from "@/trpc/server"
@@ -12,11 +11,6 @@ import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
 
-export const metadata: Metadata = {
-  title: "Dashboard | elo",
-  description: "Dashboard principal da elo",
-}
-
 export default async function DashboardPage() {
   const birthdays = await api.birthday.listCurrentMonth();
 
@@ -25,24 +19,24 @@ export default async function DashboardPage() {
     title: string,
   }[] = [
     {
-     imageRef: '/banners/Banners-intranet-1.png',
-     title: 'Banners-intranet-1',
+      imageRef: '/banners/Banners-intranet-1.png',
+      title: 'Banners-intranet-1',
     },
     {
-     imageRef: '/banners/Banners-intranet-2.png',
-     title: 'Banners-intranet-2',
+      imageRef: '/banners/Banners-intranet-2.png',
+      title: 'Banners-intranet-2',
     },
     // {
     //  imageRef: '/banners/Banners-intranet-3.png',
     //  title: 'Banners-intranet-3',
     // },
     {
-     imageRef: '/banners/Banners-intranet-4.png',
-     title: 'Banners-intranet-4',
+      imageRef: '/banners/Banners-intranet-4.png',
+      title: 'Banners-intranet-4',
     },
     {
-     imageRef: '/banners/Banners-intranet-5.jpg',
-     title: 'Banners-intranet-5',
+      imageRef: '/banners/Banners-intranet-5.jpg',
+      title: 'Banners-intranet-5',
     },
   ]
 
@@ -51,8 +45,8 @@ export default async function DashboardPage() {
     title: string,
   }[] = [
     {
-     imageRef: 'https://www.youtube.com/embed/AIlQ-EM35UQ?si=RomGdNhQLn6CuzCw',
-     title: 'Institucional Cristallux',
+      imageRef: 'https://www.youtube.com/embed/AIlQ-EM35UQ?si=RomGdNhQLn6CuzCw',
+      title: 'Institucional Cristallux',
     },
     // {
     //  imageRef: 'https://www.instagram.com/62fcede2-e9c5-477f-821d-17cc5f83040d',
@@ -88,7 +82,7 @@ export default async function DashboardPage() {
                 {
                   routeItems.map((m,i)=> m.title !== "Dashboard" && (
                     <div key={i} className="col-span-1">
-                      <Link href={m.href} className="justify-center flex items-center bg-muted p-2 rounded-lg gap-x-2">
+                      <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-2 rounded-lg gap-x-2">
                         <m.icon className="size-4"/>
                         {m.title}
                       </Link>
@@ -103,23 +97,23 @@ export default async function DashboardPage() {
                 Links
               </div>
               <div className="flex flex-col gap-y-4 mt-4">
-                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
                   <Image src="/umentor.jpg" height={40} width={40} className="rounded-md mr-2" alt="umentor"/>
                   Umentor 
                 </Link>
-                <Link href={'https://udemy.com'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://udemy.com'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
                   <Image src="/udemy.jpg" height={40} width={40} className="rounded-md mr-2" alt="udemy"/>
                   Udemy 
                 </Link>
-                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
                   <LucideGraduationCap className="size-10 mr-2"/>
                   CristalUni 
                 </Link>
-                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
                   <Image src="/LOGO BOX.png" height={40} width={40} className="rounded-md mr-2" alt="Site Box"/>
                   Site Box 
                 </Link>
-                <Link href={'https://cristallux.com.br'} className="flex items-center hover:bg-foreground/60 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://cristallux.com.br'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
                   <Image src="/icon_cristal.svg" height={40} width={40} className="rounded-md mr-2" alt="Cristaluni"/>
                   Site Cristallux 
                 </Link>
@@ -179,7 +173,7 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="flex justify-center mt-8">
-              Allpines &copy; elo
+              <Link href={'https://allpines.com.br'}>Allpines</Link> &copy; elo
         </div>
       </div>
     </div>

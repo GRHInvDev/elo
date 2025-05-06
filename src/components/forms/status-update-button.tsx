@@ -33,7 +33,7 @@ export function StatusUpdateButton({ responseId, currentStatus, currentComment }
   const router = useRouter()
 
   const updateStatus = api.formResponse.updateStatus.useMutation({
-    onSuccess: async (d) => {
+    onSuccess: async () => {
       toast.success("Status atualizado com sucesso")
       router.refresh()
       setOpen(false)

@@ -3,7 +3,6 @@
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
-import Link from "next/link"
 import { useEffect, useState } from "react"
 
 interface MainCarouselProps {
@@ -44,7 +43,7 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
       >
         <CarouselContent>
           {itens.map((item, index) => (
-            <CarouselItem key={index} className="w-full h-96">
+            <CarouselItem key={index} className="w-full md:h-96 aspect-video">
               <div className="relative w-full h-full">
                 <Image
                   alt={item.title}
@@ -60,7 +59,7 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
 
       {/* Indicators */}
       {count > 0 && (
-        <div className="flex justify-center gap-2 relative -translate-y-8">
+        <div className="flex justify-center gap-2 relative -mb-4 -translate-y-8">
           <div className="rounded-full bg-muted/50 flex items-center gap-2 p-1">
             {Array.from({ length: count }).map((_, index) => (
               <button
