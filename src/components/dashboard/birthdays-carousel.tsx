@@ -31,6 +31,18 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
     })
   }, [carouselApi])
 
+  useEffect(() => {
+    if (!carouselApi) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      carouselApi.scrollNext();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [carouselApi]);
+
   return (
     <div className={cn(className)}>
       <div className="-mt-11 flex justify-between backdrop-blur-sm items-center translate-y-11 relative z-40 bg-gradient-to-b from-black/50 pb-4 to-transparent">

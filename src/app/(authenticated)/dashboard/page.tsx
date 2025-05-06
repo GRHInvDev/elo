@@ -35,8 +35,8 @@ export default async function DashboardPage() {
       title: 'Banners-intranet-4',
     },
     {
-      imageRef: '/banners/Banners-intranet-5.jpg',
-      title: 'Banners-intranet-5',
+      imageRef: '/banners/Banners-intranet-6.jpg',
+      title: 'Banners-intranet-6',
     },
   ]
 
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-        <div className="flex justify-center mt-8">
+        <div className="flex justify-center mt-8 bg-muted p-2">
               <Link href={'https://allpines.com.br'}>Allpines</Link> &copy; elo
         </div>
       </div>

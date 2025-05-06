@@ -31,6 +31,19 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
     })
   }, [carouselApi])
 
+  useEffect(() => {
+    if (!carouselApi) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      carouselApi.scrollNext();
+    }, 5500);
+
+    return () => clearInterval(interval);
+  }, [carouselApi]);
+
+
   return (
     <div className={cn(className)}>
       <Carousel
