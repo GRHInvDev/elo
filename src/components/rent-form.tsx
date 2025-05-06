@@ -43,7 +43,7 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
       })
 
       // Redirecionar para a página de perfil ou dashboard
-      router.push("/dashboard")
+      router.push("/cars")
       router.refresh()
     },
     onError: (error) => {

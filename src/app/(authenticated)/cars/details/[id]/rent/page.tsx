@@ -22,15 +22,8 @@ export default async function RentVehiclePage({
     notFound()
   }
 
-  // Verificar se o usuário já tem um reserva ativo
-  const activeRent = await api.vehicleRent.getMyActiveRent()
-
-  if (activeRent) {
-    redirect(`/vehicles/${id}?error=already_renting`)
-  }
-
   return (
-    <div className="container max-w-2xl py-8">
+    <div className="container max-w-4xl py-8 place-self-center">
       <h1 className="mb-6 text-3xl font-bold">Alugar Veículo</h1>
 
       <RentForm vehicle={vehicle} />

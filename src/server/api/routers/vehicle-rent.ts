@@ -5,6 +5,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema } from "@/schemas/vehicle-rent.schema"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailReservaCarro } from "@/lib/mail/html-mock"
+import { addHours } from "date-fns"
 
 export const vehicleRentRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -15,11 +16,13 @@ export const vehicleRentRouter = createTRPCRouter({
         userId: z.string().optional(),
         vehicleId: z.string().optional(),
         finished: z.boolean().optional(),
+        initial_date: z.date().optional(),
+        final_date: z.date().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const limit = input.limit ?? 50
-      const { cursor, userId, vehicleId, finished } = input
+      const { cursor, userId, vehicleId, finished, final_date, initial_date } = input
 
       const rents = await ctx.db.vehicleRent.findMany({
         take: limit + 1,
@@ -27,11 +30,18 @@ export const vehicleRentRouter = createTRPCRouter({
           userId: userId,
           vehicleId: vehicleId,
           finished: finished,
+          startDate: {
+            gte: initial_date ?? undefined,
+          },
+          possibleEnd: {
+            lte: final_date ?? undefined,
+          }
         },
         cursor: cursor ? { id: cursor } : undefined,
         orderBy: {
           startDate: "desc",
         },
+
         include: {
           user: {
             select: {
@@ -87,7 +97,7 @@ export const vehicleRentRouter = createTRPCRouter({
   getMyActiveRent: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.auth.userId
 
-    const activeRent = await ctx.db.vehicleRent.findFirst({
+    const activeRent = await ctx.db.vehicleRent.findMany({
       where: {
         userId,
         finished: false,
@@ -106,32 +116,6 @@ export const vehicleRentRouter = createTRPCRouter({
   create: protectedProcedure.input(createVehicleRentSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.auth.userId
 
-    // Verificar se o usuário já tem um reserva ativo
-    const activeRent = await ctx.db.vehicleRent.findFirst({
-      where: {
-        userId,
-        finished: false,
-        AND: [
-          {
-            startDate: {
-              lte: new Date() 
-            },
-            endDate: {
-              gte: new Date()
-            }
-          },
-        ]
-      },
-    })
-
-    if (activeRent) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Você já possui um veículo reservado",
-      })
-    }
-
-    // Verificar se o veículo existe e está disponível
     const vehicle = await ctx.db.vehicle.findUnique({
       where: { id: input.vehicleId },
     })
@@ -150,19 +134,33 @@ export const vehicleRentRouter = createTRPCRouter({
         OR: [
           {
             startDate: {
-              lte: input.possibleEnd
+              lte: addHours(input.possibleEnd, -3)
             },
-            endDate: {
-              gte: input.startDate
-            }
+            OR: [
+              {
+                endDate: {
+                  gte: input.startDate
+                },
+                possibleEnd: {
+                  gte: input.startDate
+                },
+              }
+            ]
           },
           {
             startDate: {
               lte: input.startDate
             },
-            endDate: {
-              gte: input.possibleEnd
-            }
+            OR: [
+              {
+                endDate: {
+                  gte: input.startDate ? addHours(input.startDate, -3) : undefined
+                },
+                possibleEnd: {
+                  gte: input.startDate
+                },
+              }
+            ]
           }
         ]
       }
