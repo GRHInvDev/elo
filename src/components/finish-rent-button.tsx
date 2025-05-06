@@ -62,7 +62,6 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
         title: "Reserva finalizada com sucesso!",
         description: "O veículo foi devolvido com sucesso.",
       })
-
       setIsDialogOpen(false)
       router.refresh()
     },
@@ -78,7 +77,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
 
 
    // Função para verificar a distância quando a localização é obtida
-   useEffect(() => {
+  useEffect(() => {
     if (location) {
       const isDistanceOk = isMinimumDistanceAway(
         location.coords.latitude,

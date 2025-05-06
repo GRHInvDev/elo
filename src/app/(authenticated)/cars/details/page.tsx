@@ -18,7 +18,7 @@ export default async function VehiclesPage({
   const { enterprise } = await searchParams;
 
   return (
-    <div className="container py-8">
+    <div className="container py-8 place-self-center">
       <div className="mb-8 flex flex-col gap-2">
         <h1 className="text-3xl font-bold">Veículos Disponíveis</h1>
         <p className="text-muted-foreground">Selecione um veículo para alugar</p>

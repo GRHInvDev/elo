@@ -3,6 +3,8 @@ import { z } from "zod"
 import type { InputJsonValue } from "@prisma/client/runtime/library"
 import type { ResponseStatus } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
+import { sendEmail } from "@/lib/mail/email-utils"
+import { mockEmailSituacaoFormulario } from "@/lib/mail/html-mock"
 
 export const formResponseRouter = createTRPCRouter({
   create: protectedProcedure
@@ -142,14 +144,33 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
-      return await ctx.db.formResponse.update({
+      const ret = await ctx.db.formResponse.update({
         where: { id: input.responseId },
         data: {
           status: input.status as ResponseStatus,
           statusComment: input.statusComment,
           updatedAt: new Date(),
         },
+        include: {
+          form: true,
+        }
       })
+
+      const user = await ctx.db.user.findUnique({
+        where: { id: response.userId },
+      })
+
+      if(ret && user){
+        await sendEmail(user.email, `Resposta ao formulário "${ret.form.title}"`, mockEmailSituacaoFormulario(
+          user.firstName??'',
+          ret.status,
+          ret.id,
+          ret.form.id,
+          ret.form.title
+        ))
+      }
+
+      return ret;
     }),
 
   getById: protectedProcedure

@@ -3,6 +3,8 @@ import { z } from "zod"
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema } from "@/schemas/vehicle-rent.schema"
+import { sendEmail } from "@/lib/mail/email-utils"
+import { mockEmailReservaCarro, mockEmailRespostaFormulario } from "@/lib/mail/html-mock"
 
 export const vehicleRentRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -255,11 +257,13 @@ export const vehicleRentRouter = createTRPCRouter({
         data: {
           endDate: new Date(),
           finished: true,
+          finalKm: input.finalKm,
           endLocation: input.endLocation,
           observation: input.observations
         },
         include: {
           vehicle: true,
+          user: true
         },
       })
 
@@ -268,6 +272,27 @@ export const vehicleRentRouter = createTRPCRouter({
         where: { id: rent.vehicleId },
         data: { availble: true, kilometers: input.finalKm },
       })
+
+      await sendEmail('frota@boxdistribuidor.com.br', `Reserva ${updatedRent.id} finalizada`, mockEmailReservaCarro(
+        updatedRent.user.firstName ?? '',
+        updatedRent.id,
+        updatedRent.vehicleId,
+        updatedRent.vehicle.model,
+        updatedRent.startDate.toLocaleDateString('pt-BR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }),
+        updatedRent.endDate?.toLocaleDateString('pt-BR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }) ?? new Date().toLocaleDateString('pt-BR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        })
+      ));
 
       return updatedRent
     })
