@@ -97,7 +97,7 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] max-h-dvh">
                 <DialogHeader>
                     <DialogTitle>{response.form.title}</DialogTitle>
                     <DialogDescription className="flex items-center gap-2">
