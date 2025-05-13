@@ -31,6 +31,7 @@ model User {
   formResponses FormResponse[]
 
   @@map("users")
+  FormResponseChat FormResponseChat[]
 }
 
 enum UserRole {
@@ -269,4 +270,18 @@ model FormResponse {
   updatedAt       DateTime       @updatedAt
 
   @@map("forms_responses")
+  FormResponseChat FormResponseChat[]
+}
+
+model FormResponseChat {
+  id              String         @id  @default(cuid())
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  formResponse    FormResponse   @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
+  formResponseId  String
+  message         String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("forms_responses_chat")
 }

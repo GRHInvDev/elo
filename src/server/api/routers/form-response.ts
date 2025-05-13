@@ -93,6 +93,123 @@ export const formResponseRouter = createTRPCRouter({
       }
     }),
 
+  listKanBan: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.db.formResponse.findMany({
+      where: {
+        form: {
+          userId: ctx.auth.userId,
+        },
+      },
+      include: {
+        form: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            imageUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })
+  }),
+
+  getChat: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.formResponseChat.findMany({
+        where: {
+          formResponseId: input.responseId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      })
+    }),
+
+  sendChatMessage: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+        message: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verificar se a resposta existe
+      const response = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+        include: {
+          form: { select: { userId: true } },
+          user: { select: { id: true } },
+        },
+      })
+
+      if (!response) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Resposta não encontrada",
+        })
+      }
+
+      // Verificar se o usuário é o dono do formulário ou o autor da resposta
+      if (response.form.userId !== ctx.auth.userId && response.userId !== ctx.auth.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para enviar mensagens neste chat",
+        })
+      }
+
+      return await ctx.db.formResponseChat.create({
+        data: {
+          userId: ctx.auth.userId,
+          formResponseId: input.responseId,
+          message: input.message,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+        },
+      })
+    }),
+
   listUserResponses: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db.formResponse.findMany({
       where: {
@@ -153,24 +270,22 @@ export const formResponseRouter = createTRPCRouter({
         },
         include: {
           form: true,
-        }
+        },
       })
 
       const user = await ctx.db.user.findUnique({
         where: { id: response.userId },
       })
 
-      if(ret && user){
-        await sendEmail(user.email, `Resposta ao formulário "${ret.form.title}"`, mockEmailSituacaoFormulario(
-          user.firstName??'',
-          ret.status,
-          ret.id,
-          ret.form.id,
-          ret.form.title
-        ))
+      if (ret && user) {
+        await sendEmail(
+          user.email,
+          `Resposta ao formulário "${ret.form.title}"`,
+          mockEmailSituacaoFormulario(user.firstName ?? "", ret.status, ret.id, ret.form.id, ret.form.title),
+        )
       }
 
-      return ret;
+      return ret
     }),
 
   getById: protectedProcedure
@@ -190,7 +305,7 @@ export const formResponseRouter = createTRPCRouter({
               description: true,
               fields: true,
               userId: true,
-              user: true
+              user: true,
             },
           },
           user: {
@@ -223,4 +338,3 @@ export const formResponseRouter = createTRPCRouter({
       return response
     }),
 })
-

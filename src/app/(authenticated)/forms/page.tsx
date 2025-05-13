@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { PlusCircle, FileText, LucideFileVideo } from "lucide-react"
+import { PlusCircle, FileText, LucideFileVideo, LucideKanbanSquare } from "lucide-react"
 import Link from "next/link"
 import { FormsList } from "@/components/forms/forms-list"
 import { Suspense } from "react"
@@ -19,23 +19,31 @@ export default async function FormsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Formulários</h1>
           <p className="text-muted-foreground mt-2 mb-4">Crie, gerencie e responda formulários personalizados.</p>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                Tutorial <LucideFileVideo className="size-4"/>
+          <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  Tutorial <LucideFileVideo className="size-4"/>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    Tutorial: Formulários
+                  </DialogTitle>
+                </DialogHeader>
+                <DialogFooter>
+                  <iframe className="w-full aspect-video" src="https://www.youtube.com/embed/aSRZI9TmcC8?si=r6FZgNmOgoP8lhjP" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Link href="/forms/kanban">
+              <Button className="w-full" variant='outline'>
+                <LucideKanbanSquare className="mr-2 h-4 w-4" />
+                Kanban
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  Tutorial: Formulários
-                </DialogTitle>
-              </DialogHeader>
-              <DialogFooter>
-                <iframe className="w-full aspect-video" src="https://www.youtube.com/embed/aSRZI9TmcC8?si=r6FZgNmOgoP8lhjP" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </Link>
+          </div>
         </div>
         <div className="flex gap-3 flex-col md:flex-row w-full md:w-auto">
           <Link href="/forms/my-responses">

@@ -1,16 +1,36 @@
-import { api } from "@/trpc/server"
+"use client"
+
+import { useState } from "react"
+import { api } from "@/trpc/react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Eye, FileText } from "lucide-react"
+import { Eye, FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Badge } from "@/components/ui/badge"
+import { ResponseDialog } from "@/app/(authenticated)/forms/kanban/_components/response-dialog"
 
-export async function UserResponsesList() {
-  const responses = await api.formResponse.listUserResponses()
+export function UserResponsesList() {
+  const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  if (responses.length === 0) {
+  const { data: responses, isLoading } = api.formResponse.listUserResponses.useQuery()
+
+  const handleOpenDetails = (responseId: string) => {
+    setSelectedResponseId(responseId)
+    setIsDialogOpen(true)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!responses || responses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -79,17 +99,18 @@ export async function UserResponsesList() {
                   Ver Formulário
                 </Button>
               </Link>
-              <Link className="w-full md:w-auto" href={`/forms/${response.formId}/responses/${response.id}`}>
-                <Button size="sm" className="w-full md:w-auto">
-                  <Eye className="h-4 w-4 mr-1" />
-                  Ver Detalhes
-                </Button>
-              </Link>
+              <Button size="sm" className="w-full md:w-auto" onClick={() => handleOpenDetails(response.id)}>
+                <Eye className="h-4 w-4 mr-1" />
+                Ver Detalhes
+              </Button>
             </CardFooter>
           </Card>
         ))}
       </div>
+
+      {selectedResponseId && (
+        <ResponseDialog responseId={selectedResponseId} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+      )}
     </div>
   )
 }
-
