@@ -101,10 +101,6 @@ export default async function DashboardPage() {
                   <Image src="/umentor.jpg" height={40} width={40} className="rounded-md mr-2" alt="umentor"/>
                   Umentor 
                 </Link>
-                <Link href={'https://udemy.com'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
-                  <Image src="/udemy.jpg" height={40} width={40} className="rounded-md mr-2" alt="udemy"/>
-                  Udemy 
-                </Link>
                 <Link href={'https://cristaluni.com.br'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
                   <LucideGraduationCap className="size-10 mr-2"/>
                   CristalUni 
