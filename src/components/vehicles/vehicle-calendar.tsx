@@ -27,6 +27,14 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { type inferProcedureOutput } from "@trpc/server"
 import { type AppRouter } from "@/server/api/root"
 
+// Helper to convert a date that is in UTC to a local date with same clock time.
+// E.g. 2024-01-10T00:00:00Z becomes a local Date object for 2024-01-10 00:00:00
+function utcToLocalDate(date: Date | string | null | undefined): Date | null {
+    if (!date) return null
+    const d = new Date(date)
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds())
+}
+
 function CalendarSkeleton() {
     return (
         <div className="grid grid-cols-7 gap-1">
@@ -98,7 +106,9 @@ export function VehicleCalendar() {
         
         if (reservationsData?.items) {
             reservationsData.items.forEach((reservation) => {
-                const startDate = new Date(reservation.startDate)
+                const startDate = utcToLocalDate(reservation.startDate)
+                if (!startDate) return
+
                 const dateKey = format(startDate, "yyyy-MM-dd")
 
                 if (!grouped[dateKey]) {
@@ -252,9 +262,11 @@ export function VehicleCalendar() {
                                 .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
                                 .map(([dateKey, reservations]) => (
                                     <div key={dateKey} className="space-y-2">
-                                        <h3 className="font-medium">{format(new Date(dateKey), "EEEE, d MMMM", { locale: ptBR })}</h3>
+                                        <h3 className="font-medium">{format(new Date(`${dateKey}T00:00:00`), "EEEE, d MMMM", { locale: ptBR })}</h3>
                                         <div className="space-y-2">
-                                            {reservations.map((reservation) => (
+                                            {reservations.map((reservation) => {
+                                                const reservationStartDate = utcToLocalDate(reservation.startDate)
+                                                return (
                                                 <Card
                                                     key={reservation.id}
                                                     className="p-3 cursor-pointer hover:bg-muted/10"
@@ -277,11 +289,11 @@ export function VehicleCalendar() {
                                                             </div>
                                                         </div>
                                                         <div className="text-sm text-right">
-                                                            {format(new Date(reservation.startDate), "HH:mm", { locale: ptBR })}
+                                                            {reservationStartDate && format(reservationStartDate, "HH:mm", { locale: ptBR })}
                                                         </div>
                                                     </div>
                                                 </Card>
-                                            ))}
+                                            )})}
                                         </div>
                                     </div>
                                 ))}
@@ -305,6 +317,11 @@ export function VehicleCalendar() {
                     </SheetHeader>
 
                     {selectedEvent && (
+                        (() => {
+                            const selectedEventStartDate = utcToLocalDate(selectedEvent.startDate)
+                            const selectedEventPossibleEnd = utcToLocalDate(selectedEvent.possibleEnd)
+
+                            return (
                         <div className="mt-6 space-y-6">
                             <div className="flex items-center gap-3">
                                 <Avatar>
@@ -337,10 +354,10 @@ export function VehicleCalendar() {
                                     <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
                                     <div>
                                         <p className="font-medium">Data e Hora</p>
-                                        <p className="text-sm">{format(new Date(selectedEvent.startDate), "PPp", { locale: ptBR })}</p>
-                                        {selectedEvent.possibleEnd && (
+                                        <p className="text-sm">{selectedEventStartDate && format(selectedEventStartDate, "PPp", { locale: ptBR })}</p>
+                                        {selectedEvent.possibleEnd && selectedEventPossibleEnd && (
                                             <p className="text-sm text-muted-foreground">
-                                                Retorno previsto: {format(new Date(selectedEvent.possibleEnd), "PPp", { locale: ptBR })}
+                                                Retorno previsto: {format(selectedEventPossibleEnd, "PPp", { locale: ptBR })}
                                             </p>
                                         )}
                                     </div>
@@ -376,6 +393,8 @@ export function VehicleCalendar() {
                                 </Badge>
                             </div>
                         </div>
+                            )
+                        })()
                     )}
                 </SheetContent>
             </Sheet>

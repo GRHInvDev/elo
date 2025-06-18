@@ -5,6 +5,75 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createVehicleSchema, updateVehicleSchema, vehicleIdSchema } from "@/schemas/vehicle.schema"
 
 export const vehicleRouter = createTRPCRouter({
+  getAvailable: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.date(),
+        endDate: z.date(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { startDate, endDate } = input
+
+      if (startDate >= endDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A data de início deve ser anterior à data de término.",
+        })
+      }
+
+      // Encontra todos os veículos que têm aluguéis conflitantes no período solicitado
+      const unavailableVehicles = await ctx.db.vehicle.findMany({
+        where: {
+          rents: {
+            some: {
+              finished: false,
+              // Um conflito ocorre se a reserva existente (R) e o período solicitado (S) se sobrepõem.
+              // A sobreposição acontece se a R não termina antes de S começar E R não começa depois de S terminar.
+              // Em outras palavras: !(R.possibleEnd <= S.startDate || R.startDate >= S.endDate)
+              // Usando a Lei de De Morgan, isso é: R.possibleEnd > S.startDate && R.startDate < S.endDate
+              AND: [
+                {
+                  // A reserva existente começa antes do fim do período solicitado.
+                  startDate: {
+                    lt: endDate,
+                  },
+                },
+                {
+                  // A reserva existente termina depois do início do período solicitado.
+                  possibleEnd: {
+                    gt: startDate,
+                  },
+                },
+              ],
+            },
+          },
+        },
+        select: {
+          id: true, // Apenas precisamos do ID para excluir
+        },
+      })
+
+      const unavailableVehicleIds = unavailableVehicles.map((v) => v.id)
+
+      // Busca todos os veículos que NÃO ESTÃO na lista de indisponíveis
+      const availableVehicles = await ctx.db.vehicle.findMany({
+        where: {
+          id: {
+            notIn: unavailableVehicleIds,
+          },
+        },
+        orderBy: {
+          model: "asc",
+        },
+      })
+
+      return availableVehicles.map((v) => ({
+        ...v,
+        kilometers: parseInt(v.kilometers.toString()),
+      }))
+    }),
+
   getAll: protectedProcedure
     .input(
       z.object({

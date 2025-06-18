@@ -5,7 +5,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema } from "@/schemas/vehicle-rent.schema"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailReservaCarro } from "@/lib/mail/html-mock"
-import { addHours } from "date-fns"
+
 
 export const vehicleRentRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -115,94 +115,69 @@ export const vehicleRentRouter = createTRPCRouter({
 
   create: protectedProcedure.input(createVehicleRentSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.auth.userId
+    const { vehicleId, startDate, possibleEnd } = input
 
-    const vehicle = await ctx.db.vehicle.findUnique({
-      where: { id: input.vehicleId },
-    })
-
-    if (!vehicle) {
+    if (!possibleEnd) {
       throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Veículo não encontrado",
+        code: "BAD_REQUEST",
+        message: "A data de término prevista é obrigatória.",
       })
     }
 
-    const activeCarRent = await ctx.db.vehicleRent.findFirst({
-      where: {
-        finished: false,
-        vehicleId: vehicle.id,
-        OR: [
-          {
-            startDate: {
-              lte: addHours(input.possibleEnd, -3)
-            },
-            OR: [
-              {
-                endDate: {
-                  gte: input.startDate
-                },
-                possibleEnd: {
-                  gte: input.startDate
-                },
-              }
-            ]
-          },
-          {
-            startDate: {
-              lte: input.startDate
-            },
-            OR: [
-              {
-                endDate: {
-                  gte: input.startDate ? addHours(input.startDate, -3) : undefined
-                },
-                possibleEnd: {
-                  gte: input.startDate
-                },
-              }
-            ]
-          }
-        ]
-      }
-    });
-    
-    if (activeCarRent){
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Este veículo não está disponível para reserva nesse período",
-      })
-    }
-
-    // Criar a reserva e atualizar o status do veículo em uma transação
+    // Usar uma transação para garantir que a verificação de disponibilidade e a criação da reserva sejam atômicas
     return ctx.db.$transaction(async (tx) => {
-      // Criar a reserva
+      // 1. Verificar se o veículo existe
       const vehicle = await tx.vehicle.findUnique({
-        select: {
-          kilometers: true,
-        },
-        where: {
-          id: input.vehicleId
-        }
+        where: { id: vehicleId },
+        select: { id: true, kilometers: true },
       })
+
+      if (!vehicle) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Veículo não encontrado",
+        })
+      }
+
+      // 2. Verificar novamente a disponibilidade dentro da transação para evitar race conditions
+      const conflictingRent = await tx.vehicleRent.findFirst({
+        where: {
+          vehicleId: vehicleId,
+          finished: false,
+          AND: [
+            {
+              startDate: {
+                lt: possibleEnd,
+              },
+            },
+            {
+              possibleEnd: {
+                gt: startDate,
+              },
+            },
+          ],
+        },
+      })
+
+      if (conflictingRent) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Este veículo não está mais disponível para reserva no período solicitado. Por favor, tente outro horário.",
+        })
+      }
+
+      // 3. Criar a reserva
       const rent = await tx.vehicleRent.create({
         data: {
           userId,
           ...input,
-          vehicleId: input.vehicleId,
-          initialKm: vehicle?.kilometers
+          vehicleId: vehicleId,
+          initialKm: vehicle.kilometers,
         },
         include: {
           vehicle: true,
         },
       })
-
-      if (!input.startDate || input.startDate <= new Date()){
-        // Atualizar o status do veículo
-        await tx.vehicle.update({
-          where: { id: input.vehicleId },
-          data: { availble: false },
-        })
-      }
 
       return rent
     })
