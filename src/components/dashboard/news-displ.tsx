@@ -53,7 +53,7 @@ export default async function NewsDisplay() {
               </div>
               <p className="mb-4 text-xs max-w-xl group-even:place-self-end md:text-sm md:line-clamp-2 line-clamp-4">{p.content}</p>
               <div className="flex justify-end group-even:max-w-lg max-w-xl">
-                <Link href="/news">
+                <Link href={`/news#${p.id}`}>
                   <Button className="place-self-end mt-4" variant="outline" size="sm">
                     Ler mais
                   </Button>

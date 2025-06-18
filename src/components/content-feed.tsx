@@ -16,13 +16,14 @@ import {
   MessageSquarePlus,
   MessageSquare,
   Smile,
+  Send,
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import dynamic from "next/dynamic"
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -102,7 +103,7 @@ export function ContentFeed({ className }: { className?: string }) {
 
   return (
     <div className={className}>
-      <Card>
+      <div>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Feed de Conteúdo</CardTitle>
@@ -191,30 +192,39 @@ export function ContentFeed({ className }: { className?: string }) {
               {!events?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum evento agendado.</p>
               ) : (
-                <div className="space-y-4 border-b pb-4">
+                <div className="space-y-4">
                   {events.map((event) => (
-                    <div key={event.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="size-6">
-                          <AvatarImage src={event.author.imageUrl ?? undefined} />
-                          <AvatarFallback>{event.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <p className="text-md text-foreground flex items-center">
-                          {event.author.firstName}{" "}
-                          {event.author.role == "ADMIN" ? (
-                            <LucideVerified className={"ml-2 text-blue-500 size-5"} />
-                          ) : (
-                            <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
-                          )}
-                        </p>
-                      </div>
-                      <h3 className="font-medium">{event.title}</h3>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="mr-1 h-4 w-4" />
-                        {format(event.startDate, "PPp", { locale: ptBR })}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{event.description}</p>
-                    </div>
+                    <Card key={event.id}>
+                      <CardHeader>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border">
+                            <AvatarImage src={event.author.imageUrl ?? undefined} />
+                            <AvatarFallback>{event.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground flex items-center">
+                              {event.author.firstName}
+                              {event.author.role == "ADMIN" ? (
+                                <LucideVerified className={"ml-2 text-blue-500 size-4"} />
+                              ) : (
+                                <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">agendou um evento</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <h3 className="font-semibold">{event.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                      </CardContent>
+                      <CardFooter>
+                        <div className="flex items-center text-sm text-muted-foreground font-medium">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {format(event.startDate, "PPPp", { locale: ptBR })}
+                        </div>
+                      </CardFooter>
+                    </Card>
                   ))}
                 </div>
               )}
@@ -223,66 +233,74 @@ export function ContentFeed({ className }: { className?: string }) {
               {!flyers?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum encarte publicado.</p>
               ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   {flyers.map((flyer) => (
-                    <div key={flyer.id} className="space-y-2 border-b pb-2">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="size-6">
-                          <AvatarImage src={flyer.author.imageUrl ?? undefined} />
-                          <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <p className="text-md text-foreground flex items-center">
-                          {flyer.author.firstName}{" "}
-                          {flyer.author.role == "ADMIN" ? (
-                            <LucideVerified className={"ml-2 text-blue-500 size-5"} />
+                    <Card key={flyer.id} className="flex flex-col">
+                      <CardHeader>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border">
+                            <AvatarImage src={flyer.author.imageUrl ?? undefined} />
+                            <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground flex items-center">
+                              {flyer.author.firstName}
+                              {flyer.author.role == "ADMIN" ? (
+                                <LucideVerified className={"ml-2 text-blue-500 size-4"} />
+                              ) : (
+                                <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(flyer.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <h3 className="font-semibold mb-2">{flyer.title}</h3>
+                        <div className="flex items-center justify-center">
+                          {flyer.iframe ? (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <div className="relative aspect-[1/1.414] w-full cursor-pointer overflow-hidden rounded-md">
+                                  <Image
+                                    src={flyer.imageUrl || "/placeholder.svg"}
+                                    alt={flyer.title}
+                                    fill
+                                    className="object-cover transition-transform hover:scale-105"
+                                  />
+                                </div>
+                              </DialogTrigger>
+                              <DialogContent className="block h-full w-full max-w-none p-0 sm:h-[95vh] sm:w-auto sm:max-w-7xl sm:rounded-lg">
+                                <iframe src={flyer.iframe} className="w-full h-full border-0" />
+                              </DialogContent>
+                            </Dialog>
                           ) : (
-                            <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
-                          )}
-                        </p>
-                      </div>
-                      <p>{format(flyer.createdAt, "PP", { locale: ptBR })}</p>
-                      <h3 className="font-medium">{flyer.title}</h3>
-                      <div className="flex items-center justify-center text-sm text-muted-foreground">
-                        {flyer.iframe ? (
-                          <Dialog>
-                            <DialogTrigger asChild>
+                            <div className="relative aspect-[1/1.414] w-full overflow-hidden rounded-md">
                               <Image
-                                className="rounded-md cursor-pointer hover:zoom-in-50"
                                 src={flyer.imageUrl || "/placeholder.svg"}
                                 alt={flyer.title}
-                                width={300}
-                                height={300}
+                                fill
+                                className="object-cover"
                               />
-                            </DialogTrigger>
-                            <DialogContent className="block h-full w-screen pb-4 max-w-screen">
-                              <DialogHeader className="max-h-44 mb-4 min-h-0">
-                                <DialogTitle>{flyer.title}</DialogTitle>
-                              </DialogHeader>
-                              {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */}
-                              <iframe src={flyer.iframe} className="w-full h-full" />
-                            </DialogContent>
-                          </Dialog>
-                        ) : (
-                          <Image
-                            className="rounded-md"
-                            src={flyer.imageUrl || "/placeholder.svg"}
-                            alt={flyer.title}
-                            width={300}
-                            height={300}
-                          />
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground overflow-hidden overflow-ellipsis">
-                        {flyer.description}
-                      </p>
-                    </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                      {flyer.description && (
+                        <CardFooter>
+                          <p className="text-sm text-muted-foreground">{flyer.description}</p>
+                        </CardFooter>
+                      )}
+                    </Card>
                   ))}
                 </div>
               )}
             </TabsContent>
           </Tabs>
         </CardContent>
-      </Card>
+      </div>
     </div>
   )
 }
@@ -446,155 +464,166 @@ function PostItem({ post }: PostItemProps) {
   const totalReactions = reactionCounts ? Object.values(reactionCounts).reduce((sum, count) => sum + count, 0) : 0
 
   return (
-    <div className="space-y-2 border-b pb-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Avatar className="size-6">
-            <AvatarImage src={post.author.imageUrl ?? undefined} />
-            <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <p className="text-md text-foreground flex items-center">
-            {post.author.firstName}{" "}
-            {post.author.role === "ADMIN" && (
-              <LucideVerified className={"ml-2 text-blue-500 size-5"} />
-            )}
-          </p>
+    <Card className="w-full" id={post.id}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border">
+              <AvatarImage src={post.author.imageUrl ?? undefined} />
+              <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-semibold text-foreground flex items-center">
+                {post.author.firstName} {post.author.lastName}
+                {post.author.role === "ADMIN" && <LucideVerified className={"ml-2 text-blue-500 size-4"} />}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+              </p>
+            </div>
+          </div>
+          {auth.userId === post.authorId && (
+            <div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="icon" variant="ghost">
+                    <LucideEllipsis className="size-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-36 flex flex-col p-1">
+                  <UpdatePostDialog post={post} />
+                  <Button
+                    size="sm"
+                    disabled={deletePost.isPending}
+                    className="text-red-500 hover:text-red-800"
+                    variant="ghost"
+                    onClick={() => deletePost.mutate({ id: post.id })}
+                  >
+                    {deletePost.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <LucideTrash2 className="size-4 mr-2" />
+                    )}
+                    Excluir
+                  </Button>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
-        {auth.userId === post.authorId && (
+      </CardHeader>
+
+      <CardContent className="space-y-4 pb-2">
+        <h3 className="font-semibold">{post.title}</h3>
+        {showMore ? (
+          <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+            <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(false)}>
+              Ler menos...
+            </button>
+          </div>
+        ) : (
           <div>
-            <Popover>
-              <PopoverTrigger>
-                <Button size="icon" variant="ghost">
-                  <LucideEllipsis className="size-3" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-36 flex flex-col p-1">
-                <UpdatePostDialog post={post} />
-                <Button
-                  size="sm"
-                  disabled={deletePost.isPending}
-                  className="text-red-500 hover:text-red-800"
-                  variant="ghost"
-                  onClick={() => deletePost.mutate({ id: post.id })}
-                >
-                  {deletePost.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <LucideTrash2 className="size-4 mr-2" />
-                  )}
-                  Excluir
-                </Button>
-              </PopoverContent>
-            </Popover>
+            <p className="line-clamp-3 text-sm">{post.content}</p>
+            {post.content.length > 250 && (
+              <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(true)}>
+                Ler mais...
+              </button>
+            )}
           </div>
         )}
-      </div>
-      <p className="text-xs text-muted-foreground">{format(post.createdAt, "PPp", { locale: ptBR })}</p>
-      <h3 className="font-semibold">{post.title}</h3>
-      {
-        post.imageUrl &&
-        <div className="w-full relative aspect-square">
-          <Image src={post.imageUrl} fill alt={post.title} className="object-cover"/>
-        </div>
-      }
-      {
-        showMore ? 
-        <div>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
-          <button className="font-bold" onClick={()=>setShowMore(false)}>Ler menos...</button>
-        </div>
-        :
-        <div>
-          <p className="line-clamp-3">{post.content}</p>
-          <button className="font-bold" onClick={()=>setShowMore(true)}>Ler mais...</button>
-        </div>
-      }
+        {post.imageUrl && (
+          <div className="mt-2 w-full relative rounded-lg overflow-hidden border">
+            <Image
+              alt={post.title}
+              src={post.imageUrl}
+              width={0}
+              height={0}
+              sizes="100vw"
+              className="h-auto w-full"
+              style={{ maxHeight: "80vh" }}
+            />
+          </div>
+        )}
+      </CardContent>
 
-      {/* Reactions and Comments Section */}
-      <div className="flex items-center justify-between mt-4 pt-2">
-        {/* Reaction Display */}
-        <div className="flex items-center">
-          {topEmojis.length > 0 && (
-            <TooltipProvider>
+      {(totalReactions > 0 || (comments && comments.length > 0)) && (
+        <div className="px-6 pt-2 pb-2 flex items-center justify-between text-xs text-muted-foreground">
+          <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <div className="flex mr-2 relative cursor-pointer">
-                      {topEmojis.map((emoji, index) => (
-                        <div
-                          key={emoji}
-                          className="rounded-full bg-muted flex items-center justify-center w-8 h-8 border-2 border-background"
-                          style={{ marginLeft: index > 0 ? "-10px" : "0", zIndex: 3 - index }}
-                        >
-                          {emoji}
-                        </div>
-                      ))}
-                      {totalReactions > 3 && (
-                        <div
-                          className="rounded-full bg-muted flex items-center justify-center w-8 h-8 border-2 border-background text-xs"
-                          style={{ marginLeft: "-10px", zIndex: 0 }}
-                        >
-                          +{totalReactions - 3}
-                        </div>
-                      )}
-                  </div>
-                  </PopoverTrigger>
-                    <PopoverContent className="w-64 p-0">
-                      <div className="p-3 border-b">
-                        <h4 className="font-medium">Reações</h4>
-                      </div>
-                      <div className="max-h-[250px] overflow-y-auto">
-                        {reactionCounts &&
-                          Object.entries(reactionCounts)
-                            .sort((a, b) => b[1] - a[1])
-                            .map(([emoji, count]) => {
-                              // Filtrar reações para este emoji
-                              const reactionsForEmoji = reactions?.filter((r) => r.emoji === emoji) ?? []
-
-                              return (
-                                <div key={emoji} className="p-3 border-b last:border-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
-                                      {emoji}
-                                    </div>
-                                    <span className="text-sm font-medium">
-                                      {count} {count === 1 ? "pessoa" : "pessoas"}
-                                    </span>
-                                  </div>
-                                  <div className="space-y-2">
-                                    {reactionsForEmoji.map((reaction) => (
-                                      <div key={reaction.id} className="flex items-center gap-2">
-                                        <Avatar className="size-6">
-                                          <AvatarImage src={reaction.user.imageUrl ?? undefined} />
-                                          <AvatarFallback>
-                                            {reaction.user.firstName?.charAt(0).toUpperCase()}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-sm">
-                                          {reaction.user.firstName} {reaction.user.lastName}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
+                <button
+                  className="flex items-center gap-1"
+                  onClick={() => {
+                    /* Open reactions dialog/popover */
+                  }}
+                >
+                  {topEmojis.slice(0, 3).map((emoji) => (
+                    <span key={emoji}>{emoji}</span>
+                  ))}
+                  {totalReactions > 0 && <span className="ml-1">{totalReactions}</span>}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="max-h-[250px] overflow-y-auto">
+                  {reactionCounts &&
+                    Object.entries(reactionCounts)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([emoji, count]) => {
+                        const reactionsForEmoji = reactions?.filter((r) => r.emoji === emoji) ?? []
+                        return (
+                          <div key={emoji} className="p-2 border-b last:border-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted">
+                                {emoji}
+                              </div>
+                              <span className="text-sm font-medium">
+                                {count} {count === 1 ? "pessoa" : "pessoas"}
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {reactionsForEmoji.map((reaction) => (
+                                <div key={reaction.id} className="flex items-center gap-2">
+                                  <Avatar className="size-5">
+                                    <AvatarImage src={reaction.user.imageUrl ?? undefined} />
+                                    <AvatarFallback>{reaction.user.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs">
+                                    {reaction.user.firstName} {reaction.user.lastName}
+                                  </span>
                                 </div>
-                              )
-                            })}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Clique para ver quem reagiu</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {comments && comments.length > 0 && (
+            <button onClick={() => setShowCommentDialog(true)} className="hover:underline">
+              {comments.length} comentário{comments.length > 1 ? "s" : ""}
+            </button>
           )}
-          
+        </div>
+      )}
+
+      <div className="border-t border-b mx-6 my-2">
+        <div className="flex justify-around items-center">
           <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
-                {!userReaction ? <><Smile className="h-4 w-4 mr-1" /> Reagir</> : <>{userReaction?.emoji} Reagir</> }
+              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
+                {!userReaction ? (
+                  <>
+                    <Smile className="h-5 w-5 mr-1" /> Reagir
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xl mr-2">{userReaction?.emoji}</span> Reagir
+                  </>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto bg-transparent p-0 border-none shadow-lg" align="start" side="top">
@@ -608,29 +637,80 @@ function PostItem({ post }: PostItemProps) {
               />
             </PopoverContent>
           </Popover>
+          <div className="w-px bg-border h-6" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-1 text-muted-foreground"
+            onClick={() => setShowCommentDialog(true)}
+          >
+            <MessageSquare className="h-5 w-5 mr-1" />
+            Comentar
+          </Button>
         </div>
+      </div>
 
-        {/* Comments Button */}
-        <Dialog open={showCommentDialog} onOpenChange={setShowCommentDialog}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <MessageSquare className="h-4 w-4 mr-1" />
-              {comments && comments.length > 0
-                ? `${comments.length} comentário${comments.length > 1 ? "s" : ""}`
-                : "Comentar"}
+      <CardFooter className="flex flex-col items-start gap-3 pt-2">
+        {comments && comments.length > 0 && (
+          <div
+            className="w-full space-y-2 mt-2 cursor-pointer"
+            onClick={() => setShowCommentDialog(true)}
+          >
+            <div className="flex items-start gap-2">
+              <Avatar className="size-6 border">
+                <AvatarImage src={comments?.at(0)?.user.imageUrl ?? undefined} />
+                <AvatarFallback>{comments?.at(0)?.user.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="text-sm bg-muted/50 rounded-lg px-3 py-1.5 w-full">
+                <span className="font-semibold">{comments?.at(0)?.user.firstName}</span>
+                <p className="text-muted-foreground line-clamp-2">{comments?.at(0)?.comment}</p>
+              </div>
+            </div>
+            {comments.length > 1 && (
+              <p className="text-xs text-muted-foreground ml-8">Ver todos os {comments.length} comentários</p>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={handleCommentSubmit} className="w-full flex gap-2 mt-2 items-center">
+          <Avatar className="size-8">
+            <AvatarImage src={userMe?.imageUrl ?? undefined} />
+            <AvatarFallback>{userMe?.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 relative">
+            <Input
+              placeholder="Escreva um comentário..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="pr-10"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              variant="ghost"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+              disabled={!newComment.trim() || addComment.isPending}
+            >
+              {addComment.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
-          </DialogTrigger>
+          </div>
+        </form>
+
+        <Dialog open={showCommentDialog} onOpenChange={setShowCommentDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Comentários</DialogTitle>
-              <DialogDescription>Comentários no post &quot;{post.title}&quot;</DialogDescription>
+              <DialogTitle>Comentários no post de {post.author.firstName}</DialogTitle>
             </DialogHeader>
 
-            <div className="max-h-[400px] overflow-y-auto py-4 space-y-4">
+            <div className="max-h-[50vh] overflow-y-auto py-4 space-y-4">
               {comments && comments.length > 0 ? (
                 comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-2 group">
-                    <Avatar className="size-8 mt-0.5">
+                  <div key={comment.id} className="flex gap-2 group items-start">
+                    <Avatar className="size-8 mt-0.5 border">
                       <AvatarImage src={comment.user.imageUrl ?? undefined} />
                       <AvatarFallback>{comment.user.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
@@ -639,7 +719,7 @@ function PostItem({ post }: PostItemProps) {
                         <p className="font-medium text-sm">
                           {comment.user.firstName} {comment.user.lastName}
                         </p>
-                        {comment.userId === auth.userId && (
+                        {(comment.userId === auth.userId || userMe?.role === "ADMIN") && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -661,47 +741,37 @@ function PostItem({ post }: PostItemProps) {
               )}
             </div>
 
-            <form onSubmit={handleCommentSubmit} className="flex gap-2 mt-2">
+            <form onSubmit={handleCommentSubmit} className="flex gap-2 mt-2 pt-4 border-t">
               <Avatar className="size-8">
                 <AvatarImage src={userMe?.imageUrl ?? undefined} />
                 <AvatarFallback>{userMe?.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div className="flex-1 flex gap-2">
+              <div className="flex-1 relative">
                 <Input
                   placeholder="Escreva um comentário..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  className="flex-1"
+                  className="pr-10"
                 />
-                <Button type="submit" disabled={!newComment.trim() || addComment.isPending}>
-                  {addComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
+                <Button
+                  type="submit"
+                  size="icon"
+                  variant="ghost"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                  disabled={!newComment.trim() || addComment.isPending}
+                >
+                  {addComment.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Preview of first comment if exists */}
-      {comments && comments.length > 0 && (
-        <div
-          className="mt-2 pl-2 border-l-2 border-muted cursor-pointer hover:bg-muted/50 p-2 rounded-sm transition-colors"
-          onClick={() => setShowCommentDialog(true)}
-        >
-          <div className="flex items-center gap-2">
-            <Avatar className="size-5">
-              <AvatarImage src={comments?.at(0)?.user.imageUrl ?? undefined} />
-              <AvatarFallback>{comments?.at(0)?.user.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <p className="text-sm font-medium">{comments?.at(0)?.user.firstName}</p>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{comments?.at(0)?.comment}</p>
-          {comments.length > 1 && (
-            <p className="text-xs text-muted-foreground mt-1">Ver todos os {comments.length} comentários</p>
-          )}
-        </div>
-      )}
-    </div>
+      </CardFooter>
+    </Card>
   )
 }
 
