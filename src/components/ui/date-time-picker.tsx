@@ -77,7 +77,7 @@ export function DateTimePicker({ date, setDate, disabled }: DateTimePickerProps)
                           const newDate = new Date(date)
                           if (field.value) {
                             // Preserve the time when selecting a new date
-                            newDate.setHours(field.value.getHours())
+                            newDate.setHours(field.value.getHours() - 3)
                             newDate.setMinutes(field.value.getMinutes())
                           } else {
                             // Default to current time if no time was previously selected
