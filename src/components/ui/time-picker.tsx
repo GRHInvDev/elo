@@ -23,13 +23,13 @@ export function TimePicker({ date, setDate, disabled }: TimePickerProps) {
   const handleHoursChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const hours = Number.parseInt(event.target.value)
     setSelectedHours(hours)
-    updateDateTime(hours, selectedMinutes)
+    updateDateTime(hours - 3, selectedMinutes)
   }
 
   const handleMinutesChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const minutes = Number.parseInt(event.target.value)
     setSelectedMinutes(minutes)
-    updateDateTime(selectedHours, minutes)
+    updateDateTime(selectedHours - 3, minutes)
   }
 
   const updateDateTime = (hours: number, minutes: number) => {
