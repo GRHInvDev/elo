@@ -25,8 +25,7 @@ model User {
   comments      Coment[]
   enterprise    Enterprise @default(NA)
   vehicleRents  VehicleRent[]
-  shopCart      ShopCart?
-  sells         Sell[]
+  orders        Order[]
   forms         Form[]
   formResponses FormResponse[]
 
@@ -44,6 +43,17 @@ enum Enterprise {
   Box
   RHenz
   Cristallux
+}
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+}
+
+model EnterpriseConfig {
+  id                    String      @id @default(cuid())
+  enterprise            Enterprise  @unique
+  shopNotificationEmail String
 }
 
 model GlobalConfig  {
@@ -206,35 +216,33 @@ model Product {
   price       Float
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  shopCarts   ShopCart[]
-  sells       Sell[]
+  orderItems  OrderItem[]
 
   @@map("products")
 }
 
-model ShopCart {
+model Order {
   id          String      @id @default(cuid())
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String      @unique
-  products    Product[]
+  user        User        @relation(fields: [userId], references: [id])
+  userId      String
   totalPrice  Float
+  status      String      @default("PENDING")
+  paymentMethod PaymentMethod @default(PIX)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  items       OrderItem[]
 
-  @@map("shop_cart")
+  @@map("orders")
 }
 
-model Sell {
-  id              String      @id @default(cuid())
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String      @unique
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  products        Product[]
-  totalPrice      Float
-  nfeId           Int?
-
-  @@map("sells")
+model OrderItem {
+    id        String  @id @default(cuid())
+    order     Order   @relation(fields: [orderId], references: [id])
+    orderId   String
+    product   Product @relation(fields: [productId], references: [id])
+    productId String
+    quantity  Int
+    price     Float
 }
 
 model Form {

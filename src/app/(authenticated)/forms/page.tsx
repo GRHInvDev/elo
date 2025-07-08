@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { PlusCircle, FileText, LucideFileVideo, LucideKanbanSquare } from "lucide-react"
+import { FileText, LucideFileVideo, LucideKanbanSquare } from "lucide-react"
 import Link from "next/link"
 import { FormsList } from "@/components/forms/forms-list"
 import { Suspense } from "react"
@@ -50,12 +50,6 @@ export default async function FormsPage() {
             <Button variant="outline" className="w-full">
               <FileText className="mr-2 h-4 w-4" />
               Minhas Respostas
-            </Button>
-          </Link>
-          <Link href="/forms/new">
-            <Button className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo Formulário
             </Button>
           </Link>
         </div>

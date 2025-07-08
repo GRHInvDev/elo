@@ -140,4 +140,29 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   })
 })
 
+export const shopManagerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const user = await ctx.db.user.findUnique({
+    where: { id: ctx.auth.userId },
+  });
+
+  if (!user?.email) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const enterpriseConfigs = await ctx.db.enterpriseConfig.findMany({
+    where: { shopNotificationEmail: user.email },
+  });
+
+  if (enterpriseConfigs.length === 0 && user.role !== "ADMIN") {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      user,
+    },
+  });
+});
+
 export const middleware = t.middleware
