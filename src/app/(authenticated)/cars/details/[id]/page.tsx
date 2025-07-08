@@ -160,7 +160,7 @@ export default async function VehicleDetailsPage({
                           <div>
                             <p className="font-medium">Data de início</p>
                             <p className="text-sm text-muted-foreground">
-                              {format(new Date(rent.startDate), "Pp", { locale: ptBR })}
+                              {format(new Date(rent.startDate.setHours(rent.startDate.getHours() + 3)), "Pp", { locale: ptBR, })}
                             </p>
                           </div>
                         </div>
@@ -172,7 +172,7 @@ export default async function VehicleDetailsPage({
                           <div>
                             <p className="font-medium">Retorno previsto</p>
                             <p className="text-sm text-muted-foreground">
-                              {format(new Date(rent.possibleEnd), "Pp", { locale: ptBR })}
+                              {format(new Date(rent.possibleEnd.setHours(rent.possibleEnd.getHours() + 3)), "Pp", { locale: ptBR })}
                             </p>
                           </div>
                         </div>

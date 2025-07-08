@@ -117,6 +117,12 @@ export const vehicleRentRouter = createTRPCRouter({
     const userId = ctx.auth.userId
     const { vehicleId, startDate, possibleEnd } = input
 
+    console.log(startDate)
+    console.log(possibleEnd)
+
+    const newStartDate = new Date(startDate ?? new Date()).setHours(new Date(startDate ?? new Date()).getHours() - 3);
+    const newPossibleEnd = new Date(possibleEnd ?? new Date()).setHours(new Date(possibleEnd ?? new Date()).getHours() - 3);
+
     if (!possibleEnd) {
       throw new TRPCError({
         code: "BAD_REQUEST",
@@ -147,12 +153,12 @@ export const vehicleRentRouter = createTRPCRouter({
           AND: [
             {
               startDate: {
-                lt: possibleEnd,
+                lt: new Date(newPossibleEnd),
               },
             },
             {
               possibleEnd: {
-                gt: startDate,
+                gt: new Date(newStartDate),
               },
             },
           ],
@@ -170,7 +176,8 @@ export const vehicleRentRouter = createTRPCRouter({
       const rent = await tx.vehicleRent.create({
         data: {
           userId,
-          ...input,
+          startDate: new Date(newStartDate),
+          possibleEnd: new Date(newPossibleEnd),
           vehicleId: vehicleId,
           initialKm: vehicle.kilometers,
         },
