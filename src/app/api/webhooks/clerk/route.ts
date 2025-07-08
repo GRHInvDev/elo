@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Webhook } from "svix"
 import { headers } from "next/headers"
-import type { WebhookEvent } from "@clerk/nextjs/server"
+import { clerkClient, type WebhookEvent } from "@clerk/nextjs/server"
 import { db } from "@/server/db"
 
 export async function POST(req: Request) {
@@ -66,8 +66,14 @@ export async function POST(req: Request) {
           firstName: first_name ?? "",
           lastName: last_name ?? "",
           imageUrl: image_url,
-          role: public_metadata?.role === "admin" ? "ADMIN" : "USER",
+          role: "USER",
         },
+      })
+      
+      await (await clerkClient()).users.updateUserMetadata(id, {
+        publicMetadata: {
+          role: "USER"
+        }
       })
       break
     case "user.updated":

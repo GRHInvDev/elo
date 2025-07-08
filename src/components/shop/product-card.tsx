@@ -1,11 +1,25 @@
+"use client"
 import type {Product} from "@prisma/client"
 import Image from "next/image"
 import { Card, CardContent, /*CardDescription,*/ CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { LucideBadgeInfo, LucideShoppingCart } from "lucide-react";
 import { Button } from "../ui/button";
+import { useCart } from "@/contexts/cart-context";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductCard({ product }:{ product: Product }) {
+    const { addItem } = useCart();
+    const { toast } = useToast()
+
+    const handleAddItem = () => {
+        addItem(product);
+        toast({
+            title: "Produto adicionado!",
+            description: `${product.name} foi adicionado ao seu carrinho.`,
+        });
+    };
+
     return (
         <Card className="overflow-hidden min-h-[24em] flex flex-col">
             <div>
@@ -41,7 +55,7 @@ export default function ProductCard({ product }:{ product: Product }) {
                   </div>
                   <div className="flex flex-col gap-2 items-end">
                     <Badge>{product.enterprise}</Badge>
-                    {/* <CardDescription className="text-xl">R${product.price.toLocaleString()}</CardDescription> */}
+                    <p className="text-xl font-bold">{product.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
                   </div>
                 </div>
               </CardHeader>
@@ -52,9 +66,9 @@ export default function ProductCard({ product }:{ product: Product }) {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button disabled className="w-full" size="sm" >
-                  <LucideShoppingCart/>
-                  Indisponível
+                <Button className="w-full" size="sm" onClick={handleAddItem}>
+                    <LucideShoppingCart className="mr-2 h-4 w-4"/>
+                    Adicionar ao carrinho
                 </Button>
               </CardFooter>
             </Card>
