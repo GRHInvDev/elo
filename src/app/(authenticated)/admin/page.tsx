@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { LucideCake, LucideMapPin, LucideNewspaper } from "lucide-react";
+import { LucideCake, LucideMapPin, LucideNewspaper, LucideUtensils } from "lucide-react";
 import Link from "next/link";
 
 export default function Page() {
@@ -36,19 +36,19 @@ export default function Page() {
                             </CardFooter>
                         </Card>
                     </Link>
-                    {/* <Link href={'/admin/news'}> */}
-                        <Card className="text-muted-foreground">
+                    <Link href={'/admin/food'}>
+                        <Card>
                             <CardHeader>
-                                <LucideNewspaper/>
+                                <LucideUtensils/>
                                 <CardTitle>
-                                    Notícias
+                                    Comida
                                 </CardTitle>
                             </CardHeader>
                             <CardFooter>
-                                <CardDescription>Em construção 🚧</CardDescription>
+                                <CardDescription>Gerencie os pedidos de comida 🍔</CardDescription>
                             </CardFooter>
                         </Card>
-                    {/* </Link> */}
+                    </Link>
                 </CardContent>
             </Card>
         </div>

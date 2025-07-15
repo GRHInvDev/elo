@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
-import { LucideLink, LucideTerminalSquare, Menu } from "lucide-react"
+import { LucideLink, Menu } from "lucide-react"
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -13,19 +13,12 @@ import { SettingsMenu } from "./settings-menu"
 import { Separator } from "./ui/separator"
 import { routeItems } from "@/const/routes"
 import { DialogTitle } from "./ui/dialog"
+import { UserRole } from "@prisma/client"
 
 export function MainNav() {
   const pathname = usePathname()
   const { data: user } = api.user.me.useQuery()
   const [isOpen, setIsOpen] = useState(false)
-  
-
-  const isAdmin = ()=>{
-    if(user?.role === "ADMIN") 
-      return {title: "Admin",icon: LucideTerminalSquare, href: "/admin",}
-    else
-      return null
-  }
 
   return (
     <>
@@ -41,7 +34,7 @@ export function MainNav() {
           </SheetTrigger>
           <SheetContent side="left" className="w-[240px] sm:w-[300px] flex flex-col justify-between">
             <div className="flex flex-1 flex-col space-y-4 mt-8">
-              {[...routeItems, isAdmin()].map((item) => {if (item) return (
+              {[...routeItems(user?.role ?? UserRole.USER)].map((item) => {if (item) return (
                 <Link
                   key={item.href}
                   href={item.href}

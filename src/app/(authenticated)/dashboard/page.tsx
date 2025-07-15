@@ -10,10 +10,11 @@ import NewsDisplay from "@/components/dashboard/news-displ"
 import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
+import { UserRole } from "@prisma/client"
 
 export default async function DashboardPage() {
   const birthdays = await api.birthday.listCurrentMonth();
-
+  const user = await api.user.me()
   const posts: {
     imageRef: string,
     title: string,
@@ -80,7 +81,7 @@ export default async function DashboardPage() {
               </h1>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 {
-                  routeItems.map((m,i)=> m.title !== "Dashboard" && (
+                  routeItems(user?.role ?? UserRole.USER).map((m,i)=> m.title !== "Dashboard" && (
                     <div key={i} className="col-span-1">
                       <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-2 rounded-lg gap-x-2">
                         <m.icon className="size-4"/>
@@ -97,19 +98,19 @@ export default async function DashboardPage() {
                 Links
               </div>
               <div className="flex flex-col gap-y-4 mt-4">
-                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
                   <Image src="/umentor.jpg" height={40} width={40} className="rounded-md mr-2" alt="umentor"/>
                   Umentor 
                 </Link>
-                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
                   <LucideGraduationCap className="size-10 mr-2"/>
                   CristalUni 
                 </Link>
-                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
                   <Image src="/LOGO BOX.png" height={40} width={40} className="rounded-md mr-2" alt="Site Box"/>
                   Site Box 
                 </Link>
-                <Link href={'https://cristallux.com.br'} className="flex items-center hover:bg-primary/30 hover:pl-1 hover:py-1 hover:text-background transition-all duration-300 rounded-md h-12 border">
+                <Link href={'https://cristallux.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
                   <Image src="/icon_cristal.svg" height={40} width={40} className="rounded-md mr-2" alt="Cristaluni"/>
                   Site Cristallux 
                 </Link>
@@ -145,7 +146,7 @@ export default async function DashboardPage() {
         </h1>
         <NewsDisplay/>
       </div>
-      <div className="flex p-1 flex-col mt-8 h-36 bg-muted">
+      <div className="flex p-1 flex-col mt-8 h-fit bg-muted">
         <div className="flex-1 flex justify-center md:justify-start">
           <div className="p-4 md:ml-8 space-y-2">
             <div className="flex items-center gap-x-2">
@@ -168,8 +169,8 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-        <div className="flex justify-center mt-8 bg-muted p-2">
-              <Link href={'https://allpines.com.br'}>Allpines</Link> &copy; elo
+        <div className="mx-auto mt-16 w-fit flex bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
+          Elo &copy; 2025 | Built with ❤️ by <Link href={'https://allpines.com.br'} className="flex items-center ml-2 font-bold"><Image src="/logoAllpines.webp" height={15} width={15} alt="Allpines"/> Allpines</Link> 
         </div>
       </div>
     </div>

@@ -7,6 +7,8 @@ import { UserNav } from "@/components/user-nav"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { routeItems } from "@/const/routes"
 import Link from "next/link"
+import { api } from "@/trpc/server"
+import { UserRole } from "@prisma/client"
 
 export default async function AuthenticatedLayout({
   children,
@@ -14,6 +16,8 @@ export default async function AuthenticatedLayout({
   children: React.ReactNode
 }) {
   const { userId } = await auth()
+
+  const user = await api.user.me()
 
   if (!userId) {
     redirect("/sign-in")
@@ -33,10 +37,10 @@ export default async function AuthenticatedLayout({
             </div>
           </div>
           <div className="hidden md:flex w-full justify-around p-4 mt-4">
-            {routeItems.map((r, i)=>(
-              <Link key={i} href={r.href} className="flex items-center gap-2 font-extralight">
+            {routeItems(user?.role ?? UserRole.USER).map((r, i)=>(
+              <Link key={i} href={r.href} title={r.title} className="flex items-center gap-2 font-extralight">
                 <r.icon className="size-4"/>
-                {r.title}
+                <p className="hidden lg:block">{r.title}</p>
               </Link>
             ))}
           </div>
