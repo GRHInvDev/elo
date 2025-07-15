@@ -180,6 +180,7 @@ export const mockEmailPedidoComida = (
     preco: number,
     dataPedido: string,
     observacoes: string | null,
+    opcionais: string[] = [],
 ) => (`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -232,6 +233,7 @@ export const mockEmailPedidoComida = (
                         <li><strong>Prato:</strong> ${nomePrato}</li>
                         <li><strong>Preço:</strong> R$ ${preco.toFixed(2)}</li>
                         <li><strong>Data do Pedido:</strong> ${dataPedido}</li>
+                        ${opcionais && opcionais.length > 0 ? `<li><strong>Opcionais:</strong> ${opcionais.join(", ")}</li>` : ''}
                         ${observacoes ? `<li><strong>Observações:</strong> ${observacoes}</li>` : ''}
                     </ul>
                 </div>
@@ -254,8 +256,8 @@ export const mockEmailPedidosRestaurante = (
     pedidos: Array<{
         nomeUsuario: string;
         prato: string;
-        preco: number;
         observacoes: string | null;
+        opcionais?: string[];
     }>,
 ) => (`
     <!DOCTYPE html>
@@ -263,89 +265,220 @@ export const mockEmailPedidosRestaurante = (
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Pedidos do Dia - ${nomeRestaurante}</title>
             <style>
                 body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    background-color: #f7f7f7;
                     margin: 0;
-                    padding: 20px;
+                    padding: 0;
+                    -webkit-text-size-adjust: 100%;
+                    -ms-text-size-adjust: 100%;
+                    color: #333;
                 }
                 .container {
                     background-color: #ffffff;
-                    border-radius: 5px;
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                    margin: 20px auto;
                     max-width: 800px;
-                    margin: auto;
+                    overflow: hidden;
                 }
-                h1 {
-                    color: #333;
+                .header {
+                    background-color: #007bff; /* Azul vibrante */
+                    color: #fff;
+                    padding: 24px 20px;
+                    text-align: center;
+                    border-top-left-radius: 8px;
+                    border-top-right-radius: 8px;
                 }
-                p {
+                .header h1 {
+                    margin: 0;
+                    font-size: 2.2rem;
+                    line-height: 1.2;
+                }
+                .header p {
+                    margin: 8px 0 0;
+                    font-size: 1rem;
+                    opacity: 0.9;
+                }
+                .content-section {
+                    padding: 20px 30px;
+                }
+                .info-block {
+                    background-color: #e9f7ff; /* Azul claro para o bloco de informações */
+                    border-left: 5px solid #007bff;
+                    padding: 15px 20px;
+                    margin-bottom: 25px;
+                    border-radius: 4px;
+                    font-size: 1.05rem;
+                }
+                .info-block div {
+                    margin-bottom: 5px;
+                }
+                .info-block div:last-child {
+                    margin-bottom: 0;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 30px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                }
+                th, td {
+                    border: 1px solid #e0e0e0;
+                    padding: 12px 15px;
+                    text-align: left;
+                    vertical-align: top;
+                }
+                th {
+                    background-color: #f0f4f7; /* Cinza claro azulado */
                     color: #555;
-                }
-                .order-summary {
-                    background-color: #f9f9f9;
-                    padding: 15px;
-                    border-radius: 5px;
-                    margin: 15px 0;
-                }
-                .order-list {
-                    margin: 20px 0;
-                }
-                .order-item {
-                    background-color: #ffffff;
-                    border: 1px solid #ddd;
-                    border-radius: 3px;
-                    padding: 10px;
-                    margin: 10px 0;
-                }
-                .total {
                     font-weight: bold;
-                    font-size: 18px;
-                    color: #333;
-                    border-top: 2px solid #333;
-                    padding-top: 10px;
-                    margin-top: 15px;
+                    font-size: 0.95rem;
+                    text-transform: uppercase;
+                }
+                tr:nth-child(even) {
+                    background-color: #fbfbfb; /* Cinza muito claro */
+                }
+                .opcionais-list {
+                    margin: 0;
+                    padding-left: 20px;
+                    list-style-type: disc;
+                }
+                .opcionais-list li {
+                    margin-bottom: 3px;
+                }
+                .no-data {
+                    color: #aaa;
+                    font-style: italic;
+                }
+                .call-to-action {
+                    text-align: center;
+                    margin: 30px 0;
+                }
+                .button {
+                    display: inline-block;
+                    background-color: #28a745; /* Verde para call to action */
+                    color: #ffffff;
+                    padding: 12px 25px;
+                    border-radius: 5px;
+                    text-decoration: none;
+                    font-weight: bold;
+                    font-size: 1.05rem;
                 }
                 .footer {
                     margin-top: 20px;
-                    font-size: 12px;
-                    color: #aaa;
+                    font-size: 0.85rem;
+                    color: #888;
+                    border-top: 1px solid #eee;
+                    padding: 20px 30px;
+                    text-align: center;
+                    background-color: #f0f0f0;
+                    border-bottom-left-radius: 8px;
+                    border-bottom-right-radius: 8px;
+                }
+
+                @media screen and (max-width: 600px) {
+                    .container {
+                        margin: 10px;
+                        border-radius: 0;
+                    }
+                    .content-section {
+                        padding: 15px 20px;
+                    }
+                    .header {
+                        padding: 20px 15px;
+                        border-radius: 0;
+                    }
+                    .header h1 {
+                        font-size: 1.8rem;
+                    }
+                    table {
+                        display: block;
+                        overflow-x: auto;
+                        white-space: nowrap;
+                    }
+                    thead {
+                        display: none; /* Hide header on small screens */
+                    }
+                    tr {
+                        display: block;
+                        margin-bottom: 10px;
+                        border: 1px solid #e0e0e0;
+                        border-radius: 4px;
+                    }
+                    td {
+                        display: block;
+                        text-align: right;
+                        border: none;
+                        border-bottom: 1px solid #eee;
+                        padding: 10px 15px;
+                        position: relative;
+                        padding-left: 50%;
+                    }
+                    td:last-child {
+                        border-bottom: none;
+                    }
+                    td::before {
+                        content: attr(data-label);
+                        position: absolute;
+                        left: 15px;
+                        width: calc(50% - 30px);
+                        text-align: left;
+                        font-weight: bold;
+                        color: #555;
+                    }
+                    td:nth-of-type(1)::before { content: "Nº"; }
+                    td:nth-of-type(2)::before { content: "Cliente"; }
+                    td:nth-of-type(3)::before { content: "Prato"; }
+                    td:nth-of-type(4)::before { content: "Opcionais"; }
+                    td:nth-of-type(5)::before { content: "Observações"; }
                 }
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>Pedidos do Dia - ${nomeRestaurante}</h1>
-                <p>Data: ${dataPedidos}</p>
-                <p>Total de pedidos: ${pedidos.length}</p>
-                
-                <div class="order-summary">
-                    <h3>Resumo dos Pedidos:</h3>
-                    <div class="order-list">
-                        ${pedidos.map((pedido, index) => `
-                            <div class="order-item">
-                                <strong>Pedido ${index + 1}:</strong><br>
-                                <strong>Cliente:</strong> ${pedido.nomeUsuario}<br>
-                                <strong>Prato:</strong> ${pedido.prato}<br>
-                                <strong>Preço:</strong> R$ ${pedido.preco.toFixed(2)}<br>
-                                ${pedido.observacoes ? `<strong>Observações:</strong> ${pedido.observacoes}<br>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="total">
-                        <strong>Valor Total: R$ ${pedidos.reduce((total, pedido) => total + pedido.preco, 0).toFixed(2)}</strong>
-                    </div>
+                <div class="header">
+                    <h1>Pedidos do Dia</h1>
+                    <p>${nomeRestaurante}</p>
                 </div>
-
-                <p>Por favor, prepare os pedidos para entrega no horário de almoço.</p>
-
+                <div class="content-section">
+                    <div class="info-block">
+                        <div><strong>Data:</strong> ${dataPedidos}</div>
+                        <div><strong>Total de Pedidos:</strong> ${pedidos.length}</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Funcionário</th>
+                                <th>Prato</th>
+                                <th>Opcionais</th>
+                                <th>Observações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pedidos.map((pedido, index) => `
+                                <tr>
+                                    <td data-label="Nº">${index + 1}</td>
+                                    <td data-label="Funcionário">${pedido.nomeUsuario}</td>
+                                    <td data-label="Prato">${pedido.prato}</td>
+                                    <td data-label="Opcionais">
+                                        ${(pedido.opcionais && pedido.opcionais.length > 0)
+                                            ? `<ul class='opcionais-list'>${pedido.opcionais.map(opc => `<li>${opc}</li>`).join('')}</ul>`
+                                            : '<span class="no-data">-</span>'}
+                                    </td>
+                                    <td data-label="Observações">${pedido.observacoes ?? '<span class="no-data">-</span>'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <p style="font-size:1.1rem; color:#333; text-align: center; margin-bottom: 30px;">Por favor, prepare os pedidos para entrega no horário de almoço.</p>
+                </div>
                 <div class="footer">
                     <p>Atenciosamente,</p>
-                    <p>Equipe de suporte</p>
-                    <p>elo</p>
+                    <p>Equipe de suporte elo</p>
                 </div>
             </div>
         </body>

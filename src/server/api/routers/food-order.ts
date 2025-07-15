@@ -57,7 +57,8 @@ export const foodOrderRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.foodOrder.create({
+      // Criação do pedido
+      const createdOrder = await ctx.db.foodOrder.create({
         data: {
           userId,
           restaurantId: input.restaurantId,
@@ -77,6 +78,34 @@ export const foodOrderRouter = createTRPCRouter({
           },
           restaurant: true,
           menuItem: true,
+        },
+      })
+
+      // Salvar as opções escolhidas (optionChoices) na tabela OrderOptionSelection
+      if (input.optionChoices && input.optionChoices.length > 0) {
+        await ctx.db.orderOptionSelection.createMany({
+          data: input.optionChoices.map((choiceId: string) => ({
+            orderId: createdOrder.id,
+            choiceId,
+          })),
+        })
+      }
+
+      // Buscar o pedido novamente, agora incluindo as opções
+      return ctx.db.foodOrder.findUnique({
+        where: { id: createdOrder.id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          restaurant: true,
+          menuItem: true,
+          optionSelections: true,
         },
       })
     }),

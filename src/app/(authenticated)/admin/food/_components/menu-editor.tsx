@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Edit, Trash2, ChevronDown, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { type MenuItem, type MenuItemOption, type MenuItemOptionChoice } from "@prisma/client"
+import * as XLSX from "xlsx"
 
 export default function MenuEditor() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
@@ -36,6 +37,15 @@ export default function MenuEditor() {
     { enabled: !!selectedMenuItem }
   )
 
+  const createMenuItem = api.menuItem.create.useMutation({
+    onSuccess: () => {
+      toast.success("Prato criado com sucesso!")
+    },
+    onError: (error) => {
+      toast.error(`Erro ao criar prato: ${error.message}`)
+    },
+  })
+
   const toggleExpanded = (itemId: string) => {
     const newExpanded = new Set(expandedItems)
     if (newExpanded.has(itemId)) {
@@ -44,6 +54,58 @@ export default function MenuEditor() {
       newExpanded.add(itemId)
     }
     setExpandedItems(newExpanded)
+  }
+
+  // Função para exportar cardápio para Excel
+  const handleExportMenu = () => {
+    if (!menuItems.data || menuItems.data.length === 0) {
+      toast.error("Nenhum item de cardápio para exportar.")
+      return
+    }
+    const dataToExport = menuItems.data.map((item) => ({
+      "Nome": item.name,
+      "Descrição": item.description,
+      "Preço": item.price,
+      "Categoria": item.category,
+      "Disponível": item.available ? "Sim" : "Não"
+    }))
+    const ws = XLSX.utils.json_to_sheet(dataToExport)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Cardápio")
+    XLSX.writeFile(wb, `cardapio_${selectedRestaurant}.xlsx`)
+    toast.success("Cardápio exportado com sucesso!")
+  }
+
+  // Função para importar cardápio de Excel
+  const handleImportMenu = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const sheet = workbook.Sheets[workbook.SheetNames[0]!]
+      const json = XLSX.utils.sheet_to_json(sheet!)
+      // json: Array<{ Nome, Descrição, Preço, Categoria, Disponível }>
+      await Promise.all(json.map((row) => {
+        if (typeof (row as { Nome: string }).Nome !== "string" || !(row as { Nome: string }).Nome) return Promise.resolve()
+        return new Promise<void>((resolve) => {
+          createMenuItem.mutate({
+            restaurantId: selectedRestaurant,
+            name: (row as { Nome: string }).Nome,
+            description: (row as { Descrição: string }).Descrição ?? "",
+            price: Number((row as { Preço: number }).Preço) ?? 0,
+            category: (row as { Categoria: string }).Categoria ?? "",
+            available: (row as { Disponível: string }).Disponível === "Sim"
+          }, {
+            onSuccess: () => resolve(),
+            onError: () => resolve()
+          })
+        })
+      }))
+      toast.success("Cardápio importado com sucesso!")
+    } catch {
+      toast.error("Erro ao importar cardápio. Verifique o arquivo.")
+    }
   }
 
   return (
@@ -75,6 +137,21 @@ export default function MenuEditor() {
           </Select>
         </CardContent>
       </Card>
+
+      {/* Botões de exportação/importação do cardápio */}
+      {selectedRestaurant && (
+        <div className="flex gap-2 mb-4">
+          <Button variant="outline" onClick={handleExportMenu}>
+            Exportar Cardápio Excel
+          </Button>
+          <label className="inline-block">
+            <Button variant="outline" asChild>
+              <span>Importar Cardápio Excel</span>
+            </Button>
+            <input type="file" accept=".xlsx,.xls" onChange={handleImportMenu} className="hidden" />
+          </label>
+        </div>
+      )}
 
       {selectedRestaurant && (
         <Tabs defaultValue="menu" className="space-y-4">
@@ -151,7 +228,10 @@ export default function MenuEditor() {
                                 <div className="ml-10 space-y-4">
                                   <div className="flex justify-between items-center">
                                     <h4 className="font-medium">Opções do Prato</h4>
-                                    <Dialog>
+                                  </div>
+
+                                  <MenuItemOptionsList menuItemId={item.id} />
+                                  <Dialog>
                                       <DialogTrigger asChild>
                                         <Button size="sm" variant="outline">
                                           <Plus className="h-4 w-4 mr-2" />
@@ -165,9 +245,6 @@ export default function MenuEditor() {
                                         <MenuItemOptionForm menuItemId={item.id} />
                                       </DialogContent>
                                     </Dialog>
-                                  </div>
-
-                                  <MenuItemOptionsList menuItemId={item.id} />
                                 </div>
                               )}
                             </div>

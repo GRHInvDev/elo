@@ -27,6 +27,19 @@ export async function GET() {
           },
           restaurant: true,
           menuItem: true,
+          optionSelections: {
+            include: {
+              choice: {
+                include: {
+                  option: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
@@ -51,8 +64,8 @@ export async function GET() {
           const pedidos = orders.map((order) => ({
             nomeUsuario: `${order.user.firstName} ${order.user?.lastName}`.trim(),
             prato: order.menuItem?.name,
-            preco: order.menuItem?.price,
             observacoes: order.observations,
+            opcionais: order.optionSelections?.map(sel => `${sel.choice.option.name}: ${sel.choice.name}`) || [],
           }));
 
           const emailContent = mockEmailPedidosRestaurante(
@@ -61,8 +74,8 @@ export async function GET() {
             pedidos as {
               nomeUsuario: string;
               prato: string;
-              preco: number;
               observacoes: string | null;
+              opcionais?: string[];
             }[]
           );
 
