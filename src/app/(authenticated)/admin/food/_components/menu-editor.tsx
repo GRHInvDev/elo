@@ -19,8 +19,17 @@ import * as XLSX from "xlsx"
 
 export default function MenuEditor() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
-  const [selectedMenuItem, setSelectedMenuItem] = useState<string>("")
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+
+  // Adicionar estados para Dialogs
+  const [openAddMenuItem, setOpenAddMenuItem] = useState(false)
+  const [openEditMenuItemId, setOpenEditMenuItemId] = useState<string | null>(null)
+  const [openAddOptionId, setOpenAddOptionId] = useState<string | null>(null)
+  const [openEditOptionId, setOpenEditOptionId] = useState<string | null>(null)
+  const [openAddChoiceOptionId, setOpenAddChoiceOptionId] = useState<string | null>(null)
+  const [openEditChoiceId, setOpenEditChoiceId] = useState<string | null>(null)
+
+  const utils = api.useUtils()
 
   // Buscar restaurantes
   const restaurants = api.restaurant.list.useQuery()
@@ -31,14 +40,9 @@ export default function MenuEditor() {
     { enabled: !!selectedRestaurant }
   )
 
-  // Buscar opções do item selecionado
-  const menuItemOptions = api.menuItemOption.byMenuItem.useQuery(
-    { menuItemId: selectedMenuItem },
-    { enabled: !!selectedMenuItem }
-  )
-
   const createMenuItem = api.menuItem.create.useMutation({
     onSuccess: () => {
+      void utils.menuItem.byRestaurant.invalidate({ restaurantId: selectedRestaurant })
       toast.success("Prato criado com sucesso!")
     },
     onError: (error) => {
@@ -89,7 +93,7 @@ export default function MenuEditor() {
       await Promise.all(json.map((row) => {
         if (typeof (row as { Nome: string }).Nome !== "string" || !(row as { Nome: string }).Nome) return Promise.resolve()
         return new Promise<void>((resolve) => {
-          createMenuItem.mutate({
+          void createMenuItem.mutate({
             restaurantId: selectedRestaurant,
             name: (row as { Nome: string }).Nome,
             description: (row as { Descrição: string }).Descrição ?? "",
@@ -107,6 +111,9 @@ export default function MenuEditor() {
       toast.error("Erro ao importar cardápio. Verifique o arquivo.")
     }
   }
+
+  // Função para refresh do menu
+  const refreshMenu = () => menuItems.refetch()
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -171,7 +178,7 @@ export default function MenuEditor() {
                       Gerencie os pratos disponíveis
                     </CardDescription>
                   </div>
-                  <Dialog>
+                  <Dialog open={openAddMenuItem} onOpenChange={setOpenAddMenuItem}>
                     <DialogTrigger asChild>
                       <Button>
                         <Plus className="h-4 w-4 mr-2" />
@@ -185,7 +192,13 @@ export default function MenuEditor() {
                           Preencha as informações do novo prato
                         </DialogDescription>
                       </DialogHeader>
-                      <MenuItemForm restaurantId={selectedRestaurant} />
+                      <MenuItemForm
+                        restaurantId={selectedRestaurant}
+                        onSuccess={() => {
+                          setOpenAddMenuItem(false)
+                          void refreshMenu()
+                        }}
+                      />
                     </DialogContent>
                   </Dialog>
                 </div>
@@ -230,26 +243,43 @@ export default function MenuEditor() {
                                     <h4 className="font-medium">Opções do Prato</h4>
                                   </div>
 
-                                  <MenuItemOptionsList menuItemId={item.id} />
-                                  <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button size="sm" variant="outline">
-                                          <Plus className="h-4 w-4 mr-2" />
-                                          Adicionar Opção
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent>
-                                        <DialogHeader>
-                                          <DialogTitle>Adicionar Opção</DialogTitle>
-                                        </DialogHeader>
-                                        <MenuItemOptionForm menuItemId={item.id} />
-                                      </DialogContent>
-                                    </Dialog>
+                                  <MenuItemOptionsList
+                                    menuItemId={item.id}
+                                    onOptionChanged={refreshMenu}
+                                    openAddOptionId={openAddOptionId}
+                                    setOpenAddOptionId={setOpenAddOptionId}
+                                    openEditOptionId={openEditOptionId}
+                                    setOpenEditOptionId={setOpenEditOptionId}
+                                    openAddChoiceOptionId={openAddChoiceOptionId}
+                                    setOpenAddChoiceOptionId={setOpenAddChoiceOptionId}
+                                    openEditChoiceId={openEditChoiceId}
+                                    setOpenEditChoiceId={setOpenEditChoiceId}
+                                  />
+                                  <Dialog open={openAddOptionId === item.id} onOpenChange={(open) => setOpenAddOptionId(open ? item.id : null)}>
+                                    <DialogTrigger asChild>
+                                      <Button size="sm" variant="outline">
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Adicionar Opção
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Adicionar Opção</DialogTitle>
+                                      </DialogHeader>
+                                      <MenuItemOptionForm
+                                        menuItemId={item.id}
+                                        onSuccess={() => {
+                                          setOpenAddOptionId(null)
+                                          void refreshMenu()
+                                        }}
+                                      />
+                                    </DialogContent>
+                                  </Dialog>
                                 </div>
                               )}
                             </div>
                             <div className="flex space-x-2">
-                              <Dialog>
+                              <Dialog open={openEditMenuItemId === item.id} onOpenChange={(open) => setOpenEditMenuItemId(open ? item.id : null)}>
                                 <DialogTrigger asChild>
                                   <Button variant="outline" size="sm">
                                     <Edit className="h-4 w-4" />
@@ -259,7 +289,14 @@ export default function MenuEditor() {
                                   <DialogHeader>
                                     <DialogTitle>Editar Prato</DialogTitle>
                                   </DialogHeader>
-                                  <MenuItemForm restaurantId={selectedRestaurant} menuItem={item} />
+                                  <MenuItemForm
+                                    restaurantId={selectedRestaurant}
+                                    menuItem={item}
+                                    onSuccess={() => {
+                                      setOpenEditMenuItemId(null)
+                                      void refreshMenu()
+                                    }}
+                                  />
                                 </DialogContent>
                               </Dialog>
                               <Button variant="outline" size="sm">
@@ -300,7 +337,7 @@ export default function MenuEditor() {
 }
 
 // Componente de formulário de item do menu
-function MenuItemForm({ restaurantId, menuItem }: { restaurantId: string; menuItem?: MenuItem }) {
+function MenuItemForm({ restaurantId, menuItem, onSuccess }: { restaurantId: string; menuItem?: MenuItem; onSuccess?: () => void }) {
   const [formData, setFormData] = useState({
     name: menuItem?.name ?? "",
     description: menuItem?.description ?? "",
@@ -309,9 +346,13 @@ function MenuItemForm({ restaurantId, menuItem }: { restaurantId: string; menuIt
     available: menuItem?.available ?? true,
   })
 
+  const utils = api.useUtils()
+
   const createMenuItem = api.menuItem.create.useMutation({
     onSuccess: () => {
       toast.success("Prato criado com sucesso!")
+      onSuccess?.()
+      void utils.menuItem.byRestaurant.invalidate({ restaurantId })
     },
     onError: (error) => {
       toast.error(`Erro ao criar prato: ${error.message}`)
@@ -321,6 +362,8 @@ function MenuItemForm({ restaurantId, menuItem }: { restaurantId: string; menuIt
   const updateMenuItem = api.menuItem.update.useMutation({
     onSuccess: () => {
       toast.success("Prato atualizado com sucesso!")
+      onSuccess?.()
+      void utils.menuItem.byRestaurant.invalidate({ restaurantId })
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar prato: ${error.message}`)
@@ -331,13 +374,13 @@ function MenuItemForm({ restaurantId, menuItem }: { restaurantId: string; menuIt
     e.preventDefault()
     
     if (menuItem) {
-      updateMenuItem.mutate({
+      void updateMenuItem.mutate({
         id: menuItem.id,
         ...formData,
         restaurantId,
       })
     } else {
-      createMenuItem.mutate({
+      void createMenuItem.mutate({
         ...formData,
         restaurantId,
       })
@@ -407,7 +450,7 @@ function MenuItemForm({ restaurantId, menuItem }: { restaurantId: string; menuIt
 }
 
 // Componente de formulário de opção
-function MenuItemOptionForm({ menuItemId, option }: { menuItemId: string; option?: MenuItemOption }) {
+function MenuItemOptionForm({ menuItemId, option, onSuccess }: { menuItemId: string; option?: MenuItemOption; onSuccess?: () => void }) {
   const [formData, setFormData] = useState({
     name: option?.name ?? "",
     description: option?.description ?? "",
@@ -415,9 +458,13 @@ function MenuItemOptionForm({ menuItemId, option }: { menuItemId: string; option
     multiple: option?.multiple ?? false,
   })
 
+  const utils = api.useUtils()
+
   const createOption = api.menuItemOption.create.useMutation({
     onSuccess: () => {
       toast.success("Opção criada com sucesso!")
+      onSuccess?.()
+      void utils.menuItemOption.byMenuItem.invalidate({ menuItemId })
     },
     onError: (error) => {
       toast.error(`Erro ao criar opção: ${error.message}`)
@@ -427,6 +474,8 @@ function MenuItemOptionForm({ menuItemId, option }: { menuItemId: string; option
   const updateOption = api.menuItemOption.update.useMutation({
     onSuccess: () => {
       toast.success("Opção atualizada com sucesso!")
+      onSuccess?.()
+      void utils.menuItemOption.byMenuItem.invalidate({ menuItemId })
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar opção: ${error.message}`)
@@ -437,13 +486,13 @@ function MenuItemOptionForm({ menuItemId, option }: { menuItemId: string; option
     e.preventDefault()
     
     if (option) {
-      updateOption.mutate({
+      void updateOption.mutate({
         id: option.id,
         ...formData,
         menuItemId,
       })
     } else {
-      createOption.mutate({
+      void createOption.mutate({
         ...formData,
         menuItemId,
       })
@@ -501,8 +550,20 @@ function MenuItemOptionForm({ menuItemId, option }: { menuItemId: string; option
 }
 
 // Componente para listar opções de um item
-function MenuItemOptionsList({ menuItemId }: { menuItemId: string }) {
+function MenuItemOptionsList({ menuItemId, onOptionChanged, openEditOptionId, setOpenEditOptionId, openAddChoiceOptionId, setOpenAddChoiceOptionId, openEditChoiceId, setOpenEditChoiceId }: { menuItemId: string; onOptionChanged?: () => void; openAddOptionId: string | null; setOpenAddOptionId: (open: string | null) => void; openEditOptionId: string | null; setOpenEditOptionId: (open: string | null) => void; openAddChoiceOptionId: string | null; setOpenAddChoiceOptionId: (open: string | null) => void; openEditChoiceId: string | null; setOpenEditChoiceId: (open: string | null) => void }) {
   const options = api.menuItemOption.byMenuItem.useQuery({ menuItemId })
+  const utils = api.useUtils()
+
+  const deleteOption = api.menuItemOption.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Opção excluída com sucesso!")
+      void utils.menuItemOption.byMenuItem.invalidate({ menuItemId })
+      onOptionChanged?.()
+    },
+    onError: (error) => {
+      toast.error(`Erro ao excluir opção: ${error.message}`)
+    },
+  })
 
   if (!options.data || options.data.length === 0) {
     return (
@@ -533,10 +594,17 @@ function MenuItemOptionsList({ menuItemId }: { menuItemId: string }) {
                 {option.description && (
                   <p className="text-sm text-muted-foreground">{option.description}</p>
                 )}
-                <OptionChoicesList optionId={option.id} />
+                <OptionChoicesList
+                  optionId={option.id}
+                  onOptionChanged={onOptionChanged}
+                  openAddChoiceOptionId={openAddChoiceOptionId}
+                  setOpenAddChoiceOptionId={setOpenAddChoiceOptionId}
+                  openEditChoiceId={openEditChoiceId}
+                  setOpenEditChoiceId={setOpenEditChoiceId}
+                />
               </div>
               <div className="flex space-x-1">
-                <Dialog>
+                <Dialog open={openEditOptionId === option.id} onOpenChange={(open) => setOpenEditOptionId(open ? option.id : null)}>
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
                       <Edit className="h-3 w-3" />
@@ -546,10 +614,21 @@ function MenuItemOptionsList({ menuItemId }: { menuItemId: string }) {
                     <DialogHeader>
                       <DialogTitle>Editar Opção</DialogTitle>
                     </DialogHeader>
-                    <MenuItemOptionForm menuItemId={menuItemId} option={option} />
+                    <MenuItemOptionForm
+                      menuItemId={menuItemId}
+                      option={option}
+                      onSuccess={() => {
+                        setOpenEditOptionId(null)
+                        onOptionChanged?.()
+                      }}
+                    />
                   </DialogContent>
                 </Dialog>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={async () => {
+                  try {
+                    await deleteOption.mutateAsync({ id: option.id })
+                  } catch {}
+                }}>
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
@@ -562,14 +641,21 @@ function MenuItemOptionsList({ menuItemId }: { menuItemId: string }) {
 }
 
 // Componente para listar escolhas de uma opção
-function OptionChoicesList({ optionId }: { optionId: string }) {
+function OptionChoicesList({ optionId, onOptionChanged, openAddChoiceOptionId, setOpenAddChoiceOptionId, openEditChoiceId, setOpenEditChoiceId }: { optionId: string; onOptionChanged?: () => void; openAddChoiceOptionId: string | null; setOpenAddChoiceOptionId: (open: string | null) => void; openEditChoiceId: string | null; setOpenEditChoiceId: (open: string | null) => void }) {
   const choices = api.menuItemOptionChoice.byOption.useQuery({ optionId })
+  const utils = api.useUtils()
+
+  const deleteChoice = api.menuItemOptionChoice.delete.useMutation({
+    onSuccess: () => {
+      void utils.menuItemOptionChoice.byOption.invalidate({ optionId })
+    },
+  })
 
   if (!choices.data || choices.data.length === 0) {
     return (
       <div className="flex justify-between items-center">
         <p className="text-xs text-muted-foreground">Nenhuma escolha cadastrada</p>
-        <Dialog>
+        <Dialog open={openAddChoiceOptionId === optionId} onOpenChange={(open) => setOpenAddChoiceOptionId(open ? optionId : null)}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline">
               <Plus className="h-3 w-3 mr-1" />
@@ -580,7 +666,13 @@ function OptionChoicesList({ optionId }: { optionId: string }) {
             <DialogHeader>
               <DialogTitle>Adicionar Escolha</DialogTitle>
             </DialogHeader>
-            <OptionChoiceForm optionId={optionId} />
+            <OptionChoiceForm
+              optionId={optionId}
+              onSuccess={() => {
+                setOpenAddChoiceOptionId(null)
+                onOptionChanged?.()
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -591,7 +683,7 @@ function OptionChoicesList({ optionId }: { optionId: string }) {
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <p className="text-xs font-medium">Escolhas disponíveis:</p>
-        <Dialog>
+        <Dialog open={openAddChoiceOptionId === optionId} onOpenChange={(open) => setOpenAddChoiceOptionId(open ? optionId : null)}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline">
               <Plus className="h-3 w-3 mr-1" />
@@ -602,7 +694,13 @@ function OptionChoicesList({ optionId }: { optionId: string }) {
             <DialogHeader>
               <DialogTitle>Adicionar Escolha</DialogTitle>
             </DialogHeader>
-            <OptionChoiceForm optionId={optionId} />
+            <OptionChoiceForm
+              optionId={optionId}
+              onSuccess={() => {
+                setOpenAddChoiceOptionId(null)
+                onOptionChanged?.()
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -614,8 +712,40 @@ function OptionChoicesList({ optionId }: { optionId: string }) {
               <span className={choice.priceModifier >= 0 ? "text-green-600" : "text-red-600"}>
                 {choice.priceModifier >= 0 ? "+" : ""}R$ {choice.priceModifier.toFixed(2)}
               </span>
-              <Button variant="ghost" size="sm">
-                <Edit className="h-3 w-3" />
+              <Dialog open={openEditChoiceId === choice.id} onOpenChange={(open) => setOpenEditChoiceId(open ? choice.id : null)}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Editar Escolha</DialogTitle>
+                  </DialogHeader>
+                  <OptionChoiceForm
+                    optionId={optionId}
+                    choice={choice}
+                    onSuccess={() => {
+                      setOpenEditChoiceId(null)
+                      onOptionChanged?.()
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await deleteChoice.mutateAsync({ id: choice.id })
+                    onOptionChanged?.()
+                    toast.success("Escolha excluída com sucesso!")
+                  } catch {
+                    toast.error("Erro ao excluir escolha")
+                  }
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
           </div>
@@ -626,16 +756,20 @@ function OptionChoicesList({ optionId }: { optionId: string }) {
 }
 
 // Componente de formulário de escolha
-function OptionChoiceForm({ optionId, choice }: { optionId: string; choice?: MenuItemOptionChoice }) {
+function OptionChoiceForm({ optionId, choice, onSuccess }: { optionId: string; choice?: MenuItemOptionChoice; onSuccess?: () => void }) {
   const [formData, setFormData] = useState({
     name: choice?.name ?? "",
     priceModifier: choice?.priceModifier ?? 0,
     available: choice?.available ?? true,
   })
 
+  const utils = api.useUtils()
+
   const createChoice = api.menuItemOptionChoice.create.useMutation({
     onSuccess: () => {
       toast.success("Escolha criada com sucesso!")
+      onSuccess?.()
+      void utils.menuItemOptionChoice.byOption.invalidate({ optionId })
     },
     onError: (error) => {
       toast.error(`Erro ao criar escolha: ${error.message}`)
@@ -645,6 +779,7 @@ function OptionChoiceForm({ optionId, choice }: { optionId: string; choice?: Men
   const updateChoice = api.menuItemOptionChoice.update.useMutation({
     onSuccess: () => {
       toast.success("Escolha atualizada com sucesso!")
+      onSuccess?.()
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar escolha: ${error.message}`)
@@ -655,13 +790,13 @@ function OptionChoiceForm({ optionId, choice }: { optionId: string; choice?: Men
     e.preventDefault()
     
     if (choice) {
-      updateChoice.mutate({
+      void updateChoice.mutate({
         id: choice.id,
         ...formData,
         optionId,
       })
     } else {
-      createChoice.mutate({
+      void createChoice.mutate({
         ...formData,
         optionId,
       })

@@ -37,10 +37,22 @@ export const routeItems = (role: UserRole): {
       href: "/dashboard",
     },
     {
+      title: "Almoços",
+      icon: LucideUtensils,
+      describe: "Página para fazer pedidos de comida com restaurantes parceiros",
+      href: "/food",
+    },
+    {
       title: "Salas",
       icon: LucideMapPin,
       describe: "Página para reservar salas na intranet",
       href: "/rooms",
+    },
+    {
+      title: "Carros",
+      icon: LucideCar,
+      describe: "Página para reservar carros",
+      href: "/cars",
     },
     {
       title: "Eventos",
@@ -55,12 +67,6 @@ export const routeItems = (role: UserRole): {
       href: "/flyers",
     },
     {
-      title: "Carros",
-      icon: LucideCar,
-      describe: "Página para reservar carros",
-      href: "/cars",
-    },
-    {
       title: "Shop",
       icon: LucideShoppingCart,
       describe: "Página para comprar itens personalizados com as logos da BOX e da Cristallux",
@@ -71,12 +77,6 @@ export const routeItems = (role: UserRole): {
       icon: LucideFormInput,
       describe: "Página para requisitar processos internos para os setores, como marketing, TI, inovação e compras",
       href: "/forms",
-    },
-    {
-      title: "Comida",
-      icon: LucideUtensils,
-      describe: "Página para fazer pedidos de comida com restaurantes parceiros",
-      href: "/food",
     }
   ]
   if (role === UserRole.ADMIN) {

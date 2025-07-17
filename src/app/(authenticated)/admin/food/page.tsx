@@ -104,26 +104,43 @@ export default function AdminFoodPage() {
         return
       }
 
+      // Agrupar pedidos por usuário
+      const resumoPorUsuario: Record<string, {
+        nome: string
+        email: string
+        totalPedidos: number
+        valorTotal: number
+      }> = {}
+
+      data.forEach((order: typeof data[0]) => {
+        const email = order.user?.email ?? "(sem email)"
+        const nome = `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim()
+        const valor = order.menuItem?.price ?? 0
+        if (!resumoPorUsuario[email]) {
+          resumoPorUsuario[email] = {
+            nome,
+            email,
+            totalPedidos: 0,
+            valorTotal: 0,
+          }
+        }
+        resumoPorUsuario[email].totalPedidos += 1
+        resumoPorUsuario[email].valorTotal += valor
+      })
+
       // Montar os dados para exportação
-      const dataToExport = data.map((order: typeof data[0]) => ({
-        "Data do Pedido": order.orderDate ? new Date(order.orderDate).toLocaleDateString("pt-BR") : "",
-        "Horário do Pedido": order.orderTime
-          ? new Date(new Date(order.orderTime).getTime() + 3 * 60 * 60 * 1000).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-          : "",
-        "Restaurante": order.restaurant?.name ?? "",
-        "Prato": order.menuItem?.name ?? "",
-        "Preço": order.menuItem?.price?.toFixed(2) ?? "",
-        "Nome do Usuário": `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim(),
-        "Email do Usuário": order.user?.email ?? "",
-        "Status": getStatusText(order.status),
-        "Observações": order.observations ?? "",
+      const dataToExport = Object.values(resumoPorUsuario).map((usuario) => ({
+        "Nome do Usuário": usuario.nome,
+        "Email do Usuário": usuario.email,
+        "Total de Pedidos": usuario.totalPedidos,
+        "Valor Total (R$)": usuario.valorTotal.toFixed(2),
       }))
       // Gerar a planilha
       const ws = XLSX.utils.json_to_sheet(dataToExport)
       const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, "Pedidos")
+      XLSX.utils.book_append_sheet(wb, ws, "Resumo Usuários")
       // Gerar arquivo e baixar
-      XLSX.writeFile(wb, `pedidos_${exportYear}_${String(exportMonth).padStart(2, "0")}.xlsx`)
+      XLSX.writeFile(wb, `resumo_pedidos_usuarios_${exportYear}_${String(exportMonth).padStart(2, "0")}.xlsx`)
       toast.success("Arquivo Excel gerado com sucesso!")
       setExportDialogOpen(false)
     },
