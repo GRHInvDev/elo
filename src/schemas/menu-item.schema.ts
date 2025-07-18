@@ -7,6 +7,7 @@ export const createMenuItemSchema = z.object({
   category: z.string().min(1, "Categoria é obrigatória"),
   available: z.boolean().default(true),
   restaurantId: z.string().min(1, "Restaurante é obrigatório"),
+  weekDay: z.number().min(0).max(6), // 0 = Domingo, 6 = Sábado
 })
 
 export const updateMenuItemSchema = createMenuItemSchema.partial().extend({

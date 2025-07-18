@@ -99,7 +99,8 @@ export default function MenuEditor() {
             description: (row as { Descrição: string }).Descrição ?? "",
             price: Number((row as { Preço: number }).Preço) ?? 0,
             category: (row as { Categoria: string }).Categoria ?? "",
-            available: (row as { Disponível: string }).Disponível === "Sim"
+            available: (row as { Disponível: string }).Disponível === "Sim",
+            weekDay: (row as { weekDay: number }).weekDay ?? 1,
           }, {
             onSuccess: () => resolve(),
             onError: () => resolve()
@@ -224,9 +225,9 @@ export default function MenuEditor() {
                                   )}
                                 </Button>
                                 <p className="font-medium">{item.name}</p>
-                                <Badge variant="outline">{item.category}</Badge>
-                                <Badge variant={item.available ? "default" : "secondary"}>
-                                  {item.available ? "Disponível" : "Indisponível"}
+                                <Badge>{item.category}</Badge>
+                                <Badge variant="outline">
+                                  {["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"][item.weekDay]}
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground ml-10">
@@ -344,6 +345,7 @@ function MenuItemForm({ restaurantId, menuItem, onSuccess }: { restaurantId: str
     price: menuItem?.price ?? 0,
     category: menuItem?.category ?? "",
     available: menuItem?.available ?? true,
+    weekDay: menuItem?.weekDay ?? 1, // Default: Segunda-feira
   })
 
   const utils = api.useUtils()
@@ -440,6 +442,27 @@ function MenuItemForm({ restaurantId, menuItem, onSuccess }: { restaurantId: str
           onCheckedChange={(checked) => setFormData({ ...formData, available: checked })}
         />
         <Label htmlFor="available">Disponível</Label>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="weekDay">Dia da Semana</Label>
+        <Select
+          value={formData.weekDay.toString()}
+          onValueChange={(value) => setFormData({ ...formData, weekDay: parseInt(value) })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o dia da semana" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">Domingo</SelectItem>
+            <SelectItem value="1">Segunda-feira</SelectItem>
+            <SelectItem value="2">Terça-feira</SelectItem>
+            <SelectItem value="3">Quarta-feira</SelectItem>
+            <SelectItem value="4">Quinta-feira</SelectItem>
+            <SelectItem value="5">Sexta-feira</SelectItem>
+            <SelectItem value="6">Sábado</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Button type="submit" className="w-full">

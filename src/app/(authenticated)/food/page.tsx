@@ -13,6 +13,8 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { addDays, startOfDay } from "date-fns"
 
+const FOOD_ORDER_DEADLINE_HOUR = Number(process.env.NEXT_PUBLIC_FOOD_ORDER_DEADLINE_HOUR ?? 10)
+
 type MenuItemOptionsSelectorProps = {
   menuItemId: string;
   value: Record<string, string[]>;
@@ -98,17 +100,17 @@ export default function FoodPage() {
   const restaurants = api.restaurant.listActive.useQuery()
 
   // Buscar itens do menu do restaurante selecionado
+  // Definir a data do pedido conforme a regra de horário
+  const now = new Date()
+  const today = startOfDay(now)
+  const tomorrow = startOfDay(addDays(now, 1))
+  const menuDate = now.getHours() < FOOD_ORDER_DEADLINE_HOUR ? today : tomorrow;
   const menuItems = api.menuItem.byRestaurant.useQuery(
-    { restaurantId: selectedRestaurant },
+    { restaurantId: selectedRestaurant, date: menuDate },
     { enabled: !!selectedRestaurant }
   )
 
   // Buscar pedido do usuário para hoje e para amanhã
-  const now = new Date()
-  const today = startOfDay(now)
-  const tomorrow = startOfDay(addDays(now, 1))
-
-  // Buscar pedido de hoje
   const todayOrder = api.foodOrder.checkOrderByDate.useQuery({ date: today })
   // Buscar pedido de amanhã
   const tomorrowOrder = api.foodOrder.checkOrderByDate.useQuery({ date: tomorrow })
@@ -158,7 +160,7 @@ export default function FoodPage() {
     }
 
     const now = new Date()
-    const orderDate = now.getHours() < 10 ? now : new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const orderDate = now.getHours() < FOOD_ORDER_DEADLINE_HOUR ? now : new Date(now.getTime() + 24 * 60 * 60 * 1000)
 
     // Flatten as escolhas para um array de IDs
     const selectedChoicesIds = Object.values(optionChoices).flat()
@@ -212,7 +214,7 @@ export default function FoodPage() {
   )
 
   // NOVA LÓGICA: bloquear se já houver pedido para hoje (antes das 10h) ou para amanhã (após as 10h)
-  const isAfterDeadline = now.getHours() >= 10
+  const isAfterDeadline = now.getHours() >= FOOD_ORDER_DEADLINE_HOUR
   const hasOrderForToday = !!todayOrder.data
   const hasOrderForTomorrow = !!tomorrowOrder.data
   const blockOrder = (!isAfterDeadline && hasOrderForToday) || (isAfterDeadline && hasOrderForTomorrow)
@@ -236,7 +238,7 @@ export default function FoodPage() {
         <div className="flex items-center space-x-2">
           <Clock className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
-            Pedidos até às 10h para hoje
+            Pedidos até às {FOOD_ORDER_DEADLINE_HOUR}h para hoje
           </span>
         </div>
       </div>
@@ -246,7 +248,7 @@ export default function FoodPage() {
         <Alert className="border-yellow-400 bg-yellow-50/30">
           <AlertDescription className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-yellow-600" />
-            O horário limite para pedidos de hoje (10h) já passou. Seu pedido será para amanhã.
+            O horário limite para pedidos de hoje ({FOOD_ORDER_DEADLINE_HOUR}h) já passou. Seu pedido será para amanhã.
           </AlertDescription>
         </Alert>
       )}
@@ -406,23 +408,27 @@ export default function FoodPage() {
                 <label className="text-sm font-medium">Prato</label>
                 <Select value={selectedMenuItem} onValueChange={(v) => setSelectedMenuItem(v)} disabled={!selectedRestaurant || menuItems.isLoading}>
                   <SelectTrigger className="h-24">
-                    <SelectValue placeholder={menuItems.isLoading ? "Carregando pratos..." : "Selecione um prato"} />
+                    <SelectValue placeholder={menuItems.isLoading ? "Carregando prato do dia..." : "Selecione o prato do dia"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {menuItems.data?.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        <div className="flex items-start gap-3 py-2">
-                          <span className="text-xl">🍽️</span>
-                          <div className="flex flex-col w-full">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-base">{item.name}</span>
-                              <Badge variant="outline" className="text-xs">{item.category}</Badge>
+                    {menuItems.data && menuItems.data.length > 0 ? (
+                      menuItems.data.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          <div className="flex items-start gap-3 py-2">
+                            <span className="text-xl">🍽️</span>
+                            <div className="flex flex-col w-full">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-base">{item.name}</span>
+                                <Badge variant="outline" className="text-xs">{item.category}</Badge>
+                              </div>
+                              {item.description && <span className="text-xs text-muted-foreground mt-1">{item.description}</span>}
                             </div>
-                            {item.description && <span className="text-xs text-muted-foreground mt-1">{item.description}</span>}
                           </div>
-                        </div>
-                      </SelectItem>
-                    ))}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-4 py-2 text-muted-foreground">Nenhum prato disponível para {format(menuDate, "EEEE", { locale: ptBR })}.</div>
+                    )}
                   </SelectContent>
                 </Select>
                 {menuItems.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Carregando pratos...</div>}

@@ -314,6 +314,7 @@ model MenuItem {
   available    Boolean    @default(true)
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   restaurantId String
+  weekDay      Int        @default(1) // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
   options      MenuItemOption[]
   orders       FoodOrder[]
   createdAt    DateTime   @default(now())

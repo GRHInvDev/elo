@@ -65,12 +65,18 @@ export const menuItemRouter = createTRPCRouter({
 
   // Listar itens por restaurante
   byRestaurant: protectedProcedure
-    .input(z.object({ restaurantId: z.string() }))
+    .input(z.object({ restaurantId: z.string(), date: z.date().optional() }))
     .query(async ({ ctx, input }) => {
+      let weekDayFilter = {};
+      if (input.date) {
+        const weekDay = input.date.getDay(); // 0 = Domingo, 1 = Segunda, ...
+        weekDayFilter = { weekDay };
+      }
       return ctx.db.menuItem.findMany({
         where: {
           restaurantId: input.restaurantId,
           available: true,
+          ...weekDayFilter,
         },
         include: {
           restaurant: true,
