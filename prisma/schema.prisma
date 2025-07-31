@@ -29,6 +29,7 @@ model User {
   sells         Sell[]
   forms         Form[]
   formResponses FormResponse[]
+  foodOrders    FoodOrder[]
 
   @@map("users")
   FormResponseChat FormResponseChat[]
@@ -37,6 +38,7 @@ model User {
 enum UserRole {
   ADMIN
   USER
+  TOTEM
 }
 
 enum Enterprise {
@@ -285,3 +287,122 @@ model FormResponseChat {
 
   @@map("forms_responses_chat")
 }
+
+model Restaurant {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  city        String
+  address     String
+  phone       String
+  email       String
+  active      Boolean   @default(true)
+  menuItems   MenuItem[]
+  orders      FoodOrder[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("restaurants")
+}
+
+model MenuItem {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?    @db.Text
+  price        Float
+  category     String     // Ex: "Prato Principal", "Sobremesa", "Bebida"
+  available    Boolean    @default(true)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+  weekDay      Int        @default(1) // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  options      MenuItemOption[]
+  orders       FoodOrder[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("menu_items")
+}
+
+model MenuItemOption {
+  id           String     @id @default(cuid())
+  name         String     // Ex: "Tamanho", "Temperatura", "Adicionais"
+  description  String?    @db.Text
+  required     Boolean    @default(false) // Se o cliente deve escolher uma opção
+  multiple     Boolean    @default(false) // Se pode escolher múltiplas opções
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId   String
+  choices      MenuItemOptionChoice[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("menu_item_options")
+}
+
+model MenuItemOptionChoice {
+  id                String           @id @default(cuid())
+  name              String           // Ex: "Pequeno", "Médio", "Grande"
+  priceModifier     Float            @default(0) // Modificador de preço (+ ou -)
+  available         Boolean          @default(true)
+  option            MenuItemOption   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId          String
+  orderSelections   OrderOptionSelection[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@map("menu_item_option_choices")
+}
+
+model FoodOrder {
+  id           String     @id @default(cuid())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId   String
+  orderDate    DateTime   // Data para qual o pedido é feito
+  orderTime    DateTime   // Horário em que o pedido foi feito
+  status       OrderStatus @default(PENDING)
+  observations String?
+  optionSelections OrderOptionSelection[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, orderDate]) // Um pedido por usuário por dia
+  @@map("food_orders")
+}
+
+model OrderOptionSelection {
+  id           String     @id @default(cuid())
+  order        FoodOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId      String
+  choice       MenuItemOptionChoice @relation(fields: [choiceId], references: [id], onDelete: Cascade)
+  choiceId     String
+  createdAt    DateTime   @default(now())
+
+  @@map("order_option_selections")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  DELIVERED
+  CANCELLED
+}
+
+model OrderLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userName  String
+  userEmail String
+  month     Int      // 1-12
+  year      Int
+  totalOrders Int    @default(0)
+  totalValue Float   @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, month, year])
+  @@map("order_logs")
+}
+

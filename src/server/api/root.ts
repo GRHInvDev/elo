@@ -13,6 +13,12 @@ import { vehicleRentRouter } from "./routers/vehicle-rent";
 import { productRouter } from "./routers/product";
 import { formsRouter } from "./routers/forms";
 import { formResponseRouter } from "./routers/form-response";
+import { restaurantRouter } from "./routers/restaurant";
+import { menuItemRouter } from "./routers/menu-item";
+import { menuItemOptionRouter } from "./routers/menu-item-option";
+import { menuItemOptionChoiceRouter } from "./routers/menu-item-option-choice";
+import { foodOrderRouter } from "./routers/food-order";
+import { orderLogRouter } from "./routers/order-log";
 
 /**
  * This is the primary router for your server.
@@ -34,6 +40,12 @@ export const appRouter = createTRPCRouter({
   product: productRouter,
   form: formsRouter,
   formResponse: formResponseRouter,
+  restaurant: restaurantRouter,
+  menuItem: menuItemRouter,
+  menuItemOption: menuItemOptionRouter,
+  menuItemOptionChoice: menuItemOptionChoiceRouter,
+  foodOrder: foodOrderRouter,
+  orderLog: orderLogRouter,
 });
 
 // export type definition of API
