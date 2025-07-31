@@ -13,7 +13,7 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { addDays, startOfDay } from "date-fns"
 
-const FOOD_ORDER_DEADLINE_HOUR = Number(process.env.NEXT_PUBLIC_FOOD_ORDER_DEADLINE_HOUR ?? 10)
+const FOOD_ORDER_DEADLINE_HOUR = Number(process.env.NEXT_PUBLIC_FOOD_ORDER_DEADLINE_HOUR ?? 9)
 
 type MenuItemOptionsSelectorProps = {
   menuItemId: string;
@@ -281,15 +281,19 @@ export default function FoodPage() {
                 <p><strong>Observações:</strong> {todayOrder.data.observations}</p>
               )}
               {/* Botão de cancelar pedido */}
-              <Button
-                variant="destructive"
-                className="mt-4 w-full"
-                disabled={deleteOrder.isPending}
-                onClick={() => deleteOrder.mutate({ id: todayOrder.data?.id ?? "" })}
-              >
-                {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : null}
-                {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido"}
-              </Button>
+              {
+                !isAfterDeadline && ( 
+                  <Button
+                    variant="destructive"
+                    className="mt-4 w-full"
+                    disabled={deleteOrder.isPending}
+                    onClick={() => deleteOrder.mutate({ id: todayOrder.data?.id ?? "" })}
+                  >
+                    {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : null}
+                    {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido"}
+                  </Button>
+                )
+              }
             </div>
           </CardContent>
         </Card>
