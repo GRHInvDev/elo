@@ -482,12 +482,12 @@ export default function FoodPage() {
 
       {/* Mensagem de bloqueio se já houver pedido */}
       {blockOrder && (
-        <Alert className="border-red-400 bg-red-50/30">
+        <Alert className="border-green-400 bg-green-50/30">
           <AlertDescription className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-red-600" />
+            <CheckCircle className="h-4 w-4 text-green-600" />
             {isAfterDeadline && hasOrderForTomorrow
-              ? "Você já fez um pedido para amanhã. Não é possível fazer mais de um pedido por dia."
-              : "Você já fez um pedido para hoje. Não é possível fazer mais de um pedido por dia."}
+              ? "Seu pedido para amanhã já foi registrado com sucesso! Caso precise alterar, cancele o pedido atual antes de fazer um novo."
+              : "Seu pedido para hoje já foi registrado com sucesso! Caso precise alterar, cancele o pedido atual antes de fazer um novo."}
           </AlertDescription>
         </Alert>
       )}
