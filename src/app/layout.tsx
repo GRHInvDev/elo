@@ -10,6 +10,8 @@ import { ptBR } from "@clerk/localizations"
 import { type Metadata } from "next"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { auth } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
 
 export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.svg" }]
@@ -17,11 +19,17 @@ export const metadata: Metadata = {
 
 const inter = Inter({ subsets: ["latin"] })
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { userId } = await auth()
+
+  if (!userId) {
+    redirect("/sign-in")
+  }
+  
   return (
     <ClerkProvider localization={ptBR}>
       <TRPCReactProvider>

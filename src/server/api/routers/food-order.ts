@@ -10,7 +10,7 @@ export const foodOrderRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.auth.userId
       const now = new Date()
-      const orderTime = new Date(now.getTime() - 3 * 60 * 60 * 1000) // Ajuste de fuso horário
+      const orderTime = now // Removido ajuste duplo, cliente já envia com fuso correto
 
       // Verificar se já existe um pedido para este usuário nesta data
       const existingOrder = await ctx.db.foodOrder.findUnique({
