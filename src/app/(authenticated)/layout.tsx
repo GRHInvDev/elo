@@ -1,6 +1,4 @@
 import type React from "react"
-import { redirect } from "next/navigation"
-import { auth } from "@clerk/nextjs/server"
 
 import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
@@ -15,13 +13,7 @@ export default async function AuthenticatedLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { userId } = await auth()
-
   const user = await api.user.me()
-
-  if (!userId) {
-    redirect("/sign-in")
-  }
 
   return (
     <div className="flex min-h-screen flex-col">
