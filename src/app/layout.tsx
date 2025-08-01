@@ -22,6 +22,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+
   return (
     <ClerkProvider localization={ptBR}>
       <TRPCReactProvider>
