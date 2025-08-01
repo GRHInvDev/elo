@@ -25,34 +25,43 @@ import { Select as UiSelect } from "@/components/ui/select"
 export default function AdminFoodPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
+  const [selectedStatus, setSelectedStatus] = useState<string>("")
+  const [userName, setUserName] = useState<string>("")
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportMonth, setExportMonth] = useState<number>(selectedDate.getMonth() + 1)
   const [exportYear, setExportYear] = useState<number>(selectedDate.getFullYear())
+  const [signatureExportDialogOpen, setSignatureExportDialogOpen] = useState(false)
+  const [signatureExportDate, setSignatureExportDate] = useState<Date>(new Date())
+  const [signatureExportRestaurant, setSignatureExportRestaurant] = useState<string>("")
 
   // Buscar restaurantes
   const restaurants = api.restaurant.list.useQuery()
 
-  // Buscar pedidos por data
-  const ordersByDate = api.foodOrder.byDate.useQuery(
-    { date: selectedDate },
-    { enabled: !!selectedDate }
-  )
+  // Buscar pedidos com filtros
+  const filteredOrders = api.foodOrder.list.useQuery({
+    startDate: selectedDate ? (() => {
+      const start = new Date(selectedDate)
+      start.setHours(0, 0, 0, 0)
+      return start
+    })() : undefined,
+    endDate: selectedDate ? (() => {
+      const end = new Date(selectedDate)
+      end.setHours(23, 59, 59, 999)
+      return end
+    })() : undefined,
+    restaurantId: selectedRestaurant || undefined,
+    status: selectedStatus ? (selectedStatus as "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED") : undefined,
+    userName: userName || undefined,
+  })
 
-  // Buscar pedidos por restaurante
-  const ordersByRestaurant = api.foodOrder.byRestaurant.useQuery(
-    { restaurantId: selectedRestaurant, date: selectedDate },
-    { enabled: !!selectedRestaurant }
-  )
-
-  // Buscar todos os pedidos
+  // Buscar todos os pedidos (para compatibilidade)
   const allOrders = api.foodOrder.list.useQuery()
 
   // Atualizar status do pedido
   const updateOrderStatus = api.foodOrder.updateStatus.useMutation({
     onSuccess: () => {
       toast.success("Status atualizado com sucesso!")
-      void ordersByDate.refetch()
-      void ordersByRestaurant.refetch()
+      void filteredOrders.refetch()
       void allOrders.refetch()
     },
     onError: (error) => {
@@ -149,11 +158,85 @@ export default function AdminFoodPage() {
     },
   })
 
+  // Exportação de pedidos por restaurante para assinatura
+  const {mutate: exportForSignature} = api.foodOrder.exportOrdersByRestaurantAndDate.useMutation({
+    onSuccess: (data) => {
+      console.log("Dados recebidos para exportação:", data)
+      
+      if (!data || data.length === 0) {
+        toast.error("Nenhum pedido encontrado para a data e restaurante selecionados.")
+        return
+      }
 
-  const totalOrders = ordersByDate.data?.length ?? 0
-  const pendingOrders = ordersByDate.data?.filter(order => order.status === "PENDING").length ?? 0
-  const confirmedOrders = ordersByDate.data?.filter(order => order.status === "CONFIRMED").length ?? 0
-  const deliveredOrders = ordersByDate.data?.filter(order => order.status === "DELIVERED").length ?? 0
+      try {
+        // Formatar dados conforme SQL especificado
+        const dataToExport = data.map((order) => ({
+          "Nome": `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim(),
+          "Email": order.user?.email ?? "",
+          "Restaurante": order.restaurant?.name ?? "",
+          "Cidade": order.restaurant?.city ?? "",
+          "Prato": order.menuItem?.name ?? "",
+          "Assinatura": "" // Campo vazio para assinatura manual
+        }))
+
+        console.log("Dados formatados para Excel:", dataToExport)
+
+        // Gerar a planilha
+        const ws = XLSX.utils.json_to_sheet(dataToExport)
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, "Pedidos para Assinatura")
+        
+        // Nome do arquivo com data e restaurante
+        const restaurantName = signatureExportRestaurant 
+          ? restaurants.data?.find(r => r.id === signatureExportRestaurant)?.name?.replace(/[^a-zA-Z0-9]/g, "_") ?? "Todos"
+          : "Todos"
+        const fileName = `pedidos_assinatura_${restaurantName}_${format(signatureExportDate, "yyyy-MM-dd")}.xlsx`
+        
+        console.log("Tentando baixar arquivo:", fileName)
+        
+        // Tentar múltiplas abordagens para garantir o download
+        try {
+          XLSX.writeFile(wb, fileName)
+        } catch (writeError) {
+          console.error("Erro com XLSX.writeFile:", writeError)
+          // Fallback: usar writeFileXLSX se disponível
+          try {
+            XLSX.writeFileXLSX(wb, fileName)
+          } catch (fallbackError) {
+            console.error("Erro com fallback:", fallbackError)
+            // Último recurso: salvar como CSV
+            const csv = XLSX.utils.sheet_to_csv(ws)
+            const blob = new Blob([csv], { type: 'text/csv' })
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = fileName.replace('.xlsx', '.csv')
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            window.URL.revokeObjectURL(url)
+            toast.success("Arquivo CSV baixado (fallback)!")
+            return
+          }
+        }
+        toast.success("Arquivo Excel para assinatura gerado com sucesso!")
+        setSignatureExportDialogOpen(false)
+      } catch (error) {
+        console.error("Erro ao gerar Excel:", error)
+        toast.error("Erro ao gerar arquivo Excel. Verifique o console para mais detalhes.")
+      }
+    },
+    onError: (error) => {
+      console.error("Erro na API:", error)
+      toast.error(`Erro ao exportar pedidos: ${error.message}`)
+    },
+  })
+
+
+  const totalOrders = filteredOrders.data?.length ?? 0
+  const pendingOrders = filteredOrders.data?.filter(order => order.status === "PENDING").length ?? 0
+  const confirmedOrders = filteredOrders.data?.filter(order => order.status === "CONFIRMED").length ?? 0
+  const deliveredOrders = filteredOrders.data?.filter(order => order.status === "DELIVERED").length ?? 0
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -208,8 +291,64 @@ export default function AdminFoodPage() {
         </TabsList>
 
         <TabsContent value="orders" className="space-y-4">
-          {/* Botão de exportação com Dialog */}
-          <div className="flex justify-end">
+          {/* Botões de exportação */}
+          <div className="flex justify-end gap-2">
+            <Dialog open={signatureExportDialogOpen} onOpenChange={setSignatureExportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  Exportar para Assinatura
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Exportar pedidos para assinatura</DialogTitle>
+                  <DialogDescription>
+                    Selecione uma data e opcionalmente um restaurante específico
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <Label>Data dos pedidos</Label>
+                    <DatePicker 
+                      date={signatureExportDate} 
+                      onDateChange={(date: Date) => setSignatureExportDate(date)} 
+                    />
+                  </div>
+                  <div>
+                    <Label>Restaurante (opcional)</Label>
+                    <Select value={signatureExportRestaurant} onValueChange={setSignatureExportRestaurant}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos os restaurantes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {restaurants.data?.map((restaurant) => (
+                          <SelectItem key={restaurant.id} value={restaurant.id}>
+                            {restaurant.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={() => {
+                      console.log("Clicou no botão de exportar")
+                      console.log("Data selecionada:", signatureExportDate)
+                      console.log("Restaurante selecionado:", signatureExportRestaurant)
+                      
+                      exportForSignature({
+                        orderDate: signatureExportDate,
+                        restaurantId: signatureExportRestaurant || undefined,
+                      })
+                    }}
+                  >
+                    Exportar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
             <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -277,7 +416,7 @@ export default function AdminFoodPage() {
               <CardTitle>Filtros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="flex items-center space-x-2">
                   <Label>Data</Label>
                   <DatePicker date={selectedDate} onDateChange={(date: Date) => setSelectedDate(date)} />
@@ -297,6 +436,28 @@ export default function AdminFoodPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDING">Pendente</SelectItem>
+                      <SelectItem value="CONFIRMED">Confirmado</SelectItem>
+                      <SelectItem value="DELIVERED">Entregue</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nome do Colaborador</Label>
+                  <Input
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Buscar por nome ou email..."
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -304,128 +465,82 @@ export default function AdminFoodPage() {
           {/* Lista de pedidos */}
           <Card>
             <CardHeader>
-              <CardTitle>Pedidos do Dia</CardTitle>
+              <CardTitle>Pedidos Filtrados</CardTitle>
               <CardDescription>
-                {selectedRestaurant 
-                  ? `Pedidos de ${restaurants.data?.find(r => r.id === selectedRestaurant)?.name}`
-                  : "Todos os pedidos"
-                }
+                {(() => {
+                  const filters = []
+                  if (selectedRestaurant) {
+                    filters.push(`Restaurante: ${restaurants.data?.find(r => r.id === selectedRestaurant)?.name}`)
+                  }
+                  if (selectedStatus) {
+                    filters.push(`Status: ${getStatusText(selectedStatus)}`)
+                  }
+                  if (userName) {
+                    filters.push(`Nome: ${userName}`)
+                  }
+                  if (selectedDate) {
+                    filters.push(`Data: ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}`)
+                  }
+                  return filters.length > 0 ? filters.join(" | ") : "Todos os pedidos"
+                })()}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {selectedRestaurant ? (
-                ordersByRestaurant.data && ordersByRestaurant.data.length > 0 ? (
-                  <div className="space-y-4">
-                    {ordersByRestaurant.data.map((order) => (
-                      <Card key={order.id} className="bg-muted/50">
-                        <CardContent className="pt-4">
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium">
-                                  {order.user.firstName} {order.user.lastName}
-                                </p>
-                                <Badge variant="outline">{order.user.email}</Badge>
-                              </div>
-                              <p className="text-sm">{order.menuItem.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Pedido feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })}
+              {filteredOrders.data && filteredOrders.data.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredOrders.data.map((order) => (
+                    <Card key={order.id} className="bg-muted/50">
+                      <CardContent className="pt-4">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <p className="font-medium">
+                                {order.user.firstName} {order.user.lastName}
                               </p>
-                              {order.observations && (
-                                <p className="text-xs text-muted-foreground">
-                                  Obs: {order.observations}
-                                </p>
-                              )}
+                              <Badge variant="outline">{order.user.email}</Badge>
+                              <Badge variant="secondary">{order.restaurant.name}</Badge>
                             </div>
-                            <div className="text-right space-y-2">
-                              <p className="font-medium">R$ {order.menuItem.price.toFixed(2)}</p>
-                              <Badge className={getStatusColor(order.status)}>
-                                {getStatusText(order.status)}
-                              </Badge>
-                              <div className="flex space-x-1">
-                                <Select
-                                  value={order.status}
-                                  onValueChange={(value) => handleStatusUpdate(order.id, value)}
-                                >
-                                  <SelectTrigger className="w-32">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="PENDING">Pendente</SelectItem>
-                                    <SelectItem value="CONFIRMED">Confirmado</SelectItem>
-                                    <SelectItem value="DELIVERED">Entregue</SelectItem>
-                                    <SelectItem value="CANCELLED">Cancelado</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                            <p className="text-sm">{order.menuItem.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Pedido feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })} - {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                            {order.observations && (
+                              <p className="text-xs text-muted-foreground">
+                                Obs: {order.observations}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right space-y-2">
+                            <p className="font-medium">R$ {order.menuItem.price.toFixed(2)}</p>
+                            <Badge className={getStatusColor(order.status)}>
+                              {getStatusText(order.status)}
+                            </Badge>
+                            <div className="flex space-x-1">
+                              <Select
+                                value={order.status}
+                                onValueChange={(value) => handleStatusUpdate(order.id, value)}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="PENDING">Pendente</SelectItem>
+                                  <SelectItem value="CONFIRMED">Confirmado</SelectItem>
+                                  <SelectItem value="DELIVERED">Entregue</SelectItem>
+                                  <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhum pedido encontrado para este restaurante
-                  </p>
-                )
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               ) : (
-                ordersByDate.data && ordersByDate.data.length > 0 ? (
-                  <div className="space-y-4">
-                    {ordersByDate.data.map((order) => (
-                      <Card key={order.id} className="bg-muted/50">
-                        <CardContent className="pt-4">
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium">
-                                  {order.user.firstName} {order.user.lastName}
-                                </p>
-                                <Badge variant="outline">{order.user.email}</Badge>
-                                <Badge variant="secondary">{order.restaurant.name}</Badge>
-                              </div>
-                              <p className="text-sm">{order.menuItem.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Pedido feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })}
-                              </p>
-                              {order.observations && (
-                                <p className="text-xs text-muted-foreground">
-                                  Obs: {order.observations}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right space-y-2">
-                              <p className="font-medium">R$ {order.menuItem.price.toFixed(2)}</p>
-                              <Badge className={getStatusColor(order.status)}>
-                                {getStatusText(order.status)}
-                              </Badge>
-                              <div className="flex space-x-1">
-                                <Select
-                                  value={order.status}
-                                  onValueChange={(value) => handleStatusUpdate(order.id, value)}
-                                >
-                                  <SelectTrigger className="w-32">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="PENDING">Pendente</SelectItem>
-                                    <SelectItem value="CONFIRMED">Confirmado</SelectItem>
-                                    <SelectItem value="DELIVERED">Entregue</SelectItem>
-                                    <SelectItem value="CANCELLED">Cancelado</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhum pedido encontrado para esta data
-                  </p>
-                )
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhum pedido encontrado com os filtros aplicados
+                </p>
               )}
             </CardContent>
           </Card>

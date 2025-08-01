@@ -2,6 +2,7 @@ import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { createFoodOrderSchema, updateFoodOrderSchema, foodOrderIdSchema, getOrdersByDateSchema, getOrdersByRestaurantSchema } from "@/schemas/food-order.schema"
+import { type Prisma } from "@prisma/client"
 
 export const foodOrderRouter = createTRPCRouter({
   // Criar um novo pedido
@@ -257,17 +258,46 @@ export const foodOrderRouter = createTRPCRouter({
         status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
         restaurantId: z.string().optional(),
         userId: z.string().optional(),
+        userName: z.string().optional(),
       }).optional(),
     )
     .query(async ({ ctx, input }) => {
+      const whereClause: Prisma.FoodOrderWhereInput = {
+        ...(input?.startDate && { orderDate: { gte: input.startDate } }),
+        ...(input?.endDate && { orderDate: { lte: input.endDate } }),
+        ...(input?.status && { status: input.status }),
+        ...(input?.restaurantId && { restaurantId: input.restaurantId }),
+        ...(input?.userId && { userId: input.userId }),
+      }
+
+      // Adicionar filtro por nome do usuário se fornecido
+      if (input?.userName) {
+        whereClause.user = {
+          OR: [
+            {
+              firstName: {
+                contains: input.userName,
+                mode: "insensitive",
+              },
+            },
+            {
+              lastName: {
+                contains: input.userName,
+                mode: "insensitive",
+              },
+            },
+            {
+              email: {
+                contains: input.userName,
+                mode: "insensitive",
+              },
+            },
+          ],
+        }
+      }
+
       return ctx.db.foodOrder.findMany({
-        where: {
-          ...(input?.startDate && { orderDate: { gte: input.startDate } }),
-          ...(input?.endDate && { orderDate: { lte: input.endDate } }),
-          ...(input?.status && { status: input.status }),
-          ...(input?.restaurantId && { restaurantId: input.restaurantId }),
-          ...(input?.userId && { userId: input.userId }),
-        },
+        where: whereClause,
         include: {
           user: {
             select: {
@@ -292,17 +322,46 @@ export const foodOrderRouter = createTRPCRouter({
         status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
         restaurantId: z.string().optional(),
         userId: z.string().optional(),
+        userName: z.string().optional(),
       }).optional(),
     )
     .mutation(async ({ ctx, input }) => {
+      const whereClause: Prisma.FoodOrderWhereInput = {
+        ...(input?.startDate && { orderDate: { gte: input.startDate } }),
+        ...(input?.endDate && { orderDate: { lte: input.endDate } }),
+        ...(input?.status && { status: input.status }),
+        ...(input?.restaurantId && { restaurantId: input.restaurantId }),
+        ...(input?.userId && { userId: input.userId }),
+      }
+
+      // Adicionar filtro por nome do usuário se fornecido
+      if (input?.userName) {
+        whereClause.user = {
+          OR: [
+            {
+              firstName: {
+                contains: input.userName,
+                mode: "insensitive",
+              },
+            },
+            {
+              lastName: {
+                contains: input.userName,
+                mode: "insensitive",
+              },
+            },
+            {
+              email: {
+                contains: input.userName,
+                mode: "insensitive",
+              },
+            },
+          ],
+        }
+      }
+
       return ctx.db.foodOrder.findMany({
-        where: {
-          ...(input?.startDate && { orderDate: { gte: input.startDate } }),
-          ...(input?.endDate && { orderDate: { lte: input.endDate } }),
-          ...(input?.status && { status: input.status }),
-          ...(input?.restaurantId && { restaurantId: input.restaurantId }),
-          ...(input?.userId && { userId: input.userId }),
-        },
+        where: whereClause,
         include: {
           user: {
             select: {
@@ -316,6 +375,58 @@ export const foodOrderRouter = createTRPCRouter({
           menuItem: true,
         },
         orderBy: { orderDate: "desc" },
+      })
+    }),
+
+  // Exportar pedidos por restaurante e data (específico para assinatura)
+  exportOrdersByRestaurantAndDate: protectedProcedure
+    .input(
+      z.object({
+        restaurantId: z.string().optional(),
+        orderDate: z.date(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const start = new Date(input.orderDate)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(input.orderDate)
+      end.setHours(23, 59, 59, 999)
+
+      return ctx.db.foodOrder.findMany({
+        where: {
+          orderDate: {
+            gte: start,
+            lte: end,
+          },
+          ...(input.restaurantId && { restaurantId: input.restaurantId }),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+            },
+          },
+          menuItem: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          { restaurant: { name: "asc" } },
+          { user: { firstName: "asc" } },
+        ],
       })
     }),
 
