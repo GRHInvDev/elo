@@ -263,8 +263,7 @@ export const foodOrderRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const whereClause: Prisma.FoodOrderWhereInput = {
-        ...(input?.startDate && { orderDate: { gte: input.startDate } }),
-        ...(input?.endDate && { orderDate: { lte: input.endDate } }),
+        ...(input?.startDate && input?.endDate && { orderDate: new Date(input.startDate.setHours(-3, 0, 0, 0)) }),
         ...(input?.status && { status: input.status }),
         ...(input?.restaurantId && { restaurantId: input.restaurantId }),
         ...(input?.userId && { userId: input.userId }),

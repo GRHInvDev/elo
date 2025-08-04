@@ -27,6 +27,9 @@ export default function AdminFoodPage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
   const [selectedStatus, setSelectedStatus] = useState<string>("")
   const [userName, setUserName] = useState<string>("")
+
+  // Debug: Log da data selecionada
+  console.log("Data selecionada para filtro:", selectedDate)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportMonth, setExportMonth] = useState<number>(selectedDate.getMonth() + 1)
   const [exportYear, setExportYear] = useState<number>(selectedDate.getFullYear())
@@ -38,20 +41,30 @@ export default function AdminFoodPage() {
   const restaurants = api.restaurant.list.useQuery()
 
   // Buscar pedidos com filtros
-  const filteredOrders = api.foodOrder.list.useQuery({
+  const queryParams = {
     startDate: selectedDate ? (() => {
       const start = new Date(selectedDate)
       start.setHours(0, 0, 0, 0)
+      console.log("Start date para query:", start)
       return start
     })() : undefined,
     endDate: selectedDate ? (() => {
       const end = new Date(selectedDate)
       end.setHours(23, 59, 59, 999)
+      console.log("End date para query:", end)
       return end
     })() : undefined,
     restaurantId: selectedRestaurant || undefined,
     status: selectedStatus ? (selectedStatus as "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED") : undefined,
     userName: userName || undefined,
+  }
+
+  console.log("Parâmetros da query filteredOrders:", queryParams)
+
+  const filteredOrders = api.foodOrder.list.useQuery(queryParams, {
+    // Força a re-execução da query quando os filtros mudam
+    enabled: true,
+    refetchOnWindowFocus: false,
   })
 
   // Buscar todos os pedidos (para compatibilidade)
@@ -334,7 +347,7 @@ export default function AdminFoodPage() {
                   <Button
                     onClick={() => {
                       console.log("Clicou no botão de exportar")
-                      console.log("Data selecionada:", signatureExportDate)
+                      console.log("Data selecionada:", new Date(signatureExportDate.setHours(-3, 0, 0, 0)))
                       console.log("Restaurante selecionado:", signatureExportRestaurant)
                       
                       exportForSignature({
@@ -419,7 +432,13 @@ export default function AdminFoodPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="flex items-center space-x-2">
                   <Label>Data</Label>
-                  <DatePicker date={selectedDate} onDateChange={(date: Date) => setSelectedDate(date)} />
+                  <DatePicker 
+                    date={selectedDate} 
+                    onDateChange={(date: Date) => {
+                      console.log("Nova data selecionada:", date)
+                      setSelectedDate(date)
+                    }} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Restaurante</Label>
@@ -502,7 +521,7 @@ export default function AdminFoodPage() {
                             </div>
                             <p className="text-sm">{order.menuItem.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              Pedido feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })} - {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })}
+                              Pedido feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })} - {format(new Date(order.orderTime), "dd/MM/yyyy", { locale: ptBR })}
                             </p>
                             {order.observations && (
                               <p className="text-xs text-muted-foreground">

@@ -35,8 +35,8 @@ export default async function RootLayout({
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
               <Analytics/>
               <SpeedInsights/>
-              {children}
               <Toaster />
+              {children}
             </ThemeProvider>
           </body>
         </html>

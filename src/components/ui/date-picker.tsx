@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import { Calendar as CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -13,7 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export function DatePicker({ date, onDateChange }: { date: Date, onDateChange: (date: Date) => void }) {
+export function DatePicker({ date, onDateChange }: { date: Date | undefined, onDateChange: (date: Date) => void }) {
 
   return (
     <Popover>
@@ -26,16 +27,17 @@ export function DatePicker({ date, onDateChange }: { date: Date, onDateChange: (
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>Pick a date</span>}
+          {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecionar data</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"
           selected={date}
-          onSelect={(date) => {
-            if (date) {
-              onDateChange(date)
+          onSelect={(selectedDate) => {
+            console.log("Data selecionada no Calendar:", selectedDate)
+            if (selectedDate) {
+              onDateChange(selectedDate)
             }
           }}
           initialFocus
