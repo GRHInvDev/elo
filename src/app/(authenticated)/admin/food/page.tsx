@@ -347,7 +347,7 @@ export default function AdminFoodPage() {
                   <Button
                     onClick={() => {
                       console.log("Clicou no botão de exportar")
-                      console.log("Data selecionada:", new Date(signatureExportDate.setHours(-3, 0, 0, 0)))
+                      console.log("Data selecionada:", new Date(signatureExportDate.setHours(0, 0, 0, 0)))
                       console.log("Restaurante selecionado:", signatureExportRestaurant)
                       
                       exportForSignature({
