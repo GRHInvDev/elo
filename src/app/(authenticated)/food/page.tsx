@@ -102,9 +102,13 @@ export default function FoodPage() {
   // Buscar itens do menu do restaurante selecionado
   // Definir a data do pedido conforme a regra de horário (UTC-3)
   const now = new Date()
+  console.log(now)
   const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000) // UTC-3
+  console.log(brasiliaTime)
   const today = startOfDay(brasiliaTime)
+  console.log(today)
   const tomorrow = startOfDay(addDays(brasiliaTime, 1))
+  console.log(tomorrow)
   const menuDate = brasiliaTime.getHours() < FOOD_ORDER_DEADLINE_HOUR ? today : tomorrow;
   const menuItems = api.menuItem.byRestaurant.useQuery(
     { restaurantId: selectedRestaurant, date: menuDate },
@@ -250,7 +254,7 @@ export default function FoodPage() {
         <Alert className="border-yellow-400 bg-yellow-50/30">
           <AlertDescription className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-yellow-600" />
-            O horário limite para pedidos de hoje ({FOOD_ORDER_DEADLINE_HOUR}h) já passou. Seu pedido será para amanhã.
+            O horário limite para pedidos de hoje ({FOOD_ORDER_DEADLINE_HOUR}h) já passou, são {format(now, "HH:mm", { locale: ptBR })}. Seu pedido será para amanhã.
           </AlertDescription>
         </Alert>
       )}
