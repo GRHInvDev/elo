@@ -102,14 +102,10 @@ export default function FoodPage() {
   // Buscar itens do menu do restaurante selecionado
   // Definir a data do pedido conforme a regra de horário (UTC-3)
   const now = new Date()
-  console.log(now)
   const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000) // UTC-3
-  console.log(brasiliaTime)
   const today = startOfDay(brasiliaTime)
-  console.log(today)
   const tomorrow = startOfDay(addDays(brasiliaTime, 1))
-  console.log(tomorrow)
-  const menuDate = brasiliaTime.getHours() < FOOD_ORDER_DEADLINE_HOUR ? today : tomorrow;
+  const menuDate = now.getHours() < FOOD_ORDER_DEADLINE_HOUR ? today : tomorrow;
   const menuItems = api.menuItem.byRestaurant.useQuery(
     { restaurantId: selectedRestaurant, date: menuDate },
     { enabled: !!selectedRestaurant }
@@ -220,7 +216,7 @@ export default function FoodPage() {
   )
 
   // NOVA LÓGICA: bloquear se já houver pedido para hoje (antes das 10h) ou para amanhã (após as 10h)
-  const isAfterDeadline = brasiliaTime.getHours() >= FOOD_ORDER_DEADLINE_HOUR
+  const isAfterDeadline = now.getHours() >= FOOD_ORDER_DEADLINE_HOUR
   const hasOrderForToday = !!todayOrder.data
   const hasOrderForTomorrow = !!tomorrowOrder.data
   const blockOrder = (!isAfterDeadline && hasOrderForToday) || (isAfterDeadline && hasOrderForTomorrow)
