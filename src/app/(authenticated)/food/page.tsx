@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Clock, MapPin, Phone, CheckCircle, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
+import { Clock, MapPin, Phone, CheckCircle, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -282,19 +282,21 @@ export default function FoodPage() {
                 <p><strong>Observações:</strong> {todayOrder.data.observations}</p>
               )}
               {/* Botão de cancelar pedido */}
-              {
-                !isAfterDeadline && ( 
-                  <Button
-                    variant="destructive"
-                    className="mt-4 w-full"
-                    disabled={deleteOrder.isPending}
-                    onClick={() => deleteOrder.mutate({ id: todayOrder.data?.id ?? "" })}
-                  >
-                    {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : null}
-                    {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido"}
-                  </Button>
-                )
-              }
+              <div className="flex justify-end w-full">
+                {
+                  !isAfterDeadline && ( 
+                    <Button
+                      variant="destructive"
+                      className="mt-4 w-full md:w-auto"
+                      disabled={deleteOrder.isPending}
+                      onClick={() => deleteOrder.mutate({ id: todayOrder.data?.id ?? "" })}
+                    >
+                      {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : <Trash2 className="h-4 w-4 mr-2 inline" />}
+                      {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido"}
+                    </Button>
+                  )
+                }
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -328,15 +330,17 @@ export default function FoodPage() {
                 <p><strong>Observações:</strong> {tomorrowOrder.data.observations}</p>
               )}
               {/* Botão de cancelar pedido de amanhã */}
-              <Button
-                variant="destructive"
-                className="mt-4 w-full"
-                disabled={deleteOrder.isPending}
-                onClick={() => deleteOrder.mutate({ id: tomorrowOrder.data?.id ?? "" })}
-              >
-                {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : null}
-                {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido de Amanhã"}
-              </Button>
+              <div className="flex justify-end w-full">
+                <Button
+                  variant="destructive"
+                  className="mt-4 w-full md:w-auto"
+                  disabled={deleteOrder.isPending}
+                  onClick={() => deleteOrder.mutate({ id: tomorrowOrder.data?.id ?? "" })}
+                >
+                  {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : <Trash2 className="h-4 w-4 mr-2 inline" />}
+                  {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido de Amanhã"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
