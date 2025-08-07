@@ -161,8 +161,7 @@ export default function FoodPage() {
     }
 
     const now = new Date()
-    const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000) // UTC-3
-    const orderDate = brasiliaTime.getHours() < FOOD_ORDER_DEADLINE_HOUR ? startOfDay(brasiliaTime) : startOfDay(addDays(brasiliaTime, 1))
+    const orderDate = now.getHours() < FOOD_ORDER_DEADLINE_HOUR ? startOfDay(now) : startOfDay(addDays(now, 1))
 
     // Flatten as escolhas para um array de IDs
     const selectedChoicesIds = Object.values(optionChoices).flat()
