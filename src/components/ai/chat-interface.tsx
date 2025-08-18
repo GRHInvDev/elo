@@ -10,14 +10,6 @@ import remarkGfm from "remark-gfm"
 import ReactMarkdown from "react-markdown"
 import type { UIMessage, Message, ToolInvocation } from "ai"
 
-// Função utilitária para limitar mensagens no localStorage a 30
-const saveMessagesToStorage = (messages: UIMessage[]) => {
-  if (typeof window !== "undefined") {
-    const limitedMessages = messages.slice(-30)
-    localStorage.setItem("aiMessages", JSON.stringify(limitedMessages))
-  }
-}
-
 export default function ChatInterface() {
   const { messages, input, handleInputChange, addToolResult, stop, handleSubmit, status } =
     useChat({
@@ -31,14 +23,23 @@ export default function ChatInterface() {
         const newMessages = messages.concat([m as UIMessage])
         saveMessagesToStorage(newMessages)
       },
-      onSubmit: (e) => {
-        const newMessages = messages.concat([e as UIMessage])
-        saveMessagesToStorage(newMessages)
-      }
     })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isMounted, setIsMounted] = useState(false)
 
+  // Função utilitária para limitar mensagens no localStorage a 30
+  const saveMessagesToStorage = (messages: UIMessage[]) => {
+    if (typeof window !== "undefined") {
+      const limitedMessages = messages.slice(-30)
+      localStorage.setItem("aiMessages", JSON.stringify(limitedMessages))
+    }
+  }  
+  
+  const onSubmit = (e: UIMessage) => {
+    const newMessages = messages.concat([e])
+    saveMessagesToStorage(newMessages)
+  }
+  
   // Scroll to the end of messages when new messages are added
   useEffect(() => {
     if (messagesEndRef.current) {
