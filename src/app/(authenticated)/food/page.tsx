@@ -231,9 +231,9 @@ export default function FoodPage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Pedidos de Comida</h1>
+          <h1 className="text-3xl font-bold">Almoços</h1>
           <p className="text-muted-foreground">
-            Faça seu pedido com restaurantes parceiros
+            Faça seu pedido de almoço com restaurantes parceiros
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -260,7 +260,7 @@ export default function FoodPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <span>Seu Pedido de Hoje</span>
+              <span>Seu Pedido de Almoço de Hoje</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -308,7 +308,7 @@ export default function FoodPage() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-blue-600" />
-              <span>Seu Pedido de Amanhã</span>
+              <span>Seu Pedido de Almoço de Amanhã</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
