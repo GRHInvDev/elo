@@ -88,7 +88,8 @@ export async function GET() {
           await sendEmail(
             restaurant.email,
             `Pedidos do Dia - ${restaurant.name}`,
-            emailContent
+            emailContent,
+            "rh@boxdistribuidor.com.br"
           );
 
           console.log(`| CRONJOB | Email enviado para ${restaurant.name} com ${orders.length} pedidos`);
