@@ -10,6 +10,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: "Parâmetro 'to' é obrigatório" }, { status: 400 });
     }
 
+    // Separar emails por vírgula ou ponto e vírgula
+    const emails = to.split(/[,;]/).map(email => email.trim()).filter(email => email);
+
     const hoje = new Date();
     const data = hoje.toLocaleDateString("pt-BR");
 
@@ -32,15 +35,20 @@ export async function GET(request: Request) {
 
     const html = mockEmailPedidosRestauranteAgrupado("Restaurante Teste", data, pedidos);
 
-    await sendEmail(
-      to,
-      `TESTE - Pedidos (Agrupados por Opcionais) - Restaurante Teste`,
-      html,
+    // Enviar para todos os emails
+    const emailPromises = emails.map(email => 
+      sendEmail(
+        email,
+        `TESTE - Pedidos (Agrupados por Opcionais) - Restaurante Teste`,
+        html,
+      )
     );
+
+    await Promise.all(emailPromises);
 
     return NextResponse.json({
       success: true,
-      sentTo: to,
+      sentTo: emails,
       totalPedidos: pedidos.length,
       grupos: opcionais.map((opc) => `${prato} com ${opc}`),
     });
