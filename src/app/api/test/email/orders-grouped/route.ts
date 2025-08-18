@@ -18,19 +18,12 @@ export async function GET(request: Request) {
 
     const nomes = Array.from({ length: 12 }, (_, i) => `Func ${i + 1}`);
     const prato = "Entrecot";
-    const opcionais = ["", "", ""];
+    const opcionais = ["Frango", "File", "Peixe"];
 
     const pedidos: MockPedido[] = Array.from({ length: 10 }, (_, i) => {
       const func = nomes.at((i * 2) % nomes.length) ?? `Func ${i + 1}`;
-      const opc = opcionais.at(i % opcionais.length) ?? "Frango";
-      return {
-        num: i + 1,
-        data,
-        func,
-        prato,
-        opc,
-        obs: "Teste",
-      };
+      const opc = i < 4 ? (opcionais.at(i % opcionais.length) ?? "") : ""; // 4 com opcional, 6 sem
+      return { num: i + 1, data, func, prato, opc, obs: "Teste" };
     });
 
     const html = mockEmailPedidosRestauranteAgrupado("Restaurante Teste", data, pedidos);
@@ -50,7 +43,9 @@ export async function GET(request: Request) {
       success: true,
       sentTo: emails,
       totalPedidos: pedidos.length,
-      grupos: opcionais.map((opc) => `${prato} com ${opc}`),
+      grupos: Array.from(
+        new Set(pedidos.map(p => (p.opc?.trim() ? `${p.prato} com ${p.opc}` : `${p.prato} sem adicional`)))
+      ),
     });
   } catch (err) {
     return NextResponse.json(

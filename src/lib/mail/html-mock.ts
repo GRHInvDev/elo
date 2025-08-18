@@ -491,20 +491,25 @@ export type MockPedido = {
     data: string;
     func: string;
     prato: string;
-    opc: string;
+    opc: string | null | undefined;
     obs: string | null;
   };
+  
+  function getGroupKey(p: MockPedido) {
+    const opc = (p.opc ?? "").trim();
+    return opc ? `${p.prato} com ${opc}` : `${p.prato} sem adicional`;
+  }
   
   function groupPedidosByPratoOpc(pedidos: MockPedido[]) {
     const groups = new Map<string, MockPedido[]>();
     for (const p of pedidos) {
-      const key = `${p.prato} com ${p.opc}`;
+      const key = getGroupKey(p);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(p);
     }
     return groups;
   }
-  
+      
   export const mockEmailPedidosRestauranteAgrupado = (
     nomeRestaurante: string,
     dataPedidos: string,
