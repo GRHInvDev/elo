@@ -484,9 +484,7 @@ export const mockEmailPedidosRestaurante = (
         </body>
     </html>
 `)
-// apagar os dados mock abaixo após testar
-
-export type MockPedido = {
+export type GroupedEmailOrder = {
     num: number;
     data: string;
     func: string;
@@ -495,13 +493,13 @@ export type MockPedido = {
     obs: string | null;
   };
   
-  function getGroupKey(p: MockPedido) {
+  function getGroupKey(p: GroupedEmailOrder) {
     const opc = (p.opc ?? "").trim();
     return opc ? `${p.prato} com ${opc}` : `${p.prato} sem adicional`;
   }
   
-  function groupPedidosByPratoOpc(pedidos: MockPedido[]) {
-    const groups = new Map<string, MockPedido[]>();
+  function groupPedidosByPratoOpc(pedidos: GroupedEmailOrder[]) {
+    const groups = new Map<string, GroupedEmailOrder[]>();
     for (const p of pedidos) {
       const key = getGroupKey(p);
       if (!groups.has(key)) groups.set(key, []);
@@ -510,16 +508,16 @@ export type MockPedido = {
     return groups;
   }
       
-  export const mockEmailPedidosRestauranteAgrupado = (
+  export const emailPedidosRestauranteAgrupado = (
     nomeRestaurante: string,
     dataPedidos: string,
-    pedidos: MockPedido[],
+    pedidos: GroupedEmailOrder[],
   ) => {
     const groups = groupPedidosByPratoOpc(pedidos);
     const totalPedidos = pedidos.length;
   
     const totalsHtml = Array.from(groups.entries())
-      .map(([key, arr]) => `<li><strong>Total de pedidos com ${key}:</strong> ${arr.length}</li>`)
+      .map(([key, arr]) => `<li><strong>Total de pedidos de ${key}:</strong> ${arr.length}</li>`)
       .join("");
   
     const sectionsHtml = Array.from(groups.entries())
@@ -532,7 +530,7 @@ export type MockPedido = {
                 <div><strong>Data:</strong> ${p.data}</div>
                 <div><strong>Funcionário:</strong> ${p.func}</div>
                 <div><strong>Prato:</strong> ${p.prato}</div>
-                <div><strong>Opcionais:</strong> ${p.opc}</div>
+                <div><strong>Opcionais:</strong> ${(p.opc ?? "").trim() || "-"}</div>
                 <div><strong>Observações:</strong> ${p.obs ?? "-"}</div>
               </div>
             `,

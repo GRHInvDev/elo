@@ -5,7 +5,8 @@ import type SMTPPool from 'nodemailer/lib/smtp-pool';
 export async function sendEmail(
   to: string,
   subject: string,
-  htmlContent: string
+  htmlContent: string,
+  cc?: string
 ): Promise<void> {
 
   const config: SMTPPool.Options = {
@@ -24,6 +25,7 @@ export async function sendEmail(
   const mailOptions = {
     from: '"Intranet Grupo RHenz" <elo@intranet.boxdistribuidor.com.br>', // Remetente
     to: to, // Destinatário
+    cc: cc ?? undefined,
     subject: subject, // Assunto
     html: htmlContent, // Conteúdo HTML
   };

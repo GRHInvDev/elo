@@ -1,5 +1,5 @@
 import { sendEmail } from "@/lib/mail/email-utils";
-import { mockEmailPedidosRestaurante } from "@/lib/mail/html-mock";
+import { emailPedidosRestauranteAgrupado, type GroupedEmailOrder } from "@/lib/mail/html-mock";
 import { db } from "@/server/db";
 import { type Restaurant } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -61,22 +61,28 @@ export async function GET() {
         const { restaurant, orders } = data;
         
         if (orders.length > 0) {
-          const pedidos = orders.map((order) => ({
-            nomeUsuario: `${order.user.firstName} ${order.user?.lastName}`.trim(),
-            prato: order.menuItem?.name,
-            observacoes: order.observations,
-            opcionais: order.optionSelections?.map(sel => `${sel.choice.option.name}: ${sel.choice.name}`) || [],
-          }));
+          const dataPedidos = today.toLocaleDateString('pt-BR');
+          const pedidosAgrupados: GroupedEmailOrder[] = orders.map((order, idx) => {
+            const fullName = `${order.user.firstName} ${order.user?.lastName ?? ""}`.trim();
+            const prato = order.menuItem?.name ?? "";
+            const opcionais = (order.optionSelections ?? [])
+              .map((sel) => `${sel.choice.option.name}: ${sel.choice.name}`)
+              .filter(Boolean);
+            const opc = opcionais.length > 0 ? opcionais.join(", ") : ""; // vazio => "sem adicional"
+            return {
+              num: idx + 1,
+              data: dataPedidos,
+              func: fullName,
+              prato,
+              opc,
+              obs: order.observations ?? null,
+            };
+          });
 
-          const emailContent = mockEmailPedidosRestaurante(
+          const emailContent = emailPedidosRestauranteAgrupado(
             restaurant.name,
-            today.toLocaleDateString('pt-BR'),
-            pedidos as {
-              nomeUsuario: string;
-              prato: string;
-              observacoes: string | null;
-              opcionais?: string[];
-            }[]
+            dataPedidos,
+            pedidosAgrupados,
           );
 
           await sendEmail(
