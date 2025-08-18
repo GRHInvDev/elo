@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const nomes = Array.from({ length: 12 }, (_, i) => `Func ${i + 1}`);
     const prato = "Entrecot";
-    const opcionais = ["Frango", "File", "Peixe"];
+    const opcionais = ["", "", ""];
 
     const pedidos: MockPedido[] = Array.from({ length: 10 }, (_, i) => {
       const func = nomes.at((i * 2) % nomes.length) ?? `Func ${i + 1}`;
