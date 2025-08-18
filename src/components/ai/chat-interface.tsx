@@ -30,7 +30,7 @@ export default function ChatInterface() {
   // Função utilitária para limitar mensagens no localStorage a 30
   const saveMessagesToStorage = (messages: UIMessage[]) => {
     if (typeof window !== "undefined") {
-      const limitedMessages = messages.slice(-5)
+      const limitedMessages = messages.slice(-30)
       localStorage.setItem("aiMessages", JSON.stringify(limitedMessages))
     }
   }  
