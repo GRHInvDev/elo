@@ -484,3 +484,113 @@ export const mockEmailPedidosRestaurante = (
         </body>
     </html>
 `)
+// apagar os dados mock abaixo após testar
+
+export type MockPedido = {
+    num: number;
+    data: string;
+    func: string;
+    prato: string;
+    opc: string;
+    obs: string | null;
+  };
+  
+  function groupPedidosByPratoOpc(pedidos: MockPedido[]) {
+    const groups = new Map<string, MockPedido[]>();
+    for (const p of pedidos) {
+      const key = `${p.prato} com ${p.opc}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(p);
+    }
+    return groups;
+  }
+  
+  export const mockEmailPedidosRestauranteAgrupado = (
+    nomeRestaurante: string,
+    dataPedidos: string,
+    pedidos: MockPedido[],
+  ) => {
+    const groups = groupPedidosByPratoOpc(pedidos);
+    const totalPedidos = pedidos.length;
+  
+    const totalsHtml = Array.from(groups.entries())
+      .map(([key, arr]) => `<li><strong>Total de pedidos com ${key}:</strong> ${arr.length}</li>`)
+      .join("");
+  
+    const sectionsHtml = Array.from(groups.entries())
+      .map(([key, arr]) => {
+        const itemsHtml = arr
+          .map(
+            (p) => `
+              <div class="pedido">
+                <div><strong>Pedido:</strong> ${p.num}</div>
+                <div><strong>Data:</strong> ${p.data}</div>
+                <div><strong>Funcionário:</strong> ${p.func}</div>
+                <div><strong>Prato:</strong> ${p.prato}</div>
+                <div><strong>Opcionais:</strong> ${p.opc}</div>
+                <div><strong>Observações:</strong> ${p.obs ?? "-"}</div>
+              </div>
+            `,
+          )
+          .join("");
+  
+        return `
+          <section class="group">
+            <h2>${key}</h2>
+            <div class="group-count">Total de pedidos de ${key}: ${arr.length}</div>
+            <div class="pedidos">
+              ${itemsHtml}
+            </div>
+          </section>
+        `;
+      })
+      .join("");
+  
+    return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Pedidos do Dia - ${nomeRestaurante}</title>
+        <style>
+          body { font-family: Arial, Helvetica, sans-serif; background: #f7f7f7; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 900px; margin: 24px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+          .header { background: #0d6efd; color: #fff; padding: 20px; }
+          .header h1 { margin: 0; }
+          .summary { padding: 16px 20px; background: #f0f4ff; border-bottom: 1px solid #e6ecff; }
+          .summary p { margin: 6px 0; }
+          .summary ul { margin: 8px 0 0 20px; }
+          .content { padding: 20px; }
+          .group { margin-bottom: 24px; }
+          .group h2 { margin: 0 0 6px; }
+          .group-count { font-size: 0.95rem; color: #555; margin-bottom: 10px; }
+          .pedidos { display: grid; grid-template-columns: 1fr; gap: 10px; }
+          .pedido { padding: 12px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fafafa; }
+          .footer { padding: 14px 20px; background: #f5f5f5; color: #666; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Pedidos do Dia</h1>
+            <div>${nomeRestaurante}</div>
+          </div>
+          <div class="summary">
+            <p><strong>Data:</strong> ${dataPedidos}</p>
+            <p><strong>Total de pedidos:</strong> ${totalPedidos}</p>
+            <ul>
+              ${totalsHtml}
+            </ul>
+          </div>
+          <div class="content">
+            ${sectionsHtml}
+          </div>
+          <div class="footer">
+            <div>Este é um envio automático. Não responda este email.</div>
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
+  };
