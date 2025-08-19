@@ -7,12 +7,10 @@ import { api } from "@/trpc/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export function AvailableRooms({ className }: { className?: string }) {
+export function AvailableRooms({ className, filial }: { className?: string; filial?: string }) {
   const [now] = useState(new Date())
-  const { data: rooms, isLoading } = api.room.listAvailable.useQuery({
-    date: now,
-  })
-
+  const { data: rooms, isLoading } = api.room.listAvailable.useQuery({ date: now, filial })
+  const filtered = rooms?.filter((r) => !filial || (r as { filial?: string }).filial === filial)
   if (isLoading) {
     return (
       <Card className={className}>

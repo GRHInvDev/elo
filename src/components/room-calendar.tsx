@@ -25,7 +25,7 @@ import { Label } from "./ui/label"
 import { Input } from "./ui/input"
 import { type z } from "zod"
 
-export function RoomCalendar({ className }: { className?: string }) {
+export function RoomCalendar({ className, filial }: { className?: string; filial?: string }) {
   const [date, setDate] = useState<Date>(startOfToday())
   const { toast } = useToast()
   const utils = api.useUtils()
@@ -35,6 +35,8 @@ export function RoomCalendar({ className }: { className?: string }) {
     startDate: startOfToday(),
     endDate: addDays(startOfToday(), 30),
   })
+
+  const visible = (bookings ?? []).filter((b) => !filial || b.room.filial === filial)
 
   const deleteBooking = api.booking.delete.useMutation({
     onSuccess: async () => {
@@ -56,16 +58,16 @@ export function RoomCalendar({ className }: { className?: string }) {
   })
 
   // Agrupa as reservas por data
-  const bookingsByDate = bookings?.reduce(
+  const bookingsByDate = visible.reduce(
     (acc, booking) => {
       const dateKey = format(booking.start, "yyyy-MM-dd")
       if (!acc[dateKey]) {
         acc[dateKey] = []
       }
-      acc[dateKey].push(booking)
+      acc[dateKey].push(booking) // chegeui e tava assim, se possível, deixar
       return acc
     },
-    {} as Record<string, typeof bookings>,
+    {} as Record<string, typeof visible>,
   )
 
   return (

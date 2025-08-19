@@ -22,13 +22,14 @@ import { Label } from "./ui/label"
 import { Input } from "./ui/input"
 import { type z } from "zod"
 
-export function MyBookings({ className }: { className?: string }) {
+export function MyBookings({ className, filial }: { className?: string; filial?: string }) {
   const { toast } = useToast()
   const utils = api.useUtils()
   const auth = useAuth(); 
 
   const { data: bookings, isLoading } = api.booking.listMine.useQuery()
-
+  const filtered = bookings?.filter((b) => !filial || b.room.filial === filial)
+  
   const deleteBooking = api.booking.delete.useMutation({
     onSuccess: async () => {
       toast({

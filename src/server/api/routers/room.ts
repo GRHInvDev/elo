@@ -5,6 +5,7 @@ const createRoomSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   capacity: z.number().min(1, "Capacidade deve ser maior que 0"),
   floor: z.number().min(1, "Andar deve ser maior que 0"),
+  filial: z.string().optional(),
   coordinates: z.object({
     x: z.number(),
     y: z.number(),
@@ -25,6 +26,7 @@ export const roomRouter = createTRPCRouter({
         name: input.name,
         capacity: input.capacity,
         floor: input.floor,
+        filial: input.filial,
         coordinates: input.coordinates,
       },
     })
@@ -67,28 +69,35 @@ export const roomRouter = createTRPCRouter({
 
   // Listar todas as salas
   list: protectedProcedure
-    .input(
-      z
-        .object({
-          floor: z.number().optional(),
-        })
-        .optional(),
-    )
-    .query(async ({ ctx, input }) => {
-      return ctx.db.room.findMany({
-        where: input?.floor ? { floor: input.floor } : undefined,
-        include: {
-          bookings: {
-            where: {
-              end: {
-                gte: new Date(),
-              },
+  .input(
+    z
+      .object({
+        floor: z.number().optional(),
+        filial: z.string().optional(),
+      })
+      .optional(),
+  )
+  .query(async ({ ctx, input }) => {
+    return ctx.db.room.findMany({
+      where:
+        input?.floor || input?.filial
+          ? {
+              ...(input?.floor ? { floor: input.floor } : {}),
+              ...(input?.filial ? { filial: input.filial } : {}),
+            }
+          : undefined,
+      include: {
+        bookings: {
+          where: {
+            end: {
+              gte: new Date(),
             },
           },
         },
-        orderBy: [{ floor: "asc" }, { name: "asc" }],
-      })
-    }),
+      },
+      orderBy: [{ floor: "asc" }, { name: "asc" }],
+    })
+  }),
 
   // Verificar disponibilidade da sala
   checkAvailability: protectedProcedure
@@ -151,10 +160,11 @@ export const roomRouter = createTRPCRouter({
       })
     }),
 
-  listAvailable: protectedProcedure
+    listAvailable: protectedProcedure
     .input(
       z.object({
         date: z.date(),
+        filial: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -172,14 +182,15 @@ export const roomRouter = createTRPCRouter({
           roomId: true,
         },
       })
-
+  
       const bookedRoomIds = bookings.map((b) => b.roomId)
-
+  
       return ctx.db.room.findMany({
         where: {
           id: {
             notIn: bookedRoomIds,
           },
+          ...(input.filial ? { filial: input.filial } : {}),
         },
         orderBy: [
           {
@@ -192,4 +203,3 @@ export const roomRouter = createTRPCRouter({
       })
     }),
 })
-

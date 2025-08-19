@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Loader2, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { type Room } from "./room-dialog"
 import { Card } from "./ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface DrawingState {
   isDrawing: boolean
@@ -37,6 +38,7 @@ export function RoomAdmin() {
   const utils = api.useUtils()
   const [open, setOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<Room | undefined>(undefined)
+  const [filial, setFilial] = useState<string>("SCS")
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     startX: 0,
@@ -45,6 +47,13 @@ export function RoomAdmin() {
     currentY: 0,
   })
   const svgRef = useRef<SVGSVGElement>(null)
+
+  const FILIAIS = ["SCS", "CAC", "VA"]
+
+  useEffect(() => {
+    // Preenche a filial ao abrir para edição; usa default ao criar
+    setFilial((editingRoom as unknown as { filial?: string } | undefined)?.filial ?? "SCS")
+  }, [editingRoom])
 
   const createRoom = api.room.create.useMutation({
     onSuccess: async () => {
@@ -141,6 +150,7 @@ export function RoomAdmin() {
       description: formData.get("description") as string,
       capacity: Number.parseInt(formData.get("capacity") as string),
       floor: Number.parseInt(formData.get("floor") as string),
+      filial,
       coordinates: { x, y, width, height },
     }
 
@@ -214,6 +224,21 @@ export function RoomAdmin() {
                     <Label htmlFor="floor">Andar</Label>
                     <Input id="floor" name="floor" type="number" min="1" defaultValue={editingRoom?.floor} required />
                   </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="filial">Filial</Label>
+                  <Select value={filial} onValueChange={setFilial}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione a filial" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FILIAIS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid gap-2">
                   <Label>Posição no Mapa</Label>
@@ -353,6 +378,27 @@ export function RoomAdmin() {
           </div>
         )}
       </Card>
+
+      {!isLoading && (
+        <Card className="rounded-md border">
+          <div className="p-4 space-y-4">
+            {FILIAIS.map((f) => {
+              const list = (rooms ?? []).filter((r) => (r as { filial?: string }).filial === f)
+              if (!list.length) return null
+              return (
+                <div key={f} className="space-y-2">
+                  <p className="font-medium">Lista da filial {f}:</p>
+                  <ul className="list-disc pl-6">
+                    {list.map((room) => (
+                      <li key={room.id}>{room.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

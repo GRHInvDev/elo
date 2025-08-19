@@ -12,17 +12,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { api } from "@/trpc/react"
 import { Skeleton } from "@/components/ui/skeleton"
 
-type RoomMapProps = React.HTMLAttributes<HTMLDivElement>
+type RoomMapProps = React.HTMLAttributes<HTMLDivElement> & { filial?: string }
 
-export function RoomMap({ className, ...props }: RoomMapProps) {
+export function RoomMap({ className, filial, ...props }: RoomMapProps) {
   const [selectedFloor, setSelectedFloor] = useState<number>(1)
   const [selectedRoom, setSelectedRoom] = useState<Room | undefined>(undefined)
   const { theme } = useTheme()
-  const { data: rooms, isLoading } = api.room.list.useQuery()
-
-  const floorRooms = rooms?.filter((room) => room.floor === selectedFloor)
-  const floors = rooms ? Array.from(new Set(rooms.map((room) => room.floor))).sort((a, b) => a - b) : []
-
+  const { data: rooms, isLoading } = api.room.list.useQuery({ filial })
+  const filteredRooms = rooms
+  const floorRooms = filteredRooms?.filter((room) => room.floor === selectedFloor)
+  const floors = filteredRooms ? Array.from(new Set(filteredRooms.map((room) => room.floor))).sort((a, b) => a - b) : []
+  
   if (isLoading) {
     return (
       <div className={className}>
