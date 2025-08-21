@@ -495,7 +495,16 @@ export type GroupedEmailOrder = {
   
   function getGroupKey(p: GroupedEmailOrder) {
     const opc = (p.opc ?? "").trim();
-    return opc ? `${p.prato} com ${opc}` : `${p.prato} sem adicional`;
+    if (!opc) return `${p.prato} sem adicional`;
+    // Normaliza a string de opcionais para evitar diferenças de ordem
+    // Ex.: "Feijão: Sim, Salada: Não" e "Salada: Não, Feijão: Sim" viram a mesma chave
+    const normalized = opc
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+      .join(", ");
+    return `${p.prato} com ${normalized}`;
   }
   
   function groupPedidosByPratoOpc(pedidos: GroupedEmailOrder[]) {

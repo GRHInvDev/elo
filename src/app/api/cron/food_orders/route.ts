@@ -65,7 +65,14 @@ export async function GET() {
           const pedidosAgrupados: GroupedEmailOrder[] = orders.map((order, idx) => {
             const fullName = `${order.user.firstName} ${order.user?.lastName ?? ""}`.trim();
             const prato = order.menuItem?.name ?? "";
+            // Ordena por nome da opção e depois nome da escolha para garantir consistência
             const opcionais = (order.optionSelections ?? [])
+              .slice()
+              .sort((a, b) => {
+                const optCmp = a.choice.option.name.localeCompare(b.choice.option.name, "pt-BR", { sensitivity: "base" });
+                if (optCmp !== 0) return optCmp;
+                return a.choice.name.localeCompare(b.choice.name, "pt-BR", { sensitivity: "base" });
+              })
               .map((sel) => `${sel.choice.option.name}: ${sel.choice.name}`)
               .filter(Boolean);
             const opc = opcionais.length > 0 ? opcionais.join(", ") : ""; // vazio => "sem adicional"
