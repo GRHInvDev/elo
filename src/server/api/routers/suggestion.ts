@@ -56,6 +56,7 @@ export const suggestionRouter = createTRPCRouter({
         type: z.enum(["IDEIA_INOVADORA","SUGESTAO_MELHORIA","SOLUCAO_PROBLEMA","OUTRO"]),
         other: z.string().trim().optional(),
       }),
+      sector: z.string().optional(), // Novo campo opcional
     }))
     .mutation(async ({ ctx, input }) => {
       const me = await ctx.db.user.findUnique({
@@ -69,7 +70,10 @@ export const suggestionRouter = createTRPCRouter({
       })
       const ideaNumber = (last?.ideaNumber ?? 99) + 1
 
-      const sector: InputJsonValue = { enterprise: me?.enterprise ?? "NA" }
+      // Usar o setor informado pelo usuário ou o padrão da empresa
+      const sector: InputJsonValue = { 
+        enterprise: input.sector ?? me?.enterprise ?? "NA" 
+      }
 
       return ctx.db.suggestion.create({
         data: {
