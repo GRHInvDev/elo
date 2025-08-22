@@ -19,6 +19,9 @@ import { menuItemOptionRouter } from "./routers/menu-item-option";
 import { menuItemOptionChoiceRouter } from "./routers/menu-item-option-choice";
 import { foodOrderRouter } from "./routers/food-order";
 import { orderLogRouter } from "./routers/order-log";
+import { suggestionRouter } from "./routers/suggestion";
+import { classificationRouter } from "./routers/classification";
+import { kpiRouter } from "./routers/kpi";
 
 /**
  * This is the primary router for your server.
@@ -46,6 +49,9 @@ export const appRouter = createTRPCRouter({
   menuItemOptionChoice: menuItemOptionChoiceRouter,
   foodOrder: foodOrderRouter,
   orderLog: orderLogRouter,
+  suggestion: suggestionRouter,
+  classification: classificationRouter,
+  kpi: kpiRouter,
 });
 
 // export type definition of API

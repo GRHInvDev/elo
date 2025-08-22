@@ -11,6 +11,7 @@ import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
 import { UserRole } from "@prisma/client"
+import { SuggestionsCard } from "@/components/forms/suggestions-card"
 
 export default async function DashboardPage() {
   const birthdays = await api.birthday.listCurrentMonth();
@@ -138,13 +139,16 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
       <div className="place-self-center w-full max-w-6xl mt-4 md:px-4">
         <h1 className="flex items-center gap-x-2 text-4xl mb-6 ml-6 font-semibold">
           <LucideNewspaper/>
           News
         </h1>
         <NewsDisplay/>
+      </div>      
+      <div className="place-self-center w-full max-w-6xl mt-4 md:px-4">
+        <SuggestionsCard />
       </div>
       <div className="flex p-1 flex-col mt-8 h-fit bg-muted">
         <div className="flex-1 flex justify-center md:justify-start">
