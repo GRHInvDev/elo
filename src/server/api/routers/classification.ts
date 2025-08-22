@@ -1,0 +1,154 @@
+import { z } from "zod"
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
+
+export const classificationRouter = createTRPCRouter({
+  // Listar todas as classificações ativas por tipo
+  listByType: protectedProcedure
+    .input(z.object({
+      type: z.enum(["IMPACT", "CAPACITY", "EFFORT"])
+    }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.classification.findMany({
+        where: {
+          type: input.type,
+          isActive: true
+        },
+        orderBy: [
+          { order: 'asc' },
+          { score: 'desc' }
+        ]
+      })
+    }),
+
+  // Listar todas as classificações (para admin)
+  listAll: adminProcedure
+    .input(z.object({
+      type: z.enum(["IMPACT", "CAPACITY", "EFFORT"]).optional()
+    }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.classification.findMany({
+        where: input.type ? { type: input.type } : undefined,
+        orderBy: [
+          { type: 'asc' },
+          { order: 'asc' },
+          { score: 'desc' }
+        ]
+      })
+    }),
+
+  // Criar nova classificação
+  create: adminProcedure
+    .input(z.object({
+      label: z.string().min(1).max(100),
+      score: z.number().int().min(1).max(5),
+      type: z.enum(["IMPACT", "CAPACITY", "EFFORT"]),
+      order: z.number().int().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Se não especificado, colocar no final
+      const maxOrder = await ctx.db.classification.aggregate({
+        where: { type: input.type },
+        _max: { order: true }
+      })
+
+      return await ctx.db.classification.create({
+        data: {
+          label: input.label,
+          score: input.score,
+          type: input.type,
+          order: input.order ?? ((maxOrder._max.order ?? 0) + 1)
+        }
+      })
+    }),
+
+  // Atualizar classificação
+  update: adminProcedure
+    .input(z.object({
+      id: z.string(),
+      label: z.string().min(1).max(100).optional(),
+      score: z.number().int().min(1).max(5).optional(),
+      order: z.number().int().optional(),
+      isActive: z.boolean().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input
+      
+      return await ctx.db.classification.update({
+        where: { id },
+        data
+      })
+    }),
+
+  // Deletar classificação (soft delete)
+  delete: adminProcedure
+    .input(z.object({
+      id: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.classification.update({
+        where: { id: input.id },
+        data: { isActive: false }
+      })
+    }),
+
+  // Reordenar classificações
+  reorder: adminProcedure
+    .input(z.object({
+      type: z.enum(["IMPACT", "CAPACITY", "EFFORT"]),
+      items: z.array(z.object({
+        id: z.string(),
+        order: z.number().int()
+      }))
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Atualizar ordem de cada item
+      const updatePromises = input.items.map(item =>
+        ctx.db.classification.update({
+          where: { id: item.id },
+          data: { order: item.order }
+        })
+      )
+
+      await Promise.all(updatePromises)
+      
+      return { success: true }
+    }),
+
+  // Inicializar classificações padrão (para migration/seed)
+  initializeDefaults: adminProcedure
+    .mutation(async ({ ctx }) => {
+      const defaultClassifications = [
+        // Impacto
+        { label: "Alto impacto", score: 5, type: "IMPACT" as const, order: 1 },
+        { label: "Médio impacto", score: 3, type: "IMPACT" as const, order: 2 },
+        { label: "Baixo impacto", score: 1, type: "IMPACT" as const, order: 3 },
+        
+        // Capacidade
+        { label: "Alta capacidade", score: 5, type: "CAPACITY" as const, order: 1 },
+        { label: "Média capacidade", score: 3, type: "CAPACITY" as const, order: 2 },
+        { label: "Baixa capacidade", score: 1, type: "CAPACITY" as const, order: 3 },
+        
+        // Esforço
+        { label: "Baixo esforço", score: 1, type: "EFFORT" as const, order: 1 },
+        { label: "Médio esforço", score: 3, type: "EFFORT" as const, order: 2 },
+        { label: "Alto esforço", score: 5, type: "EFFORT" as const, order: 3 },
+      ]
+
+      const createPromises = defaultClassifications.map(item =>
+        ctx.db.classification.upsert({
+          where: {
+            label_type: {
+              label: item.label,
+              type: item.type
+            }
+          },
+          update: {},
+          create: item
+        })
+      )
+
+      await Promise.all(createPromises)
+      
+      return { success: true, count: defaultClassifications.length }
+    })
+})

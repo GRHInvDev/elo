@@ -1,6 +1,7 @@
 "use server"
 import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
+import { SuggestionsCard } from "@/components/admin/suggestion/suggestion-card"
 import { api } from "@/trpc/server"
 import { cn } from "@/lib/utils"
 import { LinkIcon, LucideGraduationCap, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
@@ -27,10 +28,6 @@ export default async function DashboardPage() {
       imageRef: '/banners/Banners-intranet-2.png',
       title: 'Banners-intranet-2',
     },
-    // {
-    //  imageRef: '/banners/Banners-intranet-3.png',
-    //  title: 'Banners-intranet-3',
-    // },
     {
       imageRef: '/banners/Banners-intranet-4.png',
       title: 'Banners-intranet-4',
@@ -49,10 +46,6 @@ export default async function DashboardPage() {
       imageRef: 'https://www.youtube.com/embed/AIlQ-EM35UQ?si=RomGdNhQLn6CuzCw',
       title: 'Institucional Cristallux',
     },
-    // {
-    //  imageRef: 'https://www.instagram.com/62fcede2-e9c5-477f-821d-17cc5f83040d',
-    //  title: 'Institucional Box',
-    // },
   ]
 
   return (
@@ -74,7 +67,10 @@ export default async function DashboardPage() {
             videos.length> 0 &&
             <VideosCarousel className="col-span-1 md:col-span-2" itens={videos}/>
           }
-          <div className="p-4 md:p-8 col-span-1">
+          <div className="p-4 md:p-8 col-span-1 space-y-4">
+            {/* Card de Sugestões */}
+            <SuggestionsCard />
+            
             <div className="md:hidden">
               <h1 className="text-4xl mb-6 font-semibold">
                 Funcionalidades
@@ -130,9 +126,6 @@ export default async function DashboardPage() {
             </h1>
           </div>
           <div>
-            {/**
-             * Substituir com imagem
-             */}
             <div className="flex items-center justify-center h-36 md:h-44 relative translate-x-14 md:translate-x-0 bg-muted rounded-md aspect-video">
               <LucidePlay/>
             </div>

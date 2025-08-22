@@ -1,5 +1,5 @@
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,31 +8,380 @@ datasource db {
 }
 
 model User {
-  id            String    @id
-  email         String    @unique
-  firstName     String?
-  lastName      String?
-  imageUrl      String?
-  role          UserRole  @default(USER)
-  posts         Post[]
-  events        Event[]
-  flyers        Flyer[]
-  bookings      Booking[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  birthDay      Birthday?
-  reactions     Reaction[]
-  comments      Coment[]
-  enterprise    Enterprise @default(NA)
-  vehicleRents  VehicleRent[]
-  shopCart      ShopCart?
-  sells         Sell[]
-  forms         Form[]
-  formResponses FormResponse[]
-  foodOrders    FoodOrder[]
+  id               String             @id
+  email            String             @unique
+  firstName        String?
+  lastName         String?
+  imageUrl         String?
+  role             UserRole           @default(USER)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  enterprise       Enterprise         @default(NA)
+  setor            String?            @db.VarChar
+  comments         Coment[]
+  reactions        Reaction[]
+  birthDay         Birthday?
+  bookings         Booking[]
+  events           Event[]
+  flyers           Flyer[]
+  foodOrders       FoodOrder[]
+  forms            Form[]
+  formResponses    FormResponse[]
+  FormResponseChat FormResponseChat[]
+  posts            Post[]
+  sells            Sell?
+  shopCart         ShopCart?
+  vehicleRents     VehicleRent[]
+  authoredSuggestions Suggestion[] @relation("SuggestionAuthor")
+  analyzedSuggestions Suggestion[] @relation("SuggestionAnalyst")
 
   @@map("users")
+}
+
+model GlobalConfig {
+  id          String @unique @default(cuid())
+  shopWebhook String
+}
+
+model Room {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  capacity    Int
+  floor       Int
+  coordinates Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  filial      String    @default("SCS")
+  bookings    Booking[]
+
+  @@map("rooms")
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  title     String
+  start     DateTime
+  end       DateTime
+  roomId    String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+model Post {
+  id            String     @id @default(cuid())
+  title         String
+  content       String
+  published     Boolean    @default(false)
+  authorId      String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  commentsCount Int        @default(0)
+  reactionCount Int        @default(0)
+  imageUrl      String?
+  comments      Coment[]
+  reactions     Reaction[]
+  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("posts")
+}
+
+model Reaction {
+  id     String @id @default(cuid())
+  userId String
+  postId String
+  emoji  String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Coment {
+  id      String @id @default(cuid())
+  userId  String
+  postId  String
+  comment String
+  post    Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  location    String
+  startDate   DateTime
+  endDate     DateTime
+  published   Boolean  @default(false)
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("events")
+}
+
+model Flyer {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String
+  published   Boolean  @default(false)
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  iframe      String?
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("flyers")
+}
+
+model Birthday {
+  id       String   @id @default(cuid())
+  userId   String?  @unique
+  name     String
+  data     DateTime
+  imageUrl String?
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("birthdays")
+}
+
+model Vehicle {
+  id         String        @id @default(cuid())
+  model      String
+  plate      String        @unique
+  imageUrl   String
+  enterprise Enterprise
+  kilometers BigInt
+  availble   Boolean       @default(true)
+  rents      VehicleRent[]
+
+  @@map("vehicles")
+}
+
+model VehicleRent {
+  id          String    @id @default(cuid())
+  userId      String
+  vehicleId   String
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  finished    Boolean   @default(false)
+  endLocation Json?
+  finalKm     BigInt?
+  initialKm   BigInt?
+  destiny     String    @default("")
+  driver      String    @default("")
+  observation Json?
+  passangers  String?
+  possibleEnd DateTime?
+  regIniKm    BigInt?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_rents")
+}
+
+model Product {
+  id          String     @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  enterprise  Enterprise
+  imageUrl    String[]
+  sells       Sell[]     @relation("ProductToSell")
+  shopCarts   ShopCart[] @relation("ProductToShopCart")
+
+  @@map("products")
+}
+
+model ShopCart {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  totalPrice Float
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products   Product[] @relation("ProductToShopCart")
+
+  @@map("shop_cart")
+}
+
+model Sell {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  totalPrice Float
+  nfeId      Int?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products   Product[] @relation("ProductToSell")
+
+  @@map("sells")
+}
+
+model Form {
+  id          String         @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  fields      Json[]         @db.Json
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses   FormResponse[]
+
+  @@map("forms")
+}
+
+model FormResponse {
+  id               String             @id @default(cuid())
+  userId           String
+  responses        Json[]             @db.Json
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  formId           String
+  status           ResponseStatus     @default(NOT_STARTED)
+  statusComment    String?
+  form             Form               @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   FormResponseChat FormResponseChat[]
+
+  @@map("forms_responses")
+}
+
+model FormResponseChat {
+  id             String       @id @default(cuid())
+  userId         String
+  formResponseId String
+  message        String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  formResponse   FormResponse @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("forms_responses_chat")
+}
+
+model Restaurant {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  city        String
+  address     String
+  phone       String
+  email       String
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orders      FoodOrder[]
+  menuItems   MenuItem[]
+
+  @@map("restaurants")
+}
+
+model MenuItem {
+  id           String           @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  category     String
+  available    Boolean          @default(true)
+  restaurantId String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  weekDay      Int              @default(1)
+  orders       FoodOrder[]
+  options      MenuItemOption[]
+  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@map("menu_items")
+}
+
+model MenuItemOption {
+  id          String                 @id @default(cuid())
+  name        String
+  description String?
+  required    Boolean                @default(false)
+  multiple    Boolean                @default(false)
+  menuItemId  String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  choices     MenuItemOptionChoice[]
+  menuItem    MenuItem               @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("menu_item_options")
+}
+
+model MenuItemOptionChoice {
+  id              String                 @id @default(cuid())
+  name            String
+  priceModifier   Float                  @default(0)
+  available       Boolean                @default(true)
+  optionId        String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  option          MenuItemOption         @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  orderSelections OrderOptionSelection[]
+
+  @@map("menu_item_option_choices")
+}
+
+model FoodOrder {
+  id               String                 @id @default(cuid())
+  userId           String
+  restaurantId     String
+  menuItemId       String
+  orderDate        DateTime
+  orderTime        DateTime
+  status           OrderStatus            @default(PENDING)
+  observations     String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  menuItem         MenuItem               @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  restaurant       Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  optionSelections OrderOptionSelection[]
+
+  @@unique([userId, orderDate])
+  @@map("food_orders")
+}
+
+model OrderOptionSelection {
+  id        String               @id @default(cuid())
+  orderId   String
+  choiceId  String
+  createdAt DateTime             @default(now())
+  choice    MenuItemOptionChoice @relation(fields: [choiceId], references: [id], onDelete: Cascade)
+  order     FoodOrder            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_option_selections")
+}
+
+model OrderLog {
+  id          String   @id @default(cuid())
+  userId      String
+  userName    String
+  userEmail   String
+  month       Int
+  year        Int
+  totalOrders Int      @default(0)
+  totalValue  Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, month, year])
+  @@map("order_logs")
 }
 
 enum UserRole {
@@ -46,342 +395,14 @@ enum Enterprise {
   Box
   RHenz
   Cristallux
-}
-
-model GlobalConfig  {
-  id            String    @unique @default(cuid())
-  shopWebhook   String
-}
-
-model Room {
-  id          String    @id @default(cuid())
-  name        String
-  description String?   @db.Text
-  capacity    Int
-  floor       Int
-  coordinates Json      // {x: number, y: number, width: number, height: number}
-  bookings    Booking[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  filial      String    @default("SCS")
-
-  @@map("rooms")
-}
-
-model Booking {
-  id        String   @id @default(cuid())
-  title     String
-  start     DateTime
-  end       DateTime
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  roomId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("bookings")
-}
-
-model Post {
-  id            String   @id @default(cuid())
-  title         String
-  content       String   @db.Text
-  published     Boolean  @default(false)
-  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId      String
-  createdAt     DateTime @default(now())
-  imageUrl      String?
-  updatedAt     DateTime @updatedAt
-  reactions     Reaction[]
-  comments      Coment[]
-  reactionCount Int     @default(0)
-  commentsCount Int     @default(0)
-
-  @@map("posts")
-}
-
-model Reaction {
-  id      String  @id @default(cuid())
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId  String
-  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId  String 
-  emoji   String
-
-  @@unique([userId, postId])
-}
-
-model Coment {
-  id      String  @id @default(cuid())
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId  String
-  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId  String 
-  comment String
-
-  @@unique([userId, postId])
-}
-
-model Event {
-  id          String    @id @default(cuid())
-  title       String
-  description String    @db.Text
-  location    String
-  startDate   DateTime
-  endDate     DateTime
-  published   Boolean   @default(false)
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId    String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("events")
-}
-
-model Flyer {
-  id          String   @id @default(cuid())
-  title       String
-  description String   @db.Text
-  imageUrl    String
-  iframe      String?
-  published   Boolean  @default(false)
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("flyers")
-}
-
-model Birthday {
-  id        String   @id @default(cuid())
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String?  @unique
-  imageUrl  String?
-  name      String
-  data      DateTime
-
-  @@map("birthdays")
-}
-
-model Vehicle {
-  id          String   @id @default(cuid())
-  model       String
-  plate       String   @unique
-  imageUrl    String
-  enterprise  Enterprise
-  kilometers  BigInt
-  availble    Boolean  @default(true)
-  rents       VehicleRent[]
-
-  @@map("vehicles")
-}
-
-model VehicleRent {
-  id          String      @id @default(cuid())
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  vehicle     Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  vehicleId   String
-  driver      String      @default("")
-  passangers  String?
-  destiny     String      @default("")
-  startDate   DateTime    @default(now())
-  possibleEnd DateTime?
-  endDate     DateTime?
-  finished    Boolean     @default(false)
-  initialKm   BigInt?
-  regIniKm    BigInt?
-  finalKm     BigInt?
-  endLocation Json?
-  observation Json?
-
-  @@map("vehicle_rents")
-}
-
-model Product {
-  id          String      @id @default(cuid())
-  name        String
-  description String
-  enterprise  Enterprise
-  imageUrl    String[]
-  price       Float
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  shopCarts   ShopCart[]
-  sells       Sell[]
-
-  @@map("products")
-}
-
-model ShopCart {
-  id          String      @id @default(cuid())
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String      @unique
-  products    Product[]
-  totalPrice  Float
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@map("shop_cart")
-}
-
-model Sell {
-  id              String      @id @default(cuid())
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String      @unique
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  products        Product[]
-  totalPrice      Float
-  nfeId           Int?
-
-  @@map("sells")
-}
-
-model Form {
-  id              String      @id @default(cuid())
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  title           String
-  description     String?
-  fields          Json[]      @db.Json   
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  responses       FormResponse[]
-
-  @@map("forms")
+  Box_Distribuidor          @map("Box Distribuidor")
+  Box_Distribuidor___Filial @map("Box Distribuidor - Filial")
 }
 
 enum ResponseStatus {
   NOT_STARTED
   IN_PROGRESS
   COMPLETED
-}
-
-model FormResponse {
-  id              String         @id  @default(cuid())
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  form            Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
-  formId          String
-  responses       Json[]         @db.Json 
-  status          ResponseStatus @default(NOT_STARTED)
-  statusComment   String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  @@map("forms_responses")
-  FormResponseChat FormResponseChat[]
-}
-
-model FormResponseChat {
-  id              String         @id  @default(cuid())
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  formResponse    FormResponse   @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
-  formResponseId  String
-  message         String
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  @@map("forms_responses_chat")
-}
-
-model Restaurant {
-  id          String    @id @default(cuid())
-  name        String
-  description String?   @db.Text
-  city        String
-  address     String
-  phone       String
-  email       String
-  active      Boolean   @default(true)
-  menuItems   MenuItem[]
-  orders      FoodOrder[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("restaurants")
-}
-
-model MenuItem {
-  id           String     @id @default(cuid())
-  name         String
-  description  String?    @db.Text
-  price        Float
-  category     String     // Ex: "Prato Principal", "Sobremesa", "Bebida"
-  available    Boolean    @default(true)
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  restaurantId String
-  weekDay      Int        @default(1) // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
-  options      MenuItemOption[]
-  orders       FoodOrder[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@map("menu_items")
-}
-
-model MenuItemOption {
-  id           String     @id @default(cuid())
-  name         String     // Ex: "Tamanho", "Temperatura", "Adicionais"
-  description  String?    @db.Text
-  required     Boolean    @default(false) // Se o cliente deve escolher uma opção
-  multiple     Boolean    @default(false) // Se pode escolher múltiplas opções
-  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  menuItemId   String
-  choices      MenuItemOptionChoice[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@map("menu_item_options")
-}
-
-model MenuItemOptionChoice {
-  id                String           @id @default(cuid())
-  name              String           // Ex: "Pequeno", "Médio", "Grande"
-  priceModifier     Float            @default(0) // Modificador de preço (+ ou -)
-  available         Boolean          @default(true)
-  option            MenuItemOption   @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  optionId          String
-  orderSelections   OrderOptionSelection[]
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  @@map("menu_item_option_choices")
-}
-
-model FoodOrder {
-  id           String     @id @default(cuid())
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId       String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  restaurantId String
-  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  menuItemId   String
-  orderDate    DateTime   // Data para qual o pedido é feito
-  orderTime    DateTime   // Horário em que o pedido foi feito
-  status       OrderStatus @default(PENDING)
-  observations String?
-  optionSelections OrderOptionSelection[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@unique([userId, orderDate]) // Um pedido por usuário por dia
-  @@map("food_orders")
-}
-
-model OrderOptionSelection {
-  id           String     @id @default(cuid())
-  order        FoodOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId      String
-  choice       MenuItemOptionChoice @relation(fields: [choiceId], references: [id], onDelete: Cascade)
-  choiceId     String
-  createdAt    DateTime   @default(now())
-
-  @@map("order_option_selections")
 }
 
 enum OrderStatus {
@@ -391,19 +412,70 @@ enum OrderStatus {
   CANCELLED
 }
 
-model OrderLog {
-  id        String   @id @default(cuid())
-  userId    String
-  userName  String
-  userEmail String
-  month     Int      // 1-12
-  year      Int
-  totalOrders Int    @default(0)
-  totalValue Float   @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, month, year])
-  @@map("order_logs")
+enum SuggestionStatus {
+  NEW
+  IN_REVIEW
+  APPROVED
+  IN_PROGRESS
+  DONE
+  NOT_IMPLEMENTED
 }
 
+model Suggestion {
+  id                  String            @id @default(cuid())
+  ideaNumber          Int               @unique
+
+  // relação com autor
+  userId              String
+  user                User              @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  // identificação visível/oculta
+  submittedName       String?
+  isNameVisible       Boolean           @default(true)
+
+  description         String
+  contribution        Json
+  dateRef             DateTime?
+
+  impact              Json?
+  capacity            Json?
+  effort              Json?
+  kpis                Json?
+
+  finalScore          Int?
+  finalClassification Json?
+
+  status              SuggestionStatus  @default(NEW)
+  rejectionReason     String?
+
+  analystId           String?
+  analyst             User?             @relation("SuggestionAnalyst", fields: [analystId], references: [id])
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([status, createdAt])
+  @@index([finalScore])
+}
+
+// Modelos para classificações dinâmicas
+enum ClassificationType {
+  IMPACT
+  CAPACITY
+  EFFORT
+}
+
+model Classification {
+  id          String            @id @default(cuid())
+  label       String
+  score       Int               @db.SmallInt
+  type        ClassificationType
+  isActive    Boolean           @default(true)
+  order       Int               @default(0)
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  @@unique([label, type])
+  @@index([type, isActive, order])
+}
