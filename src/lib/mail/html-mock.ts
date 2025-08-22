@@ -493,17 +493,87 @@ export type GroupedEmailOrder = {
     obs: string | null;
   };
   
+  function normalizeStr(s: string) {
+    return s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+  
   function getGroupKey(p: GroupedEmailOrder) {
-    const opc = (p.opc ?? "").trim();
-    if (!opc) return `${p.prato} sem adicional`;
-    // Normaliza a string de opcionais para evitar diferenças de ordem
-    // Ex.: "Feijão: Sim, Salada: Não" e "Salada: Não, Feijão: Sim" viram a mesma chave
-    const normalized = opc
+    const opcRaw = (p.opc ?? "").trim();
+    if (!opcRaw) return `${p.prato} sem adicional`;
+  
+    // Quebra por vírgula e limpa
+    const tokens = opcRaw
       .split(",")
       .map((s) => s.trim())
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+      .filter(Boolean);
+  
+    // Dedupe e normalização de pares chave:valor (ex.: "Feijão: Sim") - seja la o que for dedupe
+    const map = new Map<
+  string,
+    { display: string; value: string }
+    >();
+  
+    for (const tok of tokens) {
+      const parts = tok.split(":");
+      const kRaw = parts[0]?.trim();
+      const vRaw = parts.slice(1).join(":").trim(); // suporta "Observação: algo: extra"
+      if (!kRaw || !vRaw) continue;
+  
+      const kNorm = normalizeStr(kRaw);
+      const display =
+        kNorm === "feijao" ? "Feijão" : kNorm === "salada" ? "Salada" : kRaw;
+  
+      const vBase = normalizeStr(vRaw);
+      const v = vBase.startsWith("s")
+        ? "Sim"
+        : vBase.startsWith("n")
+        ? "Não"
+        : vRaw;
+  
+      if (map.has(kNorm)) {
+        // Se já existir, prioriza "Sim" se houver conflito/duplicata
+        const prev = map.get(kNorm)!;
+        const newVal = prev.value === "Sim" || v === "Sim" ? "Sim" : v;
+        map.set(kNorm, { display, value: newVal });
+      } else {
+        map.set(kNorm, { display, value: v });
+      }
+    }
+  
+    // Completa pares esperados: se só veio Salada, assume Feijão: Não; e vice-versa
+    const hasFeijao = map.has("feijao");
+    const hasSalada = map.has("salada");
+    if (hasFeijao && !hasSalada) map.set("salada", { display: "Salada", value: "Não" });
+    if (hasSalada && !hasFeijao) map.set("feijao", { display: "Feijão", value: "Não" });
+  
+    // Se tudo é "Não", trata como "sem adicional"
+    const entries = Array.from(map.values());
+    const allNo = entries.length > 0 && entries.every((e) => e.value === "Não");
+    if (allNo) return `${p.prato} sem adicional`;
+  
+    // Ordena: Feijão, Salada, depois demais chaves em ordem alfabética
+    const ordered: Array<{ display: string; value: string }> = [
+      ...(["feijao", "salada"] as const)
+        .filter((k) => map.has(k))
+        .map((k) => map.get(k)!),
+      ...Array.from(map.entries())
+        .filter(([k]) => k !== "feijao" && k !== "salada")
+        .sort((a, b) =>
+          a[1].display.localeCompare(b[1].display, "pt-BR", {
+            sensitivity: "base",
+          }),
+        )
+        .map(([, v]) => v),
+    ];
+  
+    const normalized = ordered
+      .map(({ display, value }) => `${display}: ${value}`)
       .join(", ");
+  
     return `${p.prato} com ${normalized}`;
   }
   

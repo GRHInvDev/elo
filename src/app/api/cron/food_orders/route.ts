@@ -10,7 +10,7 @@ export async function GET() {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
+      console.log("| CRONJOB | Data de hoje:", today);
       // Buscar todos os pedidos de hoje
       const orders = await db.foodOrder.findMany({
         where: {
@@ -42,7 +42,6 @@ export async function GET() {
           },
         },
       });
-
       // Agrupar pedidos por restaurante
       const ordersByRestaurant = new Map<string, { restaurant: Restaurant; orders: typeof orders }>();
       orders.forEach((order) => {
@@ -58,11 +57,11 @@ export async function GET() {
 
       // Enviar email para cada restaurante
       for (const [, data] of ordersByRestaurant) {
-        const { restaurant, orders } = data;
+        const { restaurant, orders: ordersData } = data;
         
-        if (orders.length > 0) {
+        if (ordersData.length > 0) {
           const dataPedidos = today.toLocaleDateString('pt-BR');
-          const pedidosAgrupados: GroupedEmailOrder[] = orders.map((order, idx) => {
+          const pedidosAgrupados: GroupedEmailOrder[] = ordersData.map((order, idx) => {
             const fullName = `${order.user.firstName} ${order.user?.lastName ?? ""}`.trim();
             const prato = order.menuItem?.name ?? "";
             // Ordena por nome da opção e depois nome da escolha para garantir consistência
@@ -99,7 +98,7 @@ export async function GET() {
             "rh@boxdistribuidor.com.br"
           );
 
-          console.log(`| CRONJOB | Email enviado para ${restaurant.name} com ${orders.length} pedidos`);
+          console.log(`| CRONJOB | Email enviado para ${restaurant.name} com ${ordersData.length} pedidos`);
         }
       }
 
