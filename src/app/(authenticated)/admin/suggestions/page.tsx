@@ -171,6 +171,7 @@ export default function AdminSuggestionsPage() {
   ]
   const kpiPool: string[] = []
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const openClassificationModal = (suggestionId: string, type: 'impact' | 'capacity' | 'effort') => {
     setClassificationModal({
       isOpen: true,

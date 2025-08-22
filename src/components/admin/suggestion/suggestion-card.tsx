@@ -22,6 +22,7 @@ export function SuggestionsCard() {
   const [contribType, setContribType] = useState<ContribType>("IDEIA_INOVADORA")
   const [contribOther, setContribOther] = useState("")
   const [submittedName, setSubmittedName] = useState("")
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [submittedSector, setSubmittedSector] = useState("")
   const [hideName, setHideName] = useState(false)
   const [hideSector, setHideSector] = useState(false)
