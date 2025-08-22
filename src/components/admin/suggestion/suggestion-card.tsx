@@ -22,18 +22,25 @@ export function SuggestionsCard() {
   const [contribType, setContribType] = useState<ContribType>("IDEIA_INOVADORA")
   const [contribOther, setContribOther] = useState("")
   const [submittedName, setSubmittedName] = useState("")
+  const [submittedSector, setSubmittedSector] = useState("")
   const [hideName, setHideName] = useState(false)
+  const [hideSector, setHideSector] = useState(false)
 
   // Buscar dados do usuário logado
   const { data: userData, isLoading: userLoading } = api.user.me.useQuery()
 
-  // Pré-preencher o nome quando os dados do usuário chegarem
+  // Pré-preencher o nome e setor quando os dados do usuário chegarem
   useEffect(() => {
-    if (userData && !hideName) {
-      const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
-      setSubmittedName(fullName || userData.email)
+    if (userData) {
+      if (!hideName) {
+        const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
+        setSubmittedName(fullName || userData.email)
+      }
+      if (!hideSector) {
+        setSubmittedSector(userData.setor ?? "")
+      }
     }
-  }, [userData, hideName])
+  }, [userData, hideName, hideSector])
 
   // Mutation para criar sugestão
   const create = api.suggestion.create.useMutation({
@@ -47,10 +54,12 @@ export function SuggestionsCard() {
       setContribType("IDEIA_INOVADORA")
       setContribOther("")
       setHideName(false)
-      // Recarregar nome do usuário
+      setHideSector(false)
+      // Recarregar nome e setor do usuário
       if (userData) {
         const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
         setSubmittedName(fullName || userData.email)
+        setSubmittedSector(userData.setor ?? "")
       }
     },
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
@@ -88,6 +97,7 @@ export function SuggestionsCard() {
         other: contribType === "OUTRO" ? contribOther.trim() : undefined,
       },
       submittedName: hideName ? undefined : submittedName.trim() || undefined,
+      submittedSector: hideSector ? undefined : userData?.setor ?? undefined,
     })
   }
 
@@ -106,6 +116,8 @@ export function SuggestionsCard() {
   }
 
   const userSector = userData?.setor ?? "Não informado"
+
+
 
   return (
     <Card className="w-full max-w-2xl">
@@ -159,9 +171,26 @@ export function SuggestionsCard() {
 
                 <div className="space-y-2">
                   <Label>Setor</Label>
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-md">
+                  <div className="flex items-center gap-2 p-2 rounded-md">
                     <Building2 className="h-4 w-4 text-gray-500" />
                     <span className="text-sm">{userSector}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hide-sector"
+                      checked={hideSector}
+                      onCheckedChange={(checked) => {
+                        setHideSector(checked as boolean)
+                        if (checked) {
+                          setSubmittedSector("")
+                        } else if (userData) {
+                          setSubmittedSector(userData.setor ?? "")
+                        }
+                      }}
+                    />
+                    <Label htmlFor="hide-sector" className="text-sm text-muted-foreground">
+                      Não exibir meu setor
+                    </Label>
                   </div>
                 </div>
               </div>

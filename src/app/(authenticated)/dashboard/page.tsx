@@ -68,8 +68,7 @@ export default async function DashboardPage() {
             <VideosCarousel className="col-span-1 md:col-span-2" itens={videos}/>
           }
           <div className="p-4 md:p-8 col-span-1 space-y-4">
-            {/* Card de Sugestões */}
-            <SuggestionsCard />
+  
             
             <div className="md:hidden">
               <h1 className="text-4xl mb-6 font-semibold">
@@ -139,6 +138,8 @@ export default async function DashboardPage() {
         </h1>
         <NewsDisplay/>
       </div>
+      {/* Card de Sugestões */}
+      <SuggestionsCard />
       <div className="flex p-1 flex-col mt-8 h-fit bg-muted">
         <div className="flex-1 flex justify-center md:justify-start">
           <div className="p-4 md:ml-8 space-y-2">

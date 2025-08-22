@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -24,6 +24,7 @@ type SuggestionLocal = {
   id: string
   ideaNumber: number
   submittedName: string | null
+  submittedSector: string | null
   isNameVisible: boolean
   description: string
   contribution: { type: string; other?: string }
@@ -90,6 +91,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     id: dbSuggestion.id,
     ideaNumber: dbSuggestion.ideaNumber,
     submittedName: dbSuggestion.submittedName,
+    submittedSector: dbSuggestion.user.setor,
     isNameVisible: dbSuggestion.isNameVisible,
     description: dbSuggestion.description,
     contribution: (dbSuggestion.contribution as { type: string; other?: string }) ?? { type: "", other: undefined },
@@ -173,7 +175,7 @@ export default function AdminSuggestionsPage() {
     setClassificationModal({
       isOpen: true,
       suggestionId,
-      type
+      type: 'impact' // Sempre abre com impacto como padrão, mas o modal gerencia todas
     })
   }
 
@@ -411,7 +413,7 @@ function IdeasAccordion({
         const effortScore = s.effort?.score ?? 0
         const pontuacao = impactScore + capacityScore - effortScore
         const nomeExibicao = s.isNameVisible ? (s.submittedName ?? "Não informado") : "Nome oculto"
-        const setorExibido = s.user.setor ?? "Setor não informado"
+        const setorExibido = s.submittedSector ?? s.user.setor ?? "Setor não informado"
         const contribType = s.contribution?.type ?? ""
         const contribOther = s.contribution?.other
 
@@ -487,20 +489,29 @@ function IdeasAccordion({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
                         <Label className="text-sm">Impacto ({impactScore})</Label>
-                        <div className="p-2 border rounded text-sm bg-muted">
-                          {s.impact?.label ?? "Não classificado"}
+                        <div 
+                          className="p-2 border rounded text-sm bg-muted cursor-pointer hover:bg-muted/80 transition-colors"
+                          onClick={() => onOpenClassificationModal(s.id, 'impact')}
+                        >
+                          {s.impact?.label ?? "Clique para classificar"}
                         </div>
                       </div>
                       <div>
                         <Label className="text-sm">Capacidade ({capacityScore})</Label>
-                        <div className="p-2 border rounded text-sm bg-muted">
-                          {s.capacity?.label ?? "Não classificado"}
+                        <div 
+                          className="p-2 border rounded text-sm bg-muted cursor-pointer hover:bg-muted/80 transition-colors"
+                          onClick={() => onOpenClassificationModal(s.id, 'capacity')}
+                        >
+                          {s.capacity?.label ?? "Clique para classificar"}
                         </div>
                       </div>
                       <div>
                         <Label className="text-sm">Esforço ({effortScore})</Label>
-                        <div className="p-2 border rounded text-sm bg-muted">
-                          {s.effort?.label ?? "Não classificado"}
+                        <div 
+                          className="p-2 border rounded text-sm bg-muted cursor-pointer hover:bg-muted/80 transition-colors"
+                          onClick={() => onOpenClassificationModal(s.id, 'effort')}
+                        >
+                          {s.effort?.label ?? "Clique para classificar"}
                         </div>
                       </div>
                     </div>
@@ -610,6 +621,14 @@ function ClassificationManagementModal({
   const [newLabel, setNewLabel] = useState("")
   const [newScore, setNewScore] = useState<number>(1)
   const [editingItem, setEditingItem] = useState<ClassItem | null>(null)
+  const [activeTab, setActiveTab] = useState<'impact' | 'capacity' | 'effort'>('impact')
+
+  // Inicializar activeTab baseado no tipo passado
+  useEffect(() => {
+    if (type) {
+      setActiveTab(type)
+    }
+  }, [type])
 
   // Mutations para CRUD das classificações
   const createClassification = api.classification.create.useMutation({
@@ -640,10 +659,10 @@ function ClassificationManagementModal({
     }
   })
 
-  if (!type || !suggestionId || !currentSuggestion) return null
+  if (!suggestionId || !currentSuggestion) return null
 
   const getCurrentPool = () => {
-    switch (type) {
+    switch (activeTab) {
       case 'impact': return impactPool
       case 'capacity': return capacityPool
       case 'effort': return effortPool
@@ -652,7 +671,7 @@ function ClassificationManagementModal({
   }
 
   const getDBType = () => {
-    switch (type) {
+    switch (activeTab) {
       case 'impact': return "IMPACT" as const
       case 'capacity': return "CAPACITY" as const
       case 'effort': return "EFFORT" as const
@@ -661,7 +680,7 @@ function ClassificationManagementModal({
   }
 
   const getCurrentValue = () => {
-    switch (type) {
+    switch (activeTab) {
       case 'impact': return currentSuggestion.impact
       case 'capacity': return currentSuggestion.capacity
       case 'effort': return currentSuggestion.effort
@@ -670,7 +689,7 @@ function ClassificationManagementModal({
   }
 
   const getTypeName = () => {
-    switch (type) {
+    switch (activeTab) {
       case 'impact': return 'Impacto'
       case 'capacity': return 'Capacidade'
       case 'effort': return 'Esforço'
@@ -722,7 +741,7 @@ function ClassificationManagementModal({
   }
 
   const selectItem = (item: ClassItem) => {
-    const updateData = { [type]: { label: item.label, score: item.score } }
+    const updateData = { [activeTab]: { label: item.label, score: item.score } }
     update(suggestionId, updateData as Partial<SuggestionLocal>)
     onClose()
     
@@ -737,15 +756,34 @@ function ClassificationManagementModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Gerenciar Classificações - {getTypeName()}</DialogTitle>
+          <DialogTitle>Gerenciar Classificações</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Abas para os tipos de classificação */}
+          <div className="flex space-x-1 border-b">
+            {(['impact', 'capacity', 'effort'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                  activeTab === tab
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {tab === 'impact' ? 'Impacto' : tab === 'capacity' ? 'Capacidade' : 'Esforço'}
+              </button>
+            ))}
+          </div>
+
           {/* Seleção de classificação atual */}
           <div>
-            <h4 className="text-sm font-medium mb-3">Selecionar classificação para esta sugestão</h4>
+            <h4 className="text-sm font-medium mb-3">
+              Selecionar classificação para {getTypeName().toLowerCase()} - {currentSuggestion.ideaNumber}
+            </h4>
             <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
               {currentPool.map((item) => (
                 <div 
@@ -791,7 +829,7 @@ function ClassificationManagementModal({
           {/* Adicionar/Editar novo item */}
           <div className="border-t pt-4">
             <h4 className="text-sm font-medium mb-3">
-              {editingItem ? 'Editar item' : 'Adicionar novo item'}
+              {editingItem ? 'Editar item' : `Adicionar novo item para ${getTypeName().toLowerCase()}`}
             </h4>
             <div className="space-y-3">
               <div>
@@ -800,7 +838,7 @@ function ClassificationManagementModal({
                   id="label"
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
-                  placeholder={`Ex: ${type === 'impact' ? 'Alto impacto' : type === 'capacity' ? 'Alta capacidade' : 'Baixo esforço'}`}
+                  placeholder={`Ex: ${activeTab === 'impact' ? 'Alto impacto' : activeTab === 'capacity' ? 'Alta capacidade' : 'Baixo esforço'}`}
                 />
               </div>
               <div>

@@ -431,6 +431,7 @@ model Suggestion {
 
   // identificação visível/oculta
   submittedName       String?
+  submittedSector     String?
   isNameVisible       Boolean           @default(true)
 
   description         String

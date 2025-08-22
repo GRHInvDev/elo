@@ -51,6 +51,7 @@ export const suggestionRouter = createTRPCRouter({
   create: protectedProcedure
     .input(z.object({
       submittedName: z.string().trim().optional(),
+      submittedSector: z.string().trim().optional(),
       description: z.string().trim().min(1),
       contribution: z.object({
         type: z.enum(["IDEIA_INOVADORA","SUGESTAO_MELHORIA","SOLUCAO_PROBLEMA","OUTRO"]),
@@ -74,6 +75,7 @@ export const suggestionRouter = createTRPCRouter({
           ideaNumber,
           userId: ctx.auth.userId,
           submittedName: input.submittedName ?? null,
+          submittedSector: input.submittedSector ?? null,
           description: input.description,
           contribution: input.contribution as InputJsonValue,
           dateRef: new Date(),
@@ -108,7 +110,7 @@ export const suggestionRouter = createTRPCRouter({
               firstName: true,
               lastName: true,
               email: true,
-              setor: true, // Adicionar o campo setor
+              setor: true,
             },
           },
           analyst: {
