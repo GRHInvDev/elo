@@ -66,51 +66,16 @@ export function UserResponsesList() {
     setSelectedStatuses(new Set())
   }
 
-  // Função para definir prioridade do status (maior número = maior prioridade)
-  const getStatusPriority = (status: string): number => {
-    switch (status) {
-      case "NOT_STARTED":
-        return 3 // Maior prioridade - mais urgente
-      case "IN_PROGRESS":
-        return 2 // Prioridade média - em andamento
-      case "COMPLETED":
-        return 1 // Menor prioridade - já concluído
-      default:
-        return 0
-    }
-  }
+  // Filter responses based on selected statuses
+  const filteredResponses = responses?.filter(response => 
+    selectedStatuses.size === 0 || selectedStatuses.has(response.status)
+  ) ?? []
 
-  // Função para ordenar respostas por status (prioridade) e depois por data
-  const sortResponsesByPriority = (responses: FormResponse[]): FormResponse[] => {
-    return [...responses].sort((a, b) => {
-      // Primeiro ordena por prioridade do status (maior prioridade primeiro)
-      const priorityA = getStatusPriority(a.status)
-      const priorityB = getStatusPriority(b.status)
-      
-      if (priorityA !== priorityB) {
-        return priorityB - priorityA // Ordem decrescente (maior prioridade primeiro)
-      }
-      
-      // Se prioridades são iguais, ordena por data (mais recente primeiro)
-      const dateA = new Date(a.createdAt).getTime()
-      const dateB = new Date(b.createdAt).getTime()
-      return dateB - dateA
-    })
-  }
-
-  // Filter and sort responses based on selected statuses
-  const filteredResponses = sortResponsesByPriority(
-    responses?.filter(response => 
-      selectedStatuses.size === 0 || selectedStatuses.has(response.status)
-    ) ?? []
-  )
-
-  // Group and sort responses by status for Kanban
-  const sortedLocalResponses = sortResponsesByPriority(localResponses)
+  // Group responses by status for Kanban
   const columns = {
-    NOT_STARTED: sortedLocalResponses.filter((response) => response.status === "NOT_STARTED"),
-    IN_PROGRESS: sortedLocalResponses.filter((response) => response.status === "IN_PROGRESS"),
-    COMPLETED: sortedLocalResponses.filter((response) => response.status === "COMPLETED"),
+    NOT_STARTED: localResponses.filter((response) => response.status === "NOT_STARTED"),
+    IN_PROGRESS: localResponses.filter((response) => response.status === "IN_PROGRESS"),
+    COMPLETED: localResponses.filter((response) => response.status === "COMPLETED"),
   }
 
   const onDragEnd: OnDragEndResponder = (result) => {
@@ -237,7 +202,7 @@ export function UserResponsesList() {
             </AccordionItem>
           </Accordion>
 
-          {/* Lista Filtrada e Ordenada */}
+          {/* Lista Filtrada */}
           <div className="grid grid-cols-1 gap-6">
             {filteredResponses.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
