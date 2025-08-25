@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs"
+import { auth } from "@clerk/nextjs/server"
 import { db } from "@/server/db"
 
 export async function POST() {
   try {
     // Verificar se o usuário é admin
-    const { userId } = auth()
+    const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
