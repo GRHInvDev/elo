@@ -27,6 +27,7 @@ export function KpiManagementModal({
   onKpiSelectionChange,
   suggestionId
 }: KpiManagementModalProps) {
+  const utils = api.useUtils()
   const [searchQuery, setSearchQuery] = useState("")
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [newKpiName, setNewKpiName] = useState("")
@@ -86,6 +87,10 @@ export function KpiManagementModal({
   const linkToSuggestion = api.kpi.linkToSuggestion.useMutation({
     onSuccess: () => {
       toast.success("KPIs vinculados com sucesso!")
+      // Forçar refetch dos KPIs para a sugestão selecionada
+      if (suggestionId) {
+        void utils.kpi.getBySuggestionId.invalidate({ suggestionId })
+      }
     },
     onError: (error) => {
       toast.error(error.message)
