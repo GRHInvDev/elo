@@ -49,6 +49,19 @@ export default function Page() {
                             </CardFooter>
                         </Card>
                     </Link>
+                    <Link href={'/admin/suggestions'}>
+                        <Card>
+                            <CardHeader>
+                            <LucideUtensils/>
+                            <CardTitle>
+                                    Sugestões
+                                </CardTitle>
+                            </CardHeader>
+                            <CardFooter>
+                                <CardDescription>Gerencie as sugestões 💡</CardDescription>
+                            </CardFooter>
+                        </Card>
+                    </Link>
                 </CardContent>
             </Card>
         </div>

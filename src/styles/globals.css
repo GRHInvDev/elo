@@ -100,6 +100,16 @@
   padding-left: 2em;
 }
 
+/* Ocultar barra de scroll em todos os navegadores */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
 .markdown table {
   @apply w-full border-collapse border border-gray-200 dark:border-gray-700;
 }
