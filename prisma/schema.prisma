@@ -452,11 +452,47 @@ model Suggestion {
   analystId           String?
   analyst             User?             @relation("SuggestionAnalyst", fields: [analystId], references: [id])
 
+  // Relacionamento many-to-many com KPIs
+  kpiLinks            SuggestionKpi[]
+
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
   @@index([status, createdAt])
   @@index([finalScore])
+}
+
+// Modelo para KPIs reutilizáveis
+model Kpi {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+
+  // Relacionamento m-m com sugestões
+  suggestions SuggestionKpi[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// Tabela de junção para relacionamento m-m entre sugestões e KPIs
+model SuggestionKpi {
+  id           String    @id @default(cuid())
+  suggestionId String
+  kpiId        String
+
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  kpi          Kpi        @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([suggestionId, kpiId])
+  @@index([suggestionId])
+  @@index([kpiId])
 }
 
 // Modelos para classificações dinâmicas

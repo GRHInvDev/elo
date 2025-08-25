@@ -21,6 +21,7 @@ import { foodOrderRouter } from "./routers/food-order";
 import { orderLogRouter } from "./routers/order-log";
 import { suggestionRouter } from "./routers/suggestions";
 import { classificationRouter } from "./routers/classification";
+import { kpiRouter } from "./routers/kpi";
 
 /**
  * This is the primary router for your server.
@@ -50,6 +51,7 @@ export const appRouter = createTRPCRouter({
   orderLog: orderLogRouter,
   suggestion: suggestionRouter,
   classification: classificationRouter,
+  kpi: kpiRouter,
 });
 
 // export type definition of API

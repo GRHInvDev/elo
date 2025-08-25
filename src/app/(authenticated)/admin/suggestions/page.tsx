@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
 import { Settings, Plus, Edit, Trash2 } from "lucide-react"
+import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
 
 // Usar tipos derivados do tRPC para garantir type safety
 type DBSuggestion = RouterOutputs["suggestion"]["list"][number]
@@ -32,7 +33,8 @@ type SuggestionLocal = {
   impact: { label: string; score: number } | null
   capacity: { label: string; score: number } | null
   effort: { label: string; score: number } | null
-  kpis: string[]
+  kpis: { id: string; name: string; description?: string | null }[]
+  kpiIds: string[] // IDs dos KPIs para compatibilidade com o modal
   finalScore: number | null
   finalClassification: { label: string; range: string } | null
   status: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED"
@@ -99,7 +101,8 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     impact: dbSuggestion.impact as { label: string; score: number } | null,
     capacity: dbSuggestion.capacity as { label: string; score: number } | null,
     effort: dbSuggestion.effort as { label: string; score: number } | null,
-    kpis: (dbSuggestion.kpis as string[]) ?? [],
+    kpis: [], // Será carregado via query separada
+    kpiIds: [],
     finalScore: dbSuggestion.finalScore,
     finalClassification: dbSuggestion.finalClassification as { label: string; range: string } | null,
     status: dbSuggestion.status,
@@ -126,8 +129,8 @@ export default function AdminSuggestionsPage() {
 
   const { data: currentUser } = api.user.me.useQuery()
 
-  const suggestions = useMemo(() => 
-    dbSuggestions.map((s) => convertDBToLocal(s)), 
+  const suggestions = useMemo(() =>
+    dbSuggestions.map((s) => convertDBToLocal(s)),
     [dbSuggestions]
   )
 
@@ -156,9 +159,54 @@ export default function AdminSuggestionsPage() {
   // Estado para filtros
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
+  // Estados para o modal de KPIs
+  const [kpiModalOpen, setKpiModalOpen] = useState(false)
+  const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null)
+  const [selectedKpiIds, setSelectedKpiIds] = useState<string[]>([])
 
+  // Função para abrir o modal de KPIs
+  const openKpiModal = (suggestionId: string) => {
+    console.log('openKpiModal called with suggestionId:', suggestionId)
+    setSelectedSuggestionId(suggestionId)
+    // Os KPIs serão carregados automaticamente pela query quando selectedSuggestionId mudar
+    setKpiModalOpen(true)
+  }
 
+  // Query para carregar KPIs da sugestão selecionada
+  const kpiQuery = api.kpi.getBySuggestionId.useQuery(
+    { suggestionId: selectedSuggestionId ?? "" },
+    {
+      enabled: !!selectedSuggestionId,
+    }
+  )
+  const kpiData = kpiQuery.data as unknown
+  const kpiError = kpiQuery.error
+  const isLoadingKpis = kpiQuery.isLoading
 
+  // Memoizar os dados dos KPIs para evitar re-renders desnecessários
+  const currentSuggestionKpis = useMemo((): { id: string; name: string; description?: string | null }[] => {
+    if (kpiError) {
+      console.error('Error loading KPIs:', kpiError)
+      return []
+    }
+    if (Array.isArray(kpiData)) {
+      return kpiData as { id: string; name: string; description?: string | null }[]
+    }
+    return []
+  }, [kpiData, kpiError])
+
+  // Atualizar selectedKpiIds quando os dados dos KPIs forem carregados
+  useEffect(() => {
+    if (currentSuggestionKpis.length > 0) {
+      console.log('Frontend: KPIs loaded for suggestion:', selectedSuggestionId, currentSuggestionKpis)
+      const kpiIds = currentSuggestionKpis.map(kpi => kpi.id)
+      console.log('Frontend: Setting selected KPI IDs:', kpiIds)
+      setSelectedKpiIds(kpiIds)
+    } else {
+      console.log('Frontend: No KPIs data or invalid format')
+      setSelectedKpiIds([])
+    }
+  }, [currentSuggestionKpis, selectedSuggestionId])
 
 
 
@@ -166,6 +214,9 @@ export default function AdminSuggestionsPage() {
   const { data: impactClassifications, refetch: refetchImpact } = api.classification.listByType.useQuery({ type: "IMPACT" })
   const { data: capacityClassifications, refetch: refetchCapacity } = api.classification.listByType.useQuery({ type: "CAPACITY" })
   const { data: effortClassifications, refetch: refetchEffort } = api.classification.listByType.useQuery({ type: "EFFORT" })
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _unusedKpiLoading = isLoadingKpis // Silenciar warning do linter
   
   // Função para recarregar todas as classificações
   const refetchAllClassifications = () => {
@@ -218,7 +269,7 @@ export default function AdminSuggestionsPage() {
       impact?: { label: string; score: number }
       capacity?: { label: string; score: number }
       effort?: { label: string; score: number }
-      kpis?: string[]
+      kpiIds?: string[]
       status?: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED"
       rejectionReason?: string
     } = { id }
@@ -226,7 +277,7 @@ export default function AdminSuggestionsPage() {
     if (updates.impact) updateData.impact = updates.impact
     if (updates.capacity) updateData.capacity = updates.capacity
     if (updates.effort) updateData.effort = updates.effort
-    if (updates.kpis) updateData.kpis = updates.kpis
+    if (updates.kpiIds) updateData.kpiIds = updates.kpiIds
     if (updates.status) {
       updateData.status = updates.status
     }
@@ -460,9 +511,11 @@ export default function AdminSuggestionsPage() {
           capacityPool={capacityPool}
           effortPool={effortPool}
           kpiPool={kpiPool}
+          currentSuggestionKpis={currentSuggestionKpis}
           update={update}
-          currentUser={currentUser ?? undefined}
+          currentUser={currentUser}
           onOpenClassificationModal={openClassificationModal}
+          onOpenKpiModal={openKpiModal}
           getStatusFromScore={getStatusFromScore}
         />
       </div>
@@ -476,9 +529,11 @@ export default function AdminSuggestionsPage() {
             capacityPool={capacityPool}
             effortPool={effortPool}
             kpiPool={kpiPool}
+            currentSuggestionKpis={currentSuggestionKpis}
             update={update}
-            currentUser={currentUser ?? undefined}
+            currentUser={currentUser}
             onOpenClassificationModal={openClassificationModal}
+            onOpenKpiModal={openKpiModal}
             getStatusFromScore={getStatusFromScore}
           />
         ))}
@@ -497,6 +552,26 @@ export default function AdminSuggestionsPage() {
         update={update}
         onClassificationsChange={refetchAllClassifications}
       />
+
+      {/* Modal de Gerenciamento de KPIs */}
+      <KpiManagementModal
+        isOpen={kpiModalOpen}
+        onOpenChange={(open) => {
+          setKpiModalOpen(open)
+          if (!open) {
+            // Recarregar dados da sugestão quando o modal for fechado
+            if (selectedSuggestionId) {
+              console.log('Modal closed, reloading suggestion data...')
+              void refetch()
+            }
+            setSelectedSuggestionId(null)
+            setSelectedKpiIds([])
+          }
+        }}
+        selectedKpiIds={selectedKpiIds}
+        onKpiSelectionChange={setSelectedKpiIds}
+        suggestionId={selectedSuggestionId ?? undefined}
+      />
     </DashboardShell>
   )
 }
@@ -511,9 +586,12 @@ function IdeasAccordion({
   effortPool,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   kpiPool,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  currentSuggestionKpis,
   update,
   currentUser,
   onOpenClassificationModal,
+  onOpenKpiModal,
   getStatusFromScore,
 }: {
   sugestoes: SuggestionLocal[]
@@ -521,9 +599,11 @@ function IdeasAccordion({
   capacityPool: ClassItem[]
   effortPool: ClassItem[]
   kpiPool: string[]
+  currentSuggestionKpis: { id: string; name: string; description?: string | null }[]
   update: (id: string, updates: Partial<SuggestionLocal>) => void
   currentUser: RouterOutputs["user"]["me"] | undefined
   onOpenClassificationModal: (suggestionId: string, type: 'impact' | 'capacity' | 'effort') => void
+  onOpenKpiModal: (suggestionId: string) => void
   getStatusFromScore: (suggestion: SuggestionLocal) => string
 }) {
   // Estado local para as justificativas
@@ -590,17 +670,64 @@ function IdeasAccordion({
   }
   return (
     <Accordion type="single" collapsible className="w-full space-y-3">
-      {sugestoes.map((s) => {
-        const impactScore = s.impact?.score ?? 0
-        const capacityScore = s.capacity?.score ?? 0
-        const effortScore = s.effort?.score ?? 0
-        const pontuacao = impactScore + capacityScore - effortScore
-        const nomeExibicao = s.isNameVisible ? (s.submittedName ?? "Não informado") : "Nome oculto"
-        const setorExibido = s.submittedSector ?? s.user.setor ?? "Setor não informado"
-        const contribType = s.contribution?.type ?? ""
-        const contribOther = s.contribution?.other
+      {sugestoes.map((s) => (
+        <SuggestionItem
+          key={s.id}
+          suggestion={s}
+          rejectionReasons={rejectionReasons}
+          handleRejectionReasonChange={handleRejectionReasonChange}
+          saveRejectionReason={saveRejectionReason}
+          sendRejectionNotification={sendRejectionNotification}
+          update={update}
+          currentUser={currentUser}
+          onOpenClassificationModal={onOpenClassificationModal}
+          onOpenKpiModal={onOpenKpiModal}
+          getStatusFromScore={getStatusFromScore}
+        />
+      ))}
+    </Accordion>
+  )
+}
 
-        return (
+function SuggestionItem({
+  suggestion: s,
+  rejectionReasons,
+  handleRejectionReasonChange,
+  saveRejectionReason,
+  sendRejectionNotification,
+  update,
+  currentUser,
+  onOpenClassificationModal,
+  onOpenKpiModal,
+  getStatusFromScore,
+}: {
+  suggestion: SuggestionLocal
+  rejectionReasons: Record<string, string>
+  handleRejectionReasonChange: (suggestionId: string, value: string) => void
+  saveRejectionReason: (suggestionId: string) => Promise<void>
+  sendRejectionNotification: ReturnType<typeof api.suggestion.sendRejectionNotification.useMutation>
+  update: (id: string, updates: Partial<SuggestionLocal>) => void
+  currentUser: RouterOutputs["user"]["me"] | undefined
+  onOpenClassificationModal: (suggestionId: string, type: 'impact' | 'capacity' | 'effort') => void
+  onOpenKpiModal: (suggestionId: string) => void
+  getStatusFromScore: (suggestion: SuggestionLocal) => string
+}) {
+  // Carregar KPIs específicos para esta sugestão
+  const { data: suggestionKpis = [] } = api.kpi.getBySuggestionId.useQuery(
+    { suggestionId: s.id },
+    { enabled: true }
+  )
+
+  const impactScore = s.impact?.score ?? 0
+  const capacityScore = s.capacity?.score ?? 0
+  const effortScore = s.effort?.score ?? 0
+  const pontuacao = impactScore + capacityScore - effortScore
+  const nomeExibicao = s.isNameVisible ? (s.submittedName ?? "Não informado") : "Nome oculto"
+  const setorExibido = s.submittedSector ?? s.user.setor ?? "Setor não informado"
+  const contribType = s.contribution?.type ?? ""
+  const contribOther = s.contribution?.other
+
+  return (
           <AccordionItem key={s.id} value={s.id} className="border rounded-lg">
             <AccordionTrigger className="px-4">
               <div className="w-full">
@@ -718,7 +845,45 @@ function IdeasAccordion({
                         </div>
                       </div>
                     </div>
-                    
+
+                    {/* KPIs de Sucesso */}
+                    <div className="space-y-3 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium">KPIs de Sucesso</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onOpenKpiModal(s.id)}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Gerenciar KPIs
+                        </Button>
+                      </div>
+
+                      {suggestionKpis && suggestionKpis.length > 0 ? (
+                        <div className="space-y-2">
+                          {suggestionKpis.map((kpi) => (
+                            <div key={kpi.id} className="flex items-start justify-between p-3 bg-muted/50 rounded border">
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{kpi.name}</div>
+                                {kpi.description && (
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {kpi.description}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded text-center">
+                          Nenhum KPI definido. Clique em &quot;Gerenciar KPIs&quot; para incluir métricas de sucesso.
+                        </div>
+                      )}
+
+
+                    </div>
+
                     {/* Pontuação Final e Recomendação */}
                     <div className="p-3 rounded-lg border">
                       <div className="text-sm font-medium mb-2">
@@ -849,9 +1014,6 @@ function IdeasAccordion({
               </Card>
             </AccordionContent>
           </AccordionItem>
-        )
-      })}
-    </Accordion>
   )
 }
 
@@ -1158,3 +1320,5 @@ function ClassificationManagementModal({
     </Dialog>
   )
 }
+
+
