@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { LucideCake, LucideMapPin, LucideUtensils } from "lucide-react";
+import { LucideCake, LucideMapPin, LucideUtensils, Lightbulb } from "lucide-react";
 import Link from "next/link";
 
 export default function Page() {
@@ -52,7 +52,7 @@ export default function Page() {
                     <Link href={'/admin/suggestions'}>
                         <Card>
                             <CardHeader>
-                            <LucideUtensils/>
+                            <Lightbulb/>
                             <CardTitle>
                                     Sugestões
                                 </CardTitle>

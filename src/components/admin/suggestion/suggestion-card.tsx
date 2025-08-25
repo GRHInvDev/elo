@@ -33,15 +33,11 @@ export function SuggestionsCard() {
   // Pré-preencher o nome e setor quando os dados do usuário chegarem
   useEffect(() => {
     if (userData) {
-      if (!hideName) {
-        const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
-        setSubmittedName(fullName || userData.email)
-      }
-      if (!hideSector) {
-        setSubmittedSector(userData.setor ?? "")
-      }
+      const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
+      setSubmittedName(fullName || userData.email)
+      setSubmittedSector(userData.setor ?? "")
     }
-  }, [userData, hideName, hideSector])
+  }, [userData])
 
   // Mutation para criar sugestão
   const create = api.suggestion.create.useMutation({
@@ -56,12 +52,6 @@ export function SuggestionsCard() {
       setContribOther("")
       setHideName(false)
       setHideSector(false)
-      // Recarregar nome e setor do usuário
-      if (userData) {
-        const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
-        setSubmittedName(fullName || userData.email)
-        setSubmittedSector(userData.setor ?? "")
-      }
     },
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
       toast({
@@ -121,7 +111,7 @@ export function SuggestionsCard() {
 
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-2xl mx-auto mt-4">
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="suggestion-form" className="border-0">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
@@ -142,26 +132,23 @@ export function SuggestionsCard() {
               {/* Informações do usuário */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="user-name">Nome do colaborador</Label>
-                  <Input
-                    id="user-name"
-                    value={submittedName}
-                    onChange={(e) => setSubmittedName(e.target.value)}
-                    disabled={hideName}
-                    placeholder="Seu nome não aparecerá na sugestão"
-                  />
+                  <Label>Nome do colaborador</Label>
+                  {!hideName && (
+                    <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30">
+                      <span className="text-sm font-medium">{submittedName ?? userData?.email ?? "Nome não disponível"}</span>
+                    </div>
+                  )}
+                  {hideName && (
+                    <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
+                      <span className="text-sm text-muted-foreground italic">Nome será ocultado na sugestão</span>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="hide-name"
                       checked={hideName}
                       onCheckedChange={(checked) => {
                         setHideName(checked as boolean)
-                        if (checked) {
-                          setSubmittedName("")
-                        } else if (userData) {
-                          const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
-                          setSubmittedName(fullName || userData.email)
-                        }
                       }}
                     />
                     <Label htmlFor="hide-name" className="text-sm text-muted-foreground">
