@@ -3,6 +3,8 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import type { InputJsonValue } from "@prisma/client/runtime/library"
+import { sendEmail } from "@/lib/mail/email-utils"
+import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
 
 const StatusEnum = z.enum(["NEW","IN_REVIEW","APPROVED","IN_PROGRESS","DONE","NOT_IMPLEMENTED"])
 
@@ -59,6 +61,7 @@ export const suggestionRouter = createTRPCRouter({
       }),
     }))
     .mutation(async ({ ctx, input }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const me = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { enterprise: true },
@@ -178,7 +181,36 @@ export const suggestionRouter = createTRPCRouter({
                 : { label: "Descartar com justificativa clara", range: "0-9" })
           : null
 
-      return ctx.db.suggestion.update({
+      // Buscar dados da sugestão e usuário antes da atualização
+      const suggestionData = await ctx.db.suggestion.findUnique({
+        where: { id: input.id },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          analyst: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      })
+
+      if (!suggestionData) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Sugestão não encontrada"
+        })
+      }
+
+      // Executar a atualização
+      const updatedSuggestion = await ctx.db.suggestion.update({
         where: { id: input.id },
         data: {
           impact: (input.impact ?? prevImpact ?? null) as InputJsonValue,
@@ -191,6 +223,134 @@ export const suggestionRouter = createTRPCRouter({
           finalScore,
           finalClassification: finalClassification as InputJsonValue,
         },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          analyst: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
       })
+
+      // Enviar email de notificação se o status foi alterado
+      if (input.status && input.status !== suggestionData.status) {
+        if (input.status === "NOT_IMPLEMENTED" && !input.rejectionReason) {
+        } else {
+          try {
+            const nomeUsuario = `${suggestionData.user.firstName ?? ''} ${suggestionData.user.lastName ?? ''}`.trim() ?? 'Usuário'
+            const nomeResponsavel = `${updatedSuggestion.analyst?.firstName ?? ''} ${updatedSuggestion.analyst?.lastName ?? ''}`.trim() ?? 'Admin'
+
+            // Mapear status para português
+            const statusMapping = {
+              "NEW": "Nova",
+              "IN_REVIEW": "Em avaliação",
+              "APPROVED": "Aprovada",
+              "IN_PROGRESS": "Em execução",
+              "DONE": "Concluída",
+              "NOT_IMPLEMENTED": "Não implementada"
+            }
+
+            const statusPortugues = statusMapping[input.status] || input.status
+
+            // Enviar email apenas para o usuário que criou a sugestão
+            await sendEmail(
+              suggestionData.user.email,
+              `Atualização da Sugestão #${suggestionData.ideaNumber}`,
+              mockEmailNotificacaoSugestao(
+                nomeUsuario,
+                nomeResponsavel,
+                suggestionData.ideaNumber,
+                statusPortugues,
+                input.rejectionReason
+              )
+            )
+
+          } catch (emailError) {
+            console.error("Erro ao enviar email de notificação:", emailError)
+            // Não falhar a operação se o email não puder ser enviado
+          }
+        }
+      }
+
+      return updatedSuggestion
+    }),
+
+  // Enviar notificação por email quando motivo for salvo
+  sendRejectionNotification: adminProcedure
+    .input(z.object({
+      suggestionId: z.string(),
+      rejectionReason: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Buscar dados da sugestão e usuário
+      const suggestionData = await ctx.db.suggestion.findUnique({
+        where: { id: input.suggestionId },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          analyst: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      })
+
+      if (!suggestionData) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Sugestão não encontrada"
+        })
+      }
+
+      if (suggestionData.status !== "NOT_IMPLEMENTED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Esta sugestão não está marcada como 'Não implementada'"
+        })
+      }
+
+      try {
+        const nomeUsuario = `${suggestionData.user.firstName ?? ''} ${suggestionData.user.lastName ?? ''}`.trim() ?? 'Usuário'
+        const nomeResponsavel = `${suggestionData.analyst?.firstName ?? ''} ${suggestionData.analyst?.lastName ?? ''}`.trim() ?? 'Admin'
+
+        // Enviar email apenas para o usuário que criou a sugestão
+        await sendEmail(
+          suggestionData.user.email,
+          `Atualização da Sugestão #${suggestionData.ideaNumber}`,
+          mockEmailNotificacaoSugestao(
+            nomeUsuario,
+            nomeResponsavel,
+            suggestionData.ideaNumber,
+            "Não implementada",
+            input.rejectionReason
+          )
+          // Removido CC para o admin - apenas notificação para o usuário
+        )
+
+        return { success: true, message: "Notificação enviada com sucesso" }
+      } catch (emailError) {
+        console.error("Erro ao enviar email de rejeição:", emailError)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erro ao enviar notificação por email"
+        })
+      }
     }),
 })

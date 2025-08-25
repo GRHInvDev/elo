@@ -491,8 +491,133 @@ export type GroupedEmailOrder = {
     prato: string;
     opc: string | null | undefined;
     obs: string | null;
-  };
-  
+    };
+
+export const mockEmailNotificacaoSugestao = (
+  nomeUsuario: string,
+  nomeResponsavel: string,
+  ideaNumber: number,
+  status: string,
+  motivo?: string
+) => (`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+              body {
+                  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                  background-color: #f7f7f7;
+                  margin: 0;
+                  padding: 20px;
+                  color: #333;
+              }
+              .container {
+                  background-color: #ffffff;
+                  border-radius: 8px;
+                  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                  padding: 30px;
+                  max-width: 600px;
+                  margin: auto;
+              }
+              .header {
+                  text-align: center;
+                  margin-bottom: 30px;
+                  padding-bottom: 20px;
+                  border-bottom: 2px solid #f0f0f0;
+              }
+              .header h1 {
+                  color: #007bff;
+                  margin: 0 0 10px;
+                  font-size: 1.8rem;
+              }
+              .header p {
+                  color: #666;
+                  margin: 0;
+                  font-size: 1rem;
+              }
+              .content {
+                  margin-bottom: 30px;
+              }
+              .info-box {
+                  background-color: #f8f9fa;
+                  border-left: 4px solid #007bff;
+                  padding: 15px 20px;
+                  margin-bottom: 20px;
+                  border-radius: 4px;
+              }
+              .info-box p {
+                  margin: 8px 0;
+                  color: #555;
+              }
+              .motivo-box {
+                  background-color: #fff3cd;
+                  border: 1px solid #ffeaa7;
+                  border-left: 4px solid #f39c12;
+                  padding: 15px 20px;
+                  margin-bottom: 20px;
+                  border-radius: 4px;
+              }
+              .motivo-box h3 {
+                  color: #856404;
+                  margin: 0 0 10px;
+                  font-size: 1.1rem;
+              }
+              .motivo-box p {
+                  color: #856404;
+                  margin: 0;
+                  font-size: 0.95rem;
+                  line-height: 1.4;
+              }
+              .footer {
+                  margin-top: 30px;
+                  padding-top: 20px;
+                  border-top: 1px solid #e9ecef;
+                  font-size: 0.9rem;
+                  color: #666;
+                  text-align: center;
+              }
+              .footer p {
+                  margin: 5px 0;
+              }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <h1>Atualização da Sugestão</h1>
+                  <p>Sua sugestão foi avaliada</p>
+              </div>
+
+              <div class="content">
+                  <div class="info-box">
+                      <p><strong>Olá, ${nomeUsuario}!</strong></p>
+                      <p>Sua sugestão <strong>#${ideaNumber}</strong> teve o status atualizado.</p>
+                      <p><strong>Status:</strong> ${status}</p>
+                      <p><strong>Responsável pela avaliação:</strong> ${nomeResponsavel}</p>
+                  </div>
+
+                  ${motivo ? `
+                  <div class="motivo-box">
+                      <h3>Motivo da decisão:</h3>
+                      <p>${motivo}</p>
+                  </div>
+                  ` : ''}
+
+                  <p>Para visualizar os detalhes completos da sua sugestão, acesse a intranet.</p>
+              </div>
+
+              <div class="footer">
+                  <p>Atenciosamente,</p>
+                  <p>Equipe de Avaliação de Sugestões</p>
+                  <p>elo - Sistema de Intranet</p>
+              </div>
+          </div>
+      </body>
+  </html>
+`);
+
   function normalizeStr(s: string) {
     return s
       .normalize("NFD")

@@ -40,7 +40,7 @@ export const classificationRouter = createTRPCRouter({
   create: adminProcedure
     .input(z.object({
       label: z.string().min(1).max(100),
-      score: z.number().int().min(1).max(5),
+      score: z.number().int().min(0).max(20),
       type: z.enum(["IMPACT", "CAPACITY", "EFFORT"]),
       order: z.number().int().optional()
     }))
@@ -66,7 +66,7 @@ export const classificationRouter = createTRPCRouter({
     .input(z.object({
       id: z.string(),
       label: z.string().min(1).max(100).optional(),
-      score: z.number().int().min(1).max(5).optional(),
+      score: z.number().int().min(0).max(20).optional(),
       order: z.number().int().optional(),
       isActive: z.boolean().optional()
     }))
@@ -114,41 +114,5 @@ export const classificationRouter = createTRPCRouter({
       return { success: true }
     }),
 
-  // Inicializar classificações padrão (para migration/seed)
-  initializeDefaults: adminProcedure
-    .mutation(async ({ ctx }) => {
-      const defaultClassifications = [
-        // Impacto
-        { label: "Alto impacto", score: 5, type: "IMPACT" as const, order: 1 },
-        { label: "Médio impacto", score: 3, type: "IMPACT" as const, order: 2 },
-        { label: "Baixo impacto", score: 1, type: "IMPACT" as const, order: 3 },
-        
-        // Capacidade
-        { label: "Alta capacidade", score: 5, type: "CAPACITY" as const, order: 1 },
-        { label: "Média capacidade", score: 3, type: "CAPACITY" as const, order: 2 },
-        { label: "Baixa capacidade", score: 1, type: "CAPACITY" as const, order: 3 },
-        
-        // Esforço
-        { label: "Baixo esforço", score: 1, type: "EFFORT" as const, order: 1 },
-        { label: "Médio esforço", score: 3, type: "EFFORT" as const, order: 2 },
-        { label: "Alto esforço", score: 5, type: "EFFORT" as const, order: 3 },
-      ]
 
-      const createPromises = defaultClassifications.map(item =>
-        ctx.db.classification.upsert({
-          where: {
-            label_type: {
-              label: item.label,
-              type: item.type
-            }
-          },
-          update: {},
-          create: item
-        })
-      )
-
-      await Promise.all(createPromises)
-      
-      return { success: true, count: defaultClassifications.length }
-    })
 })

@@ -121,7 +121,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
 
 export default function AdminSuggestionsPage() {
   const { data: dbSuggestions = [], refetch } = api.suggestion.list.useQuery({
-    status: ["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE"],
+    status: ["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"],
   })
 
   const { data: currentUser } = api.user.me.useQuery()
@@ -137,10 +137,10 @@ export default function AdminSuggestionsPage() {
       void refetch()
     },
     onError: (error) => {
-      toast({ 
-        title: "Erro ao salvar", 
+      toast({
+        title: "Erro ao salvar",
         description: error.message,
-        variant: "destructive" 
+        variant: "destructive"
       })
     }
   })
@@ -153,22 +153,46 @@ export default function AdminSuggestionsPage() {
     type: null
   })
 
-  // Buscar classificações do banco (usando defaults estáticos por ora)
-  const impactPool: ClassItem[] = [
-    { id: '1', label: 'Alto impacto', score: 5 },
-    { id: '2', label: 'Médio impacto', score: 3 },
-    { id: '3', label: 'Baixo impacto', score: 1 }
-  ]
-  const capacityPool: ClassItem[] = [
-    { id: '1', label: 'Alta capacidade', score: 5 },
-    { id: '2', label: 'Média capacidade', score: 3 },
-    { id: '3', label: 'Baixa capacidade', score: 1 }
-  ]
-  const effortPool: ClassItem[] = [
-    { id: '1', label: 'Baixo esforço', score: 1 },
-    { id: '2', label: 'Médio esforço', score: 3 },
-    { id: '3', label: 'Alto esforço', score: 5 }
-  ]
+  // Estado para filtros
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+
+
+
+
+
+
+
+  // Buscar classificações do banco dinamicamente
+  const { data: impactClassifications, refetch: refetchImpact } = api.classification.listByType.useQuery({ type: "IMPACT" })
+  const { data: capacityClassifications, refetch: refetchCapacity } = api.classification.listByType.useQuery({ type: "CAPACITY" })
+  const { data: effortClassifications, refetch: refetchEffort } = api.classification.listByType.useQuery({ type: "EFFORT" })
+  
+  // Função para recarregar todas as classificações
+  const refetchAllClassifications = () => {
+    void refetchImpact()
+    void refetchCapacity()
+    void refetchEffort()
+  }
+  
+  // Converter para o formato esperado pelo componente
+  const impactPool: ClassItem[] = impactClassifications?.map(c => ({
+    id: c.id,
+    label: c.label,
+    score: c.score
+  })) ?? []
+  
+  const capacityPool: ClassItem[] = capacityClassifications?.map(c => ({
+    id: c.id,
+    label: c.label,
+    score: c.score
+  })) ?? []
+  
+  const effortPool: ClassItem[] = effortClassifications?.map(c => ({
+    id: c.id,
+    label: c.label,
+    score: c.score
+  })) ?? []
+  
   const kpiPool: string[] = []
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -188,7 +212,7 @@ export default function AdminSuggestionsPage() {
     })
   }
 
-  const update = (id: string, updates: Partial<SuggestionLocal>) => {
+  const update = async (id: string, updates: Partial<SuggestionLocal>): Promise<void> => {
     const updateData: {
       id: string
       impact?: { label: string; score: number }
@@ -198,18 +222,20 @@ export default function AdminSuggestionsPage() {
       status?: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED"
       rejectionReason?: string
     } = { id }
-    
+
     if (updates.impact) updateData.impact = updates.impact
-    if (updates.capacity) updateData.capacity = updates.capacity  
+    if (updates.capacity) updateData.capacity = updates.capacity
     if (updates.effort) updateData.effort = updates.effort
     if (updates.kpis) updateData.kpis = updates.kpis
     if (updates.status) {
       updateData.status = updates.status
     }
-    if (updates.rejectionReason !== undefined) updateData.rejectionReason = updates.rejectionReason ?? undefined
+    if (updates.rejectionReason !== undefined) {
+      updateData.rejectionReason = updates.rejectionReason ?? undefined
+    }
 
     if (Object.keys(updateData).length > 1) {
-      updateMutation.mutate(updateData)
+      await updateMutation.mutateAsync(updateData)
     }
   }
 
@@ -229,18 +255,74 @@ export default function AdminSuggestionsPage() {
     const newStatusLabel = destination.droppableId
     const newStatus = Object.entries(STATUS_MAPPING).find(([_, label]) => label === newStatusLabel)?.[0] as keyof typeof STATUS_MAPPING
     if (newStatus) {
-      update(draggableId, { status: newStatus })
+      update(draggableId, { status: newStatus }).catch(console.error)
     }
   }
 
+  // Função para determinar status baseado na pontuação
+  const getStatusFromScore: (suggestion: SuggestionLocal) => string = (suggestion) => {
+    const impactScore = suggestion.impact?.score ?? 0
+    const capacityScore = suggestion.capacity?.score ?? 0
+    const effortScore = suggestion.effort?.score ?? 0
+    const pontuacao = impactScore + capacityScore - effortScore
+
+    if (pontuacao >= 0 && pontuacao <= 9) return "Descartar"
+    if (pontuacao >= 10 && pontuacao <= 14) return "Ajustar"
+    if (pontuacao >= 15 && pontuacao <= 20) return "Aprovar"
+    if (pontuacao > 20) return "Prioritário"
+    return "Revisar"
+  }
+
+  // Ordenação inteligente das sugestões com filtro
+  const sortedSuggestions = useMemo(() => {
+    const priorityOrder = {
+      "Novo": 1,
+      "Em avaliação": 2,
+      "Aprovado": 3,
+      "Em execução": 4,
+      "Ajustes e incubar": 5,
+      "Não implantado": 6,
+      "Concluído": 7
+    }
+
+    let filteredSuggestions = suggestions
+
+    // Aplicar filtro de status se não for "all"
+    if (statusFilter !== "all") {
+      filteredSuggestions = suggestions.filter(s => {
+        if (statusFilter === "score-based") {
+          // Filtrar por recomendação baseada na pontuação
+          const scoreStatus = getStatusFromScore(s)
+          return scoreStatus === "Descartar" || scoreStatus === "Ajustar" || scoreStatus === "Aprovar"
+        }
+        return (STATUS_MAPPING[s.status] ?? s.status) === statusFilter
+      })
+    }
+
+    return [...filteredSuggestions].sort((a, b) => {
+      // Primeiro por prioridade de status
+      const statusA = STATUS_MAPPING[a.status] ?? a.status
+      const statusB = STATUS_MAPPING[b.status] ?? b.status
+      const priorityA = priorityOrder[statusA as keyof typeof priorityOrder] ?? 999
+      const priorityB = priorityOrder[statusB as keyof typeof priorityOrder] ?? 999
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB
+      }
+
+      // Depois por data (mais recentes primeiro)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }, [suggestions, statusFilter])
+
   const listColumns = useMemo(() => {
     const cols: [SuggestionLocal[], SuggestionLocal[], SuggestionLocal[]] = [[], [], []]
-    for (let i = 0; i < suggestions.length; i++) {
+    for (let i = 0; i < sortedSuggestions.length; i++) {
       const bucket = (i % 3) as 0 | 1 | 2
-      cols[bucket].push(suggestions[i]!)
+      cols[bucket].push(sortedSuggestions[i]!)
     }
     return cols
-  }, [suggestions])
+  }, [sortedSuggestions])
 
   return (
     <DashboardShell>
@@ -250,37 +332,50 @@ export default function AdminSuggestionsPage() {
             <h1 className="text-3xl font-bold tracking-tight">Sugestões (Avançado)</h1>
             <p className="text-muted-foreground mt-2">Avalie, classifique e acompanhe o status das sugestões.</p>
           </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="mb-6 p-4 bg-muted/30 rounded-lg">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/admin/init-classifications', {
-                    method: 'POST'
-                  })
-                  const data = await response.json() as { success?: boolean; message?: string; error?: string }
-                  
-                  if (data.success) {
-                    toast({
-                      title: "Classificações inicializadas",
-                      description: data.message ?? "Classificações criadas com sucesso"
-                    })
-                  } else {
-                    throw new Error(data.error ?? 'Erro desconhecido')
-                  }
-                } catch (error) {
-                  toast({
-                    title: "Erro",
-                    description: error instanceof Error ? error.message : "Erro ao inicializar classificações",
-                    variant: "destructive"
-                  })
-                }
-              }}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Inicializar Classificações
-            </Button>
+            <h3 className="text-lg font-medium mb-2">Filtros</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={statusFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("all")}
+              >
+                Todas ({suggestions.length})
+              </Button>
+              <Button
+                variant={statusFilter === "score-based" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter("score-based")}
+              >
+                Por Pontuação
+              </Button>
+              {STATUS.map((st) => (
+                <Button
+                  key={st}
+                  variant={statusFilter === st ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter(st)}
+                >
+                  {st} ({kanbanColumns[st]?.length ?? 0})
+                </Button>
+              ))}
+            </div>
           </div>
+          {statusFilter !== "all" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatusFilter("all")}
+            >
+              Limpar Filtro
+            </Button>
+          )}
         </div>
       </div>
 
@@ -296,26 +391,60 @@ export default function AdminSuggestionsPage() {
                     {...provided.droppableProps}
                     className={`rounded-lg border p-3 ${getStatusColor(st)}`}
                   >
-                    <div className="font-medium mb-2">
-                      {st} ({kanbanColumns[st]?.length ?? 0})
-                    </div>
-                    {kanbanColumns[st]?.map((s, index) => (
-                      <Draggable draggableId={s.id} index={index} key={s.id}>
-                        {(prov) => (
-                          <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
-                            <Card className="mb-2 bg-background/80">
-                              <CardContent className="p-3">
-                                <div className="text-sm font-medium truncate">#{s.ideaNumber} — {s.description.substring(0, 30)}...</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
+                                         <div className="font-medium mb-2">
+                       {st} ({kanbanColumns[st]?.length ?? 0})
+                     </div>
+                                           <div className="max-h-80 overflow-y-auto space-y-2 scrollbar-hide">
+                                             {kanbanColumns[st]?.map((s, index) => {
+                        const impactScore = s.impact?.score ?? 0
+                        const capacityScore = s.capacity?.score ?? 0
+                        const effortScore = s.effort?.score ?? 0
+                        const pontuacao = impactScore + capacityScore - effortScore
+
+                        const getRecommendationColor = (score: number) => {
+                          if (score >= 0 && score <= 9) return 'bg-red-100 text-red-700 border border-red-200'
+                          if (score >= 10 && score <= 14) return 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                          if (score >= 15 && score <= 20) return 'bg-green-100 text-green-700 border border-green-200'
+                          if (score > 20) return 'bg-blue-100 text-blue-700 border border-blue-200'
+                          return 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }
+
+                        const getRecommendationText = (score: number) => {
+                          if (score >= 0 && score <= 9) return 'Descartar'
+                          if (score >= 10 && score <= 14) return 'Ajustar'
+                          if (score >= 15 && score <= 20) return 'Aprovar'
+                          if (score > 20) return 'Prioritário'
+                          return 'Revisar'
+                        }
+
+                        return (
+                          <Draggable draggableId={s.id} index={index} key={s.id}>
+                            {(prov) => (
+                              <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
+                                <Card className="bg-background/80">
+                                  <CardContent className="p-3">
+                                    <div className="text-sm font-medium truncate">#{s.ideaNumber} — {s.description.substring(0, 30)}...</div>
+                                    <div className="text-xs text-muted-foreground mb-2">
+                                      {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
+                                    </div>
+                                    {/* Pontuação e recomendação no Kanban */}
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-xs font-medium">
+                                        Pontuação: {pontuacao}
+                                      </div>
+                                      <div className={`text-xs px-2 py-1 rounded-md font-medium ${getRecommendationColor(pontuacao)}`}>
+                                        {getRecommendationText(pontuacao)}
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            )}
+                          </Draggable>
+                        )
+                      })}
+                     </div>
+                     {provided.placeholder}
                   </div>
                 )}
               </Droppable>
@@ -326,7 +455,7 @@ export default function AdminSuggestionsPage() {
 
       <div className="md:hidden">
         <IdeasAccordion
-          sugestoes={suggestions}
+          sugestoes={sortedSuggestions}
           impactPool={impactPool}
           capacityPool={capacityPool}
           effortPool={effortPool}
@@ -334,6 +463,7 @@ export default function AdminSuggestionsPage() {
           update={update}
           currentUser={currentUser ?? undefined}
           onOpenClassificationModal={openClassificationModal}
+          getStatusFromScore={getStatusFromScore}
         />
       </div>
 
@@ -349,6 +479,7 @@ export default function AdminSuggestionsPage() {
             update={update}
             currentUser={currentUser ?? undefined}
             onOpenClassificationModal={openClassificationModal}
+            getStatusFromScore={getStatusFromScore}
           />
         ))}
       </div>
@@ -364,6 +495,7 @@ export default function AdminSuggestionsPage() {
         effortPool={effortPool}
         currentSuggestion={suggestions.find(s => s.id === classificationModal.suggestionId)}
         update={update}
+        onClassificationsChange={refetchAllClassifications}
       />
     </DashboardShell>
   )
@@ -382,6 +514,7 @@ function IdeasAccordion({
   update,
   currentUser,
   onOpenClassificationModal,
+  getStatusFromScore,
 }: {
   sugestoes: SuggestionLocal[]
   impactPool: ClassItem[]
@@ -391,6 +524,7 @@ function IdeasAccordion({
   update: (id: string, updates: Partial<SuggestionLocal>) => void
   currentUser: RouterOutputs["user"]["me"] | undefined
   onOpenClassificationModal: (suggestionId: string, type: 'impact' | 'capacity' | 'effort') => void
+  getStatusFromScore: (suggestion: SuggestionLocal) => string
 }) {
   // Estado local para as justificativas
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({})
@@ -399,11 +533,59 @@ function IdeasAccordion({
     setRejectionReasons(prev => ({ ...prev, [suggestionId]: value }))
   }
   
-  const saveRejectionReason = (suggestionId: string) => {
+  // Mutation para enviar notificação de rejeição
+  const sendRejectionNotification = api.suggestion.sendRejectionNotification.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Notificação enviada",
+        description: "Email de notificação foi enviado para o colaborador."
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro na notificação",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
+  })
+
+  const saveRejectionReason = async (suggestionId: string) => {
     const reason = rejectionReasons[suggestionId]
-    if (reason !== undefined) {
-      update(suggestionId, { rejectionReason: reason })
-      toast({ title: "Justificativa salva", description: "Motivo da não implantação foi salvo." })
+
+    if (reason?.trim()) {
+      try {
+
+        update(suggestionId, {
+          status: "NOT_IMPLEMENTED",
+          rejectionReason: reason.trim()
+        })
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        await sendRejectionNotification.mutateAsync({
+          suggestionId,
+          rejectionReason: reason.trim()
+        })
+
+
+        toast({
+          title: "Sugestão rejeitada e notificação enviada",
+          description: "Status alterado para 'Não implementado', motivo salvo e colaborador notificado!"
+        })
+      } catch {
+        toast({
+          title: "Erro",
+          description: "Erro ao processar rejeição. Tente novamente.",
+          variant: "destructive"
+        })
+      }
+    } else {
+      toast({
+        title: "Erro",
+        description: "Digite uma justificativa antes de salvar.",
+        variant: "destructive"
+      })
     }
   }
   return (
@@ -432,6 +614,26 @@ function IdeasAccordion({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{setorExibido}</Badge>
+                      {/* Tag de status baseada na pontuação */}
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          getStatusFromScore(s) === 'Descartar' ? 'border-red-300 text-red-700 bg-red-50' :
+                          getStatusFromScore(s) === 'Ajustar' ? 'border-yellow-300 text-yellow-700 bg-yellow-50' :
+                          getStatusFromScore(s) === 'Aprovar' ? 'border-green-300 text-green-700 bg-green-50' :
+                          getStatusFromScore(s) === 'Prioritário' ? 'border-blue-300 text-blue-700 bg-blue-50' :
+                          'border-gray-300 text-gray-700 bg-gray-50'
+                        }`}
+                      >
+                        {getStatusFromScore(s)}
+                      </Badge>
+                      {/* Tag de status atual */}
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${getStatusColor(STATUS_MAPPING[s.status] ?? s.status)}`}
+                      >
+                        {STATUS_MAPPING[s.status] ?? s.status}
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -517,12 +719,30 @@ function IdeasAccordion({
                       </div>
                     </div>
                     
-                    <div className="p-3 bg-muted rounded-lg">
-                      <div className="text-sm font-medium">
+                    {/* Pontuação Final e Recomendação */}
+                    <div className="p-3 rounded-lg border">
+                      <div className="text-sm font-medium mb-2">
                         Pontuação Final: {pontuacao} pontos
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mb-3">
                         Impacto ({impactScore}) + Capacidade ({capacityScore}) - Esforço ({effortScore}) = {pontuacao}
+                      </div>
+
+                      {/* Recomendação baseada na pontuação */}
+                      <div className={`p-2 rounded-md text-xs font-medium ${
+                        pontuacao >= 0 && pontuacao <= 9
+                          ? 'bg-red-100 text-red-800 border border-red-200'
+                          : pontuacao >= 10 && pontuacao <= 14
+                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                          : pontuacao >= 15 && pontuacao <= 20
+                          ? 'bg-green-100 text-green-800 border border-green-200'
+                          : 'bg-gray-100 text-gray-800 border border-gray-200'
+                      }`}>
+                        {pontuacao >= 0 && pontuacao <= 9 && "🔴 Descarta com justificativa clara"}
+                        {pontuacao >= 10 && pontuacao <= 14 && "🟡 Ajustes e incubar"}
+                        {pontuacao >= 15 && pontuacao <= 20 && "🟢 Aprovar para gestores"}
+                        {pontuacao > 20 && "🚀 Aprovação imediata"}
+                        {pontuacao < 0 && "❌ Revisar pontuação"}
                       </div>
                     </div>
                   </div>
@@ -530,11 +750,15 @@ function IdeasAccordion({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="text-sm">Status</label>
-                      <Select 
-                        value={STATUS_MAPPING[s.status]} 
+                      <Select
+                        value={STATUS_MAPPING[s.status]}
                         onValueChange={(v) => {
                           const statusKey = Object.entries(STATUS_MAPPING).find(([_, label]) => label === v)?.[0] as keyof typeof STATUS_MAPPING
-                          if (statusKey) update(s.id, { status: statusKey })
+                          if (statusKey) {
+                            if (statusKey !== s.status) {
+                              update(s.id, { status: statusKey })
+                            }
+                          }
                         }}
                       >
                         <SelectTrigger>
@@ -563,28 +787,61 @@ function IdeasAccordion({
                       />
                     </div>
 
-                    {pontuacao <= 9 && (
+                    {/* Mostrar campo de motivo sempre que o status for "NOT_IMPLEMENTED" */}
+                    {s.status === "NOT_IMPLEMENTED" && (
                       <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm">Justificativa para não implantação</label>
+                        <label className="text-sm font-medium text-red-700">
+                          Motivo da não implementação <span className="text-red-500">*</span>
+                        </label>
                         <Textarea
-                          rows={3}
+                          rows={4}
                           value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
                           onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
-                          placeholder="Digite a justificativa para não implementar esta sugestão..."
+                          placeholder="Digite o motivo detalhado da não implementação desta sugestão..."
+                          className="border-red-200 focus:border-red-300"
+                          required
                         />
-                        <Button 
-                          size="sm" 
-                          onClick={() => saveRejectionReason(s.id)}
-                          className="w-fit"
-                        >
-                          Salvar Justificativa
-                        </Button>
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-red-600">
+                            Campo obrigatório para sugestões não implementadas
+                          </div>
+                                                    <Button
+                            size="sm"
+                            onClick={() => saveRejectionReason(s.id)}
+                            className="w-fit bg-red-600 hover:bg-red-700"
+                            disabled={
+                              s.status !== "NOT_IMPLEMENTED" ||
+                              sendRejectionNotification.isPending ||
+                              (!rejectionReasons[s.id]?.trim() && !s.rejectionReason?.trim())
+                            }
+                          >
+                            {sendRejectionNotification.isPending ? "Enviando..." : "Salvar Motivo"}
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
 
                   <div className="flex justify-end">
-                    <Button onClick={() => toast({ title: "Avaliação salva", description: `Sugestão #${s.ideaNumber} atualizada.` })}>
+                    <Button
+                      onClick={() => {
+                        // Validação: se status for "NOT_IMPLEMENTED", verificar justificativa
+                        if (s.status === "NOT_IMPLEMENTED" && !s.rejectionReason && !rejectionReasons[s.id]?.trim()) {
+                          toast({
+                            title: "Justificativa obrigatória",
+                            description: "Use o botão 'Salvar Motivo' para fornecer a justificativa e enviar a notificação.",
+                            variant: "destructive"
+                          })
+                          return
+                        }
+                        toast({ title: "Avaliação salva", description: `Sugestão #${s.ideaNumber} atualizada.` })
+                      }}
+                      disabled={
+                        s.status === "NOT_IMPLEMENTED" &&
+                        !s.rejectionReason &&
+                        !rejectionReasons[s.id]?.trim()
+                      }
+                    >
                       Salvar avaliação
                     </Button>
                   </div>
@@ -608,6 +865,7 @@ function ClassificationManagementModal({
   effortPool,
   currentSuggestion,
   update,
+  onClassificationsChange,
 }: {
   isOpen: boolean
   onClose: () => void
@@ -618,9 +876,10 @@ function ClassificationManagementModal({
   effortPool: ClassItem[]
   currentSuggestion: SuggestionLocal | undefined
   update: (id: string, updates: Partial<SuggestionLocal>) => void
+  onClassificationsChange: () => void
 }) {
   const [newLabel, setNewLabel] = useState("")
-  const [newScore, setNewScore] = useState<number>(1)
+  const [newScore, setNewScore] = useState<number>(0)
   const [editingItem, setEditingItem] = useState<ClassItem | null>(null)
   const [activeTab, setActiveTab] = useState<'impact' | 'capacity' | 'effort'>('impact')
 
@@ -635,7 +894,8 @@ function ClassificationManagementModal({
   const createClassification = api.classification.create.useMutation({
     onSuccess: () => {
       toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
-      // Refetch das classificações será automático devido ao cache do tRPC
+      // Recarregar classificações para atualizar a interface
+      onClassificationsChange()
     },
     onError: (error) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" })
@@ -645,6 +905,8 @@ function ClassificationManagementModal({
   const updateClassification = api.classification.update.useMutation({
     onSuccess: () => {
       toast({ title: "Classificação atualizada", description: "Alterações salvas com sucesso." })
+      // Recarregar classificações para atualizar a interface
+      onClassificationsChange()
     },
     onError: (error) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" })
@@ -654,6 +916,8 @@ function ClassificationManagementModal({
   const deleteClassification = api.classification.delete.useMutation({
     onSuccess: () => {
       toast({ title: "Classificação removida", description: "Item removido com sucesso." })
+      // Recarregar classificações para atualizar a interface
+      onClassificationsChange()
     },
     onError: (error) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" })
@@ -708,7 +972,7 @@ function ClassificationManagementModal({
     })
     
     setNewLabel("")
-    setNewScore(1)
+    setNewScore(0)
   }
 
   const editItem = (item: ClassItem) => {
@@ -730,7 +994,7 @@ function ClassificationManagementModal({
     
     setEditingItem(null)
     setNewLabel("")
-    setNewScore(1)
+    setNewScore(0)
   }
 
   const deleteItem = (itemToDelete: ClassItem) => {
@@ -842,21 +1106,21 @@ function ClassificationManagementModal({
                   placeholder={`Ex: ${activeTab === 'impact' ? 'Alto impacto' : activeTab === 'capacity' ? 'Alta capacidade' : 'Baixo esforço'}`}
                 />
               </div>
-              <div>
-                <Label htmlFor="score">Pontuação</Label>
-                <Select value={newScore.toString()} onValueChange={(v) => setNewScore(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a pontuação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5].map((score) => (
-                      <SelectItem key={score} value={score.toString()}>
-                        {score} ponto{score > 1 ? 's' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                             <div>
+                 <Label htmlFor="score">Pontuação</Label>
+                 <Select value={newScore.toString()} onValueChange={(v) => setNewScore(parseInt(v))}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Selecione a pontuação" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {Array.from({ length: 21 }, (_, i) => i).map((score) => (
+                       <SelectItem key={score} value={score.toString()}>
+                         {score} ponto{score !== 1 ? 's' : ''}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
               <div className="flex gap-2">
                 {editingItem ? (
                   <>
@@ -868,11 +1132,11 @@ function ClassificationManagementModal({
                     </Button>
                     <Button 
                       variant="outline" 
-                      onClick={() => {
-                        setEditingItem(null)
-                        setNewLabel("")
-                        setNewScore(1)
-                      }}
+                                             onClick={() => {
+                         setEditingItem(null)
+                         setNewLabel("")
+                         setNewScore(0)
+                       }}
                     >
                       Cancelar
                     </Button>

@@ -121,7 +121,7 @@ export function SuggestionsCard() {
 
 
   return (
-    <Card className="w-full max-w-2xl">
+    <Card className="w-full max-w-2xl mx-auto">
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="suggestion-form" className="border-0">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
@@ -172,10 +172,12 @@ export function SuggestionsCard() {
 
                 <div className="space-y-2">
                   <Label>Setor</Label>
-                  <div className="flex items-center gap-2 p-2 rounded-md">
-                    <Building2 className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{userSector}</span>
-                  </div>
+                  {!hideSector && (
+                    <div className="flex items-center gap-2 p-2 rounded-md">
+                      <Building2 className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm">{userSector}</span>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="hide-sector"
