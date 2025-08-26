@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { NotificationList } from "./notification-list"
-import { useNotificationCount } from "@/hooks/use-notifications"
+import { useNotificationCount, useNotifications } from "@/hooks/use-notifications"
 
 interface NotificationDropdownProps {
   className?: string
@@ -14,7 +14,17 @@ interface NotificationDropdownProps {
 
 export function NotificationDropdown({ className }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { unreadCount } = useNotificationCount()
+  const { unreadCount, refetch: refetchCount } = useNotificationCount()
+  const { markAllAsRead, refetch: refetchNotifications } = useNotifications({ limit: 1 })
+
+  // Marcar todas as notificações como lidas quando o dropdown é aberto
+  useEffect(() => {
+    if (isOpen && unreadCount > 0) {
+      markAllAsRead().catch(error => {
+        console.error('Erro ao marcar notificações como lidas:', error)
+      })
+    }
+  }, [isOpen, unreadCount, markAllAsRead])
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -28,7 +38,7 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs border-2 border-background dark:border-background"
+              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 text-xs font-bold border-2 border-background dark:border-background bg-red-500 text-white dark:bg-red-600"
             >
               {unreadCount > 99 ? '99+' : unreadCount}
             </Badge>

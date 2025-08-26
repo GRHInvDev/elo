@@ -63,7 +63,7 @@ export function NotificationPopup({
       case "warning":
         return "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
       default:
-        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+        return "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
     }
   }
 

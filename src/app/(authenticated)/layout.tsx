@@ -5,6 +5,7 @@ import { UserNav } from "@/components/user-nav"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
 import { NotificationPopupManager } from "@/components/notifications/notification-popup"
+import { GlobalNotificationManager } from "@/components/notifications/global-notification-manager"
 import { routeItems } from "@/const/routes"
 import Link from "next/link"
 import { api } from "@/trpc/server"
@@ -42,8 +43,9 @@ export default async function AuthenticatedLayout({
           </div>
         </div>
       </header>
-      <main className="flex-1 md:mt-32 mt-16">{children}</main>
+      <main className="flex-1 md:mt-32 mt-16">{children}      </main>
       <FloatingChatButton/>
+      <GlobalNotificationManager />
       <NotificationPopupManager />
     </div>
   )
