@@ -29,7 +29,8 @@ type SuggestionLocal = {
   submittedName: string | null
   submittedSector: string | null
   isNameVisible: boolean
-  description: string
+  description: string // Solução proposta (do banco)
+  problem: string | null // Problema identificado (do banco)
   contribution: { type: string; other?: string }
   dateRef: Date | null
   impact: { label: string; score: number } | null
@@ -91,40 +92,50 @@ function getStatusColor(status: string): string {
   }
 }
 
+
+
+
+
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
+  const user = (dbSuggestion as any).user || { firstName: null, lastName: null, email: "", setor: null };
+  const analyst = (dbSuggestion as any).analyst;
+
   return {
     id: dbSuggestion.id,
     ideaNumber: dbSuggestion.ideaNumber,
     submittedName: dbSuggestion.submittedName,
-    submittedSector: dbSuggestion.user.setor,
+    submittedSector: user.setor,
     isNameVisible: dbSuggestion.isNameVisible,
-    description: dbSuggestion.description,
-    contribution: (dbSuggestion.contribution as { type: string; other?: string }) ?? { type: "", other: undefined },
+    description: dbSuggestion.description || "", // Solução proposta
+    problem: (dbSuggestion as any).problem || null, // Problema identificado
+    contribution: (dbSuggestion as any).contribution ? (dbSuggestion as any).contribution as { type: string; other?: string } : { type: "", other: undefined },
     dateRef: dbSuggestion.dateRef,
-    impact: dbSuggestion.impact as { label: string; score: number } | null,
-    capacity: dbSuggestion.capacity as { label: string; score: number } | null,
-    effort: dbSuggestion.effort as { label: string; score: number } | null,
+    impact: (dbSuggestion as any).impact ? (dbSuggestion as any).impact as { label: string; score: number } : null,
+    capacity: (dbSuggestion as any).capacity ? (dbSuggestion as any).capacity as { label: string; score: number } : null,
+    effort: (dbSuggestion as any).effort ? (dbSuggestion as any).effort as { label: string; score: number } : null,
     kpis: [], // Será carregado via query separada
     kpiIds: [],
     finalScore: dbSuggestion.finalScore,
-    finalClassification: dbSuggestion.finalClassification as { label: string; range: string } | null,
-    status: dbSuggestion.status,
+    finalClassification: (dbSuggestion as any).finalClassification ? (dbSuggestion as any).finalClassification as { label: string; range: string } : null,
+    status: dbSuggestion.status as "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED",
     rejectionReason: dbSuggestion.rejectionReason,
     analystId: dbSuggestion.analystId,
     user: {
-      firstName: dbSuggestion.user.firstName,
-      lastName: dbSuggestion.user.lastName,
-      email: dbSuggestion.user.email,
-      setor: dbSuggestion.user.setor,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      setor: user.setor,
     },
-    analyst: dbSuggestion.analyst ? {
-      firstName: dbSuggestion.analyst.firstName,
-      lastName: dbSuggestion.analyst.lastName,
-      email: dbSuggestion.analyst.email,
+    analyst: analyst ? {
+      firstName: analyst.firstName,
+      lastName: analyst.lastName,
+      email: analyst.email,
     } : null,
     createdAt: dbSuggestion.createdAt,
   }
 }
+/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
 // Componente para seleção de usuário responsável
 function UserSelector({
@@ -570,7 +581,7 @@ export default function AdminSuggestionsPage() {
                               <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
                                 <Card className="bg-background/80">
                                   <CardContent className="p-3">
-                                    <div className="text-sm font-medium truncate">#{s.ideaNumber} — {s.description.substring(0, 30)}...</div>
+                                    <div className="text-sm font-medium truncate">#{s.ideaNumber} — {(s.problem ?? "Sem problema definido").substring(0, 30)}...</div>
                                     <div className="text-xs text-muted-foreground mb-2">
                                       {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
                                     </div>
@@ -659,6 +670,8 @@ export default function AdminSuggestionsPage() {
             if (selectedSuggestionId) {
               console.log('Modal closed, reloading suggestion data...')
               void refetch()
+              // Invalidar também as queries de KPIs para garantir que tudo esteja atualizado
+              void api.useUtils().kpi.getBySuggestionId.invalidate({ suggestionId: selectedSuggestionId })
             }
             setSelectedSuggestionId(null)
             setSelectedKpiIds([])
@@ -829,7 +842,7 @@ function SuggestionItem({
               <div className="w-full">
                 <div className="flex flex-col gap-2">
                   <div className="font-semibold">
-                    #{s.ideaNumber} — {s.description.substring(0, 60)}...
+                    #{s.ideaNumber} — {(s.problem ?? "Sem problema definido").substring(0, 60)}...
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs text-muted-foreground">
@@ -891,7 +904,13 @@ function SuggestionItem({
                       </div>
                     </div>
                     <div className="md:col-span-2">
-                      <div className="text-sm font-medium">Descrição</div>
+                      <div className="text-sm font-medium">Problema</div>
+                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {s.problem ?? "Não informado"}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-sm font-medium">Solução</div>
                       <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                         {s.description}
                       </div>
@@ -1367,7 +1386,7 @@ function ClassificationManagementModal({
                      <SelectValue placeholder="Selecione a pontuação" />
                    </SelectTrigger>
                    <SelectContent>
-                     {Array.from({ length: 21 }, (_, i) => i).map((score) => (
+                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                        <SelectItem key={score} value={score.toString()}>
                          {score} ponto{score !== 1 ? 's' : ''}
                        </SelectItem>

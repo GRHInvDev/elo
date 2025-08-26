@@ -3,9 +3,12 @@ import type React from "react"
 import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import { NotificationPopupManager } from "@/components/notifications/notification-popup"
 import { routeItems } from "@/const/routes"
 import Link from "next/link"
 import { api } from "@/trpc/server"
+
 import { UserRole } from "@prisma/client"
 
 export default async function AuthenticatedLayout({
@@ -25,6 +28,7 @@ export default async function AuthenticatedLayout({
               Grupo R Henz
             </h1>
             <div className="ml-4 flex items-center space-x-4">
+              <NotificationDropdown />
               <UserNav />
             </div>
           </div>
@@ -40,6 +44,7 @@ export default async function AuthenticatedLayout({
       </header>
       <main className="flex-1 md:mt-32 mt-16">{children}</main>
       <FloatingChatButton/>
+      <NotificationPopupManager />
     </div>
   )
 }

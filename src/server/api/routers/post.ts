@@ -15,12 +15,52 @@ export const postRouter = createTRPCRouter({
   .input(createPostSchema)
   .mutation(async ({ ctx, input }) => {
     console.log("user Id", ctx.auth.userId)
-    return await ctx.db.post.create({
+
+    const post = await ctx.db.post.create({
       data: {
         ...input,
         authorId: ctx.auth.userId,
       },
+      include: {
+        author: {
+          select: {
+            firstName: true,
+            lastName: true,
+          }
+        }
+      }
     })
+
+    // Criar notificações para todos os usuários (exceto o autor)
+    try {
+      const allUsers = await ctx.db.user.findMany({
+        where: {
+          id: { not: ctx.auth.userId }
+        },
+        select: { id: true }
+      })
+
+      if (allUsers.length > 0) {
+        const notifications = allUsers.map(user => ({
+          title: "Novo Post Publicado",
+          message: `${post.author.firstName ?? 'Usuário'} publicou um novo post: "${post.title}"`,
+          type: "INFO" as const,
+          channel: "IN_APP" as const,
+          userId: user.id,
+          entityId: post.id,
+          entityType: "post",
+          actionUrl: `/news` // Ajustado para a rota correta
+        }))
+
+        await ctx.db.notification.createMany({
+          data: notifications
+        })
+      }
+    } catch (notificationError) {
+      console.error("Erro ao criar notificações de post:", notificationError)
+    }
+
+    return post
   }),
 
   update: protectedProcedure

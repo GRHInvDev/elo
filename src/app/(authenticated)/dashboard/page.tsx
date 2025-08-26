@@ -1,7 +1,6 @@
-"use server"
 import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
-import { SuggestionsCard } from "@/components/admin/suggestion/suggestion-card"
+import { SuggestionsPreview, SuggestionsModal } from "@/components/admin/suggestion/suggestion-card"
 import { api } from "@/trpc/server"
 import { cn } from "@/lib/utils"
 import { LinkIcon, LucideGraduationCap, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
@@ -12,10 +11,13 @@ import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
 import { UserRole } from "@prisma/client"
+import { SuggestionsWrapper } from "./suggestions-wrapper"
 
 export default async function DashboardPage() {
-  const birthdays = await api.birthday.listCurrentMonth();
+  // Buscar dados usando server-side tRPC
+  const birthdays = await api.birthday.listCurrentMonth()
   const user = await api.user.me()
+
   const posts: {
     imageRef: string,
     title: string,
@@ -87,30 +89,32 @@ export default async function DashboardPage() {
                 }
               </div>
             </div>
-            <div className="bg-muted rounded-md p-4">
-              <div className="flex gap-2 items-center text-lg font-semibold">
-                <LinkIcon/>
+            <div className="bg-muted rounded-md p-3">
+              <div className="flex gap-2 items-center text-sm font-semibold">
+                <LinkIcon className="size-4"/>
                 Links
               </div>
-              <div className="flex flex-col gap-y-4 mt-4">
-                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
-                  <Image src="/umentor.jpg" height={40} width={40} className="rounded-md mr-2" alt="umentor"/>
-                  Umentor 
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                  <Image src="/umentor.jpg" height={24} width={24} className="rounded-md mr-2" alt="umentor"/>
+                  <span className="text-xs">Umentor</span>
                 </Link>
-                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
-                  <LucideGraduationCap className="size-10 mr-2"/>
-                  CristalUni 
+                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                  <LucideGraduationCap className="size-5 mr-2"/>
+                  <span className="text-xs">CristalUni</span>
                 </Link>
-                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
-                  <Image src="/LOGO BOX.png" height={40} width={40} className="rounded-md mr-2" alt="Site Box"/>
-                  Site Box 
+                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                  <Image src="/LOGO BOX.png" height={24} width={24} className="rounded-md mr-2" alt="Site Box"/>
+                  <span className="text-xs">Site Box</span>
                 </Link>
-                <Link href={'https://cristallux.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md h-12">
-                  <Image src="/icon_cristal.svg" height={40} width={40} className="rounded-md mr-2" alt="Cristaluni"/>
-                  Site Cristallux 
+                <Link href={'https://cristallux.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                  <Image src="/icon_cristal.svg" height={24} width={24} className="rounded-md mr-2" alt="Cristaluni"/>
+                  <span className="text-xs">Cristallux</span>
                 </Link>
               </div>
             </div>
+              {/* Card de Sugestões */}
+              <SuggestionsWrapper />
           </div>
         </div>
       </div>
@@ -138,8 +142,7 @@ export default async function DashboardPage() {
         </h1>
         <NewsDisplay/>
       </div>
-      {/* Card de Sugestões */}
-      <SuggestionsCard />
+
       <div className="flex p-1 flex-col mt-8 h-fit bg-muted">
         <div className="flex-1 flex justify-center md:justify-start">
           <div className="p-4 md:ml-8 space-y-2">

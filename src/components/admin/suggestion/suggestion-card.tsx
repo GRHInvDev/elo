@@ -8,34 +8,66 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Building2, Lightbulb } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import type { AppRouter } from "@/server/api/root"
 import type { TRPCClientErrorLike } from "@trpc/client"
+import Image from "next/image"
 
 type ContribType = "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO"
 
+// Componente de prévia que abre modal
+export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void }) {
+  return (
+    <div
+      onClick={onOpenModal}
+      className="cursor-pointer bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all duration-200"
+    >
+      <div className="flex items-center gap-4 mb-3">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Caixa de Sugestões</h3>
+          <p className="text-sm text-blue-700 dark:text-blue-300">Compartilhe suas ideias</p>
+        </div>
+        <div className="flex-shrink-0">
+          <Image
+            src="/logoAllpines.webp"
+            alt="Caixa de Sugestões"
+            width={80}
+            height={60}
+            className="rounded-lg object-cover border border-blue-200 dark:border-blue-700"
+          />
+        </div>
+      </div>
+      <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+        Clique para abrir o formulário
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
 export function SuggestionsCard() {
-  const [description, setDescription] = useState("")
+  const [problema, setProblema] = useState("")
+  const [solucao, setSolucao] = useState("")
   const [contribType, setContribType] = useState<ContribType>("IDEIA_INOVADORA")
   const [contribOther, setContribOther] = useState("")
   const [submittedName, setSubmittedName] = useState("")
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [submittedSector, setSubmittedSector] = useState("")
   const [hideName, setHideName] = useState(false)
   const [hideSector, setHideSector] = useState(false)
 
   // Buscar dados do usuário logado
   const { data: userData, isLoading: userLoading } = api.user.me.useQuery()
 
-  // Pré-preencher o nome e setor quando os dados do usuário chegarem
+  // Pré-preencher o nome quando os dados do usuário chegarem
   useEffect(() => {
     if (userData) {
       const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
       setSubmittedName(fullName || userData.email)
-      setSubmittedSector(userData.setor ?? "")
     }
   }, [userData])
 
@@ -47,7 +79,8 @@ export function SuggestionsCard() {
         description: "Sua ideia foi registrada e será avaliada em breve."
       })
       // Resetar form
-      setDescription("")
+      setProblema("")
+      setSolucao("")
       setContribType("IDEIA_INOVADORA")
       setContribOther("")
       setHideName(false)
@@ -63,10 +96,19 @@ export function SuggestionsCard() {
   })
 
   const handleSubmit = () => {
-    if (!description.trim()) {
+    if (!problema.trim()) {
       toast({
         title: "Campo obrigatório",
-        description: "Por favor, descreva sua sugestão.",
+        description: "Por favor, descreva o problema.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!solucao.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, descreva a solução proposta.",
         variant: "destructive",
       })
       return
@@ -74,7 +116,7 @@ export function SuggestionsCard() {
 
     if (contribType === "OUTRO" && !contribOther.trim()) {
       toast({
-        title: "Campo obrigatório", 
+        title: "Campo obrigatório",
         description: "Por favor, especifique o tipo de contribuição.",
         variant: "destructive",
       })
@@ -82,7 +124,8 @@ export function SuggestionsCard() {
     }
 
     create.mutate({
-      description: description.trim(),
+      description: solucao.trim(), // Solução proposta → campo description no banco
+      problem: problema.trim() || undefined, // Problema identificado → campo problem no banco
       contribution: {
         type: contribType,
         other: contribType === "OUTRO" ? contribOther.trim() : undefined,
@@ -171,11 +214,6 @@ export function SuggestionsCard() {
                       checked={hideSector}
                       onCheckedChange={(checked) => {
                         setHideSector(checked as boolean)
-                        if (checked) {
-                          setSubmittedSector("")
-                        } else if (userData) {
-                          setSubmittedSector(userData.setor ?? "")
-                        }
                       }}
                     />
                     <Label htmlFor="hide-sector" className="text-sm text-muted-foreground">
@@ -211,19 +249,35 @@ export function SuggestionsCard() {
                 )}
               </div>
 
-              {/* Descrição */}
+              {/* Problema */}
               <div className="space-y-2">
-                <Label htmlFor="description">Descrição da sugestão *</Label>
+                <Label htmlFor="problema">Problema identificado *</Label>
                 <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descreva sua ideia, sugestão ou solução de forma detalhada..."
-                  rows={4}
+                  id="problema"
+                  value={problema}
+                  onChange={(e) => setProblema(e.target.value)}
+                  placeholder="Descreva o problema que você identificou..."
+                  rows={3}
                   className="resize-none"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Seja específico e detalhe como sua ideia pode beneficiar a empresa.
+                  Seja específico sobre o problema que precisa ser resolvido.
+                </p>
+              </div>
+
+              {/* Solução */}
+              <div className="space-y-2">
+                <Label htmlFor="solucao">Solução proposta *</Label>
+                <Textarea
+                  id="solucao"
+                  value={solucao}
+                  onChange={(e) => setSolucao(e.target.value)}
+                  placeholder="Descreva a solução que você propõe..."
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Detalhe como sua solução pode resolver o problema identificado.
                 </p>
               </div>
 
@@ -231,7 +285,7 @@ export function SuggestionsCard() {
               <div className="flex justify-end">
                 <Button
                   onClick={handleSubmit}
-                  disabled={create.isPending || !description.trim()}
+                  disabled={create.isPending || !problema.trim() || !solucao.trim()}
                   className="min-w-[120px]"
                 >
                   {create.isPending ? "Enviando..." : "Enviar Sugestão"}
@@ -242,5 +296,246 @@ export function SuggestionsCard() {
         </AccordionItem>
       </Accordion>
     </Card>
+  )
+}
+
+// Componente Modal com formulário completo
+export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) {
+  const [problema, setProblema] = useState("")
+  const [solucao, setSolucao] = useState("")
+  const [contribType, setContribType] = useState<ContribType>("IDEIA_INOVADORA")
+  const [contribOther, setContribOther] = useState("")
+  const [submittedName, setSubmittedName] = useState("")
+  const [hideName, setHideName] = useState(false)
+  const [hideSector, setHideSector] = useState(false)
+
+  // Buscar dados do usuário logado
+  const { data: userData, isLoading: userLoading } = api.user.me.useQuery()
+
+  // Pré-preencher o nome quando os dados do usuário chegarem
+  useEffect(() => {
+    if (userData) {
+      const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
+      setSubmittedName(fullName || userData.email)
+    }
+  }, [userData])
+
+  // Mutation para criar sugestão
+  const create = api.suggestion.create.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Sugestão enviada!",
+        description: "Sua ideia foi registrada e será avaliada em breve."
+      })
+      // Resetar form e fechar modal
+      setProblema("")
+      setSolucao("")
+      setContribType("IDEIA_INOVADORA")
+      setContribOther("")
+      setHideName(false)
+      setHideSector(false)
+      onOpenChange(false)
+    },
+    onError: (error: TRPCClientErrorLike<AppRouter>) => {
+      toast({
+        title: "Erro ao enviar",
+        description: error.message ?? "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const handleSubmit = () => {
+    if (!problema.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, descreva o problema.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!solucao.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, descreva a solução proposta.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (contribType === "OUTRO" && !contribOther.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, especifique o tipo de contribuição.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    create.mutate({
+      description: solucao.trim(),
+      problem: problema.trim() || undefined,
+      contribution: {
+        type: contribType,
+        other: contribType === "OUTRO" ? contribOther.trim() : undefined,
+      },
+      submittedName: hideName ? undefined : submittedName.trim() || undefined,
+      submittedSector: hideSector ? undefined : userData?.setor ?? undefined,
+    })
+  }
+
+  const userSector = userData?.setor ?? "Não informado"
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Lightbulb className="h-5 w-5 text-blue-600" />
+            </div>
+            Caixa de Sugestões
+          </DialogTitle>
+        </DialogHeader>
+
+        {userLoading ? (
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-10 bg-gray-200 rounded"></div>
+            <div className="h-20 bg-gray-200 rounded"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Informações do usuário */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do colaborador</Label>
+                {!hideName && (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30">
+                    <span className="text-sm font-medium">{submittedName ?? userData?.email ?? "Nome não disponível"}</span>
+                  </div>
+                )}
+                {hideName && (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
+                    <span className="text-sm text-muted-foreground italic">Nome será ocultado na sugestão</span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hide-name"
+                    checked={hideName}
+                    onCheckedChange={(checked) => {
+                      setHideName(checked as boolean)
+                    }}
+                  />
+                  <Label htmlFor="hide-name" className="text-sm text-muted-foreground">
+                    Não exibir meu nome
+                  </Label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Setor</Label>
+                {!hideSector && (
+                  <div className="flex items-center gap-2 p-2 rounded-md">
+                    <Building2 className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm">{userSector}</span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hide-sector"
+                    checked={hideSector}
+                    onCheckedChange={(checked) => {
+                      setHideSector(checked as boolean)
+                    }}
+                  />
+                  <Label htmlFor="hide-sector" className="text-sm text-muted-foreground">
+                    Não exibir meu setor
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Tipo de contribuição */}
+            <div className="space-y-2">
+              <Label htmlFor="contrib-type">Tipo de contribuição</Label>
+              <Select value={contribType} onValueChange={(value) => setContribType(value as ContribType)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IDEIA_INOVADORA">Ideia inovadora</SelectItem>
+                  <SelectItem value="SUGESTAO_MELHORIA">Sugestão de melhoria</SelectItem>
+                  <SelectItem value="SOLUCAO_PROBLEMA">Solução de problema</SelectItem>
+                  <SelectItem value="OUTRO">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {contribType === "OUTRO" && (
+                <div className="mt-2">
+                  <Input
+                    value={contribOther}
+                    onChange={(e) => setContribOther(e.target.value)}
+                    placeholder="Especifique o tipo de contribuição"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Problema */}
+            <div className="space-y-2">
+              <Label htmlFor="problema">Problema identificado *</Label>
+              <Textarea
+                id="problema"
+                value={problema}
+                onChange={(e) => setProblema(e.target.value)}
+                placeholder="Descreva o problema que você identificou..."
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Seja específico sobre o problema que precisa ser resolvido.
+              </p>
+            </div>
+
+            {/* Solução */}
+            <div className="space-y-2">
+              <Label htmlFor="solucao">Solução proposta *</Label>
+              <Textarea
+                id="solucao"
+                value={solucao}
+                onChange={(e) => setSolucao(e.target.value)}
+                placeholder="Descreva a solução que você propõe..."
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Detalhe como sua solução pode resolver o problema identificado.
+              </p>
+            </div>
+
+            {/* Botão de envio */}
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={create.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={create.isPending || !problema.trim() || !solucao.trim()}
+                className="min-w-[120px]"
+              >
+                {create.isPending ? "Enviando..." : "Enviar Sugestão"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }

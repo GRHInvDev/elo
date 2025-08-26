@@ -40,7 +40,7 @@ export const classificationRouter = createTRPCRouter({
   create: adminProcedure
     .input(z.object({
       label: z.string().min(1).max(100),
-      score: z.number().int().min(0).max(20),
+      score: z.number().int().min(0).max(10),
       type: z.enum(["IMPACT", "CAPACITY", "EFFORT"]),
       order: z.number().int().optional()
     }))
@@ -66,7 +66,7 @@ export const classificationRouter = createTRPCRouter({
     .input(z.object({
       id: z.string(),
       label: z.string().min(1).max(100).optional(),
-      score: z.number().int().min(0).max(20).optional(),
+      score: z.number().int().min(0).max(10).optional(),
       order: z.number().int().optional(),
       isActive: z.boolean().optional()
     }))
