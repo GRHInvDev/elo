@@ -1,4 +1,4 @@
-import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils } from "lucide-react"
+import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb } from "lucide-react"
 import { UserRole } from "@prisma/client"
 
 export const routeItems = (role: UserRole): {
@@ -71,6 +71,12 @@ export const routeItems = (role: UserRole): {
       icon: LucideShoppingCart,
       describe: "Página para comprar itens personalizados com as logos da BOX e da Cristallux",
       href: "/shop",
+    },
+    {
+      title: "Minhas Sugestões",
+      icon: LucideLightbulb,
+      describe: "Visualizar e acompanhar o status das suas sugestões enviadas",
+      href: "/my-suggestions",
     },
     {
       title: "Formulários",

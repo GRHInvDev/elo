@@ -14,8 +14,8 @@ interface NotificationDropdownProps {
 
 export function NotificationDropdown({ className }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { unreadCount, refetch: refetchCount } = useNotificationCount()
-  const { markAllAsRead, refetch: refetchNotifications } = useNotifications({ limit: 1 })
+  const { unreadCount } = useNotificationCount()
+  const { markAllAsRead } = useNotifications({ limit: 1 })
 
   // Marcar todas as notificações como lidas quando o dropdown é aberto
   useEffect(() => {

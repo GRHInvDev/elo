@@ -57,13 +57,13 @@ export function NotificationPopup({
   const getTypeStyles = (type: string) => {
     switch (type) {
       case "success":
-        return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+        return "border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/20"
       case "error":
-        return "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
+        return "border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
       case "warning":
-        return "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
+        return "border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20"
       default:
-        return "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
+        return "border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
     }
   }
 
@@ -108,7 +108,7 @@ export function NotificationPopup({
               <Button
                 variant="ghost"
                 size="sm"
-                className="mt-2 h-6 px-2 text-xs hover:bg-accent dark:hover:bg-accent"
+                className="mt-2 h-6 px-2 text-xs hover:bg-accent dark:hover:bg-accent text-foreground dark:text-foreground"
                 onClick={handleAction}
               >
                 <Check className="h-3 w-3 mr-1" />
@@ -120,7 +120,7 @@ export function NotificationPopup({
           <Button
             variant="ghost"
             size="sm"
-            className="flex-shrink-0 h-6 w-6 p-0 hover:bg-accent dark:hover:bg-accent"
+            className="flex-shrink-0 h-6 w-6 p-0 hover:bg-accent dark:hover:bg-accent text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground"
             onClick={handleClose}
           >
             <X className="h-3 w-3" />

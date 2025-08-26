@@ -94,7 +94,7 @@ export function NotificationList({ className, onNotificationClick }: Notificatio
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
+          <div className="p-6 text-center text-muted-foreground">
             <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">
               {showUnreadOnly ? 'Nenhuma notificação não lida' : 'Nenhuma notificação'}
