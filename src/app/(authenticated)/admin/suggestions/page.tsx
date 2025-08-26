@@ -15,8 +15,10 @@ import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
-import { Settings, Plus, Edit, Trash2 } from "lucide-react"
+import { Settings, Plus, Edit, Trash2, Check, ChevronsUpDown } from "lucide-react"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 // Usar tipos derivados do tRPC para garantir type safety
 type DBSuggestion = RouterOutputs["suggestion"]["list"][number]
@@ -39,6 +41,7 @@ type SuggestionLocal = {
   finalClassification: { label: string; range: string } | null
   status: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED"
   rejectionReason: string | null
+  analystId: string | null
   user: {
     firstName: string | null
     lastName: string | null
@@ -107,6 +110,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     finalClassification: dbSuggestion.finalClassification as { label: string; range: string } | null,
     status: dbSuggestion.status,
     rejectionReason: dbSuggestion.rejectionReason,
+    analystId: dbSuggestion.analystId,
     user: {
       firstName: dbSuggestion.user.firstName,
       lastName: dbSuggestion.user.lastName,
@@ -122,12 +126,100 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
   }
 }
 
+// Componente para seleção de usuário responsável
+function UserSelector({
+  value,
+  onValueChange,
+  disabled = false
+}: {
+  value: string | null
+  onValueChange: (value: string | null) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+
+  // Buscar usuários para seleção de responsável
+  const { data: allUsers = [] } = api.user.listAll.useQuery()
+
+  const selectedUser = allUsers.find(user => user.id === value)
+
+  const getUserDisplayName = (user: typeof allUsers[0]) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`
+    }
+    return user.email
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+          disabled={disabled}
+        >
+          {selectedUser ? getUserDisplayName(selectedUser) : "Selecionar responsável..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[400px] p-0">
+        <Command>
+          <CommandInput placeholder="Buscar usuário..." />
+          <CommandList>
+            <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                onSelect={() => {
+                  onValueChange(null)
+                  setOpen(false)
+                }}
+                className="text-muted-foreground"
+              >
+                <Check className="mr-2 h-4 w-4 opacity-0" />
+                Não atribuído
+              </CommandItem>
+              {allUsers.map((user) => (
+                <CommandItem
+                  key={user.id}
+                  value={`${user.firstName ?? ''} ${user.lastName ?? ''} ${user.email}`.toLowerCase()}
+                  onSelect={() => {
+                    onValueChange(user.id)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={`mr-2 h-4 w-4 ${
+                      value === user.id ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-medium">
+                      {getUserDisplayName(user)}
+                    </span>
+                    {user.setor && (
+                      <span className="text-xs text-muted-foreground">
+                        {user.setor}
+                      </span>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export default function AdminSuggestionsPage() {
   const { data: dbSuggestions = [], refetch } = api.suggestion.list.useQuery({
     status: ["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"],
   })
 
-  const { data: currentUser } = api.user.me.useQuery()
+  const { data: _currentUser } = api.user.me.useQuery()
 
   const suggestions = useMemo(() =>
     dbSuggestions.map((s) => convertDBToLocal(s)),
@@ -217,33 +309,33 @@ export default function AdminSuggestionsPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _unusedKpiLoading = isLoadingKpis // Silenciar warning do linter
-  
+
   // Função para recarregar todas as classificações
   const refetchAllClassifications = () => {
     void refetchImpact()
     void refetchCapacity()
     void refetchEffort()
   }
-  
+
   // Converter para o formato esperado pelo componente
   const impactPool: ClassItem[] = impactClassifications?.map(c => ({
     id: c.id,
     label: c.label,
     score: c.score
   })) ?? []
-  
+
   const capacityPool: ClassItem[] = capacityClassifications?.map(c => ({
     id: c.id,
     label: c.label,
     score: c.score
   })) ?? []
-  
+
   const effortPool: ClassItem[] = effortClassifications?.map(c => ({
     id: c.id,
     label: c.label,
     score: c.score
   })) ?? []
-  
+
   const kpiPool: string[] = []
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -272,6 +364,7 @@ export default function AdminSuggestionsPage() {
       kpiIds?: string[]
       status?: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED"
       rejectionReason?: string
+      analystId?: string
     } = { id }
 
     if (updates.impact) updateData.impact = updates.impact
@@ -283,6 +376,9 @@ export default function AdminSuggestionsPage() {
     }
     if (updates.rejectionReason !== undefined) {
       updateData.rejectionReason = updates.rejectionReason ?? undefined
+    }
+    if (updates.analystId !== undefined) {
+      updateData.analystId = updates.analystId ?? undefined
     }
 
     if (Object.keys(updateData).length > 1) {
@@ -513,7 +609,7 @@ export default function AdminSuggestionsPage() {
           kpiPool={kpiPool}
           currentSuggestionKpis={currentSuggestionKpis}
           update={update}
-          currentUser={currentUser}
+          _currentUser={_currentUser}
           onOpenClassificationModal={openClassificationModal}
           onOpenKpiModal={openKpiModal}
           getStatusFromScore={getStatusFromScore}
@@ -531,7 +627,7 @@ export default function AdminSuggestionsPage() {
             kpiPool={kpiPool}
             currentSuggestionKpis={currentSuggestionKpis}
             update={update}
-            currentUser={currentUser}
+            _currentUser={_currentUser}
             onOpenClassificationModal={openClassificationModal}
             onOpenKpiModal={openKpiModal}
             getStatusFromScore={getStatusFromScore}
@@ -589,7 +685,7 @@ function IdeasAccordion({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   currentSuggestionKpis,
   update,
-  currentUser,
+  _currentUser,
   onOpenClassificationModal,
   onOpenKpiModal,
   getStatusFromScore,
@@ -601,7 +697,7 @@ function IdeasAccordion({
   kpiPool: string[]
   currentSuggestionKpis: { id: string; name: string; description?: string | null }[]
   update: (id: string, updates: Partial<SuggestionLocal>) => void
-  currentUser: RouterOutputs["user"]["me"] | undefined
+  _currentUser: RouterOutputs["user"]["me"] | undefined
   onOpenClassificationModal: (suggestionId: string, type: 'impact' | 'capacity' | 'effort') => void
   onOpenKpiModal: (suggestionId: string) => void
   getStatusFromScore: (suggestion: SuggestionLocal) => string
@@ -679,7 +775,7 @@ function IdeasAccordion({
           saveRejectionReason={saveRejectionReason}
           sendRejectionNotification={sendRejectionNotification}
           update={update}
-          currentUser={currentUser}
+          _currentUser={_currentUser}
           onOpenClassificationModal={onOpenClassificationModal}
           onOpenKpiModal={onOpenKpiModal}
           getStatusFromScore={getStatusFromScore}
@@ -696,7 +792,7 @@ function SuggestionItem({
   saveRejectionReason,
   sendRejectionNotification,
   update,
-  currentUser,
+  _currentUser,
   onOpenClassificationModal,
   onOpenKpiModal,
   getStatusFromScore,
@@ -707,7 +803,7 @@ function SuggestionItem({
   saveRejectionReason: (suggestionId: string) => Promise<void>
   sendRejectionNotification: ReturnType<typeof api.suggestion.sendRejectionNotification.useMutation>
   update: (id: string, updates: Partial<SuggestionLocal>) => void
-  currentUser: RouterOutputs["user"]["me"] | undefined
+  _currentUser: RouterOutputs["user"]["me"] | undefined
   onOpenClassificationModal: (suggestionId: string, type: 'impact' | 'capacity' | 'effort') => void
   onOpenKpiModal: (suggestionId: string) => void
   getStatusFromScore: (suggestion: SuggestionLocal) => string
@@ -940,15 +1036,11 @@ function SuggestionItem({
                     </div>
                     <div>
                       <label className="text-sm">Responsável pela devolutiva</label>
-                      <Input 
-                        value={
-                          currentUser && 'firstName' in currentUser && 'lastName' in currentUser && currentUser.firstName && currentUser.lastName
-                            ? `${currentUser.firstName} ${currentUser.lastName}`
-                            : currentUser && 'email' in currentUser 
-                              ? currentUser.email 
-                              : "Admin Atual"
-                        }
-                        readOnly 
+                      <UserSelector
+                        value={s.analystId}
+                        onValueChange={(userId: string | null) => {
+                          update(s.id, { analystId: userId })
+                        }}
                       />
                     </div>
 
