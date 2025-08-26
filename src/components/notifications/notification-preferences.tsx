@@ -22,7 +22,13 @@ export function NotificationPreferences() {
     foodOrderNotifications: true,
     birthdayNotifications: true,
     soundEnabled: true,
-    popupEnabled: true
+    popupEnabled: true,
+    successNotifications: true,
+    errorNotifications: true,
+    warningNotifications: true,
+    suggestionNotifications: true,
+    kpiNotifications: true,
+    maintenanceNotifications: true
   })
 
   // Query para buscar preferências atuais
@@ -67,7 +73,13 @@ export function NotificationPreferences() {
         foodOrderNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).foodOrderNotifications),
         birthdayNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).birthdayNotifications),
         soundEnabled: safeGetBoolean((currentPreferences as Record<string, unknown>).soundEnabled),
-        popupEnabled: safeGetBoolean((currentPreferences as Record<string, unknown>).popupEnabled)
+        popupEnabled: safeGetBoolean((currentPreferences as Record<string, unknown>).popupEnabled),
+        successNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).successNotifications),
+        errorNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).errorNotifications),
+        warningNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).warningNotifications),
+        suggestionNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).suggestionNotifications),
+        kpiNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).kpiNotifications),
+        maintenanceNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).maintenanceNotifications)
       })
     }
   }, [currentPreferences])
@@ -232,6 +244,97 @@ export function NotificationPreferences() {
             checked={preferences.birthdayNotifications}
             onCheckedChange={(checked) => handlePreferenceChange('birthdayNotifications', checked)}
           />
+        </div>
+
+        <Separator />
+
+        {/* Configurações por Tipo de Notificação */}
+        <div className="space-y-4">
+          <h4 className="text-lg font-semibold text-foreground dark:text-foreground">Tipos de Notificação</h4>
+
+          {/* Sucesso */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base text-foreground dark:text-foreground">Notificações de Sucesso</Label>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                ✅ Notificações sobre ações bem-sucedidas
+              </p>
+            </div>
+            <Switch
+              checked={preferences.successNotifications}
+              onCheckedChange={(checked) => handlePreferenceChange('successNotifications', checked)}
+            />
+          </div>
+
+          {/* Erro */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base text-foreground dark:text-foreground">Notificações de Erro</Label>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                ❌ Alertas sobre problemas e erros
+              </p>
+            </div>
+            <Switch
+              checked={preferences.errorNotifications}
+              onCheckedChange={(checked) => handlePreferenceChange('errorNotifications', checked)}
+            />
+          </div>
+
+          {/* Aviso */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base text-foreground dark:text-foreground">Notificações de Aviso</Label>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                ⚠️ Avisos importantes e lembretes
+              </p>
+            </div>
+            <Switch
+              checked={preferences.warningNotifications}
+              onCheckedChange={(checked) => handlePreferenceChange('warningNotifications', checked)}
+            />
+          </div>
+
+          {/* Sugestões */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base text-foreground dark:text-foreground">Sugestões</Label>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                💡 Atualizações sobre suas sugestões
+              </p>
+            </div>
+            <Switch
+              checked={preferences.suggestionNotifications}
+              onCheckedChange={(checked) => handlePreferenceChange('suggestionNotifications', checked)}
+            />
+          </div>
+
+          {/* KPI */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base text-foreground dark:text-foreground">KPIs e Métricas</Label>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                📊 Atualizações sobre indicadores e métricas
+              </p>
+            </div>
+            <Switch
+              checked={preferences.kpiNotifications}
+              onCheckedChange={(checked) => handlePreferenceChange('kpiNotifications', checked)}
+            />
+          </div>
+
+          {/* Sistema */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base text-foreground dark:text-foreground">Sistema</Label>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                🔧 Manutenções e atualizações do sistema
+              </p>
+            </div>
+            <Switch
+              checked={preferences.maintenanceNotifications}
+              onCheckedChange={(checked) => handlePreferenceChange('maintenanceNotifications', checked)}
+            />
+          </div>
         </div>
 
         <Separator />

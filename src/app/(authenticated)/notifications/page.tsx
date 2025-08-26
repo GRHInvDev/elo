@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, Settings, Filter, Search, Trash2, CheckCheck } from "lucide-react"
+import { Bell, Settings, Filter, Search, CheckCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NotificationItem } from "@/components/notifications/notification-item"
+import { NotificationPreferences } from "@/components/notifications/notification-preferences"
 import { useNotifications } from "@/hooks/use-notifications"
 import type { NotificationData } from "@/types/notification-types"
 
@@ -110,8 +112,28 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Tabs */}
+      <Tabs defaultValue="notifications" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notificações
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Preferências
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab de Notificações */}
+        <TabsContent value="notifications" className="space-y-6 mt-6">
+          {/* Estatísticas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -278,6 +300,13 @@ export default function NotificationsPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Tab de Preferências */}
+        <TabsContent value="preferences" className="space-y-6 mt-6">
+          <NotificationPreferences />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

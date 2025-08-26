@@ -22,6 +22,13 @@ export interface NotificationPreferences {
   birthdayNotifications: boolean
   soundEnabled: boolean
   popupEnabled: boolean
+  // Tipos específicos de notificação
+  successNotifications: boolean
+  errorNotifications: boolean
+  warningNotifications: boolean
+  suggestionNotifications: boolean
+  kpiNotifications: boolean
+  maintenanceNotifications: boolean
 }
 
 export interface UseNotificationsReturn {

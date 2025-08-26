@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Check, X, ExternalLink } from "lucide-react"
@@ -51,31 +52,31 @@ const getNotificationIcon = (type: string) => {
 
 const getNotificationColor = (type: string, isRead: boolean) => {
   if (isRead) {
-    return "border-gray-200 bg-gray-50"
+    return "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
   }
 
   switch (type) {
     case "SUCCESS":
-      return "border-green-200 bg-green-50"
+      return "border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/20"
     case "ERROR":
-      return "border-red-200 bg-red-50"
+      return "border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
     case "WARNING":
-      return "border-yellow-200 bg-yellow-50"
+      return "border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20"
     case "SUGGESTION_CREATED":
     case "SUGGESTION_UPDATED":
-      return "border-red-200 bg-red-50"
+      return "border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
     case "SUGGESTION_APPROVED":
-      return "border-emerald-200 bg-emerald-50"
+      return "border-emerald-200 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900/20"
     case "SUGGESTION_REJECTED":
-      return "border-orange-200 bg-orange-50"
+      return "border-orange-200 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/20"
     case "KPI_ADDED":
-      return "border-purple-200 bg-purple-50"
+      return "border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/20"
     case "CLASSIFICATION_UPDATED":
-      return "border-indigo-200 bg-indigo-50"
+      return "border-indigo-200 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/20"
     case "SYSTEM_MAINTENANCE":
-      return "border-amber-200 bg-amber-50"
+      return "border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20"
     default:
-      return "border-gray-200 bg-white"
+      return "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/50"
   }
 }
 
@@ -90,6 +91,7 @@ export function NotificationItem({
   onClick
 }: NotificationItemProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const router = useRouter()
   const { markAsRead, deleteNotification, isMarkingAsRead, isDeleting } = useNotifications()
 
   const handleMarkAsRead = async (e: React.MouseEvent) => {
@@ -123,6 +125,21 @@ export function NotificationItem({
       } as unknown as React.MouseEvent
       await handleMarkAsRead(mockEvent)
     }
+
+    // Verificar se a notificação está relacionada a sugestões
+    const isSuggestionNotification = type && [
+      'SUGGESTION_CREATED',
+      'SUGGESTION_UPDATED',
+      'SUGGESTION_APPROVED',
+      'SUGGESTION_REJECTED'
+    ].includes(type)
+
+    if (isSuggestionNotification) {
+      // Redirecionar para a página de minhas sugestões
+      router.push('/my-suggestions')
+      return
+    }
+
     onClick?.()
     if (actionUrl) {
       window.location.href = actionUrl
@@ -132,9 +149,9 @@ export function NotificationItem({
   return (
     <Card
       className={cn(
-        "transition-all duration-200 cursor-pointer hover:shadow-md",
+        "group transition-all duration-200 cursor-pointer hover:shadow-md dark:shadow-lg",
         getNotificationColor(String(type), isRead),
-        isHovered && "shadow-md"
+        isHovered && "shadow-md dark:shadow-lg"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -168,7 +185,7 @@ export function NotificationItem({
                     })}
                   </span>
                   {!isRead && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-secondary dark:bg-secondary text-secondary-foreground dark:text-secondary-foreground">
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-secondary dark:bg-secondary text-secondary-foreground dark:text-secondary-foreground border-secondary dark:border-secondary">
                       Nova
                     </Badge>
                   )}
@@ -185,7 +202,7 @@ export function NotificationItem({
                     onClick={handleMarkAsRead}
                     disabled={isMarkingAsRead}
                   >
-                    <Check className="h-3 w-3 text-muted-foreground dark:text-muted-foreground" />
+                    <Check className="h-3 w-3 text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground" />
                   </Button>
                 )}
 
@@ -199,7 +216,7 @@ export function NotificationItem({
                       window.location.href = actionUrl
                     }}
                   >
-                    <ExternalLink className="h-3 w-3 text-muted-foreground dark:text-muted-foreground" />
+                    <ExternalLink className="h-3 w-3 text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground" />
                   </Button>
                 )}
 
@@ -210,7 +227,7 @@ export function NotificationItem({
                   onClick={handleDelete}
                   disabled={isDeleting}
                 >
-                  <X className="h-3 w-3 text-muted-foreground dark:text-muted-foreground" />
+                  <X className="h-3 w-3 text-muted-foreground dark:text-muted-foreground hover:text-destructive dark:hover:text-destructive" />
                 </Button>
               </div>
             </div>

@@ -366,6 +366,52 @@ export const suggestionRouter = createTRPCRouter({
       return updatedSuggestion
     }),
 
+  // Buscar sugestões do usuário logado
+  getMySuggestions: protectedProcedure
+    .query(async ({ ctx }) => {
+      return ctx.db.suggestion.findMany({
+        where: {
+          userId: ctx.auth.userId,
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          ideaNumber: true,
+          submittedName: true,
+          submittedSector: true,
+          isNameVisible: true,
+          description: true, // Solução proposta
+          problem: true, // Problema identificado
+          contribution: true,
+          dateRef: true,
+          impact: true,
+          capacity: true,
+          effort: true,
+          finalScore: true,
+          finalClassification: true,
+          status: true,
+          rejectionReason: true,
+          analystId: true,
+          createdAt: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              setor: true,
+            },
+          },
+          analyst: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      })
+    }),
+
   // Enviar notificação por email quando motivo for salvo
   sendRejectionNotification: adminProcedure
     .input(z.object({
