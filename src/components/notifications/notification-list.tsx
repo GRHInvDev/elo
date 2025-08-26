@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Bell, CheckCheck, Settings, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationItem } from "./notification-item"
@@ -14,6 +15,7 @@ interface NotificationListProps {
 
 export function NotificationList({ className, onNotificationClick }: NotificationListProps) {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const router = useRouter()
 
   const notificationData = useNotifications({ unreadOnly: showUnreadOnly })
   const {
@@ -78,7 +80,7 @@ export function NotificationList({ className, onNotificationClick }: Notificatio
             variant="ghost"
             size="sm"
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-            className={`h-8 px-2 ${showUnreadOnly ? 'bg-blue-100 text-blue-700' : ''}`}
+            className={`h-8 px-2 ${showUnreadOnly ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : ''}`}
           >
             {showUnreadOnly ? 'Todas' : 'Não lidas'}
           </Button>
@@ -155,8 +157,7 @@ export function NotificationList({ className, onNotificationClick }: Notificatio
           size="sm"
           className="w-full justify-start text-sm text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground hover:bg-muted dark:hover:bg-muted"
           onClick={() => {
-            // TODO: Implementar navegação para página completa de notificações
-            console.log('Navegar para página completa de notificações')
+            router.push('/notifications')
           }}
         >
           <Settings className="h-4 w-4 mr-2" />

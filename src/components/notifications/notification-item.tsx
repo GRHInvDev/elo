@@ -63,7 +63,7 @@ const getNotificationColor = (type: string, isRead: boolean) => {
       return "border-yellow-200 bg-yellow-50"
     case "SUGGESTION_CREATED":
     case "SUGGESTION_UPDATED":
-      return "border-blue-200 bg-blue-50"
+      return "border-red-200 bg-red-50"
     case "SUGGESTION_APPROVED":
       return "border-emerald-200 bg-emerald-50"
     case "SUGGESTION_REJECTED":
