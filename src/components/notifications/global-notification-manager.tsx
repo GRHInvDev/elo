@@ -28,7 +28,7 @@ export function GlobalNotificationManager() {
   useEffect(() => {
     // Refetch inicial para garantir que as notificações sejam carregadas
     if (!isLoading) {
-      refetch()
+      void refetch()
     }
   }, [refetch, isLoading])
 
