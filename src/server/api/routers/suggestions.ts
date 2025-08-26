@@ -300,7 +300,7 @@ export const suggestionRouter = createTRPCRouter({
               userId: suggestionData.userId,
               entityId: input.id,
               entityType: "suggestion",
-              actionUrl: `/admin/suggestions?suggestion=${input.id}`
+              actionUrl: `/my-suggestions`
             }
           })
         } else if (input.impact || input.capacity || input.effort) {
@@ -314,7 +314,7 @@ export const suggestionRouter = createTRPCRouter({
               userId: suggestionData.userId,
               entityId: input.id,
               entityType: "suggestion",
-              actionUrl: `/admin/suggestions?suggestion=${input.id}`
+              actionUrl: `/my-suggestions`
             }
           })
         }
