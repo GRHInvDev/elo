@@ -9,15 +9,7 @@ import { useNotifications } from "@/hooks/use-notifications"
  */
 export function GlobalNotificationManager() {
   // Hook que gerencia todas as notificações globalmente
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    refetch,
-    isLoading
-  } = useNotifications({
+  const { refetch, isLoading } = useNotifications({
     limit: 20,
     autoRefresh: true,
     refreshInterval: 30000, // 30 segundos
