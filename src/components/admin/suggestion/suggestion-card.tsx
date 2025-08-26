@@ -24,12 +24,12 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
   return (
     <div
       onClick={onOpenModal}
-      className="cursor-pointer bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all duration-200"
+      className="cursor-pointer bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-950 dark:to-rose-900 rounded-lg p-4 border border-red-200 dark:border-red-800 hover:shadow-md transition-all duration-200"
     >
       <div className="flex items-center gap-4 mb-3">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Caixa de Sugestões</h3>
-          <p className="text-sm text-blue-700 dark:text-blue-300">Compartilhe suas ideias</p>
+          <h3 className="text-lg font-semibold text-red-900 dark:text-red-100">Caixa de Sugestões</h3>
+          <p className="text-sm text-red-700 dark:text-red-300">Compartilhe suas ideias</p>
         </div>
         <div className="flex-shrink-0">
           <Image
@@ -37,11 +37,11 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
             alt="Caixa de Sugestões"
             width={80}
             height={60}
-            className="rounded-lg object-cover border border-blue-200 dark:border-blue-700"
+            className="rounded-lg object-cover border border-red-200 dark:border-red-700"
           />
         </div>
       </div>
-      <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+      <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
         Clique para abrir o formulário
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -159,8 +159,8 @@ export function SuggestionsCard() {
         <AccordionItem value="suggestion-form" className="border-0">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Lightbulb className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Lightbulb className="h-5 w-5 text-red-600" />
               </div>
               <div className="text-left">
                 <h3 className="text-lg font-semibold">Caixa de Sugestões</h3>
@@ -392,8 +392,8 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Lightbulb className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-red-100 rounded-lg">
+              <Lightbulb className="h-5 w-5 text-red-600" />
             </div>
             Caixa de Sugestões
           </DialogTitle>
