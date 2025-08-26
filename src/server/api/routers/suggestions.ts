@@ -54,37 +54,34 @@ export const suggestionRouter = createTRPCRouter({
     .input(z.object({
       submittedName: z.string().trim().optional(),
       submittedSector: z.string().trim().optional(),
-      description: z.string().trim().min(1),
+      description: z.string().trim().min(1), // Solução proposta
+      problem: z.string().trim().optional(), // Problema identificado
       contribution: z.object({
         type: z.enum(["IDEIA_INOVADORA","SUGESTAO_MELHORIA","SOLUCAO_PROBLEMA","OUTRO"]),
         other: z.string().trim().optional(),
       }),
     }))
     .mutation(async ({ ctx, input }) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const me = await ctx.db.user.findUnique({
-        where: { id: ctx.auth.userId },
-        select: { enterprise: true },
-      })
-
       const last = await ctx.db.suggestion.findFirst({
         orderBy: { ideaNumber: "desc" },
         select: { ideaNumber: true },
       })
       const ideaNumber = (last?.ideaNumber ?? 99) + 1
 
-      return ctx.db.suggestion.create({
+      const suggestion = await ctx.db.suggestion.create({
         data: {
           ideaNumber,
           userId: ctx.auth.userId,
           submittedName: input.submittedName ?? null,
           submittedSector: input.submittedSector ?? null,
-          description: input.description,
+          description: input.description, // Solução proposta
+          problem: input.problem ?? null, // Problema identificado
           contribution: input.contribution as InputJsonValue,
           dateRef: new Date(),
           status: "NEW",
         },
       })
+      return suggestion
     }),
 
   // Listagem para admin (filtros simples)
@@ -113,7 +110,8 @@ export const suggestionRouter = createTRPCRouter({
           submittedName: true,
           submittedSector: true,
           isNameVisible: true,
-          description: true,
+          description: true, // Solução proposta
+          problem: true, // Problema identificado
           contribution: true,
           dateRef: true,
           impact: true,
@@ -151,7 +149,8 @@ export const suggestionRouter = createTRPCRouter({
       select: {
         id: true,
         ideaNumber: true,
-        description: true,
+        description: true, // Solução proposta
+        problem: true, // Problema identificado
         submittedName: true,
         status: true,
         createdAt: true,
@@ -258,6 +257,71 @@ export const suggestionRouter = createTRPCRouter({
           }
         }
       })
+
+      // Criar notificações baseadas nas mudanças
+      try {
+        // Notificação de atualização da sugestão
+        if (input.status && input.status !== suggestionData.status) {
+          let notificationTitle = ""
+          let notificationMessage = ""
+          let notificationType: "SUGGESTION_APPROVED" | "SUGGESTION_REJECTED" | "SUGGESTION_UPDATED" = "SUGGESTION_UPDATED"
+
+          switch (input.status) {
+            case "APPROVED":
+              notificationTitle = "Sugestão Aprovada! 🎉"
+              notificationMessage = `Parabéns! Sua sugestão #${suggestionData.ideaNumber} foi aprovada.`
+              notificationType = "SUGGESTION_APPROVED"
+              break
+            case "NOT_IMPLEMENTED":
+              notificationTitle = "Sugestão Rejeitada"
+              notificationMessage = `Sua sugestão #${suggestionData.ideaNumber} foi rejeitada.${input.rejectionReason ? ` Motivo: ${input.rejectionReason}` : ''}`
+              notificationType = "SUGGESTION_REJECTED"
+              break
+            default:
+              notificationTitle = "Sugestão Atualizada"
+              const statusMapping = {
+                "NEW": "Nova",
+                "IN_REVIEW": "Em avaliação",
+                "APPROVED": "Aprovada",
+                "IN_PROGRESS": "Em execução",
+                "DONE": "Concluída",
+                "NOT_IMPLEMENTED": "Não implementada"
+              }
+              notificationMessage = `A sugestão #${suggestionData.ideaNumber} foi atualizada para "${statusMapping[input.status] || input.status}".`
+              notificationType = "SUGGESTION_UPDATED"
+          }
+
+          await ctx.db.notification.create({
+            data: {
+              title: notificationTitle,
+              message: notificationMessage,
+              type: notificationType,
+              channel: "IN_APP",
+              userId: suggestionData.userId,
+              entityId: input.id,
+              entityType: "suggestion",
+              actionUrl: `/admin/suggestions?suggestion=${input.id}`
+            }
+          })
+        } else if (input.impact || input.capacity || input.effort) {
+          // Notificação de atualização de classificação
+          await ctx.db.notification.create({
+            data: {
+              title: "Classificação Atualizada",
+              message: `A classificação da sugestão #${suggestionData.ideaNumber} foi atualizada.`,
+              type: "CLASSIFICATION_UPDATED",
+              channel: "IN_APP",
+              userId: suggestionData.userId,
+              entityId: input.id,
+              entityType: "suggestion",
+              actionUrl: `/admin/suggestions?suggestion=${input.id}`
+            }
+          })
+        }
+      } catch (notificationError) {
+        // Não falhar a operação principal se a notificação falhar
+        console.error("Erro ao criar notificação:", notificationError)
+      }
 
       // Enviar email de notificação se o status foi alterado
       if (input.status && input.status !== suggestionData.status) {

@@ -54,7 +54,11 @@ export function KpiManagementModal({
       setNewKpiName("")
       setNewKpiDescription("")
       setIsCreatingNew(false)
+      // Refresh da lista de KPIs
       void refetchKpis()
+      // Invalidar queries relacionadas para garantir que todos os dados sejam atualizados
+      void utils.kpi.listActive.invalidate()
+      void utils.kpi.search.invalidate()
     },
     onError: (error) => {
       toast.error(error.message)
@@ -78,6 +82,14 @@ export function KpiManagementModal({
       void refetchKpis()
       // Remove da seleção se estiver selecionado
       onKpiSelectionChange(selectedKpiIds.filter(id => id !== variables.id))
+      // Invalidar queries relacionadas
+      void utils.kpi.listActive.invalidate()
+      void utils.kpi.search.invalidate()
+      // Invalidar sugestões se houver uma sugestão selecionada
+      if (suggestionId) {
+        void utils.suggestion.list.invalidate()
+        void utils.suggestion.listKanban.invalidate()
+      }
     },
     onError: (error) => {
       toast.error(error.message)
@@ -90,6 +102,9 @@ export function KpiManagementModal({
       // Forçar refetch dos KPIs para a sugestão selecionada
       if (suggestionId) {
         void utils.kpi.getBySuggestionId.invalidate({ suggestionId })
+        // Invalidar também a lista de sugestões para mostrar as mudanças imediatamente
+        void utils.suggestion.list.invalidate()
+        void utils.suggestion.listKanban.invalidate()
       }
     },
     onError: (error) => {
@@ -147,6 +162,20 @@ export function KpiManagementModal({
         suggestionId,
         kpiIds: selectedKpiIds,
       })
+
+      // Criar notificações para os KPIs adicionados
+      // Nota: A notificação é criada no backend quando os KPIs são vinculados
+      // Aqui apenas log para debug
+      if (suggestionId && selectedKpiIds.length > 0) {
+        console.log('KPIs vinculados à sugestão:', {
+          suggestionId,
+          kpiIds: selectedKpiIds,
+          kpiNames: selectedKpiIds.map(kpiId => {
+            const kpi = allKpis.find(k => k.id === kpiId)
+            return kpi?.name || 'KPI'
+          }).join(', ')
+        })
+      }
     } else {
       console.log('Skipping linkToSuggestion - missing data:', {
         suggestionId: !!suggestionId,

@@ -35,6 +35,10 @@ model User {
   authoredSuggestions Suggestion[] @relation("SuggestionAuthor")
   analyzedSuggestions Suggestion[] @relation("SuggestionAnalyst")
 
+  // Notificações
+  notifications Notification[]
+  notificationPreferences NotificationPreference?
+
   @@map("users")
 }
 
@@ -397,6 +401,7 @@ enum Enterprise {
   Cristallux
   Box_Distribuidor          @map("Box Distribuidor")
   Box_Distribuidor___Filial @map("Box Distribuidor - Filial")
+  Box_Filial                
 }
 
 enum ResponseStatus {
@@ -434,7 +439,8 @@ model Suggestion {
   submittedSector     String?
   isNameVisible       Boolean           @default(true)
 
-  description         String
+  description         String  // Solução proposta
+  problem             String? // Problema identificado
   contribution        Json
   dateRef             DateTime?
 
@@ -515,4 +521,70 @@ model Classification {
   
   @@unique([label, type])
   @@index([type, isActive, order])
+}
+
+// Módulo de Notificações
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  SUGGESTION_CREATED
+  SUGGESTION_UPDATED
+  SUGGESTION_APPROVED
+  SUGGESTION_REJECTED
+  KPI_ADDED
+  CLASSIFICATION_UPDATED
+  COMMENT_ADDED
+  SYSTEM_MAINTENANCE
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+model Notification {
+  id          String             @id @default(cuid())
+  title       String
+  message     String
+  type        NotificationType   @default(INFO)
+  channel     NotificationChannel @default(IN_APP)
+  isRead      Boolean            @default(false)
+  data        Json?              // Dados adicionais da notificação
+  userId      String
+  entityId    String?            // ID da entidade relacionada (sugestão, kpi, etc)
+  entityType  String?            // Tipo da entidade (suggestion, kpi, etc)
+  actionUrl   String?            // URL para redirecionar ao clicar
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// Configurações de notificação por usuário
+model NotificationPreference {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  emailNotifications   Boolean            @default(true)
+  pushNotifications    Boolean            @default(true)
+  suggestionUpdates    Boolean            @default(true)
+  systemNotifications  Boolean            @default(true)
+  postNotifications    Boolean            @default(true)
+  bookingNotifications Boolean            @default(true)
+  foodOrderNotifications Boolean          @default(true)
+  birthdayNotifications Boolean           @default(true)
+  soundEnabled         Boolean            @default(true)
+  popupEnabled         Boolean            @default(true)
+
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 }
