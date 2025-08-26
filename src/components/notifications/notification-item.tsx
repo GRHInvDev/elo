@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useNotifications } from "@/hooks/use-notifications"
-import type { NotificationData } from "@/types/notification-types"
 
 interface NotificationItemProps {
   id: string

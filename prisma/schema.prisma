@@ -428,10 +428,9 @@ enum SuggestionStatus {
 
 model Suggestion {
   id                  String            @id @default(cuid())
-  ideaNumber          Int               @unique
+  ideaNumber          Int               @unique @default(0)
 
-  // relação com autor
-  userId              String
+  userId              String            // Referência ao autor da sugestão
   user                User              @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
 
   // identificação visível/oculta
@@ -441,7 +440,7 @@ model Suggestion {
 
   description         String  // Solução proposta
   problem             String? // Problema identificado
-  contribution        Json
+  contribution        Json?
   dateRef             DateTime?
 
   impact              Json?

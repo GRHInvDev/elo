@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { X, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -18,7 +18,7 @@ interface NotificationPopupProps {
 }
 
 export function NotificationPopup({
-  id,
+  id: _id,
   title,
   message,
   type = "info",
@@ -30,21 +30,21 @@ export function NotificationPopup({
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
 
+  const handleClose = useCallback(() => {
+    setIsExiting(true)
+    setTimeout(() => {
+      setIsVisible(false)
+      onClose?.()
+    }, 300) // Tempo da animação de saída
+  }, [onClose])
+
   useEffect(() => {
     const timer = setTimeout(() => {
       handleClose()
     }, duration)
 
     return () => clearTimeout(timer)
-  }, [duration])
-
-  const handleClose = () => {
-    setIsExiting(true)
-    setTimeout(() => {
-      setIsVisible(false)
-      onClose?.()
-    }, 300) // Tempo da animação de saída
-  }
+  }, [duration, handleClose])
 
   const handleAction = () => {
     if (actionUrl) {
@@ -135,7 +135,11 @@ export function NotificationPopup({
 export function NotificationPopupManager() {
   const [popups, setPopups] = useState<NotificationPopupProps[]>([])
 
-  const showPopup = (popup: Omit<NotificationPopupProps, 'id'>) => {
+  const removePopup = useCallback((id: string) => {
+    setPopups(prev => prev.filter(popup => popup.id !== id))
+  }, [])
+
+  const showPopup = useCallback((popup: Omit<NotificationPopupProps, 'id'>) => {
     const id = `popup-${Date.now()}-${Math.random()}`
     const newPopup: NotificationPopupProps = { id, ...popup }
 
@@ -144,25 +148,27 @@ export function NotificationPopupManager() {
     // Auto-remover após a duração
     setTimeout(() => {
       removePopup(id)
-    }, popup.duration || 5000)
-  }
-
-  const removePopup = (id: string) => {
-    setPopups(prev => prev.filter(popup => popup.id !== id))
-  }
+    }, popup.duration ?? 5000)
+  }, [removePopup])
 
   // Função global para mostrar popups
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).showNotificationPopup = showPopup
+      const windowWithPopup = window as Window & {
+        showNotificationPopup?: (popup: Omit<NotificationPopupProps, 'id'>) => void
+      }
+      windowWithPopup.showNotificationPopup = showPopup
     }
 
     return () => {
       if (typeof window !== 'undefined') {
-        delete (window as any).showNotificationPopup
+        const windowWithPopup = window as Window & {
+          showNotificationPopup?: (popup: Omit<NotificationPopupProps, 'id'>) => void
+        }
+        delete windowWithPopup.showNotificationPopup
       }
     }
-  }, [])
+  }, [showPopup])
 
   return (
     <div className="fixed top-0 right-0 z-50 pointer-events-none">
@@ -188,8 +194,14 @@ export function NotificationPopupManager() {
 // Hook para usar popups
 export const useNotificationPopup = () => {
   const showPopup = (popup: Omit<NotificationPopupProps, 'id'>) => {
-    if (typeof window !== 'undefined' && (window as any).showNotificationPopup) {
-      (window as any).showNotificationPopup(popup)
+    if (typeof window !== 'undefined') {
+      const showNotificationPopup = (window as Window & {
+        showNotificationPopup?: (popup: Omit<NotificationPopupProps, 'id'>) => void
+      }).showNotificationPopup
+
+      if (showNotificationPopup) {
+        showNotificationPopup(popup)
+      }
     }
   }
 
