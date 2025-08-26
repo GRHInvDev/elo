@@ -43,7 +43,7 @@ export const postRouter = createTRPCRouter({
       if (allUsers.length > 0) {
         const notifications = allUsers.map(user => ({
           title: "Novo Post Publicado",
-          message: `${post.author.firstName || 'Usuário'} publicou um novo post: "${post.title}"`,
+          message: `${post.author.firstName ?? 'Usuário'} publicou um novo post: "${post.title}"`,
           type: "INFO" as const,
           channel: "IN_APP" as const,
           userId: user.id,

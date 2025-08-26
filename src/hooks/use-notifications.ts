@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from "react"
-import { NotificationType } from "@prisma/client"
+import { useState, useEffect, useCallback } from "react"
 import { api } from "@/trpc/react"
 import type { UseNotificationsReturn } from "@/types/notification-types"
 
@@ -19,26 +18,24 @@ export const useNotifications = ({
   enableSound = true
 }: UseNotificationsProps = {}): UseNotificationsReturn => {
   const [offset, setOffset] = useState(0)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [lastUnreadCount, setLastUnreadCount] = useState(0)
 
-  try {
-    // Query para buscar notificações
-    const notificationsQuery = api.notification.list.useQuery({
-      limit,
-      offset,
-      unreadOnly
-    })
-    
-    const notificationsData = notificationsQuery.data
-    const isLoading = notificationsQuery.isLoading || false
-    const refetch = notificationsQuery.refetch
-    const error = notificationsQuery.error
+  // Query para buscar notificações
+  const notificationsQuery = api.notification.list.useQuery({
+    limit,
+    offset,
+    unreadOnly
+  })
 
-    // Mutations
-    const markAsReadMutation = api.notification.markAsRead.useMutation()
-    const markAllAsReadMutation = api.notification.markAllAsRead.useMutation()
-    const deleteMutation = api.notification.delete.useMutation()
+  const notificationsData = notificationsQuery.data
+  const isLoading = notificationsQuery.isLoading || false
+  const refetch = notificationsQuery.refetch
+  const error = notificationsQuery.error
+
+  // Mutations
+  const markAsReadMutation = api.notification.markAsRead.useMutation()
+  const markAllAsReadMutation = api.notification.markAllAsRead.useMutation()
+  const deleteMutation = api.notification.delete.useMutation()
 
   // Auto-refresh
   useEffect(() => {
@@ -52,7 +49,7 @@ export const useNotifications = ({
   }, [autoRefresh, refreshInterval, refetch])
 
   // Funções de manipulação
-  const markAsRead = async (id: string) => {
+  const markAsRead = async (id: string): Promise<void> => {
     try {
       await markAsReadMutation.mutateAsync({ id })
       await refetch() // Refresh após marcar como lida
@@ -62,7 +59,7 @@ export const useNotifications = ({
     }
   }
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = async (): Promise<void> => {
     try {
       await markAllAsReadMutation.mutateAsync()
       await refetch() // Refresh após marcar todas como lidas
@@ -72,7 +69,7 @@ export const useNotifications = ({
     }
   }
 
-  const deleteNotification = async (id: string) => {
+  const deleteNotification = async (id: string): Promise<void> => {
     try {
       await deleteMutation.mutateAsync({ id })
       await refetch() // Refresh após deletar
@@ -83,7 +80,7 @@ export const useNotifications = ({
   }
 
   // Sistema de som para notificações
-  const playNotificationSound = () => {
+  const playNotificationSound = useCallback(() => {
     if (!enableSound) return
 
     try {
@@ -115,12 +112,18 @@ export const useNotifications = ({
       console.error('Erro ao inicializar áudio, usando fallback:', error)
       playFallbackSound()
     }
-  }
+  }, [enableSound])
 
   // Som de fallback usando Web Audio API (caso o arquivo não exista)
   const playFallbackSound = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioContextClass) {
+        console.warn('Web Audio API não suportado')
+        return
+      }
+
+      const audioContext = new AudioContextClass()
       const oscillator = audioContext.createOscillator()
       const gainNode = audioContext.createGain()
 
@@ -142,7 +145,7 @@ export const useNotifications = ({
 
   // Verificar se há novas notificações para tocar som e mostrar popup
   useEffect(() => {
-    const currentUnreadCount = notificationsData?.unreadCount || 0
+    const currentUnreadCount = notificationsData?.unreadCount ?? 0
 
     if (currentUnreadCount > lastUnreadCount) {
       // Tocar som se habilitado
@@ -151,105 +154,83 @@ export const useNotifications = ({
       }
 
       // Mostrar popup se disponível
-      if (typeof window !== 'undefined' && (window as any).showNotificationPopup) {
+      if (typeof window !== 'undefined' && 'showNotificationPopup' in window) {
         const latestNotification = notificationsData?.notifications?.[0]
         if (latestNotification) {
-          ;(window as any).showNotificationPopup({
-            title: latestNotification.title,
-            message: latestNotification.message,
-            type: latestNotification.type?.toLowerCase() || 'info',
-            duration: 5000,
-            actionUrl: latestNotification.actionUrl
-          })
+          const showNotificationPopup = (window as unknown as { showNotificationPopup?: (params: Record<string, unknown>) => void }).showNotificationPopup
+          if (showNotificationPopup) {
+            showNotificationPopup({
+              title: latestNotification.title,
+              message: latestNotification.message,
+              type: latestNotification.type?.toLowerCase() || 'info',
+              duration: 5000,
+              actionUrl: latestNotification.actionUrl
+            })
+          }
         }
       }
     }
 
     setLastUnreadCount(currentUnreadCount)
-  }, [notificationsData?.unreadCount, lastUnreadCount, enableSound, notificationsData?.notifications])
+  }, [notificationsData?.unreadCount, lastUnreadCount, enableSound, notificationsData?.notifications, playNotificationSound])
 
-  const loadMore = () => {
+  const loadMore = (): void => {
     if (notificationsData && notificationsData.notifications.length === limit) {
       setOffset(prev => prev + limit)
     }
   }
 
-  const resetOffset = () => {
+  const resetOffset = (): void => {
     setOffset(0)
   }
 
-    // Dados processados
-    const notifications = notificationsData?.notifications || []
-    const total = notificationsData?.total || 0
-    const unreadCount = notificationsData?.unreadCount || 0
-    const hasMore = notifications.length < total
+  // Dados processados
+  const notifications = (notificationsData?.notifications ?? []).map(notification => ({
+    ...notification,
+    actionUrl: notification.actionUrl ?? undefined,
+    entityId: notification.entityId ?? undefined,
+    entityType: notification.entityType ?? undefined
+  }))
+  const total = notificationsData?.total ?? 0
+  const unreadCount = notificationsData?.unreadCount ?? 0
+  const hasMore = notifications.length < total
 
-    return {
-      // Dados
-      notifications,
-      total,
-      unreadCount,
-      hasMore,
+  return {
+    // Dados
+    notifications,
+    total,
+    unreadCount,
+    hasMore,
 
-      // Estados
-      isLoading,
-      error,
+    // Estados
+    isLoading,
+    error,
 
-      // Ações
-      markAsRead,
-      markAllAsRead,
-      deleteNotification,
-      loadMore,
-      resetOffset,
-      refetch,
+    // Ações
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    loadMore,
+    resetOffset,
+    refetch,
 
-      // Estados das mutations
-      isMarkingAsRead: markAsReadMutation.isPending || false,
-      isMarkingAllAsRead: markAllAsReadMutation.isPending || false,
-      isDeleting: deleteMutation.isPending || false
-    }
-  } catch (err) {
-    // Fallback em caso de erro no tRPC
-    console.error('Erro no hook useNotifications:', err)
-    return {
-      notifications: [],
-      total: 0,
-      unreadCount: 0,
-      hasMore: false,
-      isLoading: false,
-      error: err,
-      markAsRead: async () => {},
-      markAllAsRead: async () => {},
-      deleteNotification: async () => {},
-      loadMore: () => {},
-      resetOffset: () => {},
-      refetch: async () => ({}),
-      isMarkingAsRead: false,
-      isMarkingAllAsRead: false,
-      isDeleting: false
-    }
+    // Estados das mutations
+    isMarkingAsRead: markAsReadMutation.isPending || false,
+    isMarkingAllAsRead: markAllAsReadMutation.isPending || false,
+    isDeleting: deleteMutation.isPending || false
   }
 }
 
 // Hook específico para contagem de notificações não lidas (para ícones/badges)
 export const useNotificationCount = () => {
-  try {
-    const notificationQuery = api.notification.list.useQuery({
-      limit: 1,
-      unreadOnly: true
-    })
+  const notificationQuery = api.notification.list.useQuery({
+    limit: 1,
+    unreadOnly: true
+  })
 
-    return {
-      unreadCount: notificationQuery.data?.unreadCount || 0,
-      isLoading: notificationQuery.isLoading || false,
-      refetch: notificationQuery.refetch
-    }
-  } catch (err) {
-    console.error('Erro no hook useNotificationCount:', err)
-    return {
-      unreadCount: 0,
-      isLoading: false,
-      refetch: async () => ({})
-    }
+  return {
+    unreadCount: notificationQuery.data?.unreadCount ?? 0,
+    isLoading: notificationQuery.isLoading || false,
+    refetch: notificationQuery.refetch
   }
 }

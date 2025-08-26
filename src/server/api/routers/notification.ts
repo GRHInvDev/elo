@@ -73,6 +73,7 @@ export const notificationRouter = createTRPCRouter({
       entityId: z.string().optional(),
       entityType: z.string().optional(),
       actionUrl: z.string().url().optional(),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: z.any().optional()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -86,7 +87,8 @@ export const notificationRouter = createTRPCRouter({
           entityId: input.entityId,
           entityType: input.entityType,
           actionUrl: input.actionUrl,
-          data: input.data
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: input.data
         }
       })
     }),
@@ -102,6 +104,7 @@ export const notificationRouter = createTRPCRouter({
       entityId: z.string().optional(),
       entityType: z.string().optional(),
       actionUrl: z.string().url().optional(),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: z.any().optional()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -114,6 +117,7 @@ export const notificationRouter = createTRPCRouter({
         entityId: input.entityId,
         entityType: input.entityType,
         actionUrl: input.actionUrl,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: input.data
       }))
 

@@ -1,20 +1,3 @@
-// Sistema de Configuração de Notificações
-// Este arquivo contém a configuração para ativar notificações em diferentes módulos
-//
-// Configurações disponíveis via variáveis de ambiente:
-// - NEXT_PUBLIC_NOTIFICATIONS_ENABLED: Habilita/desabilita notificações globalmente
-//
-// Funcionalidades futuras (não implementadas):
-// - NOTIFICATION_EMAIL_ENABLED: Configuração de email
-// - NOTIFICATION_EMAIL_FROM, NOTIFICATION_EMAIL_SMTP_*: Credenciais SMTP
-// - NOTIFICATION_PUSH_ENABLED: Configuração de push notifications
-// - NOTIFICATION_PUSH_SERVER_KEY: Chave do servidor push
-// - NOTIFICATION_REALTIME_ENABLED: Notificações em tempo real
-// - NOTIFICATION_REDIS_URL: URL do Redis para realtime
-// - NOTIFICATION_AUTO_CLEANUP_ENABLED: Limpeza automática
-// - NOTIFICATION_AUTO_CLEANUP_DAYS: Dias para limpeza (padrão: 30)
-// - NOTIFICATION_DEBUG_ENABLED: Logs de debug
-
 import { NotificationService } from './notification-service'
 
 // Flag para habilitar/desabilitar notificações globalmente
@@ -56,7 +39,9 @@ export class NotificationManager {
   private static instance: NotificationManager
   private config = NOTIFICATION_CONFIG
 
-  private constructor() {}
+  private constructor() {
+    // Construtor vazio necessário para singleton
+  }
 
   static getInstance(): NotificationManager {
     if (!NotificationManager.instance) {
@@ -73,7 +58,8 @@ export class NotificationManager {
   // Verificar se um evento específico está habilitado
   isEventEnabled(module: keyof typeof NOTIFICATION_CONFIG, event: string): boolean {
     const moduleConfig = this.config[module]
-    return moduleConfig.enabled && (moduleConfig.events as any)[event] === true
+    const events = moduleConfig.events as Record<string, boolean>
+    return moduleConfig.enabled && events[event] === true
   }
 
   // Notificações de Sugestões
@@ -209,5 +195,5 @@ export const useNotificationManager = () => {
 
 // Exportar para uso global
 if (typeof window !== 'undefined') {
-  (window as any).notificationManager = notificationManager
+  (window as Window & { notificationManager?: NotificationManager }).notificationManager = notificationManager
 }

@@ -172,7 +172,7 @@ export function KpiManagementModal({
           kpiIds: selectedKpiIds,
           kpiNames: selectedKpiIds.map(kpiId => {
             const kpi = allKpis.find(k => k.id === kpiId)
-            return kpi?.name || 'KPI'
+            return kpi?.name ?? 'KPI'
           }).join(', ')
         })
       }
