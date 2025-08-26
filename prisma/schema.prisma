@@ -430,7 +430,8 @@ model Suggestion {
   id                  String            @id @default(cuid())
   ideaNumber          Int               @unique @default(0)
 
-  userId              String            // Referência ao autor da sugestão
+  // relação com autor
+  userId              String
   user                User              @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
 
   // identificação visível/oculta
