@@ -206,7 +206,7 @@ export function NotificationItem({
                   </Button>
                 )}
 
-                {actionUrl && (
+                {actionUrl && !actionUrl.includes('/admin/') && (
                   <Button
                     variant="ghost"
                     size="sm"

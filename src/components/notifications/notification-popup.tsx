@@ -104,7 +104,7 @@ export function NotificationPopup({
               {message}
             </p>
 
-            {actionUrl && (
+            {actionUrl && !actionUrl.includes('/admin/') && (
               <Button
                 variant="ghost"
                 size="sm"

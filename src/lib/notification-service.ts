@@ -63,7 +63,7 @@ export class NotificationService {
       userId: authorId,
       entityId: suggestionId,
       entityType: "suggestion",
-      actionUrl: `/admin/suggestions?suggestion=${suggestionId}`
+      actionUrl: `/my-suggestions`
     })
   }
 
@@ -75,7 +75,7 @@ export class NotificationService {
       userId: userId,
       entityId: suggestionId,
       entityType: "suggestion",
-      actionUrl: `/admin/suggestions?suggestion=${suggestionId}`
+      actionUrl: `/my-suggestions`
     })
   }
 
@@ -87,7 +87,7 @@ export class NotificationService {
       userId: userId,
       entityId: suggestionId,
       entityType: "suggestion",
-      actionUrl: `/admin/suggestions?suggestion=${suggestionId}`
+      actionUrl: `/my-suggestions`
     })
   }
 
@@ -99,7 +99,7 @@ export class NotificationService {
       userId: userId,
       entityId: suggestionId,
       entityType: "suggestion",
-      actionUrl: `/admin/suggestions?suggestion=${suggestionId}`
+      actionUrl: `/my-suggestions`
     })
   }
 
@@ -112,7 +112,7 @@ export class NotificationService {
       userId: userId,
       entityId: suggestionId,
       entityType: "suggestion",
-      actionUrl: `/admin/suggestions?suggestion=${suggestionId}`
+      actionUrl: `/my-suggestions`
     })
   }
 
@@ -125,7 +125,7 @@ export class NotificationService {
       userId: userId,
       entityId: suggestionId,
       entityType: "suggestion",
-      actionUrl: `/admin/suggestions?suggestion=${suggestionId}`
+      actionUrl: `/my-suggestions`
     })
   }
 
