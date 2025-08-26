@@ -87,7 +87,39 @@ export const useNotifications = ({
     if (!enableSound) return
 
     try {
-      // Criar um som simples usando Web Audio API
+      // Tentar tocar arquivo de som primeiro
+      const audio = new Audio('/notification-sound.mp3')
+
+      // Configurações do áudio
+      audio.volume = 0.4 // Volume médio
+      audio.preload = 'auto'
+
+      // Evento quando o arquivo estiver carregado
+      audio.addEventListener('canplaythrough', () => {
+        audio.play().catch(error => {
+          console.warn('Erro ao tocar arquivo de som, tentando fallback:', error)
+          playFallbackSound()
+        })
+      })
+
+      // Fallback se o arquivo não carregar
+      audio.addEventListener('error', () => {
+        console.warn('Arquivo de som não encontrado, usando som gerado')
+        playFallbackSound()
+      })
+
+      // Tentar carregar o arquivo
+      audio.load()
+
+    } catch (error) {
+      console.error('Erro ao inicializar áudio, usando fallback:', error)
+      playFallbackSound()
+    }
+  }
+
+  // Som de fallback usando Web Audio API (caso o arquivo não exista)
+  const playFallbackSound = () => {
+    try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       const oscillator = audioContext.createOscillator()
       const gainNode = audioContext.createGain()
@@ -104,7 +136,7 @@ export const useNotifications = ({
       oscillator.start(audioContext.currentTime)
       oscillator.stop(audioContext.currentTime + 0.3)
     } catch (error) {
-      console.error('Erro ao tocar som de notificação:', error)
+      console.error('Erro ao tocar som de fallback:', error)
     }
   }
 

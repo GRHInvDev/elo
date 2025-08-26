@@ -163,7 +163,7 @@ await NotificationService.createNotification({
 ## 🎨 Personalização
 
 ### Estilos
-Os estilos são baseados em Tailwind CSS e podem ser personalizados através das classes CSS.
+Os estilos são baseados em Tailwind CSS e podem be personalizados através das classes CSS.
 
 ### Ícones
 Os ícones são emojis baseados no tipo de notificação, mas podem ser substituídos por ícones do Lucide React.
@@ -175,6 +175,36 @@ As cores seguem um padrão baseado no tipo:
 - **WARNING**: Amarelo
 - **INFO**: Azul
 - **SUGGESTION_***: Azul/variantes
+
+### 📢 Sistema de Som
+
+O sistema de notificações suporta arquivos de som personalizados:
+
+#### Como adicionar um arquivo de som:
+
+1. **Localização**: `public/notification-sound.mp3`
+2. **Formato recomendado**: MP3
+3. **Duração ideal**: 1-2 segundos
+4. **Volume**: Médio (sistema ajusta automaticamente para 40%)
+
+#### Características do som atual:
+
+- **Arquivo principal**: `public/notification-sound.mp3`
+- **Fallback**: Som gerado programaticamente (se arquivo não existir)
+- **Volume**: 40% do volume máximo
+- **Preload**: Automático
+- **Eventos**: Tocado quando nova notificação chega e som está habilitado
+
+#### Testando o som:
+
+O som é tocado automaticamente quando:
+- Uma nova notificação chega
+- A configuração de som está habilitada
+- O usuário tem a aba do navegador ativa
+
+#### Personalização:
+
+Para alterar o arquivo de som, simplesmente substitua `public/notification-sound.mp3` por seu arquivo personalizado.
 
 ## 🔍 Boas Práticas
 
