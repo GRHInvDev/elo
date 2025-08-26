@@ -33,7 +33,7 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
         </div>
         <div className="flex-shrink-0">
           <Image
-            src="/logoAllpines.webp"
+            src="/sugestao.webp"
             alt="Caixa de Sugestões"
             width={80}
             height={60}
