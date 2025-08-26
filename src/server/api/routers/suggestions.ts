@@ -107,7 +107,24 @@ export const suggestionRouter = createTRPCRouter({
         orderBy: { createdAt: "desc" },
         take: input?.take,
         skip: input?.skip,
-        include: {
+        select: {
+          id: true,
+          ideaNumber: true,
+          submittedName: true,
+          submittedSector: true,
+          isNameVisible: true,
+          description: true,
+          contribution: true,
+          dateRef: true,
+          impact: true,
+          capacity: true,
+          effort: true,
+          finalScore: true,
+          finalClassification: true,
+          status: true,
+          rejectionReason: true,
+          analystId: true,
+          createdAt: true,
           user: {
             select: {
               firstName: true,
@@ -142,7 +159,7 @@ export const suggestionRouter = createTRPCRouter({
     })
   }),
 
-  // Atualizações do admin (impact/capacity/effort/kpis/status/reason)
+  // Atualizações do admin (impact/capacity/effort/kpis/status/reason/analyst)
   updateAdmin: adminProcedure
     .input(z.object({
       id: z.string(),
@@ -152,6 +169,7 @@ export const suggestionRouter = createTRPCRouter({
       kpis: z.array(z.string()).optional(),
       status: StatusEnum.optional(),
       rejectionReason: z.string().optional(),
+      analystId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const prev = await ctx.db.suggestion.findUnique({
@@ -219,7 +237,7 @@ export const suggestionRouter = createTRPCRouter({
           kpis: (input.kpis ?? null) as InputJsonValue,
           status: input.status,
           rejectionReason: input.rejectionReason,
-          analystId: ctx.auth.userId,
+          analystId: input.analystId ?? ctx.auth.userId, // Usar analystId fornecido ou fallback para usuário atual
           finalScore,
           finalClassification: finalClassification as InputJsonValue,
         },
