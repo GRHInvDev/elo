@@ -8,9 +8,7 @@ export function SuggestionsWrapper() {
 
   return (
     <>
-      <div className="w-full max-w-6xl place-self-center">
-        <SuggestionsPreview onOpenModal={() => setSuggestionsModalOpen(true)} />
-      </div>
+      <SuggestionsPreview onOpenModal={() => setSuggestionsModalOpen(true)} />
 
       <SuggestionsModal
         isOpen={suggestionsModalOpen}
