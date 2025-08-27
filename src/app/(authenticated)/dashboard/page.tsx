@@ -1,6 +1,5 @@
 import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
-
 import { api } from "@/trpc/server"
 import { cn } from "@/lib/utils"
 import { LinkIcon, LucideGraduationCap, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
@@ -16,7 +15,7 @@ import { SuggestionsWrapper } from "./suggestions-wrapper"
 export default async function DashboardPage() {
   // Buscar dados usando server-side tRPC
   const birthdays = await api.birthday.listCurrentMonth()
-  const user = await api.user.me()
+  const user = await api.user.me() 
 
   const posts: {
     imageRef: string,

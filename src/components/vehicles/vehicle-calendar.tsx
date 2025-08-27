@@ -111,9 +111,7 @@ export function VehicleCalendar() {
 
                 const dateKey = format(startDate, "yyyy-MM-dd")
 
-                if (!grouped[dateKey]) {
-                    grouped[dateKey] = []
-                }
+                grouped[dateKey] ??= []
                 grouped[dateKey].push(reservation)
             })
         }
