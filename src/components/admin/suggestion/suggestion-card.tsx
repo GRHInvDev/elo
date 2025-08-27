@@ -24,28 +24,34 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
   return (
     <div
       onClick={onOpenModal}
-      className="cursor-pointer bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-950 dark:to-rose-900 rounded-lg p-4 border border-red-200 dark:border-red-800 hover:shadow-md transition-all duration-200"
+      className="cursor-pointer bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-950 dark:to-rose-900 rounded-lg p-3 md:p-4 border border-red-200 dark:border-red-800 hover:shadow-md transition-all duration-200 w-full"
     >
-      <div className="flex items-center gap-4 mb-3">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-red-900 dark:text-red-100">Ideias em ação</h3>
-          <p className="text-sm text-red-700 dark:text-red-300">Registre aqui a sua sugestão. Sua ideia pode ser premiada!</p>
-        </div>
+      <div className="flex flex-col items-center text-center gap-3">
         <div className="flex-shrink-0">
           <Image
             src="/sugestao.webp"
             alt="Ideias em Acao"
-            width={80}
-            height={60}
-            className="rounded-lg object-cover border border-red-200 dark:border-red-700"
+            width={60}
+            height={45}
+            className="rounded-lg object-cover border border-red-200 dark:border-red-700 w-16 h-12 md:w-12 md:h-9"
           />
         </div>
-      </div>
-      <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-        Clique para abrir o formulário
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+
+        <div className="flex-1 space-y-2">
+          <h3 className="text-base md:text-lg font-semibold text-red-900 dark:text-red-100">
+            Ideias em ação
+          </h3>
+          <p className="text-xs md:text-sm text-red-700 dark:text-red-300 leading-relaxed">
+            Registre aqui a sua sugestão. Sua ideia pode ser premiada!
+          </p>
+        </div>
+
+        <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+          Clique para abrir o formulário
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
       </div>
     </div>
   )
@@ -251,14 +257,14 @@ export function SuggestionsCard() {
 
               {/* Problema */}
               <div className="space-y-2">
-                <Label htmlFor="problema">Problema identificado *</Label>
+                <Label htmlFor="problema" className="text-sm md:text-base">Problema identificado *</Label>
                 <Textarea
                   id="problema"
                   value={problema}
                   onChange={(e) => setProblema(e.target.value)}
                   placeholder="Descreva o problema que você identificou..."
                   rows={3}
-                  className="resize-none"
+                  className="resize-none text-sm md:text-base"
                 />
                 <p className="text-xs text-muted-foreground">
                   Seja específico sobre o problema que precisa ser resolvido.
@@ -267,14 +273,14 @@ export function SuggestionsCard() {
 
               {/* Solução */}
               <div className="space-y-2">
-                <Label htmlFor="solucao">Solução proposta *</Label>
+                <Label htmlFor="solucao" className="text-sm md:text-base">Solução proposta *</Label>
                 <Textarea
                   id="solucao"
                   value={solucao}
                   onChange={(e) => setSolucao(e.target.value)}
                   placeholder="Descreva a solução que você propõe..."
                   rows={3}
-                  className="resize-none"
+                  className="resize-none text-sm md:text-base"
                 />
                 <p className="text-xs text-muted-foreground">
                   Detalhe como sua solução pode resolver o problema identificado.
@@ -389,13 +395,13 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="flex items-center gap-2 md:gap-3">
             <div className="p-2 bg-red-100 rounded-lg">
-              <Lightbulb className="h-5 w-5 text-red-600" />
+              <Lightbulb className="h-4 w-4 md:h-5 md:w-5 text-red-600" />
             </div>
-            Caixa de Sugestões
+            <span className="text-lg md:text-xl">Caixa de Sugestões</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -406,9 +412,9 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             <div className="h-20 bg-gray-200 rounded"></div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Informações do usuário */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div className="space-y-2">
                 <Label>Nome do colaborador</Label>
                 {!hideName && (
@@ -517,18 +523,19 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             </div>
 
             {/* Botão de envio */}
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={create.isPending}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={create.isPending || !problema.trim() || !solucao.trim()}
-                className="min-w-[120px]"
+                className="w-full sm:w-auto min-w-[120px]"
               >
                 {create.isPending ? "Enviando..." : "Enviar Sugestão"}
               </Button>
