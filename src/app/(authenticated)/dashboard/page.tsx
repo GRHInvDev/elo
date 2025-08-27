@@ -1,6 +1,6 @@
 import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
-import { SuggestionsPreview, SuggestionsModal } from "@/components/admin/suggestion/suggestion-card"
+
 import { api } from "@/trpc/server"
 import { cn } from "@/lib/utils"
 import { LinkIcon, LucideGraduationCap, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
@@ -64,12 +64,12 @@ export default async function DashboardPage() {
             title: b.name
           }))}/>
         }
-        <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-3 h-fit">
           {
             videos.length> 0 &&
             <VideosCarousel className="col-span-1 md:col-span-2" itens={videos}/>
           }
-          <div className="p-4 md:p-8 col-span-1 space-y-4">
+          <div className="p-4 md:p-8 col-span-1 h-full">
   
             
             <div className="md:hidden">
@@ -89,34 +89,36 @@ export default async function DashboardPage() {
                 }
               </div>
             </div>
-            <div className="bg-muted rounded-md p-3">
-              <div className="flex gap-2 items-center text-sm font-semibold">
-                <LinkIcon className="size-4"/>
-                Links
+            <div className="flex flex-col gap-14 h-full">
+              <div className="bg-muted rounded-md p-3 flex-1 flex flex-col">
+                <div className="flex gap-2 items-center text-sm font-semibold mb-3">
+                  <LinkIcon className="size-4"/>
+                  Links
+                </div>
+                <div className="grid grid-cols-2 gap-2 flex-1">
+                  <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
+                    <Image src="/umentor.jpg" height={24} width={24} className="rounded-md mr-2" alt="umentor"/>
+                    <span className="text-xs">Umentor</span>
+                  </Link>
+                  <Link href={'https://cristaluni.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
+                    <LucideGraduationCap className="size-5 mr-2"/>
+                    <span className="text-xs">CristalUni</span>
+                  </Link>
+                  <Link href={'https://boxdistribuidor.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
+                    <Image src="/LOGO BOX.png" height={24} width={24} className="rounded-md mr-2" alt="Site Box"/>
+                    <span className="text-xs">Site Box</span>
+                  </Link>
+                  <Link href={'https://cristallux.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
+                    <Image src="/icon_cristal.svg" height={24} width={24} className="rounded-md mr-2" alt="Cristaluni"/>
+                    <span className="text-xs">Cristallux</span>
+                  </Link>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                  <Image src="/umentor.jpg" height={24} width={24} className="rounded-md mr-2" alt="umentor"/>
-                  <span className="text-xs">Umentor</span>
-                </Link>
-                <Link href={'https://cristaluni.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                  <LucideGraduationCap className="size-5 mr-2"/>
-                  <span className="text-xs">CristalUni</span>
-                </Link>
-                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                  <Image src="/LOGO BOX.png" height={24} width={24} className="rounded-md mr-2" alt="Site Box"/>
-                  <span className="text-xs">Site Box</span>
-                </Link>
-                <Link href={'https://cristallux.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                  <Image src="/icon_cristal.svg" height={24} width={24} className="rounded-md mr-2" alt="Cristaluni"/>
-                  <span className="text-xs">Cristallux</span>
-                </Link>
-              </div>
-            </div>
               {/* Card de Sugestões */}
-              <div className="w-full">
+              <div className="flex-1">
                 <SuggestionsWrapper />
               </div>
+            </div>
           </div>
         </div>
       </div>
