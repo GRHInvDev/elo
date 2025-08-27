@@ -98,7 +98,7 @@ function getStatusColor(status: string): string {
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
-  const user = (dbSuggestion as any).user || { firstName: null, lastName: null, email: "", setor: null };
+  const user = (dbSuggestion as any).user ?? { firstName: null, lastName: null, email: "", setor: null };
   const analyst = (dbSuggestion as any).analyst;
 
   return {
@@ -108,7 +108,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     submittedSector: user.setor,
     isNameVisible: dbSuggestion.isNameVisible,
     description: dbSuggestion.description || "", // Solução proposta
-    problem: (dbSuggestion as any).problem || null, // Problema identificado
+    problem: (dbSuggestion as any).problem ?? null, // Problema identificado
     contribution: (dbSuggestion as any).contribution ? (dbSuggestion as any).contribution as { type: string; other?: string } : { type: "", other: undefined },
     dateRef: dbSuggestion.dateRef,
     impact: (dbSuggestion as any).impact ? (dbSuggestion as any).impact as { label: string; score: number } : null,

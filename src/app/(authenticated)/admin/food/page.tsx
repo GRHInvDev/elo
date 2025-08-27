@@ -138,13 +138,11 @@ export default function AdminFoodPage() {
         const email = order.user?.email ?? "(sem email)"
         const nome = `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim()
         const valor = order.menuItem?.price ?? 0
-        if (!resumoPorUsuario[email]) {
-          resumoPorUsuario[email] = {
-            nome,
-            email,
-            totalPedidos: 0,
-            valorTotal: 0,
-          }
+        resumoPorUsuario[email] ??= {
+          nome,
+          email,
+          totalPedidos: 0,
+          valorTotal: 0,
         }
         resumoPorUsuario[email].totalPedidos += 1
         resumoPorUsuario[email].valorTotal += valor

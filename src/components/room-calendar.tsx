@@ -61,9 +61,7 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
   const bookingsByDate = visible.reduce(
     (acc, booking) => {
       const dateKey = format(booking.start, "yyyy-MM-dd")
-      if (!acc[dateKey]) {
-        acc[dateKey] = []
-      }
+      acc[dateKey] ??= []
       acc[dateKey].push(booking) // chegeui e tava assim, se possível, deixar
       return acc
     },
