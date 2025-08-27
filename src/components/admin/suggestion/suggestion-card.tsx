@@ -28,13 +28,13 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
     >
       <div className="flex items-center gap-4 mb-3">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-red-900 dark:text-red-100">Caixa de Sugestões</h3>
-          <p className="text-sm text-red-700 dark:text-red-300">Descreva sua sugestão</p>
+          <h3 className="text-lg font-semibold text-red-900 dark:text-red-100">Ideias em ação</h3>
+          <p className="text-sm text-red-700 dark:text-red-300">Registre aqui a sua sugestão. Sua ideia pode ser premiada!</p>
         </div>
         <div className="flex-shrink-0">
           <Image
             src="/sugestao.webp"
-            alt="Caixa de Sugestões"
+            alt="Ideias em Acao"
             width={80}
             height={60}
             className="rounded-lg object-cover border border-red-200 dark:border-red-700"
