@@ -29,7 +29,7 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
       <div className="flex items-center gap-4 mb-3">
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-red-900 dark:text-red-100">Caixa de Sugestões</h3>
-          <p className="text-sm text-red-700 dark:text-red-300">Compartilhe suas ideias</p>
+          <p className="text-sm text-red-700 dark:text-red-300">Descreva sua sugestão</p>
         </div>
         <div className="flex-shrink-0">
           <Image
@@ -165,7 +165,7 @@ export function SuggestionsCard() {
               <div className="text-left">
                 <h3 className="text-lg font-semibold">Caixa de Sugestões</h3>
                 <p className="text-sm text-muted-foreground">
-                  Compartilhe suas ideias e contribuições
+                  Descreva sua sugestão
                 </p>
               </div>
             </div>

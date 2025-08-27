@@ -95,26 +95,28 @@ export default async function DashboardPage() {
                 Links
               </div>
               <div className="grid grid-cols-2 gap-2 mt-3">
-                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
                   <Image src="/umentor.jpg" height={24} width={24} className="rounded-md mr-2" alt="umentor"/>
                   <span className="text-xs">Umentor</span>
                 </Link>
-                <Link href={'https://cristaluni.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                <Link href={'https://cristaluni.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
                   <LucideGraduationCap className="size-5 mr-2"/>
                   <span className="text-xs">CristalUni</span>
                 </Link>
-                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
                   <Image src="/LOGO BOX.png" height={24} width={24} className="rounded-md mr-2" alt="Site Box"/>
                   <span className="text-xs">Site Box</span>
                 </Link>
-                <Link href={'https://cristallux.com.br'} className="flex items-center hover:pl-1 hover:py-1 transition-all duration-300 rounded-md p-2 bg-background/50 hover:bg-background/80">
+                <Link href={'https://cristallux.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
                   <Image src="/icon_cristal.svg" height={24} width={24} className="rounded-md mr-2" alt="Cristaluni"/>
                   <span className="text-xs">Cristallux</span>
                 </Link>
               </div>
             </div>
               {/* Card de Sugestões */}
-              <SuggestionsWrapper />
+              <div className="w-full">
+                <SuggestionsWrapper />
+              </div>
           </div>
         </div>
       </div>
