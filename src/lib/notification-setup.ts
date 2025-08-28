@@ -62,7 +62,7 @@ export class NotificationManager {
     return moduleConfig.enabled && events[event] === true
   }
 
-  // Notificações de Sugestões
+  // Notificações de ideias
   async notifySuggestionCreated(suggestionId: string, authorId: string, suggestionNumber: number) {
     if (this.isEventEnabled('suggestions', 'onCreate')) {
       try {

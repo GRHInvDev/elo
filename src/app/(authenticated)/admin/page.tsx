@@ -54,11 +54,11 @@ export default function Page() {
                             <CardHeader>
                             <Lightbulb/>
                             <CardTitle>
-                                    Sugestões
+                                    Ideias
                                 </CardTitle>
                             </CardHeader>
                             <CardFooter>
-                                <CardDescription>Gerencie as sugestões 💡</CardDescription>
+                                <CardDescription>Gerencie as Ideias 💡</CardDescription>
                             </CardFooter>
                         </Card>
                     </Link>

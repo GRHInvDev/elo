@@ -126,7 +126,7 @@ export function NotificationItem({
       await handleMarkAsRead(mockEvent)
     }
 
-    // Verificar se a notificação está relacionada a sugestões
+    // Verificar se a notificação está relacionada a Ideias
     const isSuggestionNotification = type && [
       'SUGGESTION_CREATED',
       'SUGGESTION_UPDATED',
@@ -135,7 +135,7 @@ export function NotificationItem({
     ].includes(type)
 
     if (isSuggestionNotification) {
-      // Redirecionar para a página de minhas sugestões
+      // Redirecionar para a página de minhas Ideias
       router.push('/my-suggestions')
       return
     }

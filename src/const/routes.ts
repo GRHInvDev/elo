@@ -73,9 +73,9 @@ export const routeItems = (role: UserRole): {
       href: "/shop",
     },
     {
-      title: "Minhas Sugestões",
+      title: "Minhas Ideias",
       icon: LucideLightbulb,
-      describe: "Visualizar e acompanhar o status das suas sugestões enviadas",
+      describe: "Visualizar e acompanhar o status das suas ideias enviadas",
       href: "/my-suggestions",
     },
     {
