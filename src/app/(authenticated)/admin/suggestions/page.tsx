@@ -16,7 +16,7 @@ import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
-import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X } from "lucide-react"
+import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, ChevronDown, ChevronUp } from "lucide-react"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -1433,6 +1433,7 @@ export default function AdminSuggestionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [analystFilter, setAnalystFilter] = useState<string | null>(null)
   const [showMyTasks, setShowMyTasks] = useState<boolean>(false)
+  const [showFilters, setShowFilters] = useState<boolean>(false)
 
   // Estados para o modal de KPIs
   const [kpiModalOpen, setKpiModalOpen] = useState(false)
@@ -1766,49 +1767,124 @@ export default function AdminSuggestionsPage() {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Ideias em ação</h1>
-            <p className="text-muted-foreground mt-2">Avalie, classifique e acompanhe o status das ideias.</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Ideias em ação</h1>
+            <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">
+              Avalie, classifique e acompanhe o status das ideias.
+            </p>
           </div>
         </div>
       </div>
 
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">Ordenar por numeração:</Label>
-              <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Maior → Menor</SelectItem>
-                  <SelectItem value="asc">Menor → Maior</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* Botão para mostrar/ocultar filtros em mobile */}
+        <div className="lg:hidden mb-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+            {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </div>
+
+        {/* Filtros Desktop - Mantém o layout original */}
+        <div className="hidden lg:block">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">Ordenar por numeração:</Label>
+                <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Maior → Menor</SelectItem>
+                    <SelectItem value="asc">Menor → Maior</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">Filtrar por responsável:</Label>
+                <UserSelector
+                  value={analystFilter}
+                  onValueChange={(value) => setAnalystFilter(value)}
+                  disabled={false}
+                />
+                {analystFilter && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAnalystFilter(null)}
+                    className="ml-1"
+                  >
+                    <X className="w-4 h-4" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="show-my-tasks"
+                  checked={showMyTasks}
+                  onCheckedChange={(checked) => {
+                    setShowMyTasks(checked as boolean)
+                    // Se marcar "Minhas pendências", limpar o filtro de responsável
+                    if (checked) {
+                      setAnalystFilter(null)
+                    }
+                  }}
+                  disabled={!currentUser}
+                />
+                <Label htmlFor="show-my-tasks" className="text-sm cursor-pointer">
+                  Minhas pendências
+                </Label>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">Filtrar por responsável:</Label>
-              <UserSelector
-                value={analystFilter}
-                onValueChange={(value) => setAnalystFilter(value)}
-                disabled={false}
-              />
-              {analystFilter && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAnalystFilter(null)}
-                  className="ml-1"
-                >
-                  <X className="w-4 h-4" />
-                  Limpar
-                </Button>
-              )}
+          </div>
+        </div>
+
+        {/* Filtros Mobile - Versão responsiva */}
+        {showFilters && (
+          <div className="lg:hidden space-y-3 mb-4 border rounded-lg p-4 bg-card">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <Label className="text-sm font-medium mb-2 block">Ordenação</Label>
+                <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Maior → Menor</SelectItem>
+                    <SelectItem value="asc">Menor → Maior</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label className="text-sm font-medium mb-2 block">Responsável</Label>
+                <UserSelector
+                  value={analystFilter}
+                  onValueChange={(value) => setAnalystFilter(value)}
+                  disabled={false}
+                />
+                {analystFilter && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAnalystFilter(null)}
+                    className="mt-2 w-full"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Limpar Filtro
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
               <Checkbox
-                id="show-my-tasks"
+                id="show-my-tasks-mobile"
                 checked={showMyTasks}
                 onCheckedChange={(checked) => {
                   setShowMyTasks(checked as boolean)
@@ -1819,26 +1895,31 @@ export default function AdminSuggestionsPage() {
                 }}
                 disabled={!currentUser}
               />
-              <Label htmlFor="show-my-tasks" className="text-sm cursor-pointer">
-                Minhas pendências
+              <Label htmlFor="show-my-tasks-mobile" className="text-sm cursor-pointer font-medium">
+                Mostrar apenas minhas pendências
               </Label>
             </div>
           </div>
-        </div>
+        )}
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3">
             {STATUS.map((st) => (
               <Droppable droppableId={st} key={st}>
                 {(provided) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`rounded-lg border p-3 ${getStatusColor(st)}`}
+                    className={`rounded-lg border p-2 md:p-3 ${getStatusColor(st)}`}
                   >
-                    <div className="font-medium mb-1">
-                      {st} ({kanbanColumns[st]?.length ?? 0})
+                    <div className="font-medium mb-1 text-sm md:text-base">
+                      <div className="truncate" title={st}>
+                        {st}
+                      </div>
+                      <div className="text-xs opacity-75">
+                        ({kanbanColumns[st]?.length ?? 0})
+                      </div>
                     </div>
-                    <div className="max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
+                    <div className="max-h-[400px] md:max-h-[600px] lg:max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
                       {kanbanColumns[st]?.map((s, index) => {
                         const impactData = s.impact as { score?: number; text?: string } | null
                         const capacityData = s.capacity as { score?: number; text?: string } | null
@@ -1859,26 +1940,30 @@ export default function AdminSuggestionsPage() {
                                   className="bg-background/80 cursor-pointer hover:bg-background/90 transition-colors"
                                   onClick={() => openSuggestionModal(s)}
                                 >
-                                  <CardContent className="p-2">
-                                    <div className="text-sm font-medium truncate">#{formatIdeaNumber(s.ideaNumber)} — {(s.problem ?? "Sem problema definido").substring(0, 30)}...</div>
-                                    <div className="text-xs text-muted-foreground mb-1">
-                                      {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
+                                  <CardContent className="p-2 md:p-3">
+                                    <div className="text-xs md:text-sm font-medium truncate mb-1">
+                                      #{formatIdeaNumber(s.ideaNumber)} — {(s.problem ?? "Sem problema definido").substring(0, 25)}...
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mb-2">
+                                      <div className="truncate">
+                                        {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
+                                      </div>
                                       {s.isNameVisible && (s.submittedSector ?? s.user.setor) && (
-                                        <span className="ml-1 text-[10px] bg-muted px-1 py-0.5 rounded">
+                                        <span className="ml-1 text-[9px] md:text-[10px] bg-muted px-1 py-0.5 rounded inline-block mt-1">
                                           {s.submittedSector ?? s.user.setor}
                                         </span>
                                       )}
                                     </div>
                                     {/* Pontuação no Kanban */}
-                                    <div className="flex items-center justify-between">
-                                      <div className="text-xs font-medium">
-                                        Pontuação: {pontuacao}
+                                    <div className="flex items-center justify-between gap-1">
+                                      <div className="text-xs font-medium flex-shrink-0">
+                                        {pontuacao} pts
                                       </div>
                                       {/* Tag de Pagamento */}
                                       {s.payment && (
                                         <Badge
                                           variant="outline"
-                                          className={`text-xs px-1.5 py-0.5 font-medium ${
+                                          className={`text-[10px] px-1 py-0 font-medium flex-shrink-0 ${
                                             s.payment.status === "paid"
                                               ? "bg-green-50 text-green-700 border-green-200"
                                               : "bg-orange-50 text-orange-700 border-orange-200"
@@ -1945,13 +2030,15 @@ export default function AdminSuggestionsPage() {
 
       {/* Modal de Detalhes da Sugestão */}
       <Dialog open={isSuggestionModalOpen} onOpenChange={setIsSuggestionModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit className="w-5 h-5" />
-              Sugestão #{selectedSuggestion ? formatIdeaNumber(selectedSuggestion.ideaNumber) : ''}
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 md:p-6">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
+              <Edit className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="truncate">
+                Sugestão #{selectedSuggestion ? formatIdeaNumber(selectedSuggestion.ideaNumber) : ''}
+              </span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               Avalie e classifique a sugestão com impacto, capacidade e esforço.
             </DialogDescription>
           </DialogHeader>
