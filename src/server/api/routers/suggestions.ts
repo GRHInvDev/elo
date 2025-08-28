@@ -124,6 +124,8 @@ export const suggestionRouter = createTRPCRouter({
           status: true,
           rejectionReason: true,
           analystId: true,
+          payment: true,
+          paymentDate: true,
           createdAt: true,
           user: {
             select: {
@@ -245,7 +247,7 @@ export const suggestionRouter = createTRPCRouter({
           status: input.status,
           rejectionReason: input.rejectionReason,
           analystId: input.analystId, // Usar apenas o analystId fornecido explicitamente
-          payment: input.payment ? (input.payment as InputJsonValue) : undefined,
+          payment: input.payment ? (input.payment as Prisma.InputJsonValue) : undefined,
           paymentDate: input.paymentDate,
           finalScore,
           finalClassification: finalClassification as InputJsonValue,
@@ -418,6 +420,8 @@ export const suggestionRouter = createTRPCRouter({
           status: true,
           rejectionReason: true,
           analystId: true,
+          payment: true,
+          paymentDate: true,
           createdAt: true,
           user: {
             select: {
