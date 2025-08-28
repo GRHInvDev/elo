@@ -15,7 +15,7 @@ import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
-import { Plus, Edit, Trash2, Check, ChevronsUpDown } from "lucide-react"
+import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings } from "lucide-react"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -67,7 +67,7 @@ type ClassificationModal = {
 
 const STATUS_MAPPING = {
   "NEW": "Novo",
-  "IN_REVIEW": "Em avaliação",
+  "IN_REVIEW": "Em avaliação", 
   "APPROVED": "Em orçamento",
   "IN_PROGRESS": "Em execução",
   "DONE": "Concluído",
@@ -233,7 +233,8 @@ function ClassificationInlineField({
   type,
   pool,
   onSave,
-  createClassification
+  createClassification,
+  getSimilarClassifications
 }: {
   label: string
   score: number
@@ -242,10 +243,30 @@ function ClassificationInlineField({
   pool: ClassItem[]
   onSave: (classification: { label: string; score: number }) => void
   createClassification: ReturnType<typeof api.classification.create.useMutation>
+  getSimilarClassifications: (searchTerm: string, type: 'impact' | 'capacity' | 'effort') => ClassItem[]
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const [selectedScore, setSelectedScore] = useState(0)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+
+  // Atualizar valores quando o componente recebe um novo valor
+  useEffect(() => {
+    if (!isEditing && value) {
+      setInputValue(value.label)
+      setSelectedScore(value.score)
+    }
+  }, [value, isEditing])
+
+  // Função para iniciar edição com valores atuais
+  const startEditing = () => {
+    if (value) {
+      setInputValue(value.label)
+      setSelectedScore(value.score)
+    }
+    setIsEditing(true)
+  }
 
   const getDBType = () => {
     switch (type) {
@@ -256,13 +277,35 @@ function ClassificationInlineField({
     }
   }
 
+  // Filtrar classificações similares baseado no input usando busca dinâmica
+  const filteredClassifications = inputValue.length > 0
+    ? getSimilarClassifications(inputValue, type).filter(item =>
+        item.label.toLowerCase() !== inputValue.toLowerCase().trim()
+      ).slice(0, 5) // Limitar a 5 sugestões
+    : []
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value)
+    setShowSuggestions(value.length > 0) // Mostrar sugestões assim que começar a digitar
+    setSelectedSuggestionIndex(-1) // Resetar seleção quando digitar
+  }
+
+  const selectExistingClassification = (classification: ClassItem) => {
+    onSave({ label: classification.label, score: classification.score })
+    setIsEditing(false)
+    setInputValue("")
+    setSelectedScore(0)
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+  }
+
   const handleSave = () => {
     if (!inputValue.trim()) {
       setIsEditing(false)
       return
     }
 
-    // Verificar se já existe uma classificação com esse nome
+    // Verificar se já existe uma classificação com esse nome (tanto no pool local quanto no banco)
     const existingClassification = pool.find(item =>
       item.label.toLowerCase() === inputValue.trim().toLowerCase()
     )
@@ -274,17 +317,30 @@ function ClassificationInlineField({
       setInputValue("")
       setSelectedScore(0)
     } else {
-      // Criar nova classificação
+      // Criar nova classificação com verificação adicional no banco
       createClassification.mutate({
         label: inputValue.trim(),
         score: selectedScore,
         type: getDBType()
       }, {
-        onSuccess: () => {
-          onSave({ label: inputValue.trim(), score: selectedScore })
+        onSuccess: (newClassification) => {
+          onSave({ label: newClassification.label, score: newClassification.score })
           setIsEditing(false)
           setInputValue("")
           setSelectedScore(0)
+          setSelectedSuggestionIndex(-1)
+        },
+        onError: (error) => {
+          // Se já existe uma classificação com mesmo nome e tipo, buscar e usar a existente
+          if (error.message.includes('Unique constraint failed')) {
+            toast({ title: "Classificação já existe", description: "Usando classificação existente com mesmo nome." })
+            // Como fallback, informar o usuário para tentar novamente
+            toast({ title: "Erro ao criar classificação", description: "Já existe uma classificação com este nome. Tente recarregar a página." })
+          }
+          setIsEditing(false)
+          setInputValue("")
+          setSelectedScore(0)
+          setSelectedSuggestionIndex(-1)
         }
       })
     }
@@ -292,17 +348,35 @@ function ClassificationInlineField({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSave()
+      if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < filteredClassifications.length) {
+        // Selecionar sugestão com Enter
+        const selectedClassification = filteredClassifications[selectedSuggestionIndex]
+        if (selectedClassification) {
+          selectExistingClassification(selectedClassification)
+        }
+      } else {
+        handleSave()
+      }
     } else if (e.key === 'Escape') {
       setIsEditing(false)
       setInputValue("")
       setSelectedScore(0)
+      setShowSuggestions(false)
+      setSelectedSuggestionIndex(-1)
+    } else if (e.key === 'ArrowDown' && filteredClassifications.length > 0) {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev =>
+        prev < filteredClassifications.length - 1 ? prev + 1 : 0
+      )
+    } else if (e.key === 'ArrowUp' && filteredClassifications.length > 0) {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev =>
+        prev > 0 ? prev - 1 : filteredClassifications.length - 1
+      )
     }
   }
 
-  const filteredPool = pool.filter(item =>
-    item.label.toLowerCase().includes(inputValue.toLowerCase())
-  )
+
 
   if (isEditing) {
     return (
@@ -312,27 +386,27 @@ function ClassificationInlineField({
           <div className="relative">
             <Input
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={`Digite ${label.toLowerCase()}...`}
-              className="pr-8"
               autoFocus
             />
-            {inputValue && filteredPool.length > 0 && (
+            {showSuggestions && filteredClassifications.length > 0 && (
               <div className="absolute top-full left-0 right-0 z-10 bg-background border rounded-b-md shadow-lg max-h-40 overflow-y-auto">
-                {filteredPool.map((item) => (
+                {filteredClassifications.map((item, index) => (
                   <button
                     key={item.id}
                     type="button"
-                    className="w-full px-3 py-2 text-left hover:bg-muted text-sm"
-                    onClick={() => {
-                      setInputValue(item.label)
-                      setSelectedScore(item.score)
-                    }}
+                    className={`w-full px-3 py-2 text-left hover:bg-muted text-sm ${
+                      index === selectedSuggestionIndex ? 'bg-muted' : ''
+                    }`}
+                    onClick={() => selectExistingClassification(item)}
                   >
-                    <div className="flex justify-between">
-                      <span>{item.label}</span>
-                      <span className="text-muted-foreground">{item.score} pontos</span>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{item.label}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {item.score} pontos
+                      </Badge>
                     </div>
                   </button>
                 ))}
@@ -362,6 +436,8 @@ function ClassificationInlineField({
                 setIsEditing(false)
                 setInputValue("")
                 setSelectedScore(0)
+                setShowSuggestions(false)
+                setSelectedSuggestionIndex(-1)
               }}
             >
               Cancelar
@@ -377,9 +453,18 @@ function ClassificationInlineField({
       <Label className="text-sm">{label} ({score})</Label>
       <div
         className="p-2 border rounded text-sm bg-muted cursor-pointer hover:bg-muted/80 transition-colors"
-        onClick={() => setIsEditing(true)}
+        onClick={startEditing}
       >
-        {value?.label ?? "Clique para classificar"}
+        {value ? (
+          <div className="flex justify-between items-center">
+            <span className="font-medium">{value.label}</span>
+            <Badge variant="secondary" className="text-xs">
+              {value.score} pontos
+            </Badge>
+          </div>
+        ) : (
+          "Clique para classificar"
+        )}
       </div>
     </div>
   )
@@ -397,7 +482,6 @@ function KpiInlineField({
 }) {
   const [isAddingKpi, setIsAddingKpi] = useState(false)
   const [inputValue, setInputValue] = useState("")
-  const [descriptionValue, setDescriptionValue] = useState("")
 
   // Buscar KPIs existentes para autocomplete
   const { data: allKpis = [] } = api.kpi.listActive.useQuery()
@@ -413,7 +497,6 @@ function KpiInlineField({
           onKpisChange(updatedKpis)
           setIsAddingKpi(false)
           setInputValue("")
-          setDescriptionValue("")
           toast({ title: "KPI criado e vinculado", description: "Novo KPI adicionado com sucesso." })
         }
       }).mutate({
@@ -439,7 +522,6 @@ function KpiInlineField({
     if (!inputValue.trim()) {
       setIsAddingKpi(false)
       setInputValue("")
-      setDescriptionValue("")
       return
     }
 
@@ -454,7 +536,6 @@ function KpiInlineField({
         toast({ title: "KPI já vinculado", description: "Este KPI já está associado à sugestão." })
         setIsAddingKpi(false)
         setInputValue("")
-        setDescriptionValue("")
         return
       }
 
@@ -472,14 +553,12 @@ function KpiInlineField({
           onKpisChange(updatedKpis)
           setIsAddingKpi(false)
           setInputValue("")
-          setDescriptionValue("")
         }
       })
     } else {
       // Criar novo KPI
       createKpi.mutate({
         name: inputValue.trim(),
-        description: descriptionValue.trim() || undefined,
       })
     }
   }
@@ -490,7 +569,6 @@ function KpiInlineField({
     } else if (e.key === 'Escape') {
       setIsAddingKpi(false)
       setInputValue("")
-      setDescriptionValue("")
     }
   }
 
@@ -522,11 +600,6 @@ function KpiInlineField({
             <div key={kpi.id} className="flex items-start justify-between p-3 bg-muted/50 rounded border">
               <div className="flex-1">
                 <div className="font-medium text-sm">{kpi.name}</div>
-                {kpi.description && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {kpi.description}
-                  </div>
-                )}
               </div>
               <Button
                 variant="ghost"
@@ -565,29 +638,16 @@ function KpiInlineField({
                     className="w-full px-3 py-2 text-left hover:bg-muted text-sm"
                     onClick={() => {
                       setInputValue(kpi.name)
-                      setDescriptionValue(kpi.description ?? "")
                     }}
                   >
                     <div>
                       <span className="font-medium">{kpi.name}</span>
-                      {kpi.description && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {kpi.description}
-                        </div>
-                      )}
                     </div>
                   </button>
                 ))}
               </div>
             )}
           </div>
-          <Textarea
-            value={descriptionValue}
-            onChange={(e) => setDescriptionValue(e.target.value)}
-            placeholder="Descrição do KPI (opcional)..."
-            rows={2}
-            className="resize-none"
-          />
           <div className="flex gap-2">
             <Button size="sm" onClick={handleSave} disabled={createKpi.isPending || linkToSuggestion.isPending}>
               {(createKpi.isPending || linkToSuggestion.isPending) ? "Salvando..." : "Salvar"}
@@ -598,7 +658,6 @@ function KpiInlineField({
               onClick={() => {
                 setIsAddingKpi(false)
                 setInputValue("")
-                setDescriptionValue("")
               }}
             >
               Cancelar
@@ -662,24 +721,13 @@ export default function AdminSuggestionsPage() {
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null)
   const [selectedKpiIds, setSelectedKpiIds] = useState<string[]>([])
 
-  // Estado para modal de motivo obrigatório para "Não implantado"
-  const [rejectionReasonModal, setRejectionReasonModal] = useState<{
-    isOpen: boolean
-    suggestionId: string | null
-    newStatus: string | null
-  }>({
-    isOpen: false,
-    suggestionId: null,
-    newStatus: null
-  })
+  // Estado para controlar se o campo de motivo está expandido
+  const [expandedReasonFields, setExpandedReasonFields] = useState<Set<string>>(new Set())
 
-  // Função para abrir o modal de KPIs
-  const openKpiModal = (suggestionId: string) => {
-    console.log('openKpiModal called with suggestionId:', suggestionId)
-    setSelectedSuggestionId(suggestionId)
-    // Os KPIs serão carregados automaticamente pela query quando selectedSuggestionId mudar
-    setKpiModalOpen(true)
-  }
+  // Estado para modal de gerenciamento de classificações
+  const [isClassificationModalOpen, setIsClassificationModalOpen] = useState<boolean>(false)
+
+
 
   // Query para carregar KPIs da sugestão selecionada
   const kpiQuery = api.kpi.getBySuggestionId.useQuery(
@@ -753,6 +801,23 @@ export default function AdminSuggestionsPage() {
     score: c.score
   })) ?? []
 
+  // Função para buscar classificações similares por tipo
+  const getSimilarClassifications = (searchTerm: string, type: 'impact' | 'capacity' | 'effort'): ClassItem[] => {
+    const getPoolByType = (t: 'impact' | 'capacity' | 'effort') => {
+      switch (t) {
+        case 'impact': return impactPool
+        case 'capacity': return capacityPool
+        case 'effort': return effortPool
+        default: return []
+      }
+    }
+
+    const pool = getPoolByType(type)
+    return pool.filter(item =>
+      item.label.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }
+
   const kpiPool: string[] = []
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -769,6 +834,58 @@ export default function AdminSuggestionsPage() {
       isOpen: false,
       suggestionId: null,
       type: null
+    })
+  }
+
+  // Função para lidar com mudança de status
+  const handleStatusChange = (suggestionId: string, newStatusLabel: string) => {
+    const statusKey = Object.entries(STATUS_MAPPING).find(([_, label]) => label === newStatusLabel)?.[0] as keyof typeof STATUS_MAPPING
+
+    if (statusKey === "NOT_IMPLEMENTED") {
+      // Para "Não implementado", expandir campo de motivo dentro do card
+      setExpandedReasonFields(prev => new Set([...prev, suggestionId]))
+    } else {
+      // Para outros status, aplicar diretamente e fechar campo de motivo se estiver aberto
+      void update(suggestionId, { status: statusKey })
+      setExpandedReasonFields(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(suggestionId)
+        return newSet
+      })
+    }
+  }
+
+  // Função para salvar o motivo e alterar o status
+  const saveReasonAndChangeStatus = (suggestionId: string, reason: string) => {
+    if (reason.trim().length >= 10) {
+      void update(suggestionId, {
+        status: "NOT_IMPLEMENTED",
+        rejectionReason: reason.trim()
+      })
+      setExpandedReasonFields(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(suggestionId)
+        return newSet
+      })
+      toast({
+        title: "Status atualizado",
+        description: "Sugestão movida para 'Não implantado' com motivo registrado."
+      })
+    } else {
+      toast({
+        title: "Motivo insuficiente",
+        description: "Por favor, informe um motivo detalhado (mínimo 10 caracteres).",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Função para cancelar e fechar o campo de motivo
+  const cancelReasonField = (suggestionId: string) => {
+    setExpandedReasonFields(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(suggestionId)
+      return newSet
     })
   }
 
@@ -819,19 +936,8 @@ export default function AdminSuggestionsPage() {
     const newStatusLabel = destination.droppableId
     const newStatus = Object.entries(STATUS_MAPPING).find(([_, label]) => label === newStatusLabel)?.[0] as keyof typeof STATUS_MAPPING
     if (newStatus) {
-      // Se estiver movendo para "Não implantado", verificar se já tem motivo
-      if (newStatus === "NOT_IMPLEMENTED") {
-        const suggestion = suggestions.find(s => s.id === draggableId)
-        if (suggestion && !suggestion.rejectionReason?.trim()) {
-          // Mostrar modal de motivo obrigatório
-          setRejectionReasonModal({
-            isOpen: true,
-            suggestionId: draggableId,
-            newStatus: newStatus
-          })
-          return
-        }
-      }
+      // Para "Não implementado", o campo de motivo será expandido no card
+      // A validação acontece quando o usuário confirma
       update(draggableId, { status: newStatus }).catch(console.error)
     }
   }
@@ -924,10 +1030,10 @@ export default function AdminSuggestionsPage() {
                     {...provided.droppableProps}
                     className={`rounded-lg border p-3 ${getStatusColor(st)}`}
                   >
-                                         <div className="font-medium mb-2">
+                                         <div className="font-medium mb-1">
                        {st} ({kanbanColumns[st]?.length ?? 0})
                      </div>
-                                           <div className="max-h-80 overflow-y-auto space-y-2 scrollbar-hide">
+                                           <div className="max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
                                              {kanbanColumns[st]?.map((s, index) => {
                         const impactScore = s.impact?.score ?? 0
                         const capacityScore = s.capacity?.score ?? 0
@@ -958,9 +1064,9 @@ export default function AdminSuggestionsPage() {
                             {(prov) => (
                               <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
                                 <Card className="bg-background/80">
-                                  <CardContent className="p-3">
+                                  <CardContent className="p-2">
                                     <div className="text-sm font-medium truncate">#{s.ideaNumber} — {(s.problem ?? "Sem problema definido").substring(0, 30)}...</div>
-                                    <div className="text-xs text-muted-foreground mb-2">
+                                    <div className="text-xs text-muted-foreground mb-1">
                                       {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
                                     </div>
                                     {/* Pontuação e recomendação no Kanban */}
@@ -969,9 +1075,9 @@ export default function AdminSuggestionsPage() {
                                         Pontuação: {pontuacao}
                                       </div>
                                       {shouldShowRecommendation && (
-                                        <div className={`text-xs px-2 py-1 rounded-md font-medium ${getRecommendationColor(pontuacao)}`}>
-                                          {getRecommendationText(pontuacao)}
-                                        </div>
+                                      <div className={`text-xs px-2 py-1 rounded-md font-medium ${getRecommendationColor(pontuacao)}`}>
+                                        {getRecommendationText(pontuacao)}
+                                      </div>
                                       )}
                                     </div>
                                   </CardContent>
@@ -1036,6 +1142,20 @@ export default function AdminSuggestionsPage() {
       </div>
 
       <div className="md:hidden">
+        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Classificações</h3>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsClassificationModalOpen(true)}
+              className="text-xs"
+            >
+              <Settings className="w-3 h-3 mr-1" />
+              Gerenciar
+            </Button>
+          </div>
+        </div>
         <IdeasAccordion
           sugestoes={sortedSuggestions}
           impactPool={impactPool}
@@ -1045,9 +1165,29 @@ export default function AdminSuggestionsPage() {
           currentSuggestionKpis={currentSuggestionKpis}
           update={update}
           _currentUser={_currentUser}
-
+          onStatusChange={handleStatusChange}
           getStatusFromScore={getStatusFromScore}
+          expandedReasonFields={expandedReasonFields}
+
+          saveReasonAndChangeStatus={saveReasonAndChangeStatus}
+          cancelReasonField={cancelReasonField}
+          getSimilarClassifications={getSimilarClassifications}
         />
+      </div>
+
+      <div className="hidden md:block mb-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Classificações</h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsClassificationModalOpen(true)}
+            className="text-xs"
+          >
+            <Settings className="w-3 h-3 mr-1" />
+            Gerenciar
+          </Button>
+        </div>
       </div>
 
       <div className="hidden md:grid grid-cols-3 gap-3">
@@ -1062,7 +1202,13 @@ export default function AdminSuggestionsPage() {
             currentSuggestionKpis={currentSuggestionKpis}
             update={update}
             _currentUser={_currentUser}
+            onStatusChange={handleStatusChange}
             getStatusFromScore={getStatusFromScore}
+            expandedReasonFields={expandedReasonFields}
+  
+            saveReasonAndChangeStatus={saveReasonAndChangeStatus}
+            cancelReasonField={cancelReasonField}
+            getSimilarClassifications={getSimilarClassifications}
           />
         ))}
       </div>
@@ -1103,73 +1249,25 @@ export default function AdminSuggestionsPage() {
         suggestionId={selectedSuggestionId ?? undefined}
       />
 
-      {/* Modal de Motivo Obrigatório para Não Implementado */}
-      <Dialog open={rejectionReasonModal.isOpen} onOpenChange={(open) => {
-        setRejectionReasonModal({ isOpen: open, suggestionId: null, newStatus: null })
-      }}>
-        <DialogContent>
+      {/* Modal de Gerenciamento de Classificações */}
+      <Dialog open={isClassificationModalOpen} onOpenChange={setIsClassificationModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Motivo da Não Implementação</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Gerenciar Classificações
+            </DialogTitle>
             <DialogDescription>
-              Para mover esta sugestão para &ldquo;Não implantado&rdquo;, é obrigatório informar o motivo detalhado.
+              Gerencie todas as classificações do sistema: crie novas, edite existentes ou remova as que não são mais necessárias.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="rejection-reason">Motivo detalhado *</Label>
-              <Textarea
-                id="rejection-reason"
-                placeholder="Descreva o motivo pelo qual esta sugestão não será implementada..."
-                rows={4}
-                className="mt-2"
-                value={rejectionReasonModal.suggestionId ?
-                  (suggestions.find(s => s.id === rejectionReasonModal.suggestionId)?.rejectionReason ?? "") : ""}
-                onChange={(e) => {
-                  const suggestion = suggestions.find(s => s.id === rejectionReasonModal.suggestionId)
-                  if (suggestion) {
-                    void update(suggestion.id, { rejectionReason: e.target.value })
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Este motivo será enviado por email para o colaborador que fez a sugestão.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setRejectionReasonModal({ isOpen: false, suggestionId: null, newStatus: null })}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => {
-                  if (rejectionReasonModal.suggestionId && rejectionReasonModal.newStatus) {
-                    const suggestion = suggestions.find(s => s.id === rejectionReasonModal.suggestionId)
-                    if (suggestion?.rejectionReason?.trim()) {
-                      void update(rejectionReasonModal.suggestionId, {
-                        status: rejectionReasonModal.newStatus as "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED",
-                        rejectionReason: suggestion.rejectionReason
-                      })
-                      setRejectionReasonModal({ isOpen: false, suggestionId: null, newStatus: null })
-                      toast({ title: "Status atualizado", description: "Sugestão movida para 'Não implantado'." })
-                    } else {
-                      toast({
-                        title: "Motivo obrigatório",
-                        description: "Por favor, informe o motivo da não implementação.",
-                        variant: "destructive"
-                      })
-                    }
-                  }
-                }}
-                disabled={!suggestions.find(s => s.id === rejectionReasonModal.suggestionId)?.rejectionReason?.trim()}
-              >
-                Confirmar e Mover
-              </Button>
-            </div>
-          </div>
+
+          <ClassificationManagement
+            onClose={() => setIsClassificationModalOpen(false)}
+          />
         </DialogContent>
       </Dialog>
+
     </DashboardShell>
   )
 }
@@ -1188,8 +1286,12 @@ function IdeasAccordion({
   currentSuggestionKpis,
   update,
   _currentUser,
-
+  onStatusChange,
   getStatusFromScore,
+  expandedReasonFields,
+  saveReasonAndChangeStatus,
+  cancelReasonField,
+  getSimilarClassifications,
 }: {
   sugestoes: SuggestionLocal[]
   impactPool: ClassItem[]
@@ -1199,7 +1301,12 @@ function IdeasAccordion({
   currentSuggestionKpis: { id: string; name: string; description?: string | null }[]
   update: (id: string, updates: Partial<SuggestionLocal>) => void
   _currentUser: RouterOutputs["user"]["me"] | undefined
+  onStatusChange: (suggestionId: string, newStatusLabel: string) => void
   getStatusFromScore: (suggestion: SuggestionLocal) => string
+  expandedReasonFields: Set<string>
+  saveReasonAndChangeStatus: (suggestionId: string, reason: string) => void
+  cancelReasonField: (suggestionId: string) => void
+  getSimilarClassifications: (searchTerm: string, type: 'impact' | 'capacity' | 'effort') => ClassItem[]
 }) {
   // Estado local para as justificativas
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({})
@@ -1275,7 +1382,12 @@ function IdeasAccordion({
           sendRejectionNotification={sendRejectionNotification}
           update={update}
           _currentUser={_currentUser}
+          onStatusChange={onStatusChange}
           getStatusFromScore={getStatusFromScore}
+          isReasonFieldExpanded={expandedReasonFields.has(s.id)}
+          onSaveReasonAndChangeStatus={saveReasonAndChangeStatus}
+          onCancelReasonField={cancelReasonField}
+          getSimilarClassifications={getSimilarClassifications}
         />
       ))}
     </Accordion>
@@ -1290,8 +1402,12 @@ function SuggestionItem({
   sendRejectionNotification,
   update,
   _currentUser,
-
+  onStatusChange,
   getStatusFromScore,
+  isReasonFieldExpanded,
+  onSaveReasonAndChangeStatus,
+  onCancelReasonField,
+  getSimilarClassifications,
 }: {
   suggestion: SuggestionLocal
   rejectionReasons: Record<string, string>
@@ -1300,8 +1416,12 @@ function SuggestionItem({
   sendRejectionNotification: ReturnType<typeof api.suggestion.sendRejectionNotification.useMutation>
   update: (id: string, updates: Partial<SuggestionLocal>) => void
   _currentUser: RouterOutputs["user"]["me"] | undefined
-
+  onStatusChange: (suggestionId: string, newStatusLabel: string) => void
   getStatusFromScore: (suggestion: SuggestionLocal) => string
+  isReasonFieldExpanded: boolean
+  onSaveReasonAndChangeStatus: (suggestionId: string, reason: string) => void
+  onCancelReasonField: (suggestionId: string) => void
+  getSimilarClassifications: (searchTerm: string, type: 'impact' | 'capacity' | 'effort') => ClassItem[]
 }) {
   // Carregar KPIs específicos para esta sugestão
   const { data: suggestionKpis = [] } = api.kpi.getBySuggestionId.useQuery(
@@ -1318,6 +1438,9 @@ function SuggestionItem({
   const contribType = s.contribution?.type ?? ""
   const contribOther = s.contribution?.other
 
+                        // Não mostrar tag "Descartar" quando o status for "Novo" na listagem também
+                        const shouldShowRecommendationList = s.status !== "NEW" || getStatusFromScore(s) !== 'Descartar'
+
   return (
           <AccordionItem key={s.id} value={s.id} className="border rounded-lg">
             <AccordionTrigger className="px-4">
@@ -1333,6 +1456,7 @@ function SuggestionItem({
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{setorExibido}</Badge>
                       {/* Tag de status baseada na pontuação */}
+                      {shouldShowRecommendationList && (
                       <Badge
                         variant="outline"
                         className={`text-xs ${
@@ -1345,6 +1469,7 @@ function SuggestionItem({
                       >
                         {getStatusFromScore(s)}
                       </Badge>
+                      )}
                       {/* Tag de status atual */}
                       <Badge
                         variant="outline"
@@ -1401,7 +1526,7 @@ function SuggestionItem({
 
                   {/* Seção de Classificações */}
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium">Classificações</h4>
+                      <h4 className="text-sm font-medium">Classificações</h4>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <ClassificationInlineField
@@ -1419,6 +1544,7 @@ function SuggestionItem({
                             toast({ title: "Erro", description: error.message, variant: "destructive" })
                           }
                         })}
+                        getSimilarClassifications={getSimilarClassifications}
                       />
                       <ClassificationInlineField
                         label="Capacidade"
@@ -1435,6 +1561,7 @@ function SuggestionItem({
                             toast({ title: "Erro", description: error.message, variant: "destructive" })
                           }
                         })}
+                        getSimilarClassifications={getSimilarClassifications}
                       />
                       <ClassificationInlineField
                         label="Esforço"
@@ -1451,12 +1578,13 @@ function SuggestionItem({
                             toast({ title: "Erro", description: error.message, variant: "destructive" })
                           }
                         })}
+                        getSimilarClassifications={getSimilarClassifications}
                       />
                     </div>
 
                     {/* KPIs de Sucesso */}
                     <div className="space-y-3 border-t pt-4">
-                      <h4 className="text-sm font-medium">KPIs de Sucesso</h4>
+                        <h4 className="text-sm font-medium">KPIs de Sucesso</h4>
                       <KpiInlineField
                         suggestionId={s.id}
                         currentKpis={suggestionKpis}
@@ -1501,11 +1629,8 @@ function SuggestionItem({
                       <Select
                         value={STATUS_MAPPING[s.status]}
                         onValueChange={(v) => {
-                          const statusKey = Object.entries(STATUS_MAPPING).find(([_, label]) => label === v)?.[0] as keyof typeof STATUS_MAPPING
-                          if (statusKey) {
-                            if (statusKey !== s.status) {
-                              update(s.id, { status: statusKey })
-                            }
+                          if (v !== STATUS_MAPPING[s.status]) {
+                            onStatusChange(s.id, v)
                           }
                         }}
                       >
@@ -1521,6 +1646,50 @@ function SuggestionItem({
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Campo de motivo expandível para "Não implementado" */}
+                    {isReasonFieldExpanded && (
+                      <div className="md:col-span-2 space-y-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div>
+                          <label className="text-sm font-medium text-red-700 dark:text-red-300">
+                            Motivo da não implementação <span className="text-red-500">*</span>
+                          </label>
+                          <Textarea
+                            rows={3}
+                            placeholder="Descreva o motivo detalhado da não implementação desta sugestão..."
+                            className="mt-2 border-red-200 focus:border-red-300"
+                            value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
+                            onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
+                            maxLength={1000}
+                          />
+                          <div className="flex justify-between items-center mt-1">
+                            <p className="text-xs text-red-600 dark:text-red-400">
+                              Campo obrigatório para sugestões não implementadas (mínimo 10 caracteres).
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(rejectionReasons[s.id] ?? s.rejectionReason ?? "").length}/1000
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onCancelReasonField(s.id)}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => onSaveReasonAndChangeStatus(s.id, rejectionReasons[s.id] ?? s.rejectionReason ?? "")}
+                            disabled={!rejectionReasons[s.id]?.trim() || (rejectionReasons[s.id]?.trim()?.length ?? 0) < 10}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Confirmar e Mover
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <label className="text-sm">Responsável pela devolutiva</label>
                       <UserSelector
@@ -1706,7 +1875,7 @@ function ClassificationManagementModal({
   const addNewItem = () => {
     if (!newLabel.trim()) return
     
-    createClassification.mutate({
+    void createClassification.mutate({
       label: newLabel.trim(),
       score: newScore,
       type: getDBType()
@@ -1726,7 +1895,7 @@ function ClassificationManagementModal({
     if (!editingItem || !newLabel.trim()) return
     
     if (editingItem?.id) {
-      updateClassification.mutate({
+      void updateClassification.mutate({
         id: editingItem.id,
         label: newLabel.trim(),
         score: newScore
@@ -1740,7 +1909,7 @@ function ClassificationManagementModal({
 
   const deleteItem = (itemToDelete: ClassItem) => {
     if (itemToDelete.id) {
-      deleteClassification.mutate({
+      void deleteClassification.mutate({
         id: itemToDelete.id
       })
     }
@@ -1897,6 +2066,318 @@ function ClassificationManagementModal({
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// Tipo para classificação
+type ClassificationItem = {
+  id: string
+  label: string
+  score: number
+  type: "IMPACT" | "CAPACITY" | "EFFORT"
+  isActive: boolean
+  order: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Componente para gerenciamento completo de classificações
+function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }) {
+  const [filterType, setFilterType] = useState<"ALL" | "IMPACT" | "CAPACITY" | "EFFORT">("ALL")
+  const [isCreating, setIsCreating] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [newClassification, setNewClassification] = useState({
+    label: "",
+    score: 0,
+    type: "IMPACT" as "IMPACT" | "CAPACITY" | "EFFORT"
+  })
+  const [editClassification, setEditClassification] = useState({
+    label: "",
+    score: 0,
+    type: "IMPACT" as "IMPACT" | "CAPACITY" | "EFFORT"
+  })
+
+  // Buscar todas as classificações
+  const { data: allClassifications = [], refetch: refetchAllClassifications } = api.classification.listAll.useQuery({
+    type: filterType === "ALL" ? undefined : filterType
+  })
+
+  // Mutations
+  const createClassification = api.classification.create.useMutation({
+    onSuccess: () => {
+      toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
+      void refetchAllClassifications()
+      setIsCreating(false)
+      setNewClassification({ label: "", score: 0, type: "IMPACT" })
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" })
+    }
+  })
+
+  const updateClassification = api.classification.update.useMutation({
+    onSuccess: () => {
+      toast({ title: "Classificação atualizada", description: "Classificação modificada com sucesso." })
+      void refetchAllClassifications()
+      setEditingId(null)
+      setEditClassification({ label: "", score: 0, type: "IMPACT" })
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" })
+    }
+  })
+
+  const deleteClassification = api.classification.delete.useMutation({
+    onSuccess: () => {
+      toast({ title: "Classificação removida", description: "Classificação excluída com sucesso." })
+      void refetchAllClassifications()
+    },
+    onError: (error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" })
+    }
+  })
+
+  const handleCreate = () => {
+    if (!newClassification.label.trim()) {
+      toast({ title: "Erro", description: "Nome da classificação é obrigatório.", variant: "destructive" })
+      return
+    }
+
+    void createClassification.mutate({
+      label: newClassification.label.trim(),
+      score: newClassification.score,
+      type: newClassification.type
+    })
+  }
+
+  const handleEdit = (classification: ClassificationItem) => {
+    setEditingId(classification.id)
+    setEditClassification({
+      label: classification.label,
+      score: classification.score,
+      type: classification.type
+    })
+  }
+
+  const handleUpdate = () => {
+    if (!editClassification.label.trim()) {
+      toast({ title: "Erro", description: "Nome da classificação é obrigatório.", variant: "destructive" })
+      return
+    }
+
+    updateClassification.mutate({
+      id: editingId!,
+      label: editClassification.label.trim(),
+      score: editClassification.score
+    })
+  }
+
+  const handleDelete = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta classificação?")) {
+      deleteClassification.mutate({ id })
+    }
+  }
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "IMPACT": return "Impacto"
+      case "CAPACITY": return "Capacidade"
+      case "EFFORT": return "Esforço"
+      default: return type
+    }
+  }
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "IMPACT": return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+      case "CAPACITY": return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+      case "EFFORT": return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+      default: return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300"
+    }
+  }
+
+  return (
+    <div className="space-y-6 overflow-y-auto max-h-[60vh]">
+      {/* Filtros e Botão Criar */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-wrap gap-2">
+          <Select value={filterType} onValueChange={(value: "ALL" | "IMPACT" | "CAPACITY" | "EFFORT") => setFilterType(value)}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Filtrar por tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todas</SelectItem>
+              <SelectItem value="IMPACT">Impacto</SelectItem>
+              <SelectItem value="CAPACITY">Capacidade</SelectItem>
+              <SelectItem value="EFFORT">Esforço</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button
+          onClick={() => setIsCreating(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nova Classificação
+        </Button>
+      </div>
+
+      {/* Formulário de Criação */}
+      {isCreating && (
+        <div className="p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
+          <h3 className="font-medium mb-4">Criar Nova Classificação</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="new-label">Nome</Label>
+              <Input
+                id="new-label"
+                value={newClassification.label}
+                onChange={(e) => setNewClassification(prev => ({ ...prev, label: e.target.value }))}
+                placeholder="Nome da classificação"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-score">Pontuação</Label>
+              <Select
+                value={newClassification.score.toString()}
+                onValueChange={(value) => setNewClassification(prev => ({ ...prev, score: parseInt(value) }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+                    <SelectItem key={score} value={score.toString()}>
+                      {score} ponto{score !== 1 ? 's' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="new-type">Tipo</Label>
+              <Select
+                value={newClassification.type}
+                onValueChange={(value: "IMPACT" | "CAPACITY" | "EFFORT") => setNewClassification(prev => ({ ...prev, type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IMPACT">Impacto</SelectItem>
+                  <SelectItem value="CAPACITY">Capacidade</SelectItem>
+                  <SelectItem value="EFFORT">Esforço</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Button
+              size="sm"
+              onClick={handleCreate}
+              disabled={createClassification.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {createClassification.isPending ? "Criando..." : "Criar"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setIsCreating(false)
+                setNewClassification({ label: "", score: 0, type: "IMPACT" })
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista de Classificações */}
+      <div className="space-y-2">
+        {allClassifications.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Nenhuma classificação encontrada.
+          </div>
+        ) : (
+          allClassifications.map((classification) => (
+            <div
+              key={classification.id}
+              className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              {editingId === classification.id ? (
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 mr-4">
+                  <Input
+                    value={editClassification.label}
+                    onChange={(e) => setEditClassification(prev => ({ ...prev, label: e.target.value }))}
+                    placeholder="Nome da classificação"
+                  />
+                  <Select
+                    value={editClassification.score.toString()}
+                    onValueChange={(value) => setEditClassification(prev => ({ ...prev, score: parseInt(value) }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+                        <SelectItem key={score} value={score.toString()}>
+                          {score} ponto{score !== 1 ? 's' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleUpdate} disabled={updateClassification.isPending}>
+                      <Check className="w-3 h-3 mr-1" />
+                      Salvar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingId(null)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Badge className={getTypeColor(classification.type)}>
+                      {getTypeLabel(classification.type)}
+                    </Badge>
+                    <span className="font-medium">{classification.label}</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {classification.score} pts
+                    </Badge>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEdit(classification)}
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(classification.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   )
 }
 
