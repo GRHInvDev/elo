@@ -9,8 +9,10 @@ import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
 const StatusEnum = z.enum(["NEW","IN_REVIEW","APPROVED","IN_PROGRESS","DONE","NOT_IMPLEMENTED"])
 
 const ScoreItem = z.object({
-  label: z.string(),
-  score: z.number(),
+  text: z.string().max(2000).optional(),
+  score: z.number().min(1).max(10).optional(),
+  // Manter compatibilidade com formato antigo
+  label: z.string().optional(),
 })
 
 // Middleware para admin inline
@@ -89,7 +91,7 @@ export const suggestionRouter = createTRPCRouter({
     .input(z.object({
       status: z.array(StatusEnum).optional(),
       search: z.string().optional(),
-      take: z.number().min(1).max(100).default(50),
+      take: z.number().min(1).max(1000).default(50),
       skip: z.number().min(0).default(0),
     }).optional())
     .query(async ({ ctx, input }) => {
@@ -176,9 +178,9 @@ export const suggestionRouter = createTRPCRouter({
         select: { impact: true, capacity: true, effort: true },
       })
 
-      const prevImpact = prev?.impact as unknown as { score?: number } | null
-      const prevCapacity = prev?.capacity as unknown as { score?: number } | null
-      const prevEffort = prev?.effort as unknown as { score?: number } | null
+      const prevImpact = prev?.impact as unknown as { score?: number; text?: string } | null
+      const prevCapacity = prev?.capacity as unknown as { score?: number; text?: string } | null
+      const prevEffort = prev?.effort as unknown as { score?: number; text?: string } | null
 
       const impactScore = input.impact?.score ?? prevImpact?.score ?? null
       const capacityScore = input.capacity?.score ?? prevCapacity?.score ?? null
