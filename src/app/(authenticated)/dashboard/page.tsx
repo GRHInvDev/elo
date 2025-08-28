@@ -50,73 +50,80 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div>
-      <div className={cn("grid grid-cols-1 md:grid-cols-3", (birthdays?.length==0 || posts.length==0 ) && "md:grid-cols-1")}>
+    <div className="min-h-screen bg-background">
+      {/* Seção Principal - Banners e Aniversários */}
+      <div className={cn("grid grid-cols-1 gap-4 md:gap-6", (birthdays?.length==0 || posts.length==0 ) && "md:grid-cols-1")}>
         {
           posts.length > 0 &&
-          <MainCarousel className={cn("col-span-1 md:col-span-2", (birthdays?.length==0) && "md:col-span-1")} itens={posts}/>
+          <MainCarousel className={cn("w-full", (birthdays?.length==0) && "md:col-span-1")} itens={posts}/>
         }
         {
           birthdays?.length> 0 &&
-          <BirthdaysCarousel className="col-span-1" itens={birthdays?.map((b)=>({
+          <BirthdaysCarousel className="w-full" itens={birthdays?.map((b)=>({
             imageRef: b.imageUrl??"",
             title: b.name
           }))}/>
         }
-        <div className="grid grid-cols-1 md:grid-cols-3 md:col-span-3 h-fit">
+
+        {/* Seção de Conteúdo - Vídeos, Links e Sugestões */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           {
-            videos.length> 0 &&
-            <VideosCarousel className="col-span-1 md:col-span-2" itens={videos}/>
+            videos.length> 0 && (
+              <div className="lg:col-span-2">
+                <VideosCarousel className="w-full" itens={videos}/>
+              </div>
+            )
           }
-          <div className="p-4 md:p-8 col-span-1 h-full">
-  
-            
+          <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+            {/* Funcionalidades Mobile */}
             <div className="md:hidden">
-              <h1 className="text-4xl mb-6 font-semibold">
+              <h1 className="text-2xl md:text-4xl mb-4 md:mb-6 font-semibold">
                 Funcionalidades
               </h1>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 {
                   routeItems(user?.role ?? UserRole.USER).map((m,i)=> m.title !== "Dashboard" && (
                     <div key={i} className="col-span-1">
-                      <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-2 rounded-lg gap-x-2">
+                      <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-3 rounded-lg gap-x-2 text-sm">
                         <m.icon className="size-4"/>
-                        {m.title}
+                        <span className="text-center leading-tight">{m.title}</span>
                       </Link>
                     </div>
                   ))
                 }
               </div>
             </div>
-            <div className="flex flex-col gap-14 h-full">
-              <div className="bg-muted rounded-md p-3 flex-1 flex flex-col">
-                <div className="flex gap-2 items-center text-sm font-semibold mb-3">
-                  <LinkIcon className="size-4"/>
-                  Links
-                </div>
-                <div className="grid grid-cols-2 gap-2 flex-1">
-                  <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                    <Image src="/umentor.jpg" height={24} width={24} className="rounded-md mr-2" alt="umentor"/>
-                    <span className="text-xs">Umentor</span>
-                  </Link>
-                  <Link href={'https://cristaluni.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                    <LucideGraduationCap className="size-5 mr-2"/>
-                    <span className="text-xs">CristalUni</span>
-                  </Link>
-                  <Link href={'https://boxdistribuidor.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                    <Image src="/LOGO BOX.png" height={24} width={24} className="rounded-md mr-2" alt="Site Box"/>
-                    <span className="text-xs">Site Box</span>
-                  </Link>
-                  <Link href={'https://cristallux.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80">
-                    <Image src="/icon_cristal.svg" height={24} width={24} className="rounded-md mr-2" alt="Cristaluni"/>
-                    <span className="text-xs">Cristallux</span>
-                  </Link>
-                </div>
+
+            {/* Links Úteis */}
+            <div className="bg-muted rounded-md p-3 md:p-4">
+              <div className="flex gap-2 items-center text-sm font-semibold mb-3">
+                <LinkIcon className="size-4"/>
+                Links Úteis
               </div>
-              {/* Card de Ideias */}
-              <div className="flex-1 flex items-center">
-                <SuggestionsWrapper />
+              <div className="grid grid-cols-2 gap-2">
+                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
+                  <Image src="/umentor.jpg" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="umentor"/>
+                  <span className="text-xs truncate">Umentor</span>
+                </Link>
+                <Link href={'https://cristaluni.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
+                  <LucideGraduationCap className="size-4 mr-2 flex-shrink-0"/>
+                  <span className="text-xs truncate">CristalUni</span>
+                </Link>
+                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
+                  <Image src="/LOGO BOX.png" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="Site Box"/>
+                  <span className="text-xs truncate">Site Box</span>
+                </Link>
+                <Link href={'https://cristallux.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
+                  <Image src="/icon_cristal.svg" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="Cristaluni"/>
+                  <span className="text-xs truncate">Cristallux</span>
+                </Link>
               </div>
+            </div>
+
+            {/* Card de Ideias - Melhorado para mobile */}
+            <div className="w-full">
+              <h3 className="text-lg font-semibold mb-3 md:mb-4">💡 Sugestões</h3>
+              <SuggestionsWrapper />
             </div>
           </div>
         </div>
@@ -138,39 +145,89 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
-      <div className="place-self-center w-full max-w-6xl mt-4 md:px-4">
-        <h1 className="flex items-center gap-x-2 text-4xl mb-6 ml-6 font-semibold">
-          <LucideNewspaper/>
-          News
-        </h1>
-        <NewsDisplay/>
+      <div className="w-full max-w-6xl mx-auto mt-4 md:mt-8 px-4 md:px-6">
+        <div className="mb-6">
+          <h1 className="flex items-center gap-x-2 text-2xl md:text-4xl font-semibold text-foreground">
+            <LucideNewspaper className="text-primary"/>
+            <span>Notícias</span>
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-2">
+            Fique por dentro das últimas novidades e atualizações
+          </p>
+        </div>
+        <div className="bg-card rounded-lg border shadow-sm">
+          <NewsDisplay/>
+        </div>
       </div>
 
-      <div className="flex p-1 flex-col mt-8 h-fit bg-muted">
-        <div className="flex-1 flex justify-center md:justify-start">
-          <div className="p-4 md:ml-8 space-y-2">
-            <div className="flex items-center gap-x-2">
-              <FaInstagram className="mr-2"/>
-              <Link href={'https://instagram.com/box.distribuidor'}>@box.distribuidor</Link>
-              {' | '}
-              <Link href={'https://instagram.com/cristalluxled'}>@cristalluxled</Link>
+      {/* Footer com Redes Sociais */}
+      <div className="mt-8 lg:mt-12 bg-muted/50 border-t">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Redes Sociais */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                Redes Sociais
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-x-3">
+                  <FaInstagram className="text-pink-500 flex-shrink-0"/>
+                  <div className="flex flex-wrap gap-x-2 text-sm">
+                    <Link href={'https://instagram.com/box.distribuidor'} className="text-primary hover:underline">
+                      @box.distribuidor
+                    </Link>
+                    <span className="text-muted-foreground">|</span>
+                    <Link href={'https://instagram.com/cristalluxled'} className="text-primary hover:underline">
+                      @cristalluxled
+                    </Link>
+                  </div>
+                </div>
+                <div className="flex items-center gap-x-3">
+                  <FaFacebook className="text-blue-600 flex-shrink-0"/>
+                  <div className="flex flex-wrap gap-x-2 text-sm">
+                    <Link href={'https://facebook.com/fiosecia.boxdistribuidor'} className="text-primary hover:underline">
+                      @fiosecia.boxdistribuidor
+                    </Link>
+                    <span className="text-muted-foreground">|</span>
+                    <Link href={'https://facebook.com/cristalluxled'} className="text-primary hover:underline">
+                      @cristalluxled
+                    </Link>
+                  </div>
+                </div>
+                <div className="flex items-center gap-x-3">
+                  <FaYoutube className="text-red-500 flex-shrink-0"/>
+                  <div className="flex flex-wrap gap-x-2 text-sm">
+                    <Link href={'https://youtube.com/@boxdistribuidor'} className="text-primary hover:underline">
+                      @boxdistribuidor
+                    </Link>
+                    <span className="text-muted-foreground">|</span>
+                    <Link href={'https://youtube.com/@cristallux'} className="text-primary hover:underline">
+                      @cristalluxled
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-x-2">
-              <FaFacebook className="mr-2"/>
-              <Link href={'https://facebook.com/fiosecia.boxdistribuidor'}>@fiosecia.boxdistribuidor</Link>
-              {' | '}
-              <Link href={'https://facebook.com/cristalluxled'}>@cristalluxled</Link>
-            </div>
-            <div className="flex items-center gap-x-2">
-              <FaYoutube className="mr-2"/>
-              <Link href={'https://youtube.com/@boxdistribuidor'}>@boxdistribuidor</Link>
-              {' | '}
-              <Link href={'https://youtube.com/@cristallux'}>@cristalluxled</Link>
+
+            {/* Créditos */}
+            <div className="flex items-end justify-center md:justify-end">
+              <div className="text-center md:text-right">
+                <div className="text-sm text-muted-foreground mb-2">
+                  Elo &copy; 2025
+                </div>
+                <div className="flex items-center justify-center md:justify-end gap-2 text-sm">
+                  <span>Built with ❤️ by</span>
+                  <Link
+                    href={'https://allpines.com.br'}
+                    className="flex items-center gap-1 font-bold text-primary hover:underline"
+                  >
+                    <Image src="/logoAllpines.webp" height={16} width={16} alt="Allpines" className="rounded"/>
+                    Allpines
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="mx-auto mt-16 w-fit flex bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-          Elo &copy; 2025 | Built with ❤️ by <Link href={'https://allpines.com.br'} className="flex items-center ml-2 font-bold"><Image src="/logoAllpines.webp" height={15} width={15} alt="Allpines"/> Allpines</Link> 
         </div>
       </div>
     </div>

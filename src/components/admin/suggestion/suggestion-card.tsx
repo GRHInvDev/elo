@@ -24,29 +24,30 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
   return (
     <div
       onClick={onOpenModal}
-      className="cursor-pointer bg-muted hover:bg-muted/80 rounded-lg p-3 md:p-4 border hover:shadow-md transition-all duration-200 w-full"
+      className="cursor-pointer bg-muted hover:bg-muted/80 rounded-lg p-3 md:p-4 border hover:shadow-md transition-all duration-200 w-full group"
     >
       <div className="flex items-center gap-3">
         <div className="flex-shrink-0">
           <Image
             src="/sugestao.webp"
-            alt="Ideias em Acao"
+            alt="Ideias em Ação"
             width={80}
             height={80}
-            className="rounded-lg object-cover border w-24 h-24"
+            className="rounded-lg object-cover border w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24"
           />
         </div>
 
-        <div className="flex-1 space-y-2 text-left">
-          <h3 className="text-base md:text-lg font-semibold text-foreground">
-            Ideias em ação
+        <div className="flex-1 space-y-1 md:space-y-2 text-left min-w-0">
+          <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground leading-tight">
+            💡 Ideias em Ação
           </h3>
-          <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
+          <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
             Registre aqui a sua sugestão. Sua ideia pode ser premiada!
           </p>
-          <div className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-            Clique para abrir o formulário
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-xs text-muted-foreground flex items-center gap-1 font-medium opacity-75 group-hover:opacity-100 transition-opacity">
+            <span className="hidden sm:inline">Clique para abrir o formulário</span>
+            <span className="sm:hidden">Toque para abrir</span>
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
@@ -395,13 +396,16 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
-        <DialogHeader>
+        <DialogHeader className="space-y-2">
           <DialogTitle className="flex items-center gap-2 md:gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Lightbulb className="h-4 w-4 md:h-5 md:w-5 text-red-600" />
+            <div className="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+              <Lightbulb className="h-4 w-4 md:h-5 md:w-5 text-yellow-600" />
             </div>
-            <span className="text-lg md:text-xl">Caixa de Ideias</span>
+            <span className="text-lg md:text-xl font-semibold">💡 Caixa de Ideias</span>
           </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Compartilhe sua ideia inovadora e contribua para o crescimento da empresa
+          </p>
         </DialogHeader>
 
         {userLoading ? (
