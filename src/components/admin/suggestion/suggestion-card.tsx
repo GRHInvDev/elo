@@ -39,10 +39,10 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
 
         <div className="flex-1 space-y-1 md:space-y-2 text-left min-w-0">
           <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground leading-tight">
-            💡 Ideias em Ação
+            Ideias em Ação
           </h3>
           <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
-            Registre aqui a sua sugestão. Sua ideia pode ser premiada!
+            Faça o registro aqui e sua ideia pode ser premiada!
           </p>
           <div className="text-xs text-muted-foreground flex items-center gap-1 font-medium opacity-75 group-hover:opacity-100 transition-opacity">
             <span className="hidden sm:inline">Clique para abrir o formulário</span>
@@ -189,7 +189,7 @@ export function SuggestionsCard() {
                   )}
                   {hideName && (
                     <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
-                      <span className="text-sm text-muted-foreground italic">Nome será ocultado na sugestão</span>
+                      <span className="text-sm text-muted-foreground italic">Nome será ocultado na ideia</span>
                     </div>
                   )}
                   <div className="flex items-center space-x-2">
@@ -401,7 +401,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             <div className="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
               <Lightbulb className="h-4 w-4 md:h-5 md:w-5 text-yellow-600" />
             </div>
-            <span className="text-lg md:text-xl font-semibold">💡 Caixa de Ideias</span>
+            <span className="text-lg md:text-xl font-semibold">Caixa de Ideias</span>
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
             Compartilhe sua ideia inovadora e contribua para o crescimento da empresa

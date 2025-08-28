@@ -65,7 +65,7 @@ export default async function DashboardPage() {
           }))}/>
         }
 
-        {/* Seção de Conteúdo - Vídeos, Links e Sugestões */}
+        {/* Seção de Conteúdo - Vídeos, Links e ideias */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           {
             videos.length> 0 && (
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
 
             {/* Card de Ideias - Melhorado para mobile */}
             <div className="w-full">
-              <h3 className="text-lg font-semibold mb-3 md:mb-4">💡 Sugestões</h3>
+              <h3 className="text-lg font-semibold mb-3 md:mb-4">Ideias</h3>
               <SuggestionsWrapper />
             </div>
           </div>
