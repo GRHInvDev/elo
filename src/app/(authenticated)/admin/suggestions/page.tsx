@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -1395,6 +1396,9 @@ export default function AdminSuggestionsPage() {
     take: 1000, // Buscar até 1000 Ideias (valor alto para pegar todas)
   })
 
+  // Query para obter o usuário atual
+  const { data: currentUser } = api.user.me.useQuery()
+
 
 
   const suggestions = useMemo(() =>
@@ -1428,6 +1432,7 @@ export default function AdminSuggestionsPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [analystFilter, setAnalystFilter] = useState<string | null>(null)
+  const [showMyTasks, setShowMyTasks] = useState<boolean>(false)
 
   // Estados para o modal de KPIs
   const [kpiModalOpen, setKpiModalOpen] = useState(false)
@@ -1711,6 +1716,11 @@ export default function AdminSuggestionsPage() {
       filteredSuggestions = filteredSuggestions.filter(s => s.analystId === analystFilter)
     }
 
+    // Aplicar filtro de "Minhas pendências" se estiver marcado
+    if (showMyTasks && currentUser) {
+      filteredSuggestions = filteredSuggestions.filter(s => s.analystId === currentUser.id)
+    }
+
     return [...filteredSuggestions].sort((a, b) => {
       // Primeiro por prioridade de status
       const statusA = STATUS_MAPPING[a.status] ?? a.status
@@ -1729,7 +1739,7 @@ export default function AdminSuggestionsPage() {
         return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
       }
     })
-  }, [suggestions, statusFilter, analystFilter, sortOrder])
+  }, [suggestions, statusFilter, analystFilter, showMyTasks, currentUser, sortOrder])
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const listColumns = useMemo(() => {
@@ -1795,6 +1805,23 @@ export default function AdminSuggestionsPage() {
                   Limpar
                 </Button>
               )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-my-tasks"
+                checked={showMyTasks}
+                onCheckedChange={(checked) => {
+                  setShowMyTasks(checked as boolean)
+                  // Se marcar "Minhas pendências", limpar o filtro de responsável
+                  if (checked) {
+                    setAnalystFilter(null)
+                  }
+                }}
+                disabled={!currentUser}
+              />
+              <Label htmlFor="show-my-tasks" className="text-sm cursor-pointer">
+                Minhas pendências
+              </Label>
             </div>
           </div>
         </div>
