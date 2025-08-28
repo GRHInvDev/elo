@@ -140,7 +140,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     status: dbSuggestion.status as "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED",
     rejectionReason: dbSuggestion.rejectionReason,
     analystId: dbSuggestion.analystId,
-    payment: (dbSuggestion as any).payment ? (dbSuggestion as any).payment as { status: "paid" | "unpaid"; amount?: number; description?: string } : null,
+    payment: dbSuggestion.payment ? dbSuggestion.payment as { status: "paid" | "unpaid"; amount?: number; description?: string } : null,
     paymentDate: (dbSuggestion as any).paymentDate ? new Date((dbSuggestion as any).paymentDate as string) : null,
     user: {
       firstName: user.firstName,
@@ -1812,6 +1812,19 @@ export default function AdminSuggestionsPage() {
                                       <div className="text-xs font-medium">
                                         Pontuação: {pontuacao}
                                       </div>
+                                      {/* Tag de Pagamento */}
+                                      {s.payment && (
+                                        <Badge
+                                          variant="outline"
+                                          className={`text-xs px-1.5 py-0.5 font-medium ${
+                                            s.payment.status === "paid"
+                                              ? "bg-green-50 text-green-700 border-green-200"
+                                              : "bg-orange-50 text-orange-700 border-orange-200"
+                                          }`}
+                                        >
+                                          {s.payment.status === "paid" ? "✓ Pago" : "⏳ Não Pago"}
+                                        </Badge>
+                                      )}
                                     </div>
                                   </CardContent>
                                 </Card>
