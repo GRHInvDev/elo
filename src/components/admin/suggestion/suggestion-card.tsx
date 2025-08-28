@@ -26,31 +26,30 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
       onClick={onOpenModal}
       className="cursor-pointer bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-950 dark:to-rose-900 rounded-lg p-3 md:p-4 border border-red-200 dark:border-red-800 hover:shadow-md transition-all duration-200 w-full"
     >
-      <div className="flex flex-col items-center text-center gap-3">
+      <div className="flex items-center gap-3">
         <div className="flex-shrink-0">
           <Image
             src="/sugestao.webp"
             alt="Ideias em Acao"
             width={60}
             height={45}
-            className="rounded-lg object-cover border border-red-200 dark:border-red-700 w-16 h-12 md:w-12 md:h-9"
+            className="rounded-lg object-cover border border-red-200 dark:border-red-700 w-16 h-12"
           />
         </div>
 
-        <div className="flex-1 space-y-2">
+        <div className="flex-1 space-y-2 text-left">
           <h3 className="text-base md:text-lg font-semibold text-red-900 dark:text-red-100">
             Ideias em ação
           </h3>
           <p className="text-xs md:text-sm text-red-700 dark:text-red-300 leading-relaxed">
             Registre aqui a sua sugestão. Sua ideia pode ser premiada!
           </p>
-        </div>
-
-        <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
-          Clique para abrir o formulário
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+            Clique para abrir o formulário
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
       </div>
     </div>
