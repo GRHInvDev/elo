@@ -993,9 +993,6 @@ function SuggestionDetailsModal({
 
   const utils = api.useUtils()
   
-  // Query para buscar usuários para responsável
-  const { data: users = [] } = api.user.listAll.useQuery()
-  
   const updateMutation = api.suggestion.updateAdmin.useMutation({
     onSuccess: () => {
       toast({ title: "Sugestão atualizada", description: "Classificações salvas com sucesso." })
@@ -1234,24 +1231,10 @@ function SuggestionDetailsModal({
         {/* Responsável pela Devolutiva */}
         <div className="space-y-3">
           <Label className="text-base font-medium">Responsável pela Devolutiva</Label>
-          <Select value={responsibleUser ?? "none"} onValueChange={(value) => setResponsibleUser(value === "none" ? null : value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um responsável" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhum responsável</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.firstName} {user.lastName}
-                  {user.setor && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({user.setor})
-                    </span>
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <UserSelector
+            value={responsibleUser}
+            onValueChange={setResponsibleUser}
+          />
         </div>
 
         {/* Mudança de Status */}
