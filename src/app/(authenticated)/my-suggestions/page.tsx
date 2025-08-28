@@ -179,57 +179,6 @@ export default function MySuggestionsPage() {
 
       {/* Estatísticas Detalhadas */}
       <div className="space-y-4 mb-6">
-        {/* Resumo Geral */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-red-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-sm text-muted-foreground">Total enviadas</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-orange-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.newIdeas}</p>
-                  <p className="text-sm text-muted-foreground">Novas</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Eye className="h-5 w-5 text-yellow-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.inReview}</p>
-                  <p className="text-sm text-muted-foreground">Em avaliação</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.approved}</p>
-                  <p className="text-sm text-muted-foreground">Aprovadas</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Status Detalhados */}
         <Card>
           <CardHeader>
