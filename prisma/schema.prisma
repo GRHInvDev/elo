@@ -458,6 +458,10 @@ model Suggestion {
   analystId           String?
   analyst             User?             @relation("SuggestionAnalyst", fields: [analystId], references: [id])
 
+  // Campos de pagamento (para Ideias concluídas)
+  payment             Json?             // { status: "paid" | "unpaid", amount?: number, description?: string }
+  paymentDate         DateTime?
+
   // Relacionamento many-to-many com KPIs
   kpiLinks            SuggestionKpi[]
 
@@ -476,7 +480,7 @@ model Kpi {
   isActive    Boolean  @default(true)
   order       Int      @default(0)
 
-  // Relacionamento m-m com sugestões
+  // Relacionamento m-m com Ideias
   suggestions SuggestionKpi[]
 
   createdAt   DateTime @default(now())
@@ -485,7 +489,7 @@ model Kpi {
   @@index([isActive])
 }
 
-// Tabela de junção para relacionamento m-m entre sugestões e KPIs
+// Tabela de junção para relacionamento m-m entre Ideias e KPIs
 model SuggestionKpi {
   id           String    @id @default(cuid())
   suggestionId String

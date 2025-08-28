@@ -54,7 +54,7 @@ export class NotificationService {
     }
   }
 
-  // Notificações específicas para sugestões
+  // Notificações específicas para ideias
   static async notifySuggestionCreated(suggestionId: string, authorId: string, suggestionNumber: number): Promise<unknown> {
     return this.createNotification({
       title: "Nova Sugestão Criada",

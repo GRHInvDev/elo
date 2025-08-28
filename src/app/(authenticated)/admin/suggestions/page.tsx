@@ -43,6 +43,8 @@ type SuggestionLocal = {
   status: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED"
   rejectionReason: string | null
   analystId: string | null
+  payment: { status: "paid" | "unpaid"; amount?: number; description?: string } | null
+  paymentDate: Date | null
   user: {
     firstName: string | null
     lastName: string | null
@@ -138,6 +140,8 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     status: dbSuggestion.status as "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED",
     rejectionReason: dbSuggestion.rejectionReason,
     analystId: dbSuggestion.analystId,
+    payment: (dbSuggestion as any).payment ? (dbSuggestion as any).payment as { status: "paid" | "unpaid"; amount?: number; description?: string } : null,
+    paymentDate: (dbSuggestion as any).paymentDate ? new Date((dbSuggestion as any).paymentDate as string) : null,
     user: {
       firstName: user.firstName,
       lastName: user.lastName,
@@ -298,12 +302,12 @@ function ClassificationInlineField({
   const filteredClassifications = inputValue.length > 0
     ? getSimilarClassifications(inputValue, type).filter(item =>
         item.label.toLowerCase() !== inputValue.toLowerCase().trim()
-      ).slice(0, 5) // Limitar a 5 sugestões
+      ).slice(0, 5) // Limitar a 5 Ideias
     : []
 
   const handleInputChange = (value: string) => {
     setInputValue(value)
-    setShowSuggestions(value.length > 0) // Mostrar sugestões assim que começar a digitar
+    setShowSuggestions(value.length > 0) // Mostrar Ideias assim que começar a digitar
     setSelectedSuggestionIndex(-1) // Resetar seleção quando digitar
   }
 
@@ -907,7 +911,7 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
             </Button>
           </div>
 
-          {/* Sugestões */}
+          {/* Ideias */}
           {showSuggestions && similarKpis.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-60 overflow-y-auto">
               <div className="p-2">
@@ -975,6 +979,10 @@ function SuggestionDetailsModal({
   const [newStatus, setNewStatus] = useState<string>("")
   const [rejectionReason, setRejectionReason] = useState("")
   const [showReasonField, setShowReasonField] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid")
+  const [paymentAmount, setPaymentAmount] = useState<number | undefined>(undefined)
+  const [paymentDescription, setPaymentDescription] = useState("")
+  const [paymentDate, setPaymentDate] = useState<Date | null>(null)
 
   // Carregar valores existentes
   useEffect(() => {
@@ -998,6 +1006,14 @@ function SuggestionDetailsModal({
     setResponsibleUser(suggestion.analystId ?? null)
     setNewStatus(STATUS_MAPPING[suggestion.status] ?? suggestion.status)
     setRejectionReason(suggestion.rejectionReason ?? "")
+    
+    // Carregar dados de pagamento
+    if (suggestion.payment) {
+      setPaymentStatus(suggestion.payment.status)
+      setPaymentAmount(suggestion.payment.amount)
+      setPaymentDescription(suggestion.payment.description ?? "")
+    }
+    setPaymentDate(suggestion.paymentDate)
   }, [suggestion])
 
   const utils = api.useUtils()
@@ -1049,7 +1065,13 @@ function SuggestionDetailsModal({
       effort: { text: effortText, score: effortScore },
       analystId: responsibleUser ?? undefined,
       status: statusEnum,
-      rejectionReason: newStatus === "Não implantado" ? rejectionReason : undefined
+      rejectionReason: newStatus === "Não implantado" ? rejectionReason : undefined,
+      payment: newStatus === "Concluído" ? {
+        status: paymentStatus,
+        amount: paymentAmount,
+        description: paymentDescription || undefined,
+      } : undefined,
+      paymentDate: newStatus === "Concluído" && paymentStatus === "paid" ? paymentDate ?? undefined : undefined,
     })
   }
 
@@ -1281,8 +1303,69 @@ function SuggestionDetailsModal({
               required
             />
             <p className="text-xs text-muted-foreground">
-              Este campo é obrigatório para sugestões não implementadas.
+              Este campo é obrigatório para ideias não implementadas.
             </p>
+          </div>
+        )}
+
+        {/* Campos de Pagamento (aparece apenas para "Concluído") */}
+        {newStatus === "Concluído" && (
+          <div className="space-y-6 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+            <h4 className="text-base font-medium text-green-800 dark:text-green-200">
+              💰 Gestão de Pagamento
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Status do Pagamento */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Status do Pagamento</Label>
+                <Select value={paymentStatus} onValueChange={(value: "paid" | "unpaid") => setPaymentStatus(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unpaid">Não Pago</SelectItem>
+                    <SelectItem value="paid">Pago</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Data do Pagamento (só se estiver pago) */}
+              {paymentStatus === "paid" && (
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Data do Pagamento</Label>
+                  <Input
+                    type="date"
+                    value={paymentDate ? paymentDate.toISOString().split('T')[0] : ""}
+                    onChange={(e) => setPaymentDate(e.target.value ? new Date(e.target.value) : null)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Valor do Pagamento */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Valor do Pagamento (Opcional)</Label>
+              <Input
+                type="number"
+                placeholder="Ex: 500.00"
+                step="0.01"
+                min="0"
+                value={paymentAmount ?? ""}
+                onChange={(e) => setPaymentAmount(e.target.value ? parseFloat(e.target.value) : undefined)}
+              />
+            </div>
+
+            {/* Descrição do Pagamento */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Descrição do Pagamento (Opcional)</Label>
+              <Textarea
+                placeholder="Detalhes sobre o pagamento, forma de pagamento, etc..."
+                value={paymentDescription}
+                onChange={(e) => setPaymentDescription(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -1309,7 +1392,7 @@ function SuggestionDetailsModal({
 export default function AdminSuggestionsPage() {
   const { data: dbSuggestions = [], refetch } = api.suggestion.list.useQuery({
     status: ["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"],
-    take: 1000, // Buscar até 1000 sugestões (valor alto para pegar todas)
+    take: 1000, // Buscar até 1000 Ideias (valor alto para pegar todas)
   })
 
 
@@ -1589,7 +1672,7 @@ export default function AdminSuggestionsPage() {
     return "Revisar"
   }
 
-  // Ordenação inteligente das sugestões com filtro
+  // Ordenação inteligente das Ideias com filtro
   const sortedSuggestions = useMemo(() => {
     const priorityOrder = {
       "Novo": 1,
@@ -1659,15 +1742,14 @@ export default function AdminSuggestionsPage() {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Sugestões (Avançado)</h1>
-            <p className="text-muted-foreground mt-2">Avalie, classifique e acompanhe o status das sugestões.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Ideias em ação</h1>
+            <p className="text-muted-foreground mt-2">Avalie, classifique e acompanhe o status das ideias.</p>
           </div>
         </div>
       </div>
 
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Visão Kanban</h2>
           <div className="flex items-center gap-2">
             <Label className="text-sm">Ordenar por numeração:</Label>
             <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
@@ -2234,7 +2316,7 @@ function SuggestionItem({
                           />
                           <div className="flex justify-between items-center mt-1">
                             <p className="text-xs text-red-600 dark:text-red-400">
-                              Campo obrigatório para sugestões não implementadas (mínimo 10 caracteres).
+                              Campo obrigatório para ideias não implementadas (mínimo 10 caracteres).
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {(rejectionReasons[s.id] ?? s.rejectionReason ?? "").length}/1000
@@ -2286,7 +2368,7 @@ function SuggestionItem({
                         />
                         <div className="flex items-center justify-between">
                           <div className="text-xs text-red-600">
-                            Campo obrigatório para sugestões não implementadas
+                            Campo obrigatório para ideias não implementadas
                           </div>
                                                     <Button
                             size="sm"

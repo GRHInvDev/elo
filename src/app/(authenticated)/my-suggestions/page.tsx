@@ -21,7 +21,7 @@ const STATUS_MAPPING = {
   "NOT_IMPLEMENTED": "Não implementado"
 } as const
 
-// Tipos para as sugestões
+// Tipos para as Ideias
 interface SuggestionContribution {
   type: string
   other?: string
@@ -82,10 +82,10 @@ export default function MySuggestionsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  // Buscar sugestões do usuário logado
+  // Buscar Ideias do usuário logado
   const { data: userSuggestions = [], isLoading } = api.suggestion.getMySuggestions.useQuery()
 
-  // Filtrar sugestões baseado nos critérios
+  // Filtrar Ideias baseado nos critérios
   const filteredSuggestions = useMemo(() => {
     return userSuggestions.filter((suggestion: unknown) => {
       const description = getSuggestionProperty<string>(suggestion, 'description', '')
@@ -157,10 +157,10 @@ export default function MySuggestionsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-foreground dark:text-foreground">
-            Minhas Sugestões
+            Minhas ideias
           </h1>
           <p className="text-muted-foreground dark:text-muted-foreground">
-            Acompanhe o status das suas sugestões enviadas
+            Acompanhe o status das suas ideias enviadas
           </p>
         </div>
       </div>
@@ -253,12 +253,12 @@ export default function MySuggestionsPage() {
         </CardContent>
       </Card>
 
-      {/* Lista de sugestões */}
+      {/* Lista de Ideias */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Minhas Sugestões ({filteredSuggestions.length})
+            Minhas Ideias ({filteredSuggestions.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -268,7 +268,7 @@ export default function MySuggestionsPage() {
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
                 {searchTerm || statusFilter !== "all"
                   ? "Nenhuma sugestão encontrada"
-                  : "Você ainda não enviou sugestões"}
+                  : "Você ainda não enviou Ideias"}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {searchTerm || statusFilter !== "all"
@@ -325,15 +325,12 @@ export default function MySuggestionsPage() {
                       <div className="space-y-4">
                         {/* Status com descrição */}
                         <div className="p-4 rounded-lg bg-muted/30 dark:bg-muted/30 border">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2">
                             <StatusIcon className="h-4 w-4" />
                             <span className="font-medium text-foreground dark:text-foreground">
-                              Status: {STATUS_MAPPING[status as keyof typeof STATUS_MAPPING] || status}
+                              Status: {statusConfig.description}
                             </span>
                           </div>
-                          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                            {statusConfig.description}
-                          </p>
                         </div>
                         {/* Detalhes da sugestão */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
@@ -414,6 +411,68 @@ export default function MySuggestionsPage() {
                                 <p className="mt-1 text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap break-words overflow-wrap-anywhere">
                                   {getSuggestionProperty<string>(suggestion, 'rejectionReason', '')}
                                 </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Informações de pagamento (para Ideias concluídas) */}
+                        {status === "DONE" && (
+                          <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
+                            <div className="flex items-start gap-2">
+                              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                              <div className="w-full">
+                                <Label className="text-sm font-medium text-green-800 dark:text-green-400">
+                                  💰 Informações Adicionais
+                                </Label>
+                                <div className="mt-2 space-y-1">
+                                  {(() => {
+                                    const payment = getSuggestionProperty<{status: string; amount?: number; description?: string} | null>(suggestion, 'payment', null)
+                                    const paymentDate = getSuggestionProperty<string | null>(suggestion, 'paymentDate', null)
+                                    
+                                    if (payment) {
+                                      return (
+                                        <div className="space-y-1">
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                              Pagamento: {payment.status === "paid" ? "Pago" : "Não Pago"}
+                                            </span>
+                                          </div>
+                                          
+                                          {payment.status === "paid" && paymentDate && (
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                                Data de pagamento: {new Date(paymentDate).toLocaleDateString('pt-BR')}
+                                              </span>
+                                            </div>
+                                          )}
+                                          
+                                          {payment.amount && (
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-sm text-green-700 dark:text-green-300">
+                                                Valor: R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                              </span>
+                                            </div>
+                                          )}
+                                          
+                                          {payment.description && (
+                                            <div>
+                                              <span className="text-sm text-green-700 dark:text-green-300">
+                                                Observações: {payment.description}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    } else {
+                                      return (
+                                        <p className="text-sm text-green-700 dark:text-green-300">
+                                          Informações de pagamento ainda não definidas.
+                                        </p>
+                                      )
+                                    }
+                                  })()}
+                                </div>
                               </div>
                             </div>
                           </div>

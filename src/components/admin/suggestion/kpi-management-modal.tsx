@@ -85,7 +85,7 @@ export function KpiManagementModal({
       // Invalidar queries relacionadas
       void utils.kpi.listActive.invalidate()
       void utils.kpi.search.invalidate()
-      // Invalidar sugestões se houver uma sugestão selecionada
+      // Invalidar Ideias se houver uma Ideias selecionada
       if (suggestionId) {
         void utils.suggestion.list.invalidate()
         void utils.suggestion.listKanban.invalidate()
@@ -102,7 +102,7 @@ export function KpiManagementModal({
       // Forçar refetch dos KPIs para a sugestão selecionada
       if (suggestionId) {
         void utils.kpi.getBySuggestionId.invalidate({ suggestionId })
-        // Invalidar também a lista de sugestões para mostrar as mudanças imediatamente
+        // Invalidar também a lista de Ideias para mostrar as mudanças imediatamente
         void utils.suggestion.list.invalidate()
         void utils.suggestion.listKanban.invalidate()
       }
@@ -354,7 +354,7 @@ export function KpiManagementModal({
                                   <Check className="w-4 h-4 text-primary" />
                                 )}
                                 <Badge variant="secondary" className="text-xs">
-                                  {kpi._count?.suggestions ?? 0} sugestões
+                                  {kpi._count?.suggestions ?? 0} Ideias
                                 </Badge>
                               </div>
                               {kpi.description && (

@@ -113,7 +113,7 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
               </div>
-              {/* Card de Sugestões */}
+              {/* Card de Ideias */}
               <div className="flex-1 flex items-center">
                 <SuggestionsWrapper />
               </div>

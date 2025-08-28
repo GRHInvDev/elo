@@ -610,7 +610,7 @@ export const mockEmailNotificacaoSugestao = (
 
               <div class="footer">
                   <p>Atenciosamente,</p>
-                  <p>Equipe de Avaliação de Sugestões</p>
+                  <p>Equipe de Avaliação de Ideias</p>
                   <p>elo - Sistema de Intranet</p>
               </div>
           </div>

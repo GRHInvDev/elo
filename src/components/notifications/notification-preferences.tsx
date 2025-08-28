@@ -152,12 +152,12 @@ export function NotificationPreferences() {
 
         <Separator />
 
-        {/* Atualizações de Sugestões */}
+        {/* Atualizações de Ideias */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label className="text-base text-foreground dark:text-foreground">Atualizações de Sugestões</Label>
+            <Label className="text-base text-foreground dark:text-foreground">Atualizações de Ideias</Label>
             <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-              Notificar sobre mudanças nas suas sugestões
+              Notificar sobre mudanças nas suas Ideias
             </p>
           </div>
           <Switch
@@ -294,12 +294,12 @@ export function NotificationPreferences() {
             />
           </div>
 
-          {/* Sugestões */}
+          {/* Ideias */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="text-base text-foreground dark:text-foreground">Sugestões</Label>
+              <Label className="text-base text-foreground dark:text-foreground">Ideias</Label>
               <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                💡 Atualizações sobre suas sugestões
+                💡 Atualizações sobre suas ideias
               </p>
             </div>
             <Switch

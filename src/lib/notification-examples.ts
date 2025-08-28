@@ -3,24 +3,24 @@
 
 import { NotificationService } from './notification-service'
 
-// 1. Notificações de Sugestões
+// 1. Notificações de Ideias
 export const suggestionNotificationExamples = {
-  // Quando uma sugestão é criada
+  // Quando uma Ideia é criada
   onSuggestionCreated: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
     await NotificationService.notifySuggestionCreated(suggestionId, authorId, suggestionNumber)
   },
 
-  // Quando uma sugestão é aprovada
+  // Quando uma Ideia é aprovada
   onSuggestionApproved: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
     await NotificationService.notifySuggestionApproved(suggestionId, authorId, suggestionNumber)
   },
 
-  // Quando uma sugestão é rejeitada
+  // Quando uma Ideia é rejeitada
   onSuggestionRejected: async (suggestionId: string, authorId: string, suggestionNumber: number, reason?: string) => {
     await NotificationService.notifySuggestionRejected(suggestionId, authorId, suggestionNumber, reason)
   },
 
-  // Quando uma sugestão é atualizada
+  // Quando uma Ideia é atualizada
   onSuggestionUpdated: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
     await NotificationService.notifySuggestionUpdated(suggestionId, authorId, suggestionNumber)
   }
@@ -28,7 +28,7 @@ export const suggestionNotificationExamples = {
 
 // 2. Notificações de KPIs
 export const kpiNotificationExamples = {
-  // Quando KPIs são adicionados a uma sugestão
+  // Quando KPIs são adicionados a uma Ideia
   onKpiAdded: async (suggestionId: string, authorId: string, kpiName: string) => {
     await NotificationService.notifyKpiAdded(suggestionId, authorId, kpiName)
   }
@@ -166,8 +166,8 @@ export const bestPractices = {
   // ❌ Ruim: Use tipos genéricos
   await NotificationService.createNotification({
     type: 'INFO',
-    title: 'Sugestão Aprovada',
-    message: 'Sua sugestão foi aprovada',
+    title: 'Ideia Aprovada',
+    message: 'Sua Ideia foi aprovada',
     userId
   })
   `,

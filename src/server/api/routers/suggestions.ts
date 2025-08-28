@@ -171,6 +171,12 @@ export const suggestionRouter = createTRPCRouter({
       status: StatusEnum.optional(),
       rejectionReason: z.string().optional(),
       analystId: z.string().optional(),
+      payment: z.object({
+        status: z.enum(["paid", "unpaid"]),
+        amount: z.number().optional(),
+        description: z.string().optional(),
+      }).optional(),
+      paymentDate: z.date().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const prev = await ctx.db.suggestion.findUnique({
@@ -239,6 +245,8 @@ export const suggestionRouter = createTRPCRouter({
           status: input.status,
           rejectionReason: input.rejectionReason,
           analystId: input.analystId, // Usar apenas o analystId fornecido explicitamente
+          payment: input.payment ? (input.payment as InputJsonValue) : undefined,
+          paymentDate: input.paymentDate,
           finalScore,
           finalClassification: finalClassification as InputJsonValue,
         },
@@ -330,8 +338,24 @@ export const suggestionRouter = createTRPCRouter({
         if (input.status === "NOT_IMPLEMENTED" && !input.rejectionReason) {
         } else {
           try {
-            const nomeUsuario = `${suggestionData.user.firstName ?? ''} ${suggestionData.user.lastName ?? ''}`.trim() ?? 'Usuário'
-            const nomeResponsavel = `${updatedSuggestion.analyst?.firstName ?? ''} ${updatedSuggestion.analyst?.lastName ?? ''}`.trim() ?? 'Admin'
+            const nomeUsuario = suggestionData.user ? `${suggestionData.user.firstName ?? ''} ${suggestionData.user.lastName ?? ''}`.trim() || 'Usuário' : 'Usuário'
+            let nomeResponsavel = 'Admin'
+            if (updatedSuggestion.analyst && typeof updatedSuggestion.analyst === 'object') {
+              interface AnalystData {
+                firstName?: string | null
+                lastName?: string | null
+                email?: string | null
+              }
+              const analystObj = updatedSuggestion.analyst as AnalystData
+              if (analystObj) {
+                const firstName = analystObj.firstName ?? ''
+                const lastName = analystObj.lastName ?? ''
+                const fullName = `${firstName} ${lastName}`.trim()
+                if (fullName) {
+                  nomeResponsavel = fullName
+                }
+              }
+            }
 
             // Mapear status para português
             const statusMapping = {
@@ -368,7 +392,7 @@ export const suggestionRouter = createTRPCRouter({
       return updatedSuggestion
     }),
 
-  // Buscar sugestões do usuário logado
+  // Buscar ideias do usuário logado
   getMySuggestions: protectedProcedure
     .query(async ({ ctx }) => {
       return ctx.db.suggestion.findMany({

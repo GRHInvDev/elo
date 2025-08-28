@@ -168,9 +168,9 @@ export function SuggestionsCard() {
                 <Lightbulb className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="text-left">
-                <h3 className="text-lg font-semibold">Caixa de Sugestões</h3>
+                <h3 className="text-lg font-semibold">Caixa de Ideias</h3>
                 <p className="text-sm text-muted-foreground">
-                  Descreva sua sugestão
+                  Descreva sua ideia
                 </p>
               </div>
             </div>
@@ -400,7 +400,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             <div className="p-2 bg-red-100 rounded-lg">
               <Lightbulb className="h-4 w-4 md:h-5 md:w-5 text-red-600" />
             </div>
-            <span className="text-lg md:text-xl">Caixa de Sugestões</span>
+            <span className="text-lg md:text-xl">Caixa de Ideias</span>
           </DialogTitle>
         </DialogHeader>
 
