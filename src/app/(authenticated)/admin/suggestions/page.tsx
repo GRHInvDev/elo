@@ -15,7 +15,7 @@ import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
-import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings } from "lucide-react"
+import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X } from "lucide-react"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -79,17 +79,25 @@ const STATUS = Object.values(STATUS_MAPPING)
 function getStatusColor(status: string): string {
   switch (status) {
     case "Novo":
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-100"
     case "Em avaliação":
-      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-300/50 dark:text-red-100"
+      return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200"
     case "Em orçamento":
+      return "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-800/40 dark:text-yellow-100"
     case "Em execução":
       return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-300/50 dark:text-yellow-100"
     case "Concluído":
       return "bg-green-100 text-green-800 border-green-200 dark:bg-green-300/50 dark:text-green-100"
     case "Não implantado":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-300/50 dark:text-red-100"
     default:
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-100"
   }
+}
+
+// Função para formatar números com zeros à esquerda
+function formatIdeaNumber(ideaNumber: number): string {
+  return ideaNumber.toString().padStart(3, '0')
 }
 
 
@@ -679,12 +687,636 @@ function KpiInlineField({
   )
 }
 
+// Componente para gerenciar KPIs da sugestão
+function KpiSection({ suggestionId }: { suggestionId: string }) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [inputValue, setInputValue] = useState("")
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // Query para buscar KPIs da sugestão
+  const { data: suggestionKpis = [], refetch: refetchKpis } = api.kpi.getBySuggestionId.useQuery(
+    { suggestionId },
+    { enabled: !!suggestionId }
+  )
+
+  // Query para buscar KPIs similares
+  const { data: similarKpis = [] } = api.kpi.search.useQuery(
+    { query: inputValue },
+    { enabled: inputValue.length > 0 }
+  )
+
+  // Mutations
+  const createKpi = api.kpi.create.useMutation({
+    onSuccess: (newKpi) => {
+      // Vincular automaticamente o KPI recém-criado
+      linkKpi.mutate({
+        suggestionId,
+        kpiIds: [...suggestionKpis.map(k => k.id), newKpi.id]
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao criar KPI",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
+  })
+
+  const linkKpi = api.kpi.linkToSuggestion.useMutation({
+    onSuccess: () => {
+      toast({ title: "KPI adicionado", description: "KPI vinculado com sucesso à sugestão." })
+      void refetchKpis()
+      setInputValue("")
+      setIsAdding(false)
+      setShowSuggestions(false)
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao vincular KPI",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
+  })
+
+  const unlinkKpi = api.kpi.unlinkFromSuggestion.useMutation({
+    onSuccess: () => {
+      toast({ title: "KPI removido", description: "KPI removido da sugestão." })
+      void refetchKpis()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao remover KPI",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
+  })
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value)
+    setShowSuggestions(value.length > 0)
+  }
+
+  const handleSelectExisting = (kpi: { id: string; name: string }) => {
+    // Verificar se já está vinculado
+    const isAlreadyLinked = suggestionKpis.some(k => k.id === kpi.id)
+    if (isAlreadyLinked) {
+      toast({
+        title: "KPI já vinculado",
+        description: "Este KPI já está vinculado a esta sugestão.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Vincular KPI existente
+    linkKpi.mutate({
+      suggestionId,
+      kpiIds: [...suggestionKpis.map(k => k.id), kpi.id]
+    })
+  }
+
+  const handleCreateNew = () => {
+    if (!inputValue.trim()) return
+
+    // Verificar se já existe um KPI com este nome exato
+    const existingKpi = similarKpis.find(k => 
+      k.name.toLowerCase() === inputValue.toLowerCase().trim()
+    )
+
+    if (existingKpi) {
+      handleSelectExisting(existingKpi)
+    } else {
+      // Criar novo KPI
+      createKpi.mutate({
+        name: inputValue.trim(),
+        description: undefined
+      })
+    }
+  }
+
+  const handleRemoveKpi = (kpiId: string) => {
+    unlinkKpi.mutate({
+      suggestionId,
+      kpiIds: [kpiId]
+    })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleCreateNew()
+    } else if (e.key === 'Escape') {
+      setInputValue("")
+      setIsAdding(false)
+      setShowSuggestions(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">KPIs de Sucesso</h3>
+        {!isAdding && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAdding(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar KPI
+          </Button>
+        )}
+      </div>
+
+      {/* KPIs Atuais */}
+      {suggestionKpis.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {suggestionKpis.map((kpi) => (
+            <Badge key={kpi.id} variant="secondary" className="text-sm group relative">
+              {kpi.name}
+              <button
+                onClick={() => handleRemoveKpi(kpi.id)}
+                className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                disabled={unlinkKpi.isPending}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Interface de Adição */}
+      {isAdding && (
+        <div className="relative">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Input
+                placeholder="Digite o nome do KPI..."
+                value={inputValue}
+                onChange={(e) => handleInputChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                autoFocus
+                className="pr-20"
+              />
+              {inputValue && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setInputValue("")
+                      setShowSuggestions(false)
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            <Button
+              size="sm"
+              onClick={handleCreateNew}
+              disabled={!inputValue.trim() || createKpi.isPending || linkKpi.isPending}
+            >
+              {createKpi.isPending || linkKpi.isPending ? "..." : "Adicionar"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setIsAdding(false)
+                setInputValue("")
+                setShowSuggestions(false)
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+
+          {/* Sugestões */}
+          {showSuggestions && similarKpis.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="p-2">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  KPIs similares:
+                </div>
+                {similarKpis.slice(0, 5).map((kpi) => {
+                  const isAlreadyLinked = suggestionKpis.some(k => k.id === kpi.id)
+                  return (
+                    <div
+                      key={kpi.id}
+                      className={`p-2 rounded cursor-pointer text-sm transition-colors ${
+                        isAlreadyLinked 
+                          ? 'bg-muted/50 text-muted-foreground cursor-not-allowed'
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => !isAlreadyLinked && handleSelectExisting(kpi)}
+                    >
+                      <div className="font-medium">{kpi.name}</div>
+                      {kpi.description && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {kpi.description}
+                        </div>
+                      )}
+                      {isAlreadyLinked && (
+                        <div className="text-xs text-muted-foreground italic">
+                          Já vinculado
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {suggestionKpis.length === 0 && !isAdding && (
+        <p className="text-sm text-muted-foreground">
+          Nenhum KPI vinculado a esta sugestão.
+        </p>
+      )}
+    </div>
+  )
+}
+
+// Componente para modal de detalhes da sugestão
+function SuggestionDetailsModal({
+  suggestion,
+  onUpdate,
+  onClose
+}: {
+  suggestion: SuggestionLocal
+  onUpdate: (id: string, updates: Partial<SuggestionLocal>) => void
+  onClose: () => void
+}) {
+  const [impactText, setImpactText] = useState("")
+  const [impactScore, setImpactScore] = useState(1)
+  const [capacityText, setCapacityText] = useState("")
+  const [capacityScore, setCapacityScore] = useState(1)
+  const [effortText, setEffortText] = useState("")
+  const [effortScore, setEffortScore] = useState(1)
+  const [responsibleUser, setResponsibleUser] = useState<string | null>(null)
+  const [newStatus, setNewStatus] = useState<string>("")
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [showReasonField, setShowReasonField] = useState(false)
+
+  // Carregar valores existentes
+  useEffect(() => {
+    if (suggestion.impact) {
+      const impact = suggestion.impact as { text?: string; score?: number }
+      setImpactText(impact.text ?? "")
+      setImpactScore(impact.score ?? 1)
+    }
+    if (suggestion.capacity) {
+      const capacity = suggestion.capacity as { text?: string; score?: number }
+      setCapacityText(capacity.text ?? "")
+      setCapacityScore(capacity.score ?? 1)
+    }
+    if (suggestion.effort) {
+      const effort = suggestion.effort as { text?: string; score?: number }
+      setEffortText(effort.text ?? "")
+      setEffortScore(effort.score ?? 1)
+    }
+    
+    // Carregar responsável e status atual
+    setResponsibleUser(suggestion.analystId ?? null)
+    setNewStatus(STATUS_MAPPING[suggestion.status] ?? suggestion.status)
+    setRejectionReason(suggestion.rejectionReason ?? "")
+  }, [suggestion])
+
+  const utils = api.useUtils()
+  
+  // Query para buscar usuários para responsável
+  const { data: users = [] } = api.user.listAll.useQuery()
+  
+  const updateMutation = api.suggestion.updateAdmin.useMutation({
+    onSuccess: () => {
+      toast({ title: "Sugestão atualizada", description: "Classificações salvas com sucesso." })
+      // Atualizar os dados localmente
+      onUpdate(suggestion.id, {
+        impact: { label: impactText, score: impactScore },
+        capacity: { label: capacityText, score: capacityScore },
+        effort: { label: effortText, score: effortScore }
+      })
+      // Invalidar queries para recarregar dados
+      void utils.suggestion.list.invalidate()
+      onClose()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
+  })
+
+  const handleSave = () => {
+    // Validar se motivo é necessário para "Não implantado"
+    if (newStatus === "Não implantado" && !rejectionReason.trim()) {
+      toast({
+        title: "Motivo obrigatório",
+        description: "É necessário informar o motivo para 'Não implantado'.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Converter status de volta para enum
+    const statusEnum = Object.entries(STATUS_MAPPING).find(([, value]) => value === newStatus)?.[0] as keyof typeof STATUS_MAPPING | undefined
+
+    updateMutation.mutate({
+      id: suggestion.id,
+      impact: { text: impactText, score: impactScore },
+      capacity: { text: capacityText, score: capacityScore },
+      effort: { text: effortText, score: effortScore },
+      analystId: responsibleUser ?? undefined,
+      status: statusEnum,
+      rejectionReason: newStatus === "Não implantado" ? rejectionReason : undefined
+    })
+  }
+
+  const pontuacao = impactScore + capacityScore - effortScore
+  const nomeExibicao = suggestion.isNameVisible ? (suggestion.submittedName ?? "Não informado") : "Nome oculto"
+  const setorExibido = suggestion.submittedSector ?? suggestion.user.setor ?? "Setor não informado"
+  const contribType = suggestion.contribution?.type ?? ""
+  const contribOther = suggestion.contribution?.other
+
+  // Função para determinar resultado final
+  const getFinalResult = (score: number) => {
+    if (score >= 0 && score <= 9) return { text: "Descartar com justificativa clara", color: "bg-red-100 text-red-800 border border-red-200" }
+    if (score >= 10 && score <= 14) return { text: "Ajustar e incubar", color: "bg-yellow-100 text-yellow-800 border border-yellow-200" }
+    if (score >= 15 && score <= 20) return { text: "Aprovar para gestores", color: "bg-green-100 text-green-800 border border-green-200" }
+    return { text: "Revisar pontuação", color: "bg-gray-100 text-gray-800 border border-gray-200" }
+  }
+
+  const finalResult = getFinalResult(pontuacao)
+
+  // Função para lidar com mudança de status
+  const handleStatusChange = (status: string) => {
+    setNewStatus(status)
+    if (status === "Não implantado") {
+      setShowReasonField(true)
+    } else {
+      setShowReasonField(false)
+      setRejectionReason("")
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Informações da Sugestão */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+        <div>
+          <div className="text-sm font-medium">Autor</div>
+          <div className="text-sm text-muted-foreground">
+            {nomeExibicao}
+            {setorExibido && setorExibido !== "Setor não informado" && (
+              <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
+                {setorExibido}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="md:col-span-2">
+          <div className="text-sm font-medium">Tipo de contribuição</div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">
+              {contribType === "IDEIA_INOVADORA" ? "Ideia inovadora" :
+               contribType === "SUGESTAO_MELHORIA" ? "Sugestão de melhoria" :
+               contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
+               contribType === "OUTRO" ? `Outro: ${contribOther ?? ""}` : "-"}
+            </Badge>
+          </div>
+        </div>
+        <div className="md:col-span-2">
+          <div className="text-sm font-medium">Problema</div>
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {suggestion.problem ?? "Não informado"}
+          </div>
+        </div>
+        <div className="md:col-span-2">
+          <div className="text-sm font-medium">Solução</div>
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {suggestion.description}
+          </div>
+        </div>
+      </div>
+
+      {/* Classificações Simplificadas */}
+      <div className="space-y-6">
+        <h3 className="text-lg font-semibold">Classificações</h3>
+        
+        {/* Impacto */}
+        <div className="space-y-3">
+          <Label className="text-base font-medium">Impacto</Label>
+          <Textarea
+            placeholder="Descreva o impacto desta sugestão (máximo 2000 caracteres)"
+            value={impactText}
+            onChange={(e) => setImpactText(e.target.value)}
+            maxLength={2000}
+            className="min-h-[100px]"
+          />
+          <div className="flex items-center gap-4">
+            <Label className="text-sm">Pontuação:</Label>
+            <Select value={impactScore.toString()} onValueChange={(value) => setImpactScore(Number(value))}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">
+              {impactText.length}/2000 caracteres
+            </span>
+          </div>
+        </div>
+
+        {/* Capacidade */}
+        <div className="space-y-3">
+          <Label className="text-base font-medium">Capacidade</Label>
+          <Textarea
+            placeholder="Descreva a capacidade de implementação desta sugestão (máximo 2000 caracteres)"
+            value={capacityText}
+            onChange={(e) => setCapacityText(e.target.value)}
+            maxLength={2000}
+            className="min-h-[100px]"
+          />
+          <div className="flex items-center gap-4">
+            <Label className="text-sm">Pontuação:</Label>
+            <Select value={capacityScore.toString()} onValueChange={(value) => setCapacityScore(Number(value))}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">
+              {capacityText.length}/2000 caracteres
+            </span>
+          </div>
+        </div>
+
+        {/* Esforço */}
+        <div className="space-y-3">
+          <Label className="text-base font-medium">Esforço</Label>
+          <Textarea
+            placeholder="Descreva o esforço necessário para implementar esta sugestão (máximo 2000 caracteres)"
+            value={effortText}
+            onChange={(e) => setEffortText(e.target.value)}
+            maxLength={2000}
+            className="min-h-[100px]"
+          />
+          <div className="flex items-center gap-4">
+            <Label className="text-sm">Pontuação:</Label>
+            <Select value={effortScore.toString()} onValueChange={(value) => setEffortScore(Number(value))}>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">
+              {effortText.length}/2000 caracteres
+            </span>
+          </div>
+        </div>
+
+        {/* Pontuação Total */}
+        <div className="p-4 bg-muted/30 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="font-medium">Pontuação Total:</span>
+            <span className="text-lg font-bold">{pontuacao}</span>
+          </div>
+          <div className="text-sm text-muted-foreground mt-1">
+            Impacto ({impactScore}) + Capacidade ({capacityScore}) - Esforço ({effortScore})
+          </div>
+        </div>
+
+        {/* Resultado Final */}
+        <div className={`p-4 rounded-lg ${finalResult.color}`}>
+          <div className="flex items-center justify-between">
+            <span className="font-medium">Resultado Final:</span>
+            <span className="font-bold">{finalResult.text}</span>
+          </div>
+          <div className="text-sm mt-1 opacity-80">
+            Baseado na pontuação: {pontuacao}
+          </div>
+        </div>
+      </div>
+
+      {/* Seção de Gestão */}
+      <div className="space-y-6">
+        <h3 className="text-lg font-semibold">Gestão da Sugestão</h3>
+        
+        {/* Responsável pela Devolutiva */}
+        <div className="space-y-3">
+          <Label className="text-base font-medium">Responsável pela Devolutiva</Label>
+          <Select value={responsibleUser ?? "none"} onValueChange={(value) => setResponsibleUser(value === "none" ? null : value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um responsável" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum responsável</SelectItem>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.firstName} {user.lastName}
+                  {user.setor && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({user.setor})
+                    </span>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Mudança de Status */}
+        <div className="space-y-3">
+          <Label className="text-base font-medium">Status da Sugestão</Label>
+          <Select value={newStatus} onValueChange={handleStatusChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o status" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(STATUS_MAPPING).map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Campo de Motivo (aparece apenas para "Não implantado") */}
+        {(showReasonField || newStatus === "Não implantado") && (
+          <div className="space-y-3">
+            <Label className="text-base font-medium text-destructive">
+              Motivo da Não Implementação *
+            </Label>
+            <Textarea
+              placeholder="Explique o motivo pelo qual esta sugestão não será implementada..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="min-h-[100px]"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Este campo é obrigatório para sugestões não implementadas.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Seção de KPIs */}
+      <KpiSection suggestionId={suggestion.id} />
+
+      {/* Botões de Ação */}
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button 
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+        >
+          {updateMutation.isPending ? "Salvando..." : "Salvar Classificações"}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminSuggestionsPage() {
   const { data: dbSuggestions = [], refetch } = api.suggestion.list.useQuery({
     status: ["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"],
+    take: 1000, // Buscar até 1000 sugestões (valor alto para pegar todas)
   })
 
-  const { data: _currentUser } = api.user.me.useQuery()
+
 
   const suggestions = useMemo(() =>
     dbSuggestions.map((s) => convertDBToLocal(s)),
@@ -726,6 +1358,22 @@ export default function AdminSuggestionsPage() {
 
   // Estado para modal de gerenciamento de classificações
   const [isClassificationModalOpen, setIsClassificationModalOpen] = useState<boolean>(false)
+
+  // Estado para modal de detalhes da sugestão
+  const [selectedSuggestion, setSelectedSuggestion] = useState<SuggestionLocal | null>(null)
+  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+
+  // Função para abrir modal de detalhes da sugestão
+  const openSuggestionModal = (suggestion: SuggestionLocal) => {
+    setSelectedSuggestion(suggestion)
+    setIsSuggestionModalOpen(true)
+  }
+
+  const closeSuggestionModal = () => {
+    setSelectedSuggestion(null)
+    setIsSuggestionModalOpen(false)
+  }
 
 
 
@@ -944,12 +1592,11 @@ export default function AdminSuggestionsPage() {
 
   // Função para determinar status baseado na pontuação
   const getStatusFromScore: (suggestion: SuggestionLocal) => string = (suggestion) => {
-    const impactScore = suggestion.impact?.score ?? 0
-    const capacityScore = suggestion.capacity?.score ?? 0
-    const effortScore = suggestion.effort?.score ?? 0
+    const impactScore = suggestion.impact?.score ?? 1
+    const capacityScore = suggestion.capacity?.score ?? 1
+    const effortScore = suggestion.effort?.score ?? 1
     const pontuacao = impactScore + capacityScore - effortScore
 
-    if (pontuacao >= 0 && pontuacao <= 9) return "Descartar"
     if (pontuacao >= 10 && pontuacao <= 14) return "Ajustar"
     if (pontuacao >= 15 && pontuacao <= 20) return "Aprovar"
     if (pontuacao > 20) return "Prioritário"
@@ -976,7 +1623,7 @@ export default function AdminSuggestionsPage() {
         if (statusFilter === "score-based") {
           // Filtrar por recomendação baseada na pontuação
           const scoreStatus = getStatusFromScore(s)
-          return scoreStatus === "Descartar" || scoreStatus === "Ajustar" || scoreStatus === "Aprovar"
+          return scoreStatus === "Ajustar" || scoreStatus === "Aprovar"
         }
         return (STATUS_MAPPING[s.status] ?? s.status) === statusFilter
       })
@@ -993,10 +1640,14 @@ export default function AdminSuggestionsPage() {
         return priorityA - priorityB
       }
 
-      // Depois por data (mais recentes primeiro)
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      // Depois por numeração de ideias (conforme sortOrder)
+      if (sortOrder === "asc") {
+        return (a.ideaNumber ?? 0) - (b.ideaNumber ?? 0)
+      } else {
+        return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
+      }
     })
-  }, [suggestions, statusFilter])
+  }, [suggestions, statusFilter, sortOrder])
 
   const listColumns = useMemo(() => {
     const cols: [SuggestionLocal[], SuggestionLocal[], SuggestionLocal[]] = [[], [], []]
@@ -1019,7 +1670,21 @@ export default function AdminSuggestionsPage() {
       </div>
 
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-3">Visão Kanban</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Visão Kanban</h2>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">Ordenar por numeração:</Label>
+            <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Maior → Menor</SelectItem>
+                <SelectItem value="asc">Menor → Maior</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3">
             {STATUS.map((st) => (
@@ -1035,50 +1700,40 @@ export default function AdminSuggestionsPage() {
                      </div>
                                            <div className="max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
                                              {kanbanColumns[st]?.map((s, index) => {
-                        const impactScore = s.impact?.score ?? 0
-                        const capacityScore = s.capacity?.score ?? 0
-                        const effortScore = s.effort?.score ?? 0
+                        const impactData = s.impact as { score?: number; text?: string } | null
+                        const capacityData = s.capacity as { score?: number; text?: string } | null
+                        const effortData = s.effort as { score?: number; text?: string } | null
+                        
+                        const impactScore = impactData?.score ?? 1
+                        const capacityScore = capacityData?.score ?? 1
+                        const effortScore = effortData?.score ?? 1
                         const pontuacao = impactScore + capacityScore - effortScore
 
-                        const getRecommendationColor = (score: number) => {
-                          if (score >= 0 && score <= 9) return 'bg-red-100 text-red-700 border border-red-200'
-                          if (score >= 10 && score <= 14) return 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                          if (score >= 15 && score <= 20) return 'bg-green-100 text-green-700 border border-green-200'
-                          if (score > 20) return 'bg-blue-100 text-blue-700 border border-blue-200'
-                          return 'bg-gray-100 text-gray-700 border border-gray-200'
-                        }
 
-                        const getRecommendationText = (score: number) => {
-                          if (score >= 0 && score <= 9) return 'Descartar'
-                          if (score >= 10 && score <= 14) return 'Ajustar'
-                          if (score >= 15 && score <= 20) return 'Aprovar'
-                          if (score > 20) return 'Prioritário'
-                          return 'Revisar'
-                        }
-
-                        // Não mostrar tag "Descartar" quando o status for "Novo"
-                        const shouldShowRecommendation = s.status !== "NEW" || getRecommendationText(pontuacao) !== 'Descartar'
 
                         return (
                           <Draggable draggableId={s.id} index={index} key={s.id}>
                             {(prov) => (
                               <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
-                                <Card className="bg-background/80">
+                                <Card 
+                                  className="bg-background/80 cursor-pointer hover:bg-background/90 transition-colors"
+                                  onClick={() => openSuggestionModal(s)}
+                                >
                                   <CardContent className="p-2">
-                                    <div className="text-sm font-medium truncate">#{s.ideaNumber} — {(s.problem ?? "Sem problema definido").substring(0, 30)}...</div>
+                                    <div className="text-sm font-medium truncate">#{formatIdeaNumber(s.ideaNumber)} — {(s.problem ?? "Sem problema definido").substring(0, 30)}...</div>
                                     <div className="text-xs text-muted-foreground mb-1">
                                       {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
+                                      {s.isNameVisible && (s.submittedSector ?? s.user.setor) && (
+                                        <span className="ml-1 text-[10px] bg-muted px-1 py-0.5 rounded">
+                                          {s.submittedSector ?? s.user.setor}
+                                        </span>
+                                      )}
                                     </div>
-                                    {/* Pontuação e recomendação no Kanban */}
+                                    {/* Pontuação no Kanban */}
                                     <div className="flex items-center justify-between">
                                       <div className="text-xs font-medium">
                                         Pontuação: {pontuacao}
                                       </div>
-                                      {shouldShowRecommendation && (
-                                      <div className={`text-xs px-2 py-1 rounded-md font-medium ${getRecommendationColor(pontuacao)}`}>
-                                        {getRecommendationText(pontuacao)}
-                                      </div>
-                                      )}
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -1097,121 +1752,7 @@ export default function AdminSuggestionsPage() {
         </DragDropContext>
       </div>
 
-      {/* Filtros */}
-      <div className="mb-6 p-4 bg-muted/30 rounded-lg">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Filtros</h3>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={statusFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter("all")}
-              >
-                Todas ({suggestions.length})
-              </Button>
-              <Button
-                variant={statusFilter === "score-based" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter("score-based")}
-              >
-                Por Pontuação
-              </Button>
-              {STATUS.map((st) => (
-                <Button
-                  key={st}
-                  variant={statusFilter === st ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setStatusFilter(st)}
-                >
-                  {st} ({kanbanColumns[st]?.length ?? 0})
-                </Button>
-              ))}
-            </div>
-          </div>
-          {statusFilter !== "all" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setStatusFilter("all")}
-            >
-              Limpar Filtro
-            </Button>
-          )}
-        </div>
-      </div>
 
-      <div className="md:hidden">
-        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Classificações</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsClassificationModalOpen(true)}
-              className="text-xs"
-            >
-              <Settings className="w-3 h-3 mr-1" />
-              Gerenciar
-            </Button>
-          </div>
-        </div>
-        <IdeasAccordion
-          sugestoes={sortedSuggestions}
-          impactPool={impactPool}
-          capacityPool={capacityPool}
-          effortPool={effortPool}
-          kpiPool={kpiPool}
-          currentSuggestionKpis={currentSuggestionKpis}
-          update={update}
-          _currentUser={_currentUser}
-          onStatusChange={handleStatusChange}
-          getStatusFromScore={getStatusFromScore}
-          expandedReasonFields={expandedReasonFields}
-
-          saveReasonAndChangeStatus={saveReasonAndChangeStatus}
-          cancelReasonField={cancelReasonField}
-          getSimilarClassifications={getSimilarClassifications}
-        />
-      </div>
-
-      <div className="hidden md:block mb-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Classificações</h3>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsClassificationModalOpen(true)}
-            className="text-xs"
-          >
-            <Settings className="w-3 h-3 mr-1" />
-            Gerenciar
-          </Button>
-        </div>
-      </div>
-
-      <div className="hidden md:grid grid-cols-3 gap-3">
-        {listColumns.map((col, idx) => (
-          <IdeasAccordion
-            key={`col-${idx}`}
-            sugestoes={col}
-            impactPool={impactPool}
-            capacityPool={capacityPool}
-            effortPool={effortPool}
-            kpiPool={kpiPool}
-            currentSuggestionKpis={currentSuggestionKpis}
-            update={update}
-            _currentUser={_currentUser}
-            onStatusChange={handleStatusChange}
-            getStatusFromScore={getStatusFromScore}
-            expandedReasonFields={expandedReasonFields}
-  
-            saveReasonAndChangeStatus={saveReasonAndChangeStatus}
-            cancelReasonField={cancelReasonField}
-            getSimilarClassifications={getSimilarClassifications}
-          />
-        ))}
-      </div>
 
       {/* Modal de Classificações */}
       <ClassificationManagementModal
@@ -1248,6 +1789,29 @@ export default function AdminSuggestionsPage() {
         onKpiSelectionChange={setSelectedKpiIds}
         suggestionId={selectedSuggestionId ?? undefined}
       />
+
+      {/* Modal de Detalhes da Sugestão */}
+      <Dialog open={isSuggestionModalOpen} onOpenChange={setIsSuggestionModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="w-5 h-5" />
+              Sugestão #{selectedSuggestion ? formatIdeaNumber(selectedSuggestion.ideaNumber) : ''}
+            </DialogTitle>
+            <DialogDescription>
+              Avalie e classifique a sugestão com impacto, capacidade e esforço.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSuggestion && (
+            <SuggestionDetailsModal
+              suggestion={selectedSuggestion}
+              onUpdate={update}
+              onClose={closeSuggestionModal}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Gerenciamento de Classificações */}
       <Dialog open={isClassificationModalOpen} onOpenChange={setIsClassificationModalOpen}>
@@ -1429,17 +1993,16 @@ function SuggestionItem({
     { enabled: true }
   )
 
-  const impactScore = s.impact?.score ?? 0
-  const capacityScore = s.capacity?.score ?? 0
-  const effortScore = s.effort?.score ?? 0
+  const impactScore = s.impact?.score ?? 1
+  const capacityScore = s.capacity?.score ?? 1
+  const effortScore = s.effort?.score ?? 1
   const pontuacao = impactScore + capacityScore - effortScore
   const nomeExibicao = s.isNameVisible ? (s.submittedName ?? "Não informado") : "Nome oculto"
   const setorExibido = s.submittedSector ?? s.user.setor ?? "Setor não informado"
   const contribType = s.contribution?.type ?? ""
   const contribOther = s.contribution?.other
 
-                        // Não mostrar tag "Descartar" quando o status for "Novo" na listagem também
-                        const shouldShowRecommendationList = s.status !== "NEW" || getStatusFromScore(s) !== 'Descartar'
+
 
   return (
           <AccordionItem key={s.id} value={s.id} className="border rounded-lg">
@@ -1447,20 +2010,22 @@ function SuggestionItem({
               <div className="w-full">
                 <div className="flex flex-col gap-2">
                   <div className="font-semibold">
-                    #{s.ideaNumber} — {(s.problem ?? "Sem problema definido").substring(0, 60)}...
+                    #{formatIdeaNumber(s.ideaNumber)} — {(s.problem ?? "Sem problema definido").substring(0, 60)}...
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs text-muted-foreground">
                       Nome: {nomeExibicao}
+                    {setorExibido && setorExibido !== "Setor não informado" && (
+                      <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
+                        {setorExibido}
+                      </span>
+                    )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary">{setorExibido}</Badge>
                       {/* Tag de status baseada na pontuação */}
-                      {shouldShowRecommendationList && (
                       <Badge
                         variant="outline"
                         className={`text-xs ${
-                          getStatusFromScore(s) === 'Descartar' ? 'border-red-300 text-red-700 bg-red-50' :
                           getStatusFromScore(s) === 'Ajustar' ? 'border-yellow-300 text-yellow-700 bg-yellow-50' :
                           getStatusFromScore(s) === 'Aprovar' ? 'border-green-300 text-green-700 bg-green-50' :
                           getStatusFromScore(s) === 'Prioritário' ? 'border-blue-300 text-blue-700 bg-blue-50' :
@@ -1469,7 +2034,6 @@ function SuggestionItem({
                       >
                         {getStatusFromScore(s)}
                       </Badge>
-                      )}
                       {/* Tag de status atual */}
                       <Badge
                         variant="outline"
@@ -1614,7 +2178,7 @@ function SuggestionItem({
                           ? 'bg-green-100 text-green-800 border border-green-200'
                           : 'bg-gray-100 text-gray-800 border border-gray-200'
                       }`}>
-                        {pontuacao >= 0 && pontuacao <= 9 && "🔴 Descarta com justificativa clara"}
+
                         {pontuacao >= 10 && pontuacao <= 14 && "🟡 Ajustes e incubar"}
                         {pontuacao >= 15 && pontuacao <= 20 && "🟢 Aprovar para gestores"}
                         {pontuacao > 20 && "🚀 Aprovação imediata"}
@@ -1747,7 +2311,7 @@ function SuggestionItem({
                           })
                           return
                         }
-                        toast({ title: "Avaliação salva", description: `Sugestão #${s.ideaNumber} atualizada.` })
+                        toast({ title: "Avaliação salva", description: `Sugestão #${formatIdeaNumber(s.ideaNumber)} atualizada.` })
                       }}
                       disabled={
                         s.status === "NOT_IMPLEMENTED" &&
@@ -2088,12 +2652,12 @@ function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newClassification, setNewClassification] = useState({
     label: "",
-    score: 0,
+    score: 1,
     type: "IMPACT" as "IMPACT" | "CAPACITY" | "EFFORT"
   })
   const [editClassification, setEditClassification] = useState({
     label: "",
-    score: 0,
+    score: 1,
     type: "IMPACT" as "IMPACT" | "CAPACITY" | "EFFORT"
   })
 

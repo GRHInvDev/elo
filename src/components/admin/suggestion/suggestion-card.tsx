@@ -165,8 +165,8 @@ export function SuggestionsCard() {
         <AccordionItem value="suggestion-form" className="border-0">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Lightbulb className="h-5 w-5 text-red-600" />
+              <div className="p-2 bg-muted rounded-lg">
+                <Lightbulb className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="text-left">
                 <h3 className="text-lg font-semibold">Caixa de Sugestões</h3>

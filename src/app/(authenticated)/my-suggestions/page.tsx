@@ -291,13 +291,13 @@ export default function MySuggestionsPage() {
                 return (
                   <AccordionItem key={id} value={id} className="border-b border-border">
                     <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-4 text-left">
+                      <div className="flex items-start justify-between w-full gap-4">
+                        <div className="flex items-start gap-4 text-left flex-1 min-w-0">
                           <div className="flex-shrink-0">
-                            <StatusIcon className="h-5 w-5" />
+                            <StatusIcon className="h-5 w-5 mt-0.5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className="font-semibold text-foreground dark:text-foreground">
                                 #{ideaNumber}
                               </span>
@@ -305,13 +305,13 @@ export default function MySuggestionsPage() {
                                 {STATUS_MAPPING[status as keyof typeof STATUS_MAPPING] || status}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground dark:text-muted-foreground truncate">
+                            <p className="text-sm text-muted-foreground dark:text-muted-foreground break-words line-clamp-2 pr-4">
                               {problem}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-right">
-                          <div className="text-xs text-muted-foreground dark:text-muted-foreground">
+                        <div className="flex items-start gap-2 text-right flex-shrink-0">
+                          <div className="text-xs text-muted-foreground dark:text-muted-foreground whitespace-nowrap">
                             {formatDistanceToNow(createdAt, {
                               addSuffix: true,
                               locale: ptBR
@@ -336,24 +336,24 @@ export default function MySuggestionsPage() {
                           </p>
                         </div>
                         {/* Detalhes da sugestão */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-3">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
+                          <div className="space-y-3 min-w-0">
                             <div>
                               <Label className="text-sm font-medium">Problema identificado</Label>
-                              <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm">
+                              <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
                                 {problem || "Não informado"}
                               </div>
                             </div>
 
                             <div>
                               <Label className="text-sm font-medium">Solução proposta</Label>
-                              <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm whitespace-pre-wrap">
+                              <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
                                 {getSuggestionProperty<string>(suggestion, 'description', 'Não informado')}
                               </div>
                             </div>
                           </div>
 
-                          <div className="space-y-3">
+                          <div className="space-y-3 min-w-0">
                             <div>
                               <Label className="text-sm font-medium">Tipo de contribuição</Label>
                               <div className="mt-1">
@@ -411,7 +411,7 @@ export default function MySuggestionsPage() {
                                 <Label className="text-sm font-medium text-red-800 dark:text-red-400">
                                   Motivo da não implementação
                                 </Label>
-                                <p className="mt-1 text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">
+                                <p className="mt-1 text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap break-words overflow-wrap-anywhere">
                                   {getSuggestionProperty<string>(suggestion, 'rejectionReason', '')}
                                 </p>
                               </div>
