@@ -38,7 +38,8 @@ docs/
 ├── 05-Modulos/
 │   ├── README.md             # Visão geral dos módulos
 │   ├── dashboard.md          # Dashboard principal
-│   ├── sugestoes.md          # Sistema de sugestões + KPIs
+│   ├── ideias.md             # Sistema de ideias v1.4.0 (NOVO)
+│   ├── sugestoes.md          # Sistema de sugestões + KPIs (LEGACY)
 │   ├── forms.md              # Formulários dinâmicos
 │   ├── food.md               # Sistema de alimentação
 │   ├── rooms.md              # Reserva de salas
@@ -130,7 +131,8 @@ npm run dev
 - **🗄️ Banco de Dados Completo** - Modelos, relacionamentos, migrações
 - **🌐 API tRPC Completa** - Routers, middlewares, webhooks
 - **🔐 Autenticação Completa** - Clerk, RBAC, segurança
-- **💡 Módulo Sugestões Completo** - Sistema de pontuação, workflow
+- **💡 Módulo Ideias v1.4.0 Completo** - Sistema de ideias com premiação integrada
+- **💡 Módulo Sugestões Completo** - Sistema legado de pontuação, workflow
 - **📝 Módulo Formulários Completo** - Builder visual, engine dinâmico
 - **🍽️ Módulo Alimentação Completo** - Cardápios, pedidos, gestão
 - **🏢 Módulo Salas Completo** - Reservas, calendário, conflitos
@@ -169,30 +171,32 @@ npm run dev
 2. **[Setup](./01-Setup/)** - Configure seu ambiente
 3. **[Arquitetura](./02-Arquitetura/)** - Aprenda a estrutura
 4. **[Autenticação](./04-API/auth.md)** - Sistema de login
-5. **[Módulo Sugestões](./05-Modulos/sugestoes.md)** - Sistema de ideias + KPIs
-6. **[Módulo Formulários](./05-Modulos/forms.md)** - Builder visual dinâmico
-7. **[Módulo Alimentação](./05-Modulos/food.md)** - Pedidos e cardápios
-8. **[Módulo Salas](./05-Modulos/rooms.md)** - Reservas e calendário
-9. **[Módulo Veículos](./05-Modulos/cars.md)** - Gestão de frota
-10. **[Módulo Eventos](./05-Modulos/events.md)** - Calendário e flyers
-11. **[Módulo Loja](./05-Modulos/shop.md)** - E-commerce corporativo
-12. **[Dashboard Principal](./05-Modulos/dashboard.md)** - Centralização de informações
-13. **[Painéis Administrativos](./05-Modulos/admin.md)** - Gestão completa do sistema
-14. **[Padrões de Código](./06-Desenvolvimento/padroes.md)** - Convenções e melhores práticas
-15. **[Deploy e Produção](./06-Desenvolvimento/deploy.md)** - Estratégia de produção
-16. **[Troubleshooting](./08-Troubleshooting/)** - Solução de problemas
+5. **[Módulo Ideias](./05-Modulos/ideias.md)** - Sistema de ideias v1.4.0 com premiação
+6. **[Módulo Sugestões](./05-Modulos/sugestoes.md)** - Sistema legado de ideias + KPIs
+7. **[Módulo Formulários](./05-Modulos/forms.md)** - Builder visual dinâmico
+8. **[Módulo Alimentação](./05-Modulos/food.md)** - Pedidos e cardápios
+9. **[Módulo Salas](./05-Modulos/rooms.md)** - Reservas e calendário
+10. **[Módulo Veículos](./05-Modulos/cars.md)** - Gestão de frota
+11. **[Módulo Eventos](./05-Modulos/events.md)** - Calendário e flyers
+12. **[Módulo Loja](./05-Modulos/shop.md)** - E-commerce corporativo
+13. **[Dashboard Principal](./05-Modulos/dashboard.md)** - Centralização de informações
+14. **[Painéis Administrativos](./05-Modulos/admin.md)** - Gestão completa do sistema
+15. **[Padrões de Código](./06-Desenvolvimento/padroes.md)** - Convenções e melhores práticas
+16. **[Deploy e Produção](./06-Desenvolvimento/deploy.md)** - Estratégia de produção
+17. **[Troubleshooting](./08-Troubleshooting/)** - Solução de problemas
 
 ### 🏗️ Para Arquitetos/Tech Leads
 1. **[Arquitetura](./02-Arquitetura/)** - Visão técnica completa
 2. **[Banco de Dados](./03-Banco-Dados/)** - Modelos e relacionamentos
 3. **[API tRPC](./04-API/)** - Endpoints e integrações
-4. **[Módulo Formulários](./05-Modulos/forms.md)** - Builder visual complexo
-5. **[Módulo Sugestões](./05-Modulos/sugestoes.md)** - Sistema de pontuação
-6. **[Módulo Veículos](./05-Modulos/cars.md)** - Gestão completa de frota
-7. **[Módulo Eventos](./05-Modulos/events.md)** - Sistema de calendário
-8. **[Módulo Loja](./05-Modulos/shop.md)** - E-commerce corporativo
-9. **[Dashboard Principal](./05-Modulos/dashboard.md)** - Arquitetura de centralização
-10. **[Painéis Administrativos](./05-Modulos/admin.md)** - Sistema de controle
+4. **[Módulo Ideias](./05-Modulos/ideias.md)** - Sistema completo de ideias v1.4.0
+5. **[Módulo Formulários](./05-Modulos/forms.md)** - Builder visual complexo
+6. **[Módulo Sugestões](./05-Modulos/sugestoes.md)** - Sistema legado de pontuação
+7. **[Módulo Veículos](./05-Modulos/cars.md)** - Gestão completa de frota
+8. **[Módulo Eventos](./05-Modulos/events.md)** - Sistema de calendário
+9. **[Módulo Loja](./05-Modulos/shop.md)** - E-commerce corporativo
+10. **[Dashboard Principal](./05-Modulos/dashboard.md)** - Arquitetura de centralização
+11. **[Painéis Administrativos](./05-Modulos/admin.md)** - Sistema de controle
 
 ### 👨‍💻 Para Desenvolvedores
 1. **[API tRPC](./04-API/trpc.md)** - Routers e procedures
@@ -222,6 +226,7 @@ npm run dev
 | ✅ Banco de Dados | 🎉 **Completo** | - | 100% |
 | ✅ API tRPC | 🎉 **Completo** | - | 100% |
 | ✅ Autenticação | 🎉 **Completo** | - | 100% |
+| ✅ Módulo Ideias v1.4.0 | 🎉 **Completo** | - | 100% |
 | ✅ Módulo Sugestões | 🎉 **Completo** | - | 100% |
 | ✅ Módulo Formulários | 🎉 **Completo** | - | 100% |
 | 🔄 Módulos Restantes | 📝 Em desenvolvimento | - | 25% |
@@ -238,16 +243,24 @@ npm run dev
 
 ## 📈 Roadmap
 
-### Versão 1.0 (Atual) - 100% COMPLETA! 🎉
-- ✅ Sistema base funcional
+### Versão 1.4.0 (Atual) - SISTEMA COMPLETO DE IDEIAS! 🎉
+- ✅ Sistema base funcional e maduro
 - ✅ Arquitetura completa documentada
 - ✅ Setup e configuração detalhada
 - ✅ API tRPC e autenticação completa
-- ✅ Todos os 8 módulos principais documentados (sugestões, formulários, alimentação, salas, veículos, eventos, loja, dashboard, admin)
+- ✅ **NOVO: Módulo de Ideias v1.4.0** - Sistema completo com premiação integrada
+- ✅ Todos os 9 módulos principais documentados (ideias, sugestões, formulários, alimentação, salas, veículos, eventos, loja, dashboard, admin)
 - ✅ Guias de desenvolvimento completos (padrões, testes, hooks, componentes)
 - ✅ Deploy e produção documentados
 - ✅ Troubleshooting e soluções de problemas
-- 📝 Documentação completa (17/17 seções) - 100% (meta superada!)
+- 📝 Documentação completa (18/18 seções) - 100% (meta superada!)
+
+#### ✨ **Destaques da Versão 1.4.0:**
+- 🧠 **Sistema de Ideias Inteligente** - Pontuação automática, workflow estruturado
+- 💰 **Módulo de Premiação** - Status pago/não pago, valores, datas
+- 🎨 **Interface Moderna** - Kanban drag & drop, responsividade completa
+- 📊 **Analytics Avançado** - KPIs, métricas, relatórios
+- 🔒 **Segurança Reforçada** - Validações, permissões, auditoria
 
 ### Versão 2.0 (Q1 2025)
 - 🔄 Analytics Dashboard

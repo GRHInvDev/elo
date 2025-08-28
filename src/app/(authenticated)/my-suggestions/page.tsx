@@ -104,23 +104,35 @@ export default function MySuggestionsPage() {
     })
   }, [userSuggestions, searchTerm, statusFilter])
 
-  // Estatísticas
+  // Estatísticas detalhadas por status
   const stats = useMemo(() => {
     const total = userSuggestions.length
-    const approved = userSuggestions.filter((s: unknown) => {
-      const status = getSuggestionProperty<string>(s, 'status', '')
-      return status === "APPROVED" || status === "IN_PROGRESS" || status === "DONE"
-    }).length
-    const inReview = userSuggestions.filter((s: unknown) => {
-      const status = getSuggestionProperty<string>(s, 'status', '')
-      return status === "IN_REVIEW"
-    }).length
-    const completed = userSuggestions.filter((s: unknown) => {
-      const status = getSuggestionProperty<string>(s, 'status', '')
-      return status === "DONE"
-    }).length
 
-    return { total, approved, inReview, completed }
+    // Contadores por status - garantir que todas as propriedades estejam definidas
+    const statusCounts: Record<string, number> = {}
+    Object.keys(STATUS_MAPPING).forEach(status => {
+      statusCounts[status] = userSuggestions.filter((s: unknown) => {
+        const suggestionStatus = getSuggestionProperty<string>(s, 'status', '')
+        return suggestionStatus === status
+      }).length
+    })
+
+    // Estatísticas agregadas
+    const approved = (statusCounts.APPROVED ?? 0) + (statusCounts.IN_PROGRESS ?? 0) + (statusCounts.DONE ?? 0)
+    const inReview = statusCounts.IN_REVIEW ?? 0
+    const completed = statusCounts.DONE ?? 0
+    const newIdeas = statusCounts.NEW ?? 0
+    const notImplemented = statusCounts.NOT_IMPLEMENTED ?? 0
+
+    return {
+      total,
+      statusCounts,
+      approved,
+      inReview,
+      completed,
+      newIdeas,
+      notImplemented
+    }
   }, [userSuggestions])
 
   const getContributionTypeLabel = (type: string, other?: string) => {
@@ -165,52 +177,85 @@ export default function MySuggestionsPage() {
         </div>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-muted-foreground">Total enviadas</p>
+      {/* Estatísticas Detalhadas */}
+      <div className="space-y-4 mb-6">
+        {/* Resumo Geral */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-sm text-muted-foreground">Total enviadas</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="text-2xl font-bold">{stats.inReview}</p>
-                <p className="text-sm text-muted-foreground">Em avaliação</p>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-orange-600" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.newIdeas}</p>
+                  <p className="text-sm text-muted-foreground">Novas</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-2xl font-bold">{stats.approved}</p>
-                <p className="text-sm text-muted-foreground">Aprovadas</p>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.inReview}</p>
+                  <p className="text-sm text-muted-foreground">Em avaliação</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
-              <div>
-                <p className="text-2xl font-bold">{stats.completed}</p>
-                <p className="text-sm text-muted-foreground">Concluídas</p>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.approved}</p>
+                  <p className="text-sm text-muted-foreground">Aprovadas</p>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Status Detalhados */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Status das Ideias</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {Object.entries(STATUS_MAPPING).map(([statusKey, statusLabel]) => {
+                const count = stats.statusCounts[statusKey] ?? 0
+                const statusConfig = getStatusConfig(statusKey)
+                const StatusIcon = statusConfig.icon
+
+                return (
+                  <div key={statusKey} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                    <StatusIcon className="h-4 w-4 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium truncate">{statusLabel}</span>
+                        <Badge variant="secondary" className="ml-2 flex-shrink-0">
+                          {count}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -240,12 +285,33 @@ export default function MySuggestionsPage() {
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  {Object.entries(STATUS_MAPPING).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">
+                    <div className="flex items-center justify-between w-full">
+                      <span>Todos os status</span>
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {stats.total}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                  {Object.entries(STATUS_MAPPING).map(([key, label]) => {
+                    const count = stats.statusCounts[key] ?? 0
+                    const statusConfig = getStatusConfig(key)
+                    const StatusIcon = statusConfig.icon
+
+                    return (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <StatusIcon className="h-3 w-3" />
+                            <span>{label}</span>
+                          </div>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {count}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
             </div>
