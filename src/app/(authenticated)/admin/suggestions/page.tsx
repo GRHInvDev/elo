@@ -119,9 +119,18 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     problem: (dbSuggestion as any).problem ?? null, // Problema identificado
     contribution: (dbSuggestion as any).contribution ? (dbSuggestion as any).contribution as { type: string; other?: string } : { type: "", other: undefined },
     dateRef: dbSuggestion.dateRef,
-    impact: (dbSuggestion as any).impact ? (dbSuggestion as any).impact as { label: string; score: number } : null,
-    capacity: (dbSuggestion as any).capacity ? (dbSuggestion as any).capacity as { label: string; score: number } : null,
-    effort: (dbSuggestion as any).effort ? (dbSuggestion as any).effort as { label: string; score: number } : null,
+    impact: (dbSuggestion as any).impact ? {
+      label: (dbSuggestion as any).impact.text ?? (dbSuggestion as any).impact.label ?? "",
+      score: (dbSuggestion as any).impact.score ?? 1
+    } : null,
+    capacity: (dbSuggestion as any).capacity ? {
+      label: (dbSuggestion as any).capacity.text ?? (dbSuggestion as any).capacity.label ?? "",
+      score: (dbSuggestion as any).capacity.score ?? 1
+    } : null,
+    effort: (dbSuggestion as any).effort ? {
+      label: (dbSuggestion as any).effort.text ?? (dbSuggestion as any).effort.label ?? "",
+      score: (dbSuggestion as any).effort.score ?? 1
+    } : null,
     kpis: [], // Será carregado via query separada
     kpiIds: [],
     finalScore: dbSuggestion.finalScore,
@@ -970,18 +979,18 @@ function SuggestionDetailsModal({
   // Carregar valores existentes
   useEffect(() => {
     if (suggestion.impact) {
-      const impact = suggestion.impact as { text?: string; score?: number }
-      setImpactText(impact.text ?? "")
+      const impact = suggestion.impact as { text?: string; label?: string; score?: number }
+      setImpactText(impact.text ?? impact.label ?? "")
       setImpactScore(impact.score ?? 1)
     }
     if (suggestion.capacity) {
-      const capacity = suggestion.capacity as { text?: string; score?: number }
-      setCapacityText(capacity.text ?? "")
+      const capacity = suggestion.capacity as { text?: string; label?: string; score?: number }
+      setCapacityText(capacity.text ?? capacity.label ?? "")
       setCapacityScore(capacity.score ?? 1)
     }
     if (suggestion.effort) {
-      const effort = suggestion.effort as { text?: string; score?: number }
-      setEffortText(effort.text ?? "")
+      const effort = suggestion.effort as { text?: string; label?: string; score?: number }
+      setEffortText(effort.text ?? effort.label ?? "")
       setEffortScore(effort.score ?? 1)
     }
     
@@ -997,10 +1006,14 @@ function SuggestionDetailsModal({
     onSuccess: () => {
       toast({ title: "Sugestão atualizada", description: "Classificações salvas com sucesso." })
       // Atualizar os dados localmente
+      const statusEnum = Object.entries(STATUS_MAPPING).find(([, value]) => value === newStatus)?.[0] as keyof typeof STATUS_MAPPING | undefined
       onUpdate(suggestion.id, {
         impact: { label: impactText, score: impactScore },
         capacity: { label: capacityText, score: capacityScore },
-        effort: { label: effortText, score: effortScore }
+        effort: { label: effortText, score: effortScore },
+        analystId: responsibleUser,
+        status: statusEnum,
+        rejectionReason: newStatus === "Não implantado" ? rejectionReason : null
       })
       // Invalidar queries para recarregar dados
       void utils.suggestion.list.invalidate()
@@ -1523,18 +1536,18 @@ export default function AdminSuggestionsPage() {
   const update = async (id: string, updates: Partial<SuggestionLocal>): Promise<void> => {
     const updateData: {
       id: string
-      impact?: { label: string; score: number }
-      capacity?: { label: string; score: number }
-      effort?: { label: string; score: number }
+      impact?: { text: string; score: number }
+      capacity?: { text: string; score: number }
+      effort?: { text: string; score: number }
       kpiIds?: string[]
       status?: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED"
       rejectionReason?: string
       analystId?: string
     } = { id }
 
-    if (updates.impact) updateData.impact = updates.impact
-    if (updates.capacity) updateData.capacity = updates.capacity
-    if (updates.effort) updateData.effort = updates.effort
+    if (updates.impact) updateData.impact = { text: updates.impact.label, score: updates.impact.score }
+    if (updates.capacity) updateData.capacity = { text: updates.capacity.label, score: updates.capacity.score }
+    if (updates.effort) updateData.effort = { text: updates.effort.label, score: updates.effort.score }
     if (updates.kpiIds) updateData.kpiIds = updates.kpiIds
     if (updates.status) {
       updateData.status = updates.status
@@ -1550,16 +1563,6 @@ export default function AdminSuggestionsPage() {
       await updateMutation.mutateAsync(updateData)
     }
   }
-
-  const kanbanColumns = useMemo(() => {
-    const map: Record<string, SuggestionLocal[]> = {}
-    STATUS.forEach((s) => (map[s] = []))
-    for (const s of suggestions) {
-      const statusLabel = STATUS_MAPPING[s.status] ?? s.status
-      ;(map[statusLabel] ?? (map[statusLabel] = [])).push(s)
-    }
-    return map
-  }, [suggestions])
 
   const onDragEnd: OnDragEndResponder = (result) => {
     const { destination, draggableId } = result
@@ -1641,6 +1644,16 @@ export default function AdminSuggestionsPage() {
     return cols
   }, [sortedSuggestions])
 
+  const kanbanColumns = useMemo(() => {
+    const map: Record<string, SuggestionLocal[]> = {}
+    STATUS.forEach((s) => (map[s] = []))
+    for (const s of sortedSuggestions) {
+      const statusLabel = STATUS_MAPPING[s.status] ?? s.status
+      ;(map[statusLabel] ?? (map[statusLabel] = [])).push(s)
+    }
+    return map
+  }, [sortedSuggestions])
+
   return (
     <DashboardShell>
       <div className="mb-6">
@@ -1678,11 +1691,11 @@ export default function AdminSuggestionsPage() {
                     {...provided.droppableProps}
                     className={`rounded-lg border p-3 ${getStatusColor(st)}`}
                   >
-                                         <div className="font-medium mb-1">
-                       {st} ({kanbanColumns[st]?.length ?? 0})
-                     </div>
-                                           <div className="max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
-                                             {kanbanColumns[st]?.map((s, index) => {
+                    <div className="font-medium mb-1">
+                      {st} ({kanbanColumns[st]?.length ?? 0})
+                    </div>
+                    <div className="max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
+                      {kanbanColumns[st]?.map((s, index) => {
                         const impactData = s.impact as { score?: number; text?: string } | null
                         const capacityData = s.capacity as { score?: number; text?: string } | null
                         const effortData = s.effort as { score?: number; text?: string } | null
@@ -1975,6 +1988,16 @@ function SuggestionItem({
     { suggestionId: s.id },
     { enabled: true }
   )
+
+  // Mutation para salvar classificações
+  const updateMutation = api.suggestion.updateAdmin.useMutation({
+    onSuccess: () => {
+      // Success será tratado no onClick do botão
+    },
+    onError: () => {
+      // Error será tratado no onClick do botão
+    }
+  })
 
   const impactScore = s.impact?.score ?? 1
   const capacityScore = s.capacity?.score ?? 1
@@ -2294,7 +2317,26 @@ function SuggestionItem({
                           })
                           return
                         }
-                        toast({ title: "Avaliação salva", description: `Sugestão #${formatIdeaNumber(s.ideaNumber)} atualizada.` })
+                        
+                        // Salvar as classificações
+                        updateMutation.mutate({
+                          id: s.id,
+                          impact: s.impact ? { text: s.impact.label || "", score: s.impact.score || 1 } : undefined,
+                          capacity: s.capacity ? { text: s.capacity.label || "", score: s.capacity.score || 1 } : undefined,
+                          effort: s.effort ? { text: s.effort.label || "", score: s.effort.score || 1 } : undefined,
+                          ...(s.analystId && { analystId: s.analystId }), // Preservar o responsável atual
+                        }, {
+                          onSuccess: () => {
+                            toast({ title: "Avaliação salva", description: `Sugestão #${formatIdeaNumber(s.ideaNumber)} atualizada.` })
+                          },
+                          onError: (error) => {
+                            toast({
+                              title: "Erro ao salvar",
+                              description: error.message,
+                              variant: "destructive"
+                            })
+                          }
+                        })
                       }}
                       disabled={
                         s.status === "NOT_IMPLEMENTED" &&

@@ -238,7 +238,7 @@ export const suggestionRouter = createTRPCRouter({
           kpis: (input.kpis ?? null) as InputJsonValue,
           status: input.status,
           rejectionReason: input.rejectionReason,
-          analystId: input.analystId ?? ctx.auth.userId, // Usar analystId fornecido ou fallback para usuário atual
+          analystId: input.analystId, // Usar apenas o analystId fornecido explicitamente
           finalScore,
           finalClassification: finalClassification as InputJsonValue,
         },
