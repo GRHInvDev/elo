@@ -1425,7 +1425,9 @@ export default function AdminSuggestionsPage() {
   })
 
   // Estado para filtros
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [analystFilter, setAnalystFilter] = useState<string | null>(null)
 
   // Estados para o modal de KPIs
   const [kpiModalOpen, setKpiModalOpen] = useState(false)
@@ -1433,6 +1435,7 @@ export default function AdminSuggestionsPage() {
   const [selectedKpiIds, setSelectedKpiIds] = useState<string[]>([])
 
   // Estado para controlar se o campo de motivo está expandido
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [expandedReasonFields, setExpandedReasonFields] = useState<Set<string>>(new Set())
 
   // Estado para modal de gerenciamento de classificações
@@ -1529,6 +1532,7 @@ export default function AdminSuggestionsPage() {
   })) ?? []
 
   // Função para buscar classificações similares por tipo
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getSimilarClassifications = (searchTerm: string, type: 'impact' | 'capacity' | 'effort'): ClassItem[] => {
     const getPoolByType = (t: 'impact' | 'capacity' | 'effort') => {
       switch (t) {
@@ -1545,6 +1549,7 @@ export default function AdminSuggestionsPage() {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const kpiPool: string[] = []
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1565,6 +1570,7 @@ export default function AdminSuggestionsPage() {
   }
 
   // Função para lidar com mudança de status
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleStatusChange = (suggestionId: string, newStatusLabel: string) => {
     const statusKey = Object.entries(STATUS_MAPPING).find(([_, label]) => label === newStatusLabel)?.[0] as keyof typeof STATUS_MAPPING
 
@@ -1583,6 +1589,7 @@ export default function AdminSuggestionsPage() {
   }
 
   // Função para salvar o motivo e alterar o status
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const saveReasonAndChangeStatus = (suggestionId: string, reason: string) => {
     if (reason.trim().length >= 10) {
       void update(suggestionId, {
@@ -1608,6 +1615,7 @@ export default function AdminSuggestionsPage() {
   }
 
   // Função para cancelar e fechar o campo de motivo
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const cancelReasonField = (suggestionId: string) => {
     setExpandedReasonFields(prev => {
       const newSet = new Set(prev)
@@ -1698,6 +1706,11 @@ export default function AdminSuggestionsPage() {
       })
     }
 
+    // Aplicar filtro de responsável se houver seleção
+    if (analystFilter) {
+      filteredSuggestions = filteredSuggestions.filter(s => s.analystId === analystFilter)
+    }
+
     return [...filteredSuggestions].sort((a, b) => {
       // Primeiro por prioridade de status
       const statusA = STATUS_MAPPING[a.status] ?? a.status
@@ -1716,8 +1729,9 @@ export default function AdminSuggestionsPage() {
         return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
       }
     })
-  }, [suggestions, statusFilter, sortOrder])
+  }, [suggestions, statusFilter, analystFilter, sortOrder])
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const listColumns = useMemo(() => {
     const cols: [SuggestionLocal[], SuggestionLocal[], SuggestionLocal[]] = [[], [], []]
     for (let i = 0; i < sortedSuggestions.length; i++) {
@@ -1750,17 +1764,38 @@ export default function AdminSuggestionsPage() {
 
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm">Ordenar por numeração:</Label>
-            <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Maior → Menor</SelectItem>
-                <SelectItem value="asc">Menor → Maior</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Ordenar por numeração:</Label>
+              <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">Maior → Menor</SelectItem>
+                  <SelectItem value="asc">Menor → Maior</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Filtrar por responsável:</Label>
+              <UserSelector
+                value={analystFilter}
+                onValueChange={(value) => setAnalystFilter(value)}
+                disabled={false}
+              />
+              {analystFilter && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAnalystFilter(null)}
+                  className="ml-1"
+                >
+                  <X className="w-4 h-4" />
+                  Limpar
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         <DragDropContext onDragEnd={onDragEnd}>
@@ -1927,6 +1962,7 @@ export default function AdminSuggestionsPage() {
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function IdeasAccordion({
   sugestoes,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
