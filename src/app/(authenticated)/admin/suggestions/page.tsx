@@ -116,7 +116,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
   return {
     id: dbSuggestion.id,
     ideaNumber: dbSuggestion.ideaNumber,
-    userId: (dbSuggestion as any).userId || "",
+    userId: (dbSuggestion as any).userId ?? "",
     submittedName: dbSuggestion.submittedName,
     submittedSector: user.setor,
     isNameVisible: dbSuggestion.isNameVisible,
