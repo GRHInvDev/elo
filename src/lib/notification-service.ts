@@ -57,8 +57,8 @@ export class NotificationService {
   // Notificações específicas para ideias
   static async notifySuggestionCreated(suggestionId: string, authorId: string, suggestionNumber: number): Promise<unknown> {
     return this.createNotification({
-      title: "Nova Sugestão Criada",
-      message: `Sua sugestão #${suggestionNumber} foi criada com sucesso e está em análise.`,
+      title: "Nova Ideia Criada",
+      message: `Sua ideia #${suggestionNumber} foi criada com sucesso e está em análise.`,
       type: NotificationType.SUGGESTION_CREATED,
       userId: authorId,
       entityId: suggestionId,
@@ -69,8 +69,8 @@ export class NotificationService {
 
   static async notifySuggestionUpdated(suggestionId: string, userId: string, suggestionNumber: number): Promise<unknown> {
     return this.createNotification({
-      title: "Sugestão Atualizada",
-      message: `A sugestão #${suggestionNumber} foi atualizada.`,
+      title: "Ideia Atualizada",
+      message: `A ideia #${suggestionNumber} foi atualizada.`,
       type: NotificationType.SUGGESTION_UPDATED,
       userId: userId,
       entityId: suggestionId,
@@ -81,8 +81,8 @@ export class NotificationService {
 
   static async notifySuggestionApproved(suggestionId: string, userId: string, suggestionNumber: number): Promise<unknown> {
     return this.createNotification({
-      title: "Sugestão Aprovada! 🎉",
-      message: `Parabéns! Sua sugestão #${suggestionNumber} foi aprovada.`,
+      title: "Ideia Aprovada! 🎉",
+      message: `Parabéns! Sua ideia #${suggestionNumber} foi aprovada.`,
       type: NotificationType.SUGGESTION_APPROVED,
       userId: userId,
       entityId: suggestionId,
@@ -93,8 +93,8 @@ export class NotificationService {
 
   static async notifySuggestionRejected(suggestionId: string, userId: string, suggestionNumber: number, reason?: string): Promise<unknown> {
     return this.createNotification({
-      title: "Sugestão Rejeitada",
-      message: `Sua sugestão #${suggestionNumber} foi rejeitada.${reason ? ` Motivo: ${reason}` : ''}`,
+      title: "Ideia Rejeitada",
+      message: `Sua ideia #${suggestionNumber} foi rejeitada.${reason ? ` Motivo: ${reason}` : ''}`,
       type: NotificationType.SUGGESTION_REJECTED,
       userId: userId,
       entityId: suggestionId,
@@ -107,7 +107,7 @@ export class NotificationService {
   static async notifyKpiAdded(suggestionId: string, userId: string, kpiName: string): Promise<unknown> {
     return this.createNotification({
       title: "KPI Adicionado",
-      message: `O KPI "${kpiName}" foi adicionado à sua sugestão.`,
+      message: `O KPI "${kpiName}" foi adicionado à sua ideia.`,
       type: NotificationType.KPI_ADDED,
       userId: userId,
       entityId: suggestionId,
@@ -120,7 +120,7 @@ export class NotificationService {
   static async notifyClassificationUpdated(suggestionId: string, userId: string, suggestionNumber: number): Promise<unknown> {
     return this.createNotification({
       title: "Classificação Atualizada",
-      message: `A classificação da sugestão #${suggestionNumber} foi atualizada.`,
+      message: `A classificação da ideia #${suggestionNumber} foi atualizada.`,
       type: NotificationType.CLASSIFICATION_UPDATED,
       userId: userId,
       entityId: suggestionId,

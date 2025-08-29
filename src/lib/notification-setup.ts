@@ -67,9 +67,9 @@ export class NotificationManager {
     if (this.isEventEnabled('suggestions', 'onCreate')) {
       try {
         await NotificationService.notifySuggestionCreated(suggestionId, authorId, suggestionNumber)
-        console.log('✅ Notificação de sugestão criada enviada')
+        console.log('✅ Notificação de ideia criada enviada')
       } catch (error) {
-        console.error('❌ Erro ao enviar notificação de sugestão criada:', error)
+        console.error('❌ Erro ao enviar notificação de ideia criada:', error)
       }
     }
   }
@@ -78,9 +78,9 @@ export class NotificationManager {
     if (this.isEventEnabled('suggestions', 'onUpdate')) {
       try {
         await NotificationService.notifySuggestionUpdated(suggestionId, authorId, suggestionNumber)
-        console.log('✅ Notificação de sugestão atualizada enviada')
+        console.log('✅ Notificação de ideia atualizada enviada')
       } catch (error) {
-        console.error('❌ Erro ao enviar notificação de sugestão atualizada:', error)
+        console.error('❌ Erro ao enviar notificação de ideia atualizada:', error)
       }
     }
   }
@@ -89,9 +89,9 @@ export class NotificationManager {
     if (this.isEventEnabled('suggestions', 'onStatusChange')) {
       try {
         await NotificationService.notifySuggestionApproved(suggestionId, authorId, suggestionNumber)
-        console.log('✅ Notificação de sugestão aprovada enviada')
+        console.log('✅ Notificação de ideia aprovada enviada')
       } catch (error) {
-        console.error('❌ Erro ao enviar notificação de sugestão aprovada:', error)
+        console.error('❌ Erro ao enviar notificação de ideia aprovada:', error)
       }
     }
   }
@@ -100,9 +100,9 @@ export class NotificationManager {
     if (this.isEventEnabled('suggestions', 'onStatusChange')) {
       try {
         await NotificationService.notifySuggestionRejected(suggestionId, authorId, suggestionNumber, reason)
-        console.log('✅ Notificação de sugestão rejeitada enviada')
+        console.log('✅ Notificação de ideia rejeitada enviada')
       } catch (error) {
-        console.error('❌ Erro ao enviar notificação de sugestão rejeitada:', error)
+        console.error('❌ Erro ao enviar notificação de ideia rejeitada:', error)
       }
     }
   }

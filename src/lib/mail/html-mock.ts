@@ -586,14 +586,14 @@ export const mockEmailNotificacaoSugestao = (
       <body>
           <div class="container">
               <div class="header">
-                  <h1>Atualização da Sugestão</h1>
-                  <p>Sua sugestão foi avaliada</p>
+                  <h1>Atualização da Ideia</h1>
+                  <p>Sua ideia foi avaliada</p>
               </div>
 
               <div class="content">
                   <div class="info-box">
                       <p><strong>Olá, ${nomeUsuario}!</strong></p>
-                      <p>Sua sugestão <strong>#${ideaNumber}</strong> teve o status atualizado.</p>
+                      <p>Sua ideia <strong>#${ideaNumber}</strong> teve o status atualizado.</p>
                       <p><strong>Status:</strong> ${status}</p>
                       <p><strong>Responsável pela avaliação:</strong> ${nomeResponsavel}</p>
                   </div>
@@ -605,7 +605,7 @@ export const mockEmailNotificacaoSugestao = (
                   </div>
                   ` : ''}
 
-                  <p>Para visualizar os detalhes completos da sua sugestão, acesse a intranet.</p>
+                  <p>Para visualizar os detalhes completos da sua ideia, acesse a intranet.</p>
               </div>
 
               <div class="footer">

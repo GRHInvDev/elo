@@ -371,7 +371,7 @@ function ClassificationInlineField({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < filteredClassifications.length) {
-        // Selecionar sugestão com Enter
+        // Selecionar ideia com Enter
         const selectedClassification = filteredClassifications[selectedSuggestionIndex]
         if (selectedClassification) {
           selectExistingClassification(selectedClassification)
@@ -511,10 +511,10 @@ function KpiInlineField({
   // Mutations
   const createKpi = api.kpi.create.useMutation({
     onSuccess: (newKpi) => {
-      // Vincular o novo KPI à sugestão
+      // Vincular o novo KPI à ideia
       api.kpi.linkToSuggestion.useMutation({
         onSuccess: () => {
-          // Atualizar a lista de KPIs da sugestão
+          // Atualizar a lista de KPIs da ideia
           const updatedKpis = [...currentKpis, { id: newKpi.id, name: newKpi.name, description: newKpi.description }]
           onKpisChange(updatedKpis)
           setIsAddingKpi(false)
@@ -533,7 +533,7 @@ function KpiInlineField({
 
   const linkToSuggestion = api.kpi.linkToSuggestion.useMutation({
     onSuccess: () => {
-      toast({ title: "KPI vinculado", description: "KPI adicionado à sugestão com sucesso." })
+      toast({ title: "KPI vinculado", description: "KPI adicionado à ideia com sucesso." })
     },
     onError: (error) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" })
@@ -555,7 +555,7 @@ function KpiInlineField({
     if (existingKpi) {
       // Verificar se já está vinculado
       if (currentKpis.some(kpi => kpi.id === existingKpi.id)) {
-        toast({ title: "KPI já vinculado", description: "Este KPI já está associado à sugestão." })
+        toast({ title: "KPI já vinculado", description: "Este KPI já está associado à ideia." })
         setIsAddingKpi(false)
         setInputValue("")
         return
@@ -601,7 +601,7 @@ function KpiInlineField({
     // Remover do banco também
     api.kpi.unlinkFromSuggestion.useMutation({
       onSuccess: () => {
-        toast({ title: "KPI removido", description: "KPI desvinculado da sugestão." })
+        toast({ title: "KPI removido", description: "KPI desvinculado da ideia." })
       }
     }).mutate({
       suggestionId,
@@ -701,13 +701,13 @@ function KpiInlineField({
   )
 }
 
-// Componente para gerenciar KPIs da sugestão
+// Componente para gerenciar KPIs da ideia
 function KpiSection({ suggestionId }: { suggestionId: string }) {
   const [isAdding, setIsAdding] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
 
-  // Query para buscar KPIs da sugestão
+  // Query para buscar KPIs da ideia
   const { data: suggestionKpis = [], refetch: refetchKpis } = api.kpi.getBySuggestionId.useQuery(
     { suggestionId },
     { enabled: !!suggestionId }
@@ -739,7 +739,7 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
 
   const linkKpi = api.kpi.linkToSuggestion.useMutation({
     onSuccess: () => {
-      toast({ title: "KPI adicionado", description: "KPI vinculado com sucesso à sugestão." })
+      toast({ title: "KPI adicionado", description: "KPI vinculado com sucesso à ideia." })
       void refetchKpis()
       setInputValue("")
       setIsAdding(false)
@@ -756,7 +756,7 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
 
   const unlinkKpi = api.kpi.unlinkFromSuggestion.useMutation({
     onSuccess: () => {
-      toast({ title: "KPI removido", description: "KPI removido da sugestão." })
+      toast({ title: "KPI removido", description: "KPI removido da ideia." })
       void refetchKpis()
     },
     onError: (error) => {
@@ -779,7 +779,7 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
     if (isAlreadyLinked) {
       toast({
         title: "KPI já vinculado",
-        description: "Este KPI já está vinculado a esta sugestão.",
+        description: "Este KPI já está vinculado a esta ideia.",
         variant: "destructive"
       })
       return
@@ -953,14 +953,14 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
 
       {suggestionKpis.length === 0 && !isAdding && (
         <p className="text-sm text-muted-foreground">
-          Nenhum KPI vinculado a esta sugestão.
+          Nenhum KPI vinculado a esta ideia.
         </p>
       )}
     </div>
   )
 }
 
-// Componente para modal de detalhes da sugestão
+// Componente para modal de detalhes da ideia
 function SuggestionDetailsModal({
   suggestion,
   onUpdate,
@@ -1021,7 +1021,7 @@ function SuggestionDetailsModal({
   
   const updateMutation = api.suggestion.updateAdmin.useMutation({
     onSuccess: () => {
-      toast({ title: "Sugestão atualizada", description: "Classificações salvas com sucesso." })
+      toast({ title: "Ideia atualizada", description: "Classificações salvas com sucesso." })
       // Atualizar os dados localmente
       const statusEnum = Object.entries(STATUS_MAPPING).find(([, value]) => value === newStatus)?.[0] as keyof typeof STATUS_MAPPING | undefined
       onUpdate(suggestion.id, {
@@ -1105,7 +1105,7 @@ function SuggestionDetailsModal({
 
   return (
     <div className="space-y-6">
-      {/* Informações da Sugestão */}
+      {/* Informações da Ideia */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
         <div>
           <div className="text-sm font-medium">Autor</div>
@@ -1123,7 +1123,7 @@ function SuggestionDetailsModal({
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">
               {contribType === "IDEIA_INOVADORA" ? "Ideia inovadora" :
-               contribType === "SUGESTAO_MELHORIA" ? "Sugestão de melhoria" :
+               contribType === "SUGESTAO_MELHORIA" ? "Ideia de melhoria" :
                contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
                contribType === "OUTRO" ? `Outro: ${contribOther ?? ""}` : "-"}
             </Badge>
@@ -1151,7 +1151,7 @@ function SuggestionDetailsModal({
         <div className="space-y-3">
           <Label className="text-base font-medium">Impacto</Label>
           <Textarea
-            placeholder="Descreva o impacto desta sugestão (máximo 2000 caracteres)"
+            placeholder="Descreva o impacto desta ideia (máximo 2000 caracteres)"
             value={impactText}
             onChange={(e) => setImpactText(e.target.value)}
             maxLength={2000}
@@ -1181,7 +1181,7 @@ function SuggestionDetailsModal({
         <div className="space-y-3">
           <Label className="text-base font-medium">Capacidade</Label>
           <Textarea
-            placeholder="Descreva a capacidade de implementação desta sugestão (máximo 2000 caracteres)"
+            placeholder="Descreva a capacidade de implementação desta ideia (máximo 2000 caracteres)"
             value={capacityText}
             onChange={(e) => setCapacityText(e.target.value)}
             maxLength={2000}
@@ -1211,7 +1211,7 @@ function SuggestionDetailsModal({
         <div className="space-y-3">
           <Label className="text-base font-medium">Esforço</Label>
           <Textarea
-            placeholder="Descreva o esforço necessário para implementar esta sugestão (máximo 2000 caracteres)"
+            placeholder="Descreva o esforço necessário para implementar esta ideia (máximo 2000 caracteres)"
             value={effortText}
             onChange={(e) => setEffortText(e.target.value)}
             maxLength={2000}
@@ -1262,7 +1262,7 @@ function SuggestionDetailsModal({
 
       {/* Seção de Gestão */}
       <div className="space-y-6">
-        <h3 className="text-lg font-semibold">Gestão da Sugestão</h3>
+        <h3 className="text-lg font-semibold">Gestão da Ideia</h3>
         
         {/* Responsável pela Devolutiva */}
         <div className="space-y-3">
@@ -1275,7 +1275,7 @@ function SuggestionDetailsModal({
 
         {/* Mudança de Status */}
         <div className="space-y-3">
-          <Label className="text-base font-medium">Status da Sugestão</Label>
+          <Label className="text-base font-medium">Status da Ideia</Label>
           <Select value={newStatus} onValueChange={handleStatusChange}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione o status" />
@@ -1297,7 +1297,7 @@ function SuggestionDetailsModal({
               Motivo da Não Implementação *
             </Label>
             <Textarea
-              placeholder="Explique o motivo pelo qual esta sugestão não será implementada..."
+              placeholder="Explique o motivo pelo qual esta ideia não será implementada..."
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               className="min-h-[100px]"
@@ -1408,7 +1408,7 @@ export default function AdminSuggestionsPage() {
 
   const updateMutation = api.suggestion.updateAdmin.useMutation({
     onSuccess: () => {
-      toast({ title: "Avaliação salva", description: "Sugestão atualizada com sucesso." })
+              toast({ title: "Avaliação salva", description: "Ideia atualizada com sucesso." })
       void refetch()
     },
     onError: (error) => {
@@ -1447,12 +1447,12 @@ export default function AdminSuggestionsPage() {
   // Estado para modal de gerenciamento de classificações
   const [isClassificationModalOpen, setIsClassificationModalOpen] = useState<boolean>(false)
 
-  // Estado para modal de detalhes da sugestão
+  // Estado para modal de detalhes da ideia
   const [selectedSuggestion, setSelectedSuggestion] = useState<SuggestionLocal | null>(null)
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false)
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
 
-  // Função para abrir modal de detalhes da sugestão
+  // Função para abrir modal de detalhes da ideia
   const openSuggestionModal = (suggestion: SuggestionLocal) => {
     setSelectedSuggestion(suggestion)
     setIsSuggestionModalOpen(true)
@@ -1465,7 +1465,7 @@ export default function AdminSuggestionsPage() {
 
 
 
-  // Query para carregar KPIs da sugestão selecionada
+  // Query para carregar KPIs da ideia selecionada
   const kpiQuery = api.kpi.getBySuggestionId.useQuery(
     { suggestionId: selectedSuggestionId ?? "" },
     {
@@ -1609,7 +1609,7 @@ export default function AdminSuggestionsPage() {
       })
       toast({
         title: "Status atualizado",
-        description: "Sugestão movida para 'Não implantado' com motivo registrado."
+        description: "Ideia movida para 'Não implantado' com motivo registrado."
       })
     } else {
       toast({
@@ -2012,7 +2012,7 @@ export default function AdminSuggestionsPage() {
         onOpenChange={(open) => {
           setKpiModalOpen(open)
           if (!open) {
-            // Recarregar dados da sugestão quando o modal for fechado
+            // Recarregar dados da ideia quando o modal for fechado
             if (selectedSuggestionId) {
               console.log('Modal closed, reloading suggestion data...')
               void refetch()
@@ -2028,18 +2028,18 @@ export default function AdminSuggestionsPage() {
         suggestionId={selectedSuggestionId ?? undefined}
       />
 
-      {/* Modal de Detalhes da Sugestão */}
+      {/* Modal de Detalhes da Ideia */}
       <Dialog open={isSuggestionModalOpen} onOpenChange={setIsSuggestionModalOpen}>
         <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 md:p-6">
           <DialogHeader className="space-y-2">
             <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
               <Edit className="w-4 h-4 md:w-5 md:h-5" />
               <span className="truncate">
-                Sugestão #{selectedSuggestion ? formatIdeaNumber(selectedSuggestion.ideaNumber) : ''}
+                Ideia #{selectedSuggestion ? formatIdeaNumber(selectedSuggestion.ideaNumber) : ''}
               </span>
             </DialogTitle>
             <DialogDescription className="text-sm">
-              Avalie e classifique a sugestão com impacto, capacidade e esforço.
+              Avalie e classifique a ideia com impacto, capacidade e esforço.
             </DialogDescription>
           </DialogHeader>
 
@@ -2157,7 +2157,7 @@ function IdeasAccordion({
 
 
         toast({
-          title: "Sugestão rejeitada e notificação enviada",
+          title: "Ideia rejeitada e notificação enviada",
           description: "Status alterado para 'Não implementado', motivo salvo e colaborador notificado!"
         })
       } catch {
@@ -2228,7 +2228,7 @@ function SuggestionItem({
   onCancelReasonField: (suggestionId: string) => void
   getSimilarClassifications: (searchTerm: string, type: 'impact' | 'capacity' | 'effort') => ClassItem[]
 }) {
-  // Carregar KPIs específicos para esta sugestão
+  // Carregar KPIs específicos para esta ideia
   const { data: suggestionKpis = [] } = api.kpi.getBySuggestionId.useQuery(
     { suggestionId: s.id },
     { enabled: true }
@@ -2319,7 +2319,7 @@ function SuggestionItem({
                       <div className="flex flex-wrap gap-2">
                         <Badge variant="outline">
                           {contribType === "IDEIA_INOVADORA" ? "Ideia inovadora" :
-                           contribType === "SUGESTAO_MELHORIA" ? "Sugestão de melhoria" :
+                           contribType === "SUGESTAO_MELHORIA" ? "Ideia de melhoria" :
                            contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
                            contribType === "OUTRO" ? `Outro: ${contribOther ?? ""}` : "-"}
                         </Badge>
@@ -2471,7 +2471,7 @@ function SuggestionItem({
                           </label>
                           <Textarea
                             rows={3}
-                            placeholder="Descreva o motivo detalhado da não implementação desta sugestão..."
+                            placeholder="Descreva o motivo detalhado da não implementação desta ideia..."
                             className="mt-2 border-red-200 focus:border-red-300"
                             value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
                             onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
@@ -2525,7 +2525,7 @@ function SuggestionItem({
                           rows={4}
                           value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
                           onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
-                          placeholder="Digite o motivo detalhado da não implementação desta sugestão..."
+                          placeholder="Digite o motivo detalhado da não implementação desta ideia..."
                           className="border-red-200 focus:border-red-300"
                           required
                         />
@@ -2572,7 +2572,7 @@ function SuggestionItem({
                           ...(s.analystId && { analystId: s.analystId }), // Preservar o responsável atual
                         }, {
                           onSuccess: () => {
-                            toast({ title: "Avaliação salva", description: `Sugestão #${formatIdeaNumber(s.ideaNumber)} atualizada.` })
+                            toast({ title: "Avaliação salva", description: `Ideia #${formatIdeaNumber(s.ideaNumber)} atualizada.` })
                           },
                           onError: (error) => {
                             toast({

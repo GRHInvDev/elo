@@ -99,7 +99,7 @@ export function KpiManagementModal({
   const linkToSuggestion = api.kpi.linkToSuggestion.useMutation({
     onSuccess: () => {
       toast.success("KPIs vinculados com sucesso!")
-      // Forçar refetch dos KPIs para a sugestão selecionada
+      // Forçar refetch dos KPIs para a ideia selecionada
       if (suggestionId) {
         void utils.kpi.getBySuggestionId.invalidate({ suggestionId })
         // Invalidar também a lista de Ideias para mostrar as mudanças imediatamente
@@ -167,7 +167,7 @@ export function KpiManagementModal({
       // Nota: A notificação é criada no backend quando os KPIs são vinculados
       // Aqui apenas log para debug
       if (suggestionId && selectedKpiIds.length > 0) {
-        console.log('KPIs vinculados à sugestão:', {
+        console.log('KPIs vinculados à ideia:', {
           suggestionId,
           kpiIds: selectedKpiIds,
           kpiNames: selectedKpiIds.map(kpiId => {
@@ -198,7 +198,7 @@ export function KpiManagementModal({
             Gerenciar KPIs de Sucesso
           </DialogTitle>
           <DialogDescription>
-            Selecione KPIs existentes ou crie novos para acompanhar o sucesso desta sugestão.
+            Selecione KPIs existentes ou crie novos para acompanhar o sucesso desta ideia.
           </DialogDescription>
         </DialogHeader>
 

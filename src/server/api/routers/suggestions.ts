@@ -51,7 +51,7 @@ const adminMiddleware = middleware(async ({ ctx, next }) => {
 const adminProcedure = protectedProcedure.use(adminMiddleware)
 
 export const suggestionRouter = createTRPCRouter({
-  // Criar sugestão (caixa)
+  // Criar ideia (caixa)
   create: protectedProcedure
     .input(z.object({
       submittedName: z.string().trim().optional(),
@@ -208,7 +208,7 @@ export const suggestionRouter = createTRPCRouter({
                 : { label: "Descartar com justificativa clara", range: "0-9" })
           : null
 
-      // Buscar dados da sugestão e usuário antes da atualização
+      // Buscar dados da ideia e usuário antes da atualização
       const suggestionData = await ctx.db.suggestion.findUnique({
         where: { id: input.id },
         include: {
@@ -232,7 +232,7 @@ export const suggestionRouter = createTRPCRouter({
       if (!suggestionData) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Sugestão não encontrada"
+          message: "Ideia não encontrada"
         })
       }
 
@@ -272,7 +272,7 @@ export const suggestionRouter = createTRPCRouter({
 
       // Criar notificações baseadas nas mudanças
       try {
-        // Notificação de atualização da sugestão
+        // Notificação de atualização da ideia
         if (input.status && input.status !== suggestionData.status) {
           let notificationTitle = ""
           let notificationMessage = ""
@@ -280,17 +280,17 @@ export const suggestionRouter = createTRPCRouter({
 
           switch (input.status) {
             case "APPROVED":
-              notificationTitle = "Sugestão Aprovada! 🎉"
-              notificationMessage = `Parabéns! Sua sugestão #${suggestionData.ideaNumber} foi aprovada.`
+              notificationTitle = "Ideia Aprovada! 🎉"
+              notificationMessage = `Parabéns! Sua ideia #${suggestionData.ideaNumber} foi aprovada.`
               notificationType = "SUGGESTION_APPROVED"
               break
             case "NOT_IMPLEMENTED":
-              notificationTitle = "Sugestão Rejeitada"
-              notificationMessage = `Sua sugestão #${suggestionData.ideaNumber} foi rejeitada.${input.rejectionReason ? ` Motivo: ${input.rejectionReason}` : ''}`
+              notificationTitle = "Ideia Rejeitada"
+              notificationMessage = `Sua ideia #${suggestionData.ideaNumber} foi rejeitada.${input.rejectionReason ? ` Motivo: ${input.rejectionReason}` : ''}`
               notificationType = "SUGGESTION_REJECTED"
               break
             default:
-              notificationTitle = "Sugestão Atualizada"
+              notificationTitle = "Ideia Atualizada"
               const statusMapping = {
                 "NEW": "Nova",
                 "IN_REVIEW": "Em avaliação",
@@ -299,7 +299,7 @@ export const suggestionRouter = createTRPCRouter({
                 "DONE": "Concluída",
                 "NOT_IMPLEMENTED": "Não implementada"
               }
-              notificationMessage = `A sugestão #${suggestionData.ideaNumber} foi atualizada para "${statusMapping[input.status] || input.status}".`
+              notificationMessage = `A ideia #${suggestionData.ideaNumber} foi atualizada para "${statusMapping[input.status] || input.status}".`
               notificationType = "SUGGESTION_UPDATED"
           }
 
@@ -316,11 +316,11 @@ export const suggestionRouter = createTRPCRouter({
             }
           })
         } else if (input.impact || input.capacity || input.effort) {
-          // Notificação de atualização de classificação
+          // Notificação de atualização de classificação da ideia
           await ctx.db.notification.create({
             data: {
               title: "Classificação Atualizada",
-              message: `A classificação da sugestão #${suggestionData.ideaNumber} foi atualizada.`,
+              message: `A classificação da ideia #${suggestionData.ideaNumber} foi atualizada.`,
               type: "CLASSIFICATION_UPDATED",
               channel: "IN_APP",
               userId: suggestionData.userId,
@@ -371,10 +371,10 @@ export const suggestionRouter = createTRPCRouter({
 
             const statusPortugues = statusMapping[input.status] || input.status
 
-            // Enviar email apenas para o usuário que criou a sugestão
+            // Enviar email apenas para o usuário que criou a ideia
             await sendEmail(
               suggestionData.user.email,
-              `Atualização da Sugestão #${suggestionData.ideaNumber}`,
+              `Atualização da Ideia #${suggestionData.ideaNumber}`,
               mockEmailNotificacaoSugestao(
                 nomeUsuario,
                 nomeResponsavel,
@@ -449,7 +449,7 @@ export const suggestionRouter = createTRPCRouter({
       rejectionReason: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Buscar dados da sugestão e usuário
+      // Buscar dados da ideia e usuário
       const suggestionData = await ctx.db.suggestion.findUnique({
         where: { id: input.suggestionId },
         include: {
@@ -473,14 +473,14 @@ export const suggestionRouter = createTRPCRouter({
       if (!suggestionData) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Sugestão não encontrada"
+          message: "Ideia não encontrada"
         })
       }
 
       if (suggestionData.status !== "NOT_IMPLEMENTED") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Esta sugestão não está marcada como 'Não implementada'"
+          message: "Esta ideia não está marcada como 'Não implementada'"
         })
       }
 
@@ -488,10 +488,10 @@ export const suggestionRouter = createTRPCRouter({
         const nomeUsuario = `${suggestionData.user.firstName ?? ''} ${suggestionData.user.lastName ?? ''}`.trim() ?? 'Usuário'
         const nomeResponsavel = `${suggestionData.analyst?.firstName ?? ''} ${suggestionData.analyst?.lastName ?? ''}`.trim() ?? 'Admin'
 
-        // Enviar email apenas para o usuário que criou a sugestão
+        // Enviar email apenas para o usuário que criou a ideia
         await sendEmail(
           suggestionData.user.email,
-          `Atualização da Sugestão #${suggestionData.ideaNumber}`,
+          `Atualização da Ideia #${suggestionData.ideaNumber}`,
           mockEmailNotificacaoSugestao(
             nomeUsuario,
             nomeResponsavel,
@@ -509,6 +509,52 @@ export const suggestionRouter = createTRPCRouter({
           code: "INTERNAL_SERVER_ERROR",
           message: "Erro ao enviar notificação por email"
         })
+      }
+    }),
+
+  // Estatísticas para dashboard
+  getStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Contar ideias totais
+      const totalSuggestions = await ctx.db.suggestion.count()
+
+      // Última ideia criada
+      const latestSuggestion = await ctx.db.suggestion.findFirst({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          createdAt: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      })
+
+      // Ideias criadas hoje
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+
+      const todaySuggestions = await ctx.db.suggestion.count({
+        where: {
+          createdAt: {
+            gte: today,
+            lt: tomorrow
+          }
+        }
+      })
+
+      return {
+        total: totalSuggestions,
+        today: todaySuggestions,
+        latest: latestSuggestion ? {
+          createdAt: latestSuggestion.createdAt,
+          user: latestSuggestion.user
+        } : null
       }
     }),
 })
