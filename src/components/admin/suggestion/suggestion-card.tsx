@@ -55,44 +55,10 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
                 <div className="h-3 bg-muted-foreground/20 rounded w-1/2"></div>
               </div>
             ) : stats ? (
-              <>
-                <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
-                  <span className="font-medium text-foreground">{stats.total}</span> ideias registradas
-                  {stats.today > 0 && (
-                    <span className="text-primary"> • {stats.today} hoje</span>
-                  )}
-                </p>
-
-                {/* Última ideia */}
-                {stats?.latest?.createdAt ? (
-                  <div className="text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium">
-                        {stats.latest.user?.firstName || stats.latest.user?.lastName
-                          ? `${stats.latest.user.firstName ?? ''} ${stats.latest.user.lastName ?? ''}`.trim()
-                          : 'Usuário anônimo'}
-                      </span>
-                    </div>
-                    <div className="text-[10px] md:text-xs opacity-75">
-                      {new Date(stats.latest.createdAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
-                ) : stats.total > 0 ? (
-                  <div className="text-xs text-muted-foreground">
-                    <span className="opacity-75">Data não disponível</span>
-                  </div>
-                ) : null}
-              </>
-            ) : (
               <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
                 Faça o registro aqui e sua ideia pode ser premiada!
               </p>
-            )}
+            ) : null}
           </div>
 
           <div className="text-xs text-muted-foreground flex items-center gap-1 font-medium opacity-75 group-hover:opacity-100 transition-opacity">
