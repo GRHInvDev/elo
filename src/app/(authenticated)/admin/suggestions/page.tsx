@@ -1117,6 +1117,22 @@ function SuggestionDetailsModal({
               </span>
             )}
           </div>
+          <div className="text-xs text-muted-foreground mt-1 opacity-75">
+            {suggestion.createdAt ? (
+              <>
+                <span className="font-medium">Enviado em:</span>{' '}
+                {new Date(suggestion.createdAt).toLocaleDateString('pt-BR', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </>
+            ) : (
+              'Data não disponível'
+            )}
+          </div>
         </div>
         <div className="md:col-span-2">
           <div className="text-sm font-medium">Tipo de contribuição</div>
