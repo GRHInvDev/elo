@@ -1835,6 +1835,26 @@ export default function AdminSuggestionsPage() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
+                <Label className="text-sm">Selecionar autor:</Label>
+                <UserSelector
+                  value={authorFilter}
+                  onValueChange={(value) => setAuthorFilter(value)}
+                  disabled={false}
+                  adminOnly={false}
+                />
+                {authorFilter && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAuthorFilter(null)}
+                    className="ml-1"
+                  >
+                    <X className="w-4 h-4" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
                 <Label className="text-sm">Filtrar por responsável:</Label>
                 <UserSelector
                   value={analystFilter}
@@ -1847,26 +1867,6 @@ export default function AdminSuggestionsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setAnalystFilter(null)}
-                    className="ml-1"
-                  >
-                    <X className="w-4 h-4" />
-                    Limpar
-                  </Button>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Filtrar por autor:</Label>
-                <UserSelector
-                  value={authorFilter}
-                  onValueChange={(value) => setAuthorFilter(value)}
-                  disabled={false}
-                  adminOnly={false}
-                />
-                {authorFilter && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAuthorFilter(null)}
                     className="ml-1"
                   >
                     <X className="w-4 h-4" />
