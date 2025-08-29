@@ -19,29 +19,12 @@ import Image from "next/image"
 
 type ContribType = "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO"
 
-// Tipos para as estatísticas
-type SuggestionStats = {
-  total: number
-  today: number
-  latest: {
-    createdAt: Date
-    user: {
-      firstName: string | null
-      lastName: string | null
-    } | null
-  } | null
-}
+
 
 // Componente de prévia que abre modal
 export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void }) {
-  // Por enquanto, usar dados mock para evitar problemas de tipagem
-  // Em produção, isso seria substituído por uma query real da API
-  const stats: SuggestionStats | null = {
-    total: 0,
-    today: 0,
-    latest: null
-  }
-  const isLoading = false
+  // Query para buscar estatísticas das ideias
+  const { data: stats, isLoading } = api.suggestion.getStats.useQuery()
 
   return (
     <div
@@ -81,11 +64,13 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
                 </p>
 
                 {/* Última ideia */}
-                {stats.latest && (
+                {stats?.latest?.createdAt ? (
                   <div className="text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <span className="font-medium">
-                        {stats.latest.user?.firstName} {stats.latest.user?.lastName}
+                        {stats.latest.user?.firstName || stats.latest.user?.lastName
+                          ? `${stats.latest.user.firstName ?? ''} ${stats.latest.user.lastName ?? ''}`.trim()
+                          : 'Usuário anônimo'}
                       </span>
                     </div>
                     <div className="text-[10px] md:text-xs opacity-75">
@@ -97,7 +82,11 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
                       })}
                     </div>
                   </div>
-                )}
+                ) : stats.total > 0 ? (
+                  <div className="text-xs text-muted-foreground">
+                    <span className="opacity-75">Data não disponível</span>
+                  </div>
+                ) : null}
               </>
             ) : (
               <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
