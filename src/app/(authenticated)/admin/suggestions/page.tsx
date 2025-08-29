@@ -154,7 +154,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
       lastName: analyst.lastName,
       email: analyst.email,
     } : null,
-    createdAt: dbSuggestion.createdAt,
+    createdAt: dbSuggestion.createdAt ? new Date(dbSuggestion.createdAt) : new Date(),
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
@@ -1953,6 +1953,18 @@ export default function AdminSuggestionsPage() {
                                           {s.submittedSector ?? s.user.setor}
                                         </span>
                                       )}
+                                      <div className="text-[10px] md:text-[11px] opacity-75 mt-1">
+                                        {s.createdAt ? (
+                                          new Date(s.createdAt).toLocaleDateString('pt-BR', {
+                                            day: '2-digit',
+                                            month: 'short',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })
+                                        ) : (
+                                          'Data não disponível'
+                                        )}
+                                      </div>
                                     </div>
                                     {/* Pontuação no Kanban */}
                                     <div className="flex items-center justify-between gap-1">
