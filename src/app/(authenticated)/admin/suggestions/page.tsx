@@ -16,10 +16,11 @@ import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
-import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { DoubtsPopup } from "@/components/doubts-popup"
 
 // Usar tipos derivados do tRPC para garantir type safety
 type DBSuggestion = RouterOutputs["suggestion"]["list"][number]
@@ -166,12 +167,14 @@ function UserSelector({
   value,
   onValueChange,
   disabled = false,
-  adminOnly = false
+  adminOnly = false,
+  placeholder = "Selecionar responsável..."
 }: {
   value: string | null
   onValueChange: (value: string | null) => void
   disabled?: boolean
   adminOnly?: boolean
+  placeholder?: string
 }) {
   const [open, setOpen] = useState(false)
 
@@ -199,7 +202,7 @@ function UserSelector({
           className="w-full justify-between"
           disabled={disabled}
         >
-          {selectedUser ? getUserDisplayName(selectedUser) : "Selecionar responsável..."}
+          {selectedUser ? getUserDisplayName(selectedUser) : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -1293,6 +1296,7 @@ function SuggestionDetailsModal({
             value={responsibleUser}
             onValueChange={setResponsibleUser}
             adminOnly={true}
+            placeholder="Selecionar responsável..."
           />
         </div>
 
@@ -1398,16 +1402,32 @@ function SuggestionDetailsModal({
       <KpiSection suggestionId={suggestion.id} />
 
       {/* Botões de Ação */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button 
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
+      <div className="flex justify-between items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            // Aqui precisamos acessar o estado do componente pai
+            // Por enquanto, vamos usar uma abordagem simplificada
+            const event = new CustomEvent('openDoubtsPopup')
+            window.dispatchEvent(event)
+          }}
+          className="flex items-center gap-2"
         >
-          {updateMutation.isPending ? "Salvando..." : "Salvar Classificações"}
+          <HelpCircle className="w-4 h-4" />
+          Dúvidas
         </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+          >
+            {updateMutation.isPending ? "Salvando..." : "Salvar Classificações"}
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -1475,6 +1495,22 @@ export default function AdminSuggestionsPage() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<SuggestionLocal | null>(null)
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false)
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+
+  // Estado para popup de dúvidas
+  const [isDoubtsPopupOpen, setIsDoubtsPopupOpen] = useState(false)
+
+  // Listener para eventos customizados do modal
+  useEffect(() => {
+    const handleOpenDoubtsPopup = () => {
+      setIsDoubtsPopupOpen(true)
+    }
+
+    window.addEventListener('openDoubtsPopup', handleOpenDoubtsPopup)
+
+    return () => {
+      window.removeEventListener('openDoubtsPopup', handleOpenDoubtsPopup)
+    }
+  }, [])
 
   // Função para abrir modal de detalhes da ideia
   const openSuggestionModal = (suggestion: SuggestionLocal) => {
@@ -1801,6 +1837,15 @@ export default function AdminSuggestionsPage() {
               Avalie, classifique e acompanhe o status das ideias.
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDoubtsPopupOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Dúvidas
+          </Button>
         </div>
       </div>
 
@@ -1841,6 +1886,7 @@ export default function AdminSuggestionsPage() {
                   onValueChange={(value) => setAuthorFilter(value)}
                   disabled={false}
                   adminOnly={false}
+                  placeholder="Selecionar autor..."
                 />
                 {authorFilter && (
                   <Button
@@ -1861,6 +1907,7 @@ export default function AdminSuggestionsPage() {
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
                   adminOnly={true}
+                  placeholder="Selecionar responsável..."
                 />
                 {analystFilter && (
                   <Button
@@ -1918,6 +1965,7 @@ export default function AdminSuggestionsPage() {
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
                   adminOnly={true}
+                  placeholder="Selecionar responsável..."
                 />
                 {analystFilter && (
                   <Button
@@ -1938,6 +1986,7 @@ export default function AdminSuggestionsPage() {
                   onValueChange={(value) => setAuthorFilter(value)}
                   disabled={false}
                   adminOnly={false}
+                  placeholder="Selecionar autor..."
                 />
                 {authorFilter && (
                   <Button
@@ -2154,6 +2203,12 @@ export default function AdminSuggestionsPage() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Popup de Dúvidas */}
+      <DoubtsPopup
+        isOpen={isDoubtsPopupOpen}
+        onClose={() => setIsDoubtsPopupOpen(false)}
+      />
 
     </DashboardShell>
   )
@@ -2596,6 +2651,7 @@ function SuggestionItem({
                           update(s.id, { analystId: userId })
                         }}
                         adminOnly={true}
+                        placeholder="Selecionar responsável..."
                       />
                     </div>
 
