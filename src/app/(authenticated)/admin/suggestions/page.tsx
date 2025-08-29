@@ -27,6 +27,7 @@ type DBSuggestion = RouterOutputs["suggestion"]["list"][number]
 type SuggestionLocal = {
   id: string
   ideaNumber: number
+  userId: string
   submittedName: string | null
   submittedSector: string | null
   isNameVisible: boolean
@@ -115,6 +116,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
   return {
     id: dbSuggestion.id,
     ideaNumber: dbSuggestion.ideaNumber,
+    userId: (dbSuggestion as any).userId || "",
     submittedName: dbSuggestion.submittedName,
     submittedSector: user.setor,
     isNameVisible: dbSuggestion.isNameVisible,
@@ -163,16 +165,20 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
 function UserSelector({
   value,
   onValueChange,
-  disabled = false
+  disabled = false,
+  adminOnly = false
 }: {
   value: string | null
   onValueChange: (value: string | null) => void
   disabled?: boolean
+  adminOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
 
   // Buscar usuários para seleção de responsável
-  const { data: allUsers = [] } = api.user.listAll.useQuery()
+  const { data: allUsers = [] } = adminOnly
+    ? api.user.listAdmins.useQuery()
+    : api.user.listAll.useQuery()
 
   const selectedUser = allUsers.find(user => user.id === value)
 
@@ -1286,6 +1292,7 @@ function SuggestionDetailsModal({
           <UserSelector
             value={responsibleUser}
             onValueChange={setResponsibleUser}
+            adminOnly={true}
           />
         </div>
 
@@ -1448,6 +1455,7 @@ export default function AdminSuggestionsPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [analystFilter, setAnalystFilter] = useState<string | null>(null)
+  const [authorFilter, setAuthorFilter] = useState<string | null>(null)
   const [showMyTasks, setShowMyTasks] = useState<boolean>(false)
   const [showFilters, setShowFilters] = useState<boolean>(false)
 
@@ -1733,6 +1741,11 @@ export default function AdminSuggestionsPage() {
       filteredSuggestions = filteredSuggestions.filter(s => s.analystId === analystFilter)
     }
 
+    // Aplicar filtro de autor se houver seleção
+    if (authorFilter) {
+      filteredSuggestions = filteredSuggestions.filter(s => s.userId === authorFilter)
+    }
+
     // Aplicar filtro de "Minhas pendências" se estiver marcado
     if (showMyTasks && currentUser) {
       filteredSuggestions = filteredSuggestions.filter(s => s.analystId === currentUser.id)
@@ -1756,7 +1769,7 @@ export default function AdminSuggestionsPage() {
         return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
       }
     })
-  }, [suggestions, statusFilter, analystFilter, showMyTasks, currentUser, sortOrder])
+  }, [suggestions, statusFilter, analystFilter, authorFilter, showMyTasks, currentUser, sortOrder])
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const listColumns = useMemo(() => {
@@ -1827,12 +1840,33 @@ export default function AdminSuggestionsPage() {
                   value={analystFilter}
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
+                  adminOnly={true}
                 />
                 {analystFilter && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setAnalystFilter(null)}
+                    className="ml-1"
+                  >
+                    <X className="w-4 h-4" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">Filtrar por autor:</Label>
+                <UserSelector
+                  value={authorFilter}
+                  onValueChange={(value) => setAuthorFilter(value)}
+                  disabled={false}
+                  adminOnly={false}
+                />
+                {authorFilter && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAuthorFilter(null)}
                     className="ml-1"
                   >
                     <X className="w-4 h-4" />
@@ -1883,12 +1917,33 @@ export default function AdminSuggestionsPage() {
                   value={analystFilter}
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
+                  adminOnly={true}
                 />
                 {analystFilter && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setAnalystFilter(null)}
+                    className="mt-2 w-full"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Limpar Filtro
+                  </Button>
+                )}
+              </div>
+              <div className="flex-1">
+                <Label className="text-sm font-medium mb-2 block">Autor</Label>
+                <UserSelector
+                  value={authorFilter}
+                  onValueChange={(value) => setAuthorFilter(value)}
+                  disabled={false}
+                  adminOnly={false}
+                />
+                {authorFilter && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAuthorFilter(null)}
                     className="mt-2 w-full"
                   >
                     <X className="w-4 h-4 mr-2" />
@@ -2540,6 +2595,7 @@ function SuggestionItem({
                         onValueChange={(userId: string | null) => {
                           update(s.id, { analystId: userId })
                         }}
+                        adminOnly={true}
                       />
                     </div>
 
