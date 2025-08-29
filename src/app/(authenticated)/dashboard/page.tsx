@@ -154,7 +154,7 @@ export default async function DashboardPage() {
               <LucideNewspaper className="w-6 h-6 md:w-8 md:h-8 text-primary"/>
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
-              Notícias
+              News
             </h1>
           </div>
           <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto lg:mx-0 leading-relaxed">
