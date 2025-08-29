@@ -109,6 +109,7 @@ export const suggestionRouter = createTRPCRouter({
         select: {
           id: true,
           ideaNumber: true,
+          userId: true,
           submittedName: true,
           submittedSector: true,
           isNameVisible: true,

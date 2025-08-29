@@ -21,5 +21,21 @@ export const userRouter = createTRPCRouter({
   listAll: adminProcedure.query(async ({ ctx })=>{
     return await ctx.db.user.findMany();
   }),
+
+  listAdmins: adminProcedure.query(async ({ ctx })=>{
+    return await ctx.db.user.findMany({
+      where: {
+        role: 'ADMIN'
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        setor: true
+      }
+    });
+  }),
 })
 
