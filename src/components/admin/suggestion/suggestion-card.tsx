@@ -19,8 +19,13 @@ import Image from "next/image"
 
 type ContribType = "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO"
 
+
+
 // Componente de prévia que abre modal
 export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void }) {
+  // Query para buscar estatísticas das ideias
+  const { data: stats, isLoading } = api.suggestion.getStats.useQuery()
+
   return (
     <div
       onClick={onOpenModal}
@@ -39,11 +44,57 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
 
         <div className="flex-1 space-y-1 md:space-y-2 text-left min-w-0">
           <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground leading-tight">
-            Ideias em Ação
+            💡 Ideias em Ação
           </h3>
-          <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
-            Faça o registro aqui e sua ideia pode ser premiada!
-          </p>
+
+          {/* Estatísticas dinâmicas */}
+          <div className="space-y-1">
+            {isLoading ? (
+              <div className="animate-pulse space-y-1">
+                <div className="h-3 bg-muted-foreground/20 rounded w-3/4"></div>
+                <div className="h-3 bg-muted-foreground/20 rounded w-1/2"></div>
+              </div>
+            ) : stats ? (
+              <>
+                <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
+                  <span className="font-medium text-foreground">{stats.total}</span> ideias registradas
+                  {stats.today > 0 && (
+                    <span className="text-primary"> • {stats.today} hoje</span>
+                  )}
+                </p>
+
+                {/* Última ideia */}
+                {stats?.latest?.createdAt ? (
+                  <div className="text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">
+                        {stats.latest.user?.firstName || stats.latest.user?.lastName
+                          ? `${stats.latest.user.firstName ?? ''} ${stats.latest.user.lastName ?? ''}`.trim()
+                          : 'Usuário anônimo'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] md:text-xs opacity-75">
+                      {new Date(stats.latest.createdAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                ) : stats.total > 0 ? (
+                  <div className="text-xs text-muted-foreground">
+                    <span className="opacity-75">Data não disponível</span>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                Faça o registro aqui e sua ideia pode ser premiada!
+              </p>
+            )}
+          </div>
+
           <div className="text-xs text-muted-foreground flex items-center gap-1 font-medium opacity-75 group-hover:opacity-100 transition-opacity">
             <span className="hidden sm:inline">Clique para abrir o formulário</span>
             <span className="sm:hidden">Toque para abrir</span>
@@ -77,11 +128,11 @@ export function SuggestionsCard() {
     }
   }, [userData])
 
-  // Mutation para criar sugestão
+  // Mutation para criar ideia
   const create = api.suggestion.create.useMutation({
     onSuccess: () => {
       toast({
-        title: "Sugestão enviada!",
+        title: "Ideia enviada!",
         description: "Sua ideia foi registrada e será avaliada em breve."
       })
       // Resetar form
@@ -238,7 +289,7 @@ export function SuggestionsCard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="IDEIA_INOVADORA">Ideia inovadora</SelectItem>
-                    <SelectItem value="SUGESTAO_MELHORIA">Sugestão de melhoria</SelectItem>
+                    <SelectItem value="SUGESTAO_MELHORIA">Ideia de melhoria</SelectItem>
                     <SelectItem value="SOLUCAO_PROBLEMA">Solução de problema</SelectItem>
                     <SelectItem value="OUTRO">Outro</SelectItem>
                   </SelectContent>
@@ -294,7 +345,7 @@ export function SuggestionsCard() {
                   disabled={create.isPending || !problema.trim() || !solucao.trim()}
                   className="min-w-[120px]"
                 >
-                  {create.isPending ? "Enviando..." : "Enviar Sugestão"}
+                  {create.isPending ? "Enviando..." : "Enviar ideia"}
                 </Button>
               </div>
             </CardContent>
@@ -326,11 +377,11 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
     }
   }, [userData])
 
-  // Mutation para criar sugestão
+  // Mutation para criar ideia
   const create = api.suggestion.create.useMutation({
     onSuccess: () => {
       toast({
-        title: "Sugestão enviada!",
+        title: "Ideia enviada!",
         description: "Sua ideia foi registrada e será avaliada em breve."
       })
       // Resetar form e fechar modal
@@ -427,7 +478,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
                 )}
                 {hideName && (
                   <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
-                    <span className="text-sm text-muted-foreground italic">Nome será ocultado na sugestão</span>
+                    <span className="text-sm text-muted-foreground italic">Nome será ocultado na ideia</span>
                   </div>
                 )}
                 <div className="flex items-center space-x-2">
@@ -476,7 +527,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="IDEIA_INOVADORA">Ideia inovadora</SelectItem>
-                  <SelectItem value="SUGESTAO_MELHORIA">Sugestão de melhoria</SelectItem>
+                  <SelectItem value="SUGESTAO_MELHORIA">Ideia de melhoria</SelectItem>
                   <SelectItem value="SOLUCAO_PROBLEMA">Solução de problema</SelectItem>
                   <SelectItem value="OUTRO">Outro</SelectItem>
                 </SelectContent>
@@ -540,7 +591,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
                 disabled={create.isPending || !problema.trim() || !solucao.trim()}
                 className="w-full sm:w-auto min-w-[120px]"
               >
-                {create.isPending ? "Enviando..." : "Enviar Sugestão"}
+                {create.isPending ? "Enviando..." : "Enviar ideia"}
               </Button>
             </div>
           </div>

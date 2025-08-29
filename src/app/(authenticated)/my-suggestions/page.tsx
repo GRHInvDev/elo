@@ -42,38 +42,38 @@ const getStatusConfig = (status: string) => {
       return {
         icon: Clock,
         color: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
-        description: "Sua sugestão foi recebida e aguarda avaliação"
+        description: "Sua ideia foi recebida e aguarda avaliação"
       }
     case "IN_REVIEW":
       return {
         icon: Eye,
         color: "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800",
-        description: "Sua sugestão está sendo analisada por nossa equipe"
+        description: "Sua ideia está sendo analisada por nossa equipe"
       }
     case "APPROVED":
       return {
         icon: CheckCircle,
         color: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
-        description: "Sua sugestão foi aprovada e será implementada em breve"
+        description: "Sua ideia foi aprovada e será implementada em breve"
       }
     case "IN_PROGRESS":
       return {
         icon: TrendingUp,
         color: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
-        description: "Sua sugestão está sendo implementada"
+        description: "Sua ideia está sendo implementada"
       }
     case "DONE":
       return {
         icon: CheckCircle,
         color: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
-        description: "Sua sugestão foi implementada com sucesso"
+        description: "Sua ideia foi implementada com sucesso"
       }
     case "NOT_IMPLEMENTED":
     default:
       return {
         icon: XCircle,
         color: "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800",
-        description: "Sua sugestão não será implementada neste momento"
+        description: "Sua ideia não será implementada neste momento"
       }
   }
 }
@@ -140,7 +140,7 @@ export default function MySuggestionsPage() {
       case "IDEIA_INOVADORA":
         return "Ideia inovadora"
       case "SUGESTAO_MELHORIA":
-        return "Sugestão de melhoria"
+        return "Ideia de melhoria"
       case "SOLUCAO_PROBLEMA":
         return "Solução de problema"
       case "OUTRO":
@@ -282,13 +282,13 @@ export default function MySuggestionsPage() {
               <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
                 {searchTerm || statusFilter !== "all"
-                  ? "Nenhuma sugestão encontrada"
+                  ? "Nenhuma ideia encontrada"
                   : "Você ainda não enviou Ideias"}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {searchTerm || statusFilter !== "all"
                   ? "Tente ajustar os filtros de busca"
-                  : "Que tal enviar sua primeira sugestão?"}
+                  : "Que tal enviar sua primeira ideia?"}
               </p>
             </div>
           ) : (
@@ -347,7 +347,7 @@ export default function MySuggestionsPage() {
                             </span>
                           </div>
                         </div>
-                        {/* Detalhes da sugestão */}
+                        {/* Detalhes da ideia */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
                           <div className="space-y-3 min-w-0">
                             <div>
