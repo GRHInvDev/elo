@@ -1,3 +1,4 @@
+import { Enterprise } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
 import { z } from "zod"
 
@@ -34,7 +35,8 @@ export const userRouter = createTRPCRouter({
         firstName: true,
         lastName: true,
         role: true,
-        setor: true
+        setor: true,
+        enterprise: true
       }
     });
   }),
@@ -48,7 +50,7 @@ export const userRouter = createTRPCRouter({
       return await ctx.db.user.update({
         where: { id: ctx.auth.userId },
         data: {
-          enterprise: input.enterprise,
+          enterprise: input.enterprise as Enterprise,
           setor: input.setor,
         },
         select: {
