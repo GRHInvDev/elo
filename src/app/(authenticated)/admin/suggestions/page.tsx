@@ -980,11 +980,11 @@ function SuggestionDetailsModal({
   onClose: () => void
 }) {
   const [impactText, setImpactText] = useState("")
-  const [impactScore, setImpactScore] = useState(1)
+  const [impactScore, setImpactScore] = useState(0)
   const [capacityText, setCapacityText] = useState("")
-  const [capacityScore, setCapacityScore] = useState(1)
+  const [capacityScore, setCapacityScore] = useState(0)
   const [effortText, setEffortText] = useState("")
-  const [effortScore, setEffortScore] = useState(1)
+  const [effortScore, setEffortScore] = useState(0)
   const [responsibleUser, setResponsibleUser] = useState<string | null>(null)
   const [newStatus, setNewStatus] = useState<string>("")
   const [rejectionReason, setRejectionReason] = useState("")
@@ -1093,7 +1093,8 @@ function SuggestionDetailsModal({
 
   // Função para determinar resultado final
   const getFinalResult = (score: number) => {
-    if (score >= 0 && score <= 9) return { text: "Descartar com justificativa clara", color: "bg-red-100 text-red-800 border border-red-200" }
+    if (score === 0) return { text: "Ainda não avaliado", color: "bg-blue-100 text-blue-800 border border-blue-200" }
+    if (score >= 1 && score <= 9) return { text: "Descartar com justificativa clara", color: "bg-red-100 text-red-800 border border-red-200" }
     if (score >= 10 && score <= 14) return { text: "Ajustar e incubar", color: "bg-yellow-100 text-yellow-800 border border-yellow-200" }
     if (score >= 15 && score <= 20) return { text: "Aprovar para gestores", color: "bg-green-100 text-green-800 border border-green-200" }
     return { text: "Revisar pontuação", color: "bg-gray-100 text-gray-800 border border-gray-200" }
@@ -1170,8 +1171,15 @@ function SuggestionDetailsModal({
 
       {/* Classificações Simplificadas */}
       <div className="space-y-6">
-        <h3 className="text-lg font-semibold">Classificações</h3>
-        
+        <h3 className="text-lg font-semibold">
+          Classificações
+          {suggestion.status === "NEW" && (
+            <span className="ml-2 text-sm font-normal text-green-600 dark:text-green-400">
+              (Editável - Status: Novo)
+            </span>
+          )}
+        </h3>
+
         {/* Impacto */}
         <div className="space-y-3">
           <Label className="text-base font-medium">Impacto</Label>
@@ -1181,15 +1189,20 @@ function SuggestionDetailsModal({
             onChange={(e) => setImpactText(e.target.value)}
             maxLength={2000}
             className="min-h-[100px]"
+            disabled={suggestion.status !== "NEW"}
           />
           <div className="flex items-center gap-4">
             <Label className="text-sm">Pontuação:</Label>
-            <Select value={impactScore.toString()} onValueChange={(value) => setImpactScore(Number(value))}>
+            <Select
+              value={impactScore.toString()}
+              onValueChange={(value) => setImpactScore(Number(value))}
+              disabled={suggestion.status !== "NEW"}
+            >
               <SelectTrigger className="w-20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                {Array.from({ length: 11 }, (_, i) => i).map((num) => (
                   <SelectItem key={num} value={num.toString()}>
                     {num}
                   </SelectItem>
@@ -1211,15 +1224,20 @@ function SuggestionDetailsModal({
             onChange={(e) => setCapacityText(e.target.value)}
             maxLength={2000}
             className="min-h-[100px]"
+            disabled={suggestion.status !== "NEW"}
           />
           <div className="flex items-center gap-4">
             <Label className="text-sm">Pontuação:</Label>
-            <Select value={capacityScore.toString()} onValueChange={(value) => setCapacityScore(Number(value))}>
+            <Select
+              value={capacityScore.toString()}
+              onValueChange={(value) => setCapacityScore(Number(value))}
+              disabled={suggestion.status !== "NEW"}
+            >
               <SelectTrigger className="w-20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                {Array.from({ length: 11 }, (_, i) => i).map((num) => (
                   <SelectItem key={num} value={num.toString()}>
                     {num}
                   </SelectItem>
@@ -1241,15 +1259,20 @@ function SuggestionDetailsModal({
             onChange={(e) => setEffortText(e.target.value)}
             maxLength={2000}
             className="min-h-[100px]"
+            disabled={suggestion.status !== "NEW"}
           />
           <div className="flex items-center gap-4">
             <Label className="text-sm">Pontuação:</Label>
-            <Select value={effortScore.toString()} onValueChange={(value) => setEffortScore(Number(value))}>
+            <Select
+              value={effortScore.toString()}
+              onValueChange={(value) => setEffortScore(Number(value))}
+              disabled={suggestion.status !== "NEW"}
+            >
               <SelectTrigger className="w-20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                {Array.from({ length: 11 }, (_, i) => i).map((num) => (
                   <SelectItem key={num} value={num.toString()}>
                     {num}
                   </SelectItem>
