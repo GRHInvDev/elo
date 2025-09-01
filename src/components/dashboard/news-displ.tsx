@@ -1,19 +1,40 @@
-import { api } from "@/trpc/server";
+"use client"
+
+import { api } from "@/trpc/react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { LucideArrowRight } from "lucide-react";
+import { LucideArrowRight, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 
-export default async function NewsDisplay() {
-  const posts = (await api.post.list()).slice(0, 3);
+export default function NewsDisplay() {
+  const { data: posts, isLoading } = api.post.list.useQuery();
+
+  const displayPosts = posts?.slice(0, 3) ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Carregando notícias...</span>
+      </div>
+    );
+  }
+
+  if (displayPosts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-muted-foreground">Nenhuma notícia encontrada.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col max-w-full overflow-hidden gap-y-8 md:gap-y-12 lg:gap-y-16">
       {
-        posts.map((p, i)=>(
+        displayPosts.map((p, i)=>(
           <article key={i} className="group relative">
             {/* Card Container com Design Aprimorado */}
             <div className="bg-background/60 backdrop-blur-sm border border-border/40 rounded-lg md:rounded-xl p-4 md:p-6 lg:p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:border-border">
