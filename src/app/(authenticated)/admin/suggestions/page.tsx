@@ -451,7 +451,7 @@ function ClassificationInlineField({
             <SelectContent>
               {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                 <SelectItem key={score} value={score.toString()}>
-                  {score} ponto{score !== 1 ? 's' : ''}
+                  {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -3020,7 +3020,7 @@ function ClassificationManagementModal({
                    <SelectContent>
                      {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                        <SelectItem key={score} value={score.toString()}>
-                         {score} ponto{score !== 1 ? 's' : ''}
+                         {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                        </SelectItem>
                      ))}
                    </SelectContent>
@@ -3244,7 +3244,7 @@ function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }
                 <SelectContent>
                   {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                     <SelectItem key={score} value={score.toString()}>
-                      {score} ponto{score !== 1 ? 's' : ''}
+                      {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -3319,7 +3319,7 @@ function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }
                     <SelectContent>
                       {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                         <SelectItem key={score} value={score.toString()}>
-                          {score} ponto{score !== 1 ? 's' : ''}
+                          {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -3412,6 +3412,31 @@ function CreateSuggestionModal({
 
   const utils = api.useUtils()
 
+  // Buscar todos os usuários para seleção
+  const { data: allUsers = [] } = api.user.listAll.useQuery()
+
+  // Preencher automaticamente os campos quando um usuário é selecionado
+  useEffect(() => {
+    if (formData.userId && allUsers.length > 0) {
+      const selectedUser = allUsers.find(user => user.id === formData.userId)
+      if (selectedUser) {
+        const fullName = `${selectedUser.firstName ?? ''} ${selectedUser.lastName ?? ''}`.trim()
+        setFormData(prev => ({
+          ...prev,
+          submittedName: fullName,
+          submittedSector: selectedUser.setor ?? ""
+        }))
+      }
+    } else if (!formData.userId) {
+      // Limpar campos quando nenhum usuário estiver selecionado
+      setFormData(prev => ({
+        ...prev,
+        submittedName: "",
+        submittedSector: ""
+      }))
+    }
+  }, [formData.userId, allUsers])
+
   // Mutation para criar ideia manualmente
   const createSuggestion = api.suggestion.createManual.useMutation({
     onSuccess: () => {
@@ -3457,11 +3482,11 @@ function CreateSuggestionModal({
 
   const handleSubmit = () => {
     // Validações básicas
-    if (!formData.submittedName.trim()) {
+    if (!formData.userId && !formData.submittedName.trim()) {
       toast({ title: "Erro", description: "Nome do colaborador é obrigatório.", variant: "destructive" })
       return
     }
-    if (!formData.submittedSector.trim()) {
+    if (!formData.userId && !formData.submittedSector.trim()) {
       toast({ title: "Erro", description: "Setor do colaborador é obrigatório.", variant: "destructive" })
       return
     }
@@ -3534,33 +3559,80 @@ function CreateSuggestionModal({
           {/* Informações do Autor */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações do Autor</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="submittedName">Nome do Colaborador *</Label>
-                <Input
-                  id="submittedName"
-                  value={formData.submittedName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, submittedName: e.target.value }))}
-                  placeholder="Digite o nome completo"
+                <div className="flex items-center justify-between">
+                  <Label>Selecionar Colaborador</Label>
+                  {formData.userId && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          userId: null,
+                          submittedName: "",
+                          submittedSector: ""
+                        }))
+                      }}
+                      className="h-auto p-1 text-xs"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Limpar seleção
+                    </Button>
+                  )}
+                </div>
+                <UserSelector
+                  value={formData.userId}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      userId: value
+                    }))
+                  }}
+                  adminOnly={false}
+                  placeholder="Selecionar colaborador..."
                 />
+                <p className="text-xs text-muted-foreground">
+                  Selecione um colaborador existente ou deixe vazio para inserir manualmente.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="submittedSector">Setor *</Label>
-                <Input
-                  id="submittedSector"
-                  value={formData.submittedSector}
-                  onChange={(e) => setFormData(prev => ({ ...prev, submittedSector: e.target.value }))}
-                  placeholder="Digite o setor"
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="submittedName">
+                    Nome do Colaborador {formData.userId ? "" : "*"}
+                  </Label>
+                  <Input
+                    id="submittedName"
+                    value={formData.submittedName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, submittedName: e.target.value }))}
+                    placeholder="Digite o nome completo"
+                    disabled={!!formData.userId}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="submittedSector">
+                    Setor {formData.userId ? "" : "*"}
+                  </Label>
+                  <Input
+                    id="submittedSector"
+                    value={formData.submittedSector}
+                    onChange={(e) => setFormData(prev => ({ ...prev, submittedSector: e.target.value }))}
+                    placeholder="Digite o setor"
+                    disabled={!!formData.userId}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isNameVisible"
+                  checked={formData.isNameVisible}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isNameVisible: checked as boolean }))}
                 />
+                <Label htmlFor="isNameVisible">Nome visível publicamente</Label>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isNameVisible"
-                checked={formData.isNameVisible}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isNameVisible: checked as boolean }))}
-              />
-              <Label htmlFor="isNameVisible">Nome visível publicamente</Label>
             </div>
           </div>
 
@@ -3642,7 +3714,7 @@ function CreateSuggestionModal({
                   <SelectContent>
                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                       <SelectItem key={score} value={score.toString()}>
-                        {score} ponto{score !== 1 ? 's' : ''}
+                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -3668,7 +3740,7 @@ function CreateSuggestionModal({
                   <SelectContent>
                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                       <SelectItem key={score} value={score.toString()}>
-                        {score} ponto{score !== 1 ? 's' : ''}
+                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -3694,7 +3766,7 @@ function CreateSuggestionModal({
                   <SelectContent>
                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                       <SelectItem key={score} value={score.toString()}>
-                        {score} ponto{score !== 1 ? 's' : ''}
+                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                       </SelectItem>
                     ))}
                   </SelectContent>

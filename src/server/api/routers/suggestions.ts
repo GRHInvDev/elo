@@ -10,7 +10,7 @@ const StatusEnum = z.enum(["NEW","IN_REVIEW","APPROVED","IN_PROGRESS","DONE","NO
 
 const ScoreItem = z.object({
   text: z.string().max(2000).optional(),
-  score: z.number().min(1).max(10).optional(),
+  score: z.number().min(0).max(10).optional(),
   // Manter compatibilidade com formato antigo
   label: z.string().optional(),
 })
