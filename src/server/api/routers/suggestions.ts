@@ -86,6 +86,168 @@ export const suggestionRouter = createTRPCRouter({
       return suggestion
     }),
 
+  // Criar ideia manualmente (admin)
+  createManual: adminProcedure
+    .input(z.object({
+      submittedName: z.string().trim().min(1),
+      submittedSector: z.string().trim().min(1),
+      isNameVisible: z.boolean().default(true),
+      description: z.string().trim().min(1), // Solução proposta
+      problem: z.string().trim().min(1), // Problema identificado
+      contribution: z.object({
+        type: z.enum(["IDEIA_INOVADORA","SUGESTAO_MELHORIA","SOLUCAO_PROBLEMA","OUTRO"]),
+        other: z.string().trim().optional(),
+      }),
+      impact: z.object({
+        text: z.string().max(2000),
+        score: z.number().min(0).max(10),
+      }).optional(),
+      capacity: z.object({
+        text: z.string().max(2000),
+        score: z.number().min(0).max(10),
+      }).optional(),
+      effort: z.object({
+        text: z.string().max(2000),
+        score: z.number().min(0).max(10),
+      }).optional(),
+      analystId: z.string().optional(),
+      status: StatusEnum.default("NEW"),
+      rejectionReason: z.string().optional(),
+      payment: z.object({
+        status: z.enum(["paid", "unpaid"]),
+        amount: z.number().optional(),
+        description: z.string().optional(),
+      }).optional(),
+      paymentDate: z.date().optional(),
+      userId: z.string().optional(), // Para atribuir a outro usuário
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Gerar próximo número de ideia
+      const last = await ctx.db.suggestion.findFirst({
+        orderBy: { ideaNumber: "desc" },
+        select: { ideaNumber: true },
+      })
+      const ideaNumber = (last?.ideaNumber ?? 99) + 1
+
+      // Calcular pontuação final se todas as classificações estiverem presentes
+      const impactScore = input.impact?.score ?? null
+      const capacityScore = input.capacity?.score ?? null
+      const effortScore = input.effort?.score ?? null
+
+      const finalScore = 
+        [impactScore, capacityScore, effortScore].every((v) => typeof v === "number")
+          ? (impactScore! + capacityScore! - effortScore!)
+          : null
+
+      const finalClassification = 
+        typeof finalScore === "number"
+          ? (finalScore >= 15
+              ? { label: "Aprovar para Gestores", range: "15-20" }
+              : finalScore >= 10
+                ? { label: "Ajustar e incubar", range: "10-14" }
+                : { label: "Descartar com justificativa clara", range: "0-9" })
+          : null
+
+      // Validar se o usuário existe (se fornecido)
+      if (input.userId) {
+        const userExists = await ctx.db.user.findUnique({
+          where: { id: input.userId },
+          select: { id: true },
+        })
+        if (!userExists) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Usuário não encontrado"
+          })
+        }
+      }
+
+      // Validar se o analista existe (se fornecido)
+      if (input.analystId) {
+        const analystExists = await ctx.db.user.findUnique({
+          where: { id: input.analystId, role: "ADMIN" },
+          select: { id: true },
+        })
+        if (!analystExists) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Analista não encontrado ou não é admin"
+          })
+        }
+      }
+
+      // Validar motivo para status "NOT_IMPLEMENTED"
+      if (input.status === "NOT_IMPLEMENTED" && !input.rejectionReason?.trim()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Motivo da não implementação é obrigatório"
+        })
+      }
+
+      const suggestion = await ctx.db.suggestion.create({
+        data: {
+          ideaNumber,
+          userId: input.userId ?? ctx.user.id, // Se não especificado, atribuir ao admin que criou
+          submittedName: input.submittedName,
+          submittedSector: input.submittedSector,
+          isNameVisible: input.isNameVisible,
+          description: input.description,
+          problem: input.problem,
+          contribution: input.contribution as InputJsonValue,
+          impact: input.impact as InputJsonValue,
+          capacity: input.capacity as InputJsonValue,
+          effort: input.effort as InputJsonValue,
+          finalScore,
+          finalClassification: finalClassification as InputJsonValue,
+          status: input.status,
+          rejectionReason: input.rejectionReason,
+          analystId: input.analystId,
+          payment: input.payment as InputJsonValue,
+          paymentDate: input.paymentDate,
+          dateRef: new Date(),
+        },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              setor: true,
+            },
+          },
+          analyst: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      })
+
+      // Criar notificação para o usuário (se não for o próprio admin)
+      if (input.userId && input.userId !== ctx.user.id) {
+        try {
+          await ctx.db.notification.create({
+            data: {
+              title: "Nova Ideia Criada",
+              message: `Uma nova ideia #${ideaNumber} foi criada em seu nome.`,
+              type: "SUGGESTION_CREATED",
+              channel: "IN_APP",
+              userId: input.userId,
+              entityId: suggestion.id,
+              entityType: "suggestion",
+              actionUrl: `/my-suggestions`
+            }
+          })
+        } catch (notificationError) {
+          console.error("Erro ao criar notificação:", notificationError)
+        }
+      }
+
+      return suggestion
+    }),
+
   // Listagem para admin (filtros simples)
   list: adminProcedure
     .input(z.object({

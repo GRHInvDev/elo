@@ -13,7 +13,7 @@ import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 const STATUS_MAPPING = {
-  "NEW": "Novo",
+  "NEW": "Ainda não avaliado",
   "IN_REVIEW": "Em avaliação",
   "APPROVED": "Aprovado",
   "IN_PROGRESS": "Em execução",
