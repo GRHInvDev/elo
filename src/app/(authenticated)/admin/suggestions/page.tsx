@@ -451,7 +451,7 @@ function ClassificationInlineField({
             <SelectContent>
               {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                 <SelectItem key={score} value={score.toString()}>
-                  {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
+                  {score}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -3065,7 +3065,7 @@ function ClassificationManagementModal({
                    <SelectContent>
                      {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                        <SelectItem key={score} value={score.toString()}>
-                         {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
+                         {score}
                        </SelectItem>
                      ))}
                    </SelectContent>
