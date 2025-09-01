@@ -3394,12 +3394,7 @@ function CreateSuggestionModal({
     description: "",
     contributionType: "IDEIA_INOVADORA" as "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO",
     contributionOther: "",
-    impactText: "",
-    impactScore: 0,
-    capacityText: "",
-    capacityScore: 0,
-    effortText: "",
-    effortScore: 0,
+    dateRef: null as Date | null,
     analystId: null as string | null,
     status: "NEW" as "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED",
     rejectionReason: "",
@@ -3463,12 +3458,7 @@ function CreateSuggestionModal({
       description: "",
       contributionType: "IDEIA_INOVADORA",
       contributionOther: "",
-      impactText: "",
-      impactScore: 0,
-      capacityText: "",
-      capacityScore: 0,
-      effortText: "",
-      effortScore: 0,
+      dateRef: null,
       analystId: null,
       status: "NEW",
       rejectionReason: "",
@@ -3513,18 +3503,7 @@ function CreateSuggestionModal({
         type: formData.contributionType,
         other: formData.contributionType === "OUTRO" ? formData.contributionOther.trim() : undefined
       },
-      impact: formData.impactText.trim() ? {
-        text: formData.impactText.trim(),
-        score: formData.impactScore
-      } : undefined,
-      capacity: formData.capacityText.trim() ? {
-        text: formData.capacityText.trim(),
-        score: formData.capacityScore
-      } : undefined,
-      effort: formData.effortText.trim() ? {
-        text: formData.effortText.trim(),
-        score: formData.effortScore
-      } : undefined,
+      dateRef: formData.dateRef ?? undefined,
       analystId: formData.analystId ?? undefined,
       status: formData.status,
       rejectionReason: formData.status === "NOT_IMPLEMENTED" ? formData.rejectionReason.trim() : undefined,
@@ -3664,6 +3643,28 @@ function CreateSuggestionModal({
             </div>
           </div>
 
+          {/* Data de Referência */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Data de Referência</h3>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="dateRef">Data da Ideia</Label>
+                <Input
+                  id="dateRef"
+                  type="date"
+                  value={formData.dateRef ? formData.dateRef.toISOString().split('T')[0] : ""}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    dateRef: e.target.value ? new Date(e.target.value) : null
+                  }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Define a data de referência da ideia. Se não informada, será usada a data atual.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Problema e Solução */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Problema e Solução</h3>
@@ -3691,89 +3692,7 @@ function CreateSuggestionModal({
             </div>
           </div>
 
-          {/* Classificações */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Classificações</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Impacto */}
-              <div className="space-y-3">
-                <Label>Impacto</Label>
-                <Textarea
-                  value={formData.impactText}
-                  onChange={(e) => setFormData(prev => ({ ...prev, impactText: e.target.value }))}
-                  placeholder="Descreva o impacto..."
-                  rows={2}
-                />
-                <Select
-                  value={formData.impactScore.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, impactScore: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pontuação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 11 }, (_, i) => i).map((score) => (
-                      <SelectItem key={score} value={score.toString()}>
-                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              {/* Capacidade */}
-              <div className="space-y-3">
-                <Label>Capacidade</Label>
-                <Textarea
-                  value={formData.capacityText}
-                  onChange={(e) => setFormData(prev => ({ ...prev, capacityText: e.target.value }))}
-                  placeholder="Descreva a capacidade..."
-                  rows={2}
-                />
-                <Select
-                  value={formData.capacityScore.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, capacityScore: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pontuação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 11 }, (_, i) => i).map((score) => (
-                      <SelectItem key={score} value={score.toString()}>
-                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Esforço */}
-              <div className="space-y-3">
-                <Label>Esforço</Label>
-                <Textarea
-                  value={formData.effortText}
-                  onChange={(e) => setFormData(prev => ({ ...prev, effortText: e.target.value }))}
-                  placeholder="Descreva o esforço..."
-                  rows={2}
-                />
-                <Select
-                  value={formData.effortScore.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, effortScore: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pontuação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 11 }, (_, i) => i).map((score) => (
-                      <SelectItem key={score} value={score.toString()}>
-                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
 
           {/* Gestão */}
           <div className="space-y-4">
