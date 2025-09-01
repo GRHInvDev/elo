@@ -446,7 +446,7 @@ function ClassificationInlineField({
           </div>
           <Select value={selectedScore.toString()} onValueChange={(v) => setSelectedScore(parseInt(v))}>
             <SelectTrigger>
-              <SelectValue placeholder="Pontuação" />
+              <SelectValue placeholder="0" />
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 11 }, (_, i) => i).map((score) => (
@@ -1211,7 +1211,7 @@ function SuggestionDetailsModal({
               disabled={suggestion.status !== "NEW"}
             >
               <SelectTrigger className="w-20">
-                <SelectValue />
+                <SelectValue placeholder="0" />
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 11 }, (_, i) => i).map((num) => (
@@ -1246,7 +1246,7 @@ function SuggestionDetailsModal({
               disabled={suggestion.status !== "NEW"}
             >
               <SelectTrigger className="w-20">
-                <SelectValue />
+                <SelectValue placeholder="0" />
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 11 }, (_, i) => i).map((num) => (
@@ -1281,7 +1281,7 @@ function SuggestionDetailsModal({
               disabled={suggestion.status !== "NEW"}
             >
               <SelectTrigger className="w-20">
-                <SelectValue />
+                <SelectValue placeholder="0" />
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 11 }, (_, i) => i).map((num) => (
@@ -3050,7 +3050,7 @@ function ClassificationManagementModal({
                  <Label htmlFor="score">Pontuação</Label>
                  <Select value={newScore.toString()} onValueChange={(v) => setNewScore(parseInt(v))}>
                    <SelectTrigger>
-                     <SelectValue placeholder="Selecione a pontuação" />
+                     <SelectValue placeholder="0" />
                    </SelectTrigger>
                    <SelectContent>
                      {Array.from({ length: 11 }, (_, i) => i).map((score) => (
