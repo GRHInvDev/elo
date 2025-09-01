@@ -2058,11 +2058,11 @@ export default function AdminSuggestionsPage() {
                         const impactData = s.impact as { score?: number; text?: string } | null
                         const capacityData = s.capacity as { score?: number; text?: string } | null
                         const effortData = s.effort as { score?: number; text?: string } | null
-                        
+
                         const impactScore = impactData?.score ?? 0
                         const capacityScore = capacityData?.score ?? 0
                         const effortScore = effortData?.score ?? 0
-                        const pontuacao = impactScore + capacityScore - effortScore
+                        const pontuacao = Math.max(0, impactScore + capacityScore - effortScore)
 
 
 
