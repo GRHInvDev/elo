@@ -451,7 +451,7 @@ function ClassificationInlineField({
             <SelectContent>
               {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                 <SelectItem key={score} value={score.toString()}>
-                  {score} ponto{score !== 1 ? 's' : ''}
+                  {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -3020,7 +3020,7 @@ function ClassificationManagementModal({
                    <SelectContent>
                      {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                        <SelectItem key={score} value={score.toString()}>
-                         {score} ponto{score !== 1 ? 's' : ''}
+                         {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                        </SelectItem>
                      ))}
                    </SelectContent>
@@ -3244,7 +3244,7 @@ function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }
                 <SelectContent>
                   {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                     <SelectItem key={score} value={score.toString()}>
-                      {score} ponto{score !== 1 ? 's' : ''}
+                      {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -3319,7 +3319,7 @@ function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }
                     <SelectContent>
                       {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                         <SelectItem key={score} value={score.toString()}>
-                          {score} ponto{score !== 1 ? 's' : ''}
+                          {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -3714,7 +3714,7 @@ function CreateSuggestionModal({
                   <SelectContent>
                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                       <SelectItem key={score} value={score.toString()}>
-                        {score} ponto{score !== 1 ? 's' : ''}
+                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -3740,7 +3740,7 @@ function CreateSuggestionModal({
                   <SelectContent>
                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                       <SelectItem key={score} value={score.toString()}>
-                        {score} ponto{score !== 1 ? 's' : ''}
+                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -3766,7 +3766,7 @@ function CreateSuggestionModal({
                   <SelectContent>
                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
                       <SelectItem key={score} value={score.toString()}>
-                        {score} ponto{score !== 1 ? 's' : ''}
+                        {score === 0 ? '0 pontos (não avaliado)' : `${score} ponto${score !== 1 ? 's' : ''}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
