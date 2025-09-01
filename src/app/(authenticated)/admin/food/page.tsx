@@ -130,6 +130,8 @@ export default function AdminFoodPage() {
       const resumoPorUsuario: Record<string, {
         nome: string
         email: string
+        empresa?: string
+        setor?: string | null
         totalPedidos: number
         valorTotal: number
       }> = {}
@@ -137,10 +139,14 @@ export default function AdminFoodPage() {
       data.forEach((order: typeof data[0]) => {
         const email = order.user?.email ?? "(sem email)"
         const nome = `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim()
+        const empresa = order.user?.enterprise ?? undefined
+        const setor = order.user?.setor ?? null
         const valor = order.menuItem?.price ?? 0
         resumoPorUsuario[email] ??= {
           nome,
           email,
+          empresa,
+          setor,
           totalPedidos: 0,
           valorTotal: 0,
         }
@@ -152,6 +158,8 @@ export default function AdminFoodPage() {
       const dataToExport = Object.values(resumoPorUsuario).map((usuario) => ({
         "Nome do Usuário": usuario.nome,
         "Email do Usuário": usuario.email,
+        "Empresa": usuario.empresa ?? "",
+        "Setor": usuario.setor ?? "",
         "Total de Pedidos": usuario.totalPedidos,
         "Valor Total (R$)": usuario.valorTotal.toFixed(2),
       }))
@@ -344,10 +352,6 @@ export default function AdminFoodPage() {
                 <DialogFooter>
                   <Button
                     onClick={() => {
-                      console.log("Clicou no botão de exportar")
-                      console.log("Data selecionada:", new Date(signatureExportDate.setHours(-3, 0, 0, 0)))
-                      console.log("Restaurante selecionado:", signatureExportRestaurant)
-                      
                       exportForSignature({
                         orderDate: signatureExportDate,
                         restaurantId: signatureExportRestaurant || undefined,

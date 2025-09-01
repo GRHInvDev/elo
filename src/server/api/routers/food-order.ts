@@ -298,14 +298,7 @@ export const foodOrderRouter = createTRPCRouter({
       return ctx.db.foodOrder.findMany({
         where: whereClause,
         include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
+          user: true,
           restaurant: true,
           menuItem: true,
         },
@@ -368,6 +361,8 @@ export const foodOrderRouter = createTRPCRouter({
               firstName: true,
               lastName: true,
               email: true,
+              enterprise: true,
+              setor: true,
             },
           },
           restaurant: true,
@@ -406,6 +401,8 @@ export const foodOrderRouter = createTRPCRouter({
               firstName: true,
               lastName: true,
               email: true,
+              enterprise: true,
+              setor: true,
             },
           },
           restaurant: {
