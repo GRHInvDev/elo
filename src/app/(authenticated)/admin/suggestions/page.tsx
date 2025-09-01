@@ -996,42 +996,32 @@ function SuggestionDetailsModal({
 
   // Carregar valores existentes
   useEffect(() => {
-    // Sempre definir valores padrão como 0 para sugestões no status NEW
-    if (suggestion.status === "NEW") {
-      setImpactScore(0)
-      setCapacityScore(0)
-      setEffortScore(0)
-      setImpactText("")
-      setCapacityText("")
-      setEffortText("")
+    // Sempre carregar valores existentes ou usar 0 como padrão
+    if (suggestion.impact) {
+      const impact = suggestion.impact as { text?: string; label?: string; score?: number }
+      setImpactText(impact.text ?? impact.label ?? "")
+      setImpactScore(impact.score ?? 0)
     } else {
-      // Para outros status, carregar valores existentes ou usar 0 como padrão
-      if (suggestion.impact) {
-        const impact = suggestion.impact as { text?: string; label?: string; score?: number }
-        setImpactText(impact.text ?? impact.label ?? "")
-        setImpactScore(impact.score ?? 0)
-      } else {
-        setImpactText("")
-        setImpactScore(0)
-      }
+      setImpactText("")
+      setImpactScore(0)
+    }
 
-      if (suggestion.capacity) {
-        const capacity = suggestion.capacity as { text?: string; label?: string; score?: number }
-        setCapacityText(capacity.text ?? capacity.label ?? "")
-        setCapacityScore(capacity.score ?? 0)
-      } else {
-        setCapacityText("")
-        setCapacityScore(0)
-      }
+    if (suggestion.capacity) {
+      const capacity = suggestion.capacity as { text?: string; label?: string; score?: number }
+      setCapacityText(capacity.text ?? capacity.label ?? "")
+      setCapacityScore(capacity.score ?? 0)
+    } else {
+      setCapacityText("")
+      setCapacityScore(0)
+    }
 
-      if (suggestion.effort) {
-        const effort = suggestion.effort as { text?: string; label?: string; score?: number }
-        setEffortText(effort.text ?? effort.label ?? "")
-        setEffortScore(effort.score ?? 0)
-      } else {
-        setEffortText("")
-        setEffortScore(0)
-      }
+    if (suggestion.effort) {
+      const effort = suggestion.effort as { text?: string; label?: string; score?: number }
+      setEffortText(effort.text ?? effort.label ?? "")
+      setEffortScore(effort.score ?? 0)
+    } else {
+      setEffortText("")
+      setEffortScore(0)
     }
     
     // Carregar responsável e status atual
