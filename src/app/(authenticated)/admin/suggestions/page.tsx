@@ -71,7 +71,7 @@ type ClassificationModal = {
 }
 
 const STATUS_MAPPING = {
-  "NEW": "Novo",
+  "NEW": "Ainda não avaliado",
   "IN_REVIEW": "Em avaliação", 
   "APPROVED": "Em orçamento",
   "IN_PROGRESS": "Em execução",
@@ -83,7 +83,7 @@ const STATUS = Object.values(STATUS_MAPPING)
 
 function getStatusColor(status: string): string {
   switch (status) {
-    case "Novo":
+    case "Ainda não avaliado":
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-100"
     case "Em avaliação":
       return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200"
@@ -127,15 +127,15 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     dateRef: dbSuggestion.dateRef,
     impact: (dbSuggestion as any).impact ? {
       label: (dbSuggestion as any).impact.text ?? (dbSuggestion as any).impact.label ?? "",
-      score: (dbSuggestion as any).impact.score ?? 1
+      score: (dbSuggestion as any).impact.score ?? 0
     } : null,
     capacity: (dbSuggestion as any).capacity ? {
       label: (dbSuggestion as any).capacity.text ?? (dbSuggestion as any).capacity.label ?? "",
-      score: (dbSuggestion as any).capacity.score ?? 1
+      score: (dbSuggestion as any).capacity.score ?? 0
     } : null,
     effort: (dbSuggestion as any).effort ? {
       label: (dbSuggestion as any).effort.text ?? (dbSuggestion as any).effort.label ?? "",
-      score: (dbSuggestion as any).effort.score ?? 1
+      score: (dbSuggestion as any).effort.score ?? 0
     } : null,
     kpis: [], // Será carregado via query separada
     kpiIds: [],
@@ -999,17 +999,17 @@ function SuggestionDetailsModal({
     if (suggestion.impact) {
       const impact = suggestion.impact as { text?: string; label?: string; score?: number }
       setImpactText(impact.text ?? impact.label ?? "")
-      setImpactScore(impact.score ?? 1)
+      setImpactScore(impact.score ?? 0)
     }
     if (suggestion.capacity) {
       const capacity = suggestion.capacity as { text?: string; label?: string; score?: number }
       setCapacityText(capacity.text ?? capacity.label ?? "")
-      setCapacityScore(capacity.score ?? 1)
+      setCapacityScore(capacity.score ?? 0)
     }
     if (suggestion.effort) {
       const effort = suggestion.effort as { text?: string; label?: string; score?: number }
       setEffortText(effort.text ?? effort.label ?? "")
-      setEffortScore(effort.score ?? 1)
+      setEffortScore(effort.score ?? 0)
     }
     
     // Carregar responsável e status atual
@@ -1499,6 +1499,9 @@ export default function AdminSuggestionsPage() {
   // Estado para popup de dúvidas
   const [isDoubtsPopupOpen, setIsDoubtsPopupOpen] = useState(false)
 
+  // Estado para modal de criação de sugestão
+  const [isCreateSuggestionModalOpen, setIsCreateSuggestionModalOpen] = useState(false)
+
   // Listener para eventos customizados do modal
   useEffect(() => {
     const handleOpenDoubtsPopup = () => {
@@ -1735,9 +1738,9 @@ export default function AdminSuggestionsPage() {
 
   // Função para determinar status baseado na pontuação
   const getStatusFromScore: (suggestion: SuggestionLocal) => string = (suggestion) => {
-    const impactScore = suggestion.impact?.score ?? 1
-    const capacityScore = suggestion.capacity?.score ?? 1
-    const effortScore = suggestion.effort?.score ?? 1
+    const impactScore = suggestion.impact?.score ?? 0
+    const capacityScore = suggestion.capacity?.score ?? 0
+    const effortScore = suggestion.effort?.score ?? 0
     const pontuacao = impactScore + capacityScore - effortScore
 
     if (pontuacao >= 10 && pontuacao <= 14) return "Ajustar"
@@ -1749,7 +1752,7 @@ export default function AdminSuggestionsPage() {
   // Ordenação inteligente das Ideias com filtro
   const sortedSuggestions = useMemo(() => {
     const priorityOrder = {
-      "Novo": 1,
+      "Ainda não avaliado": 1,
       "Em avaliação": 2,
       "Em orçamento": 3,
       "Em execução": 4,
@@ -1837,15 +1840,26 @@ export default function AdminSuggestionsPage() {
               Avalie, classifique e acompanhe o status das ideias.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsDoubtsPopupOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <HelpCircle className="w-4 h-4" />
-            Dúvidas
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setIsCreateSuggestionModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              Nova Ideia
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsDoubtsPopupOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Dúvidas
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -2031,11 +2045,11 @@ export default function AdminSuggestionsPage() {
                     {...provided.droppableProps}
                     className={`rounded-lg border p-2 md:p-3 ${getStatusColor(st)}`}
                   >
-                    <div className="font-medium mb-1 text-sm md:text-base">
+                    <div className="font-medium mb-1 text-sm md:text-base flex items-center justify-between">
                       <div className="truncate" title={st}>
                         {st}
                       </div>
-                      <div className="text-xs opacity-75">
+                      <div className="text-xs opacity-75 ml-2 flex-shrink-0">
                         ({kanbanColumns[st]?.length ?? 0})
                       </div>
                     </div>
@@ -2045,9 +2059,9 @@ export default function AdminSuggestionsPage() {
                         const capacityData = s.capacity as { score?: number; text?: string } | null
                         const effortData = s.effort as { score?: number; text?: string } | null
                         
-                        const impactScore = impactData?.score ?? 1
-                        const capacityScore = capacityData?.score ?? 1
-                        const effortScore = effortData?.score ?? 1
+                        const impactScore = impactData?.score ?? 0
+                        const capacityScore = capacityData?.score ?? 0
+                        const effortScore = effortData?.score ?? 0
                         const pontuacao = impactScore + capacityScore - effortScore
 
 
@@ -2208,6 +2222,13 @@ export default function AdminSuggestionsPage() {
       <DoubtsPopup
         isOpen={isDoubtsPopupOpen}
         onClose={() => setIsDoubtsPopupOpen(false)}
+      />
+
+      {/* Modal de Criação de Ideia Manual */}
+      <CreateSuggestionModal
+        isOpen={isCreateSuggestionModalOpen}
+        onClose={() => setIsCreateSuggestionModalOpen(false)}
+        setIsDoubtsPopupOpen={setIsDoubtsPopupOpen}
       />
 
     </DashboardShell>
@@ -2382,9 +2403,9 @@ function SuggestionItem({
     }
   })
 
-  const impactScore = s.impact?.score ?? 1
-  const capacityScore = s.capacity?.score ?? 1
-  const effortScore = s.effort?.score ?? 1
+  const impactScore = s.impact?.score ?? 0
+  const capacityScore = s.capacity?.score ?? 0
+  const effortScore = s.effort?.score ?? 0
   const pontuacao = impactScore + capacityScore - effortScore
   const nomeExibicao = s.isNameVisible ? (s.submittedName ?? "Não informado") : "Nome oculto"
   const setorExibido = s.submittedSector ?? s.user.setor ?? "Setor não informado"
@@ -3352,6 +3373,472 @@ function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }
         )}
       </div>
     </div>
+  )
+}
+
+// Componente para modal de criação de sugestão manual
+function CreateSuggestionModal({
+  isOpen,
+  onClose,
+  setIsDoubtsPopupOpen
+}: {
+  isOpen: boolean
+  onClose: () => void
+  setIsDoubtsPopupOpen: (value: boolean) => void
+}) {
+  const [formData, setFormData] = useState({
+    submittedName: "",
+    submittedSector: "",
+    isNameVisible: true,
+    problem: "",
+    description: "",
+    contributionType: "IDEIA_INOVADORA" as "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO",
+    contributionOther: "",
+    impactText: "",
+    impactScore: 0,
+    capacityText: "",
+    capacityScore: 0,
+    effortText: "",
+    effortScore: 0,
+    analystId: null as string | null,
+    status: "NEW" as "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED",
+    rejectionReason: "",
+    paymentStatus: "unpaid" as "paid" | "unpaid",
+    paymentAmount: undefined as number | undefined,
+    paymentDescription: "",
+    paymentDate: null as Date | null,
+    userId: null as string | null
+  })
+
+  const utils = api.useUtils()
+
+  // Mutation para criar ideia manualmente
+  const createSuggestion = api.suggestion.createManual.useMutation({
+    onSuccess: () => {
+      toast({ title: "Ideia criada", description: "Nova ideia criada com sucesso." })
+      void utils.suggestion.list.invalidate()
+      onClose()
+      resetForm()
+    },
+    onError: (error: { message: string }) => {
+      toast({
+        title: "Erro ao criar ideia",
+        description: error.message,
+        variant: "destructive"
+      })
+    }
+  })
+
+  const resetForm = () => {
+    setFormData({
+      submittedName: "",
+      submittedSector: "",
+      isNameVisible: true,
+      problem: "",
+      description: "",
+      contributionType: "IDEIA_INOVADORA",
+      contributionOther: "",
+      impactText: "",
+      impactScore: 0,
+      capacityText: "",
+      capacityScore: 0,
+      effortText: "",
+      effortScore: 0,
+      analystId: null,
+      status: "NEW",
+      rejectionReason: "",
+      paymentStatus: "unpaid",
+      paymentAmount: undefined,
+      paymentDescription: "",
+      paymentDate: null,
+      userId: null
+    })
+  }
+
+  const handleSubmit = () => {
+    // Validações básicas
+    if (!formData.submittedName.trim()) {
+      toast({ title: "Erro", description: "Nome do colaborador é obrigatório.", variant: "destructive" })
+      return
+    }
+    if (!formData.submittedSector.trim()) {
+      toast({ title: "Erro", description: "Setor do colaborador é obrigatório.", variant: "destructive" })
+      return
+    }
+    if (!formData.problem.trim()) {
+      toast({ title: "Erro", description: "Problema identificado é obrigatório.", variant: "destructive" })
+      return
+    }
+    if (!formData.description.trim()) {
+      toast({ title: "Erro", description: "Solução proposta é obrigatória.", variant: "destructive" })
+      return
+    }
+    if (formData.status === "NOT_IMPLEMENTED" && !formData.rejectionReason.trim()) {
+      toast({ title: "Erro", description: "Motivo da não implementação é obrigatório.", variant: "destructive" })
+      return
+    }
+
+    const submissionData = {
+      submittedName: formData.submittedName.trim(),
+      submittedSector: formData.submittedSector.trim(),
+      isNameVisible: formData.isNameVisible,
+      problem: formData.problem.trim(),
+      description: formData.description.trim(),
+      contribution: {
+        type: formData.contributionType,
+        other: formData.contributionType === "OUTRO" ? formData.contributionOther.trim() : undefined
+      },
+      impact: formData.impactText.trim() ? {
+        text: formData.impactText.trim(),
+        score: formData.impactScore
+      } : undefined,
+      capacity: formData.capacityText.trim() ? {
+        text: formData.capacityText.trim(),
+        score: formData.capacityScore
+      } : undefined,
+      effort: formData.effortText.trim() ? {
+        text: formData.effortText.trim(),
+        score: formData.effortScore
+      } : undefined,
+      analystId: formData.analystId ?? undefined,
+      status: formData.status,
+      rejectionReason: formData.status === "NOT_IMPLEMENTED" ? formData.rejectionReason.trim() : undefined,
+      payment: formData.status === "DONE" ? {
+        status: formData.paymentStatus,
+        amount: formData.paymentAmount,
+        description: formData.paymentDescription.trim() || undefined
+      } : undefined,
+      paymentDate: formData.status === "DONE" && formData.paymentStatus === "paid" && formData.paymentDate ? formData.paymentDate : undefined,
+      userId: formData.userId ?? undefined
+    }
+
+    createSuggestion.mutate(submissionData)
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 md:p-6">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <Plus className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="truncate">
+              Criar Nova Ideia Manualmente
+            </span>
+          </DialogTitle>
+          <DialogDescription className="text-sm">
+            Preencha todos os dados necessários para criar uma nova ideia no sistema.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Informações do Autor */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Informações do Autor</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="submittedName">Nome do Colaborador *</Label>
+                <Input
+                  id="submittedName"
+                  value={formData.submittedName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, submittedName: e.target.value }))}
+                  placeholder="Digite o nome completo"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="submittedSector">Setor *</Label>
+                <Input
+                  id="submittedSector"
+                  value={formData.submittedSector}
+                  onChange={(e) => setFormData(prev => ({ ...prev, submittedSector: e.target.value }))}
+                  placeholder="Digite o setor"
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isNameVisible"
+                checked={formData.isNameVisible}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isNameVisible: checked as boolean }))}
+              />
+              <Label htmlFor="isNameVisible">Nome visível publicamente</Label>
+            </div>
+          </div>
+
+          {/* Tipo de Contribuição */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Tipo de Contribuição</h3>
+            <div className="space-y-3">
+              <Select
+                value={formData.contributionType}
+                onValueChange={(value: "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO") => setFormData(prev => ({ ...prev, contributionType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de contribuição" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IDEIA_INOVADORA">Ideia Inovadora</SelectItem>
+                  <SelectItem value="SUGESTAO_MELHORIA">Sugestão de Melhoria</SelectItem>
+                  <SelectItem value="SOLUCAO_PROBLEMA">Solução de Problema</SelectItem>
+                  <SelectItem value="OUTRO">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.contributionType === "OUTRO" && (
+                <Input
+                  value={formData.contributionOther}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contributionOther: e.target.value }))}
+                  placeholder="Especifique o tipo de contribuição"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Problema e Solução */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Problema e Solução</h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="problem">Problema Identificado *</Label>
+                <Textarea
+                  id="problem"
+                  value={formData.problem}
+                  onChange={(e) => setFormData(prev => ({ ...prev, problem: e.target.value }))}
+                  placeholder="Descreva o problema identificado..."
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Solução Proposta *</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Descreva a solução proposta..."
+                  rows={4}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Classificações */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Classificações</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Impacto */}
+              <div className="space-y-3">
+                <Label>Impacto</Label>
+                <Textarea
+                  value={formData.impactText}
+                  onChange={(e) => setFormData(prev => ({ ...prev, impactText: e.target.value }))}
+                  placeholder="Descreva o impacto..."
+                  rows={2}
+                />
+                <Select
+                  value={formData.impactScore.toString()}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, impactScore: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pontuação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+                      <SelectItem key={score} value={score.toString()}>
+                        {score} ponto{score !== 1 ? 's' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Capacidade */}
+              <div className="space-y-3">
+                <Label>Capacidade</Label>
+                <Textarea
+                  value={formData.capacityText}
+                  onChange={(e) => setFormData(prev => ({ ...prev, capacityText: e.target.value }))}
+                  placeholder="Descreva a capacidade..."
+                  rows={2}
+                />
+                <Select
+                  value={formData.capacityScore.toString()}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, capacityScore: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pontuação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+                      <SelectItem key={score} value={score.toString()}>
+                        {score} ponto{score !== 1 ? 's' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Esforço */}
+              <div className="space-y-3">
+                <Label>Esforço</Label>
+                <Textarea
+                  value={formData.effortText}
+                  onChange={(e) => setFormData(prev => ({ ...prev, effortText: e.target.value }))}
+                  placeholder="Descreva o esforço..."
+                  rows={2}
+                />
+                <Select
+                  value={formData.effortScore.toString()}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, effortScore: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pontuação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+                      <SelectItem key={score} value={score.toString()}>
+                        {score} ponto{score !== 1 ? 's' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Gestão */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Gestão da Ideia</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Atribuir a Usuário (Opcional)</Label>
+                <UserSelector
+                  value={formData.userId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, userId: value }))}
+                  adminOnly={false}
+                  placeholder="Selecionar usuário..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se não selecionado, será atribuído ao admin que está criando.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Responsável pela Devolutiva</Label>
+                <UserSelector
+                  value={formData.analystId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, analystId: value }))}
+                  adminOnly={true}
+                  placeholder="Selecionar responsável..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Status da Ideia</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED") => setFormData(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(STATUS_MAPPING).map((status) => (
+                      <SelectItem key={status} value={Object.entries(STATUS_MAPPING).find(([, label]) => label === status)?.[0] ?? ""}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Campo de motivo para não implementado */}
+            {formData.status === "NOT_IMPLEMENTED" && (
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason">Motivo da Não Implementação *</Label>
+                <Textarea
+                  id="rejectionReason"
+                  value={formData.rejectionReason}
+                  onChange={(e) => setFormData(prev => ({ ...prev, rejectionReason: e.target.value }))}
+                  placeholder="Explique o motivo pelo qual esta ideia não será implementada..."
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {/* Campos de pagamento para concluído */}
+            {formData.status === "DONE" && (
+              <div className="space-y-4 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                <h4 className="text-base font-medium text-green-800 dark:text-green-200">💰 Gestão de Pagamento</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Status do Pagamento</Label>
+                    <Select
+                      value={formData.paymentStatus}
+                      onValueChange={(value: "paid" | "unpaid") => setFormData(prev => ({ ...prev, paymentStatus: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unpaid">Não Pago</SelectItem>
+                        <SelectItem value="paid">Pago</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.paymentStatus === "paid" && (
+                    <div className="space-y-2">
+                      <Label>Data do Pagamento</Label>
+                      <Input
+                        type="date"
+                        value={formData.paymentDate ? formData.paymentDate.toISOString().split('T')[0] : ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, paymentDate: e.target.value ? new Date(e.target.value) : null }))}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor do Pagamento (Opcional)</Label>
+                  <Input
+                    type="number"
+                    placeholder="Ex: 500.00"
+                    step="0.01"
+                    min="0"
+                    value={formData.paymentAmount ?? ""}
+                    onChange={(e) => setFormData(prev => ({ ...prev, paymentAmount: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição do Pagamento (Opcional)</Label>
+                  <Textarea
+                    value={formData.paymentDescription}
+                    onChange={(e) => setFormData(prev => ({ ...prev, paymentDescription: e.target.value }))}
+                    placeholder="Detalhes sobre o pagamento..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="flex justify-between items-center gap-3 pt-4 border-t">
+            <Button variant="ghost" onClick={() => setIsDoubtsPopupOpen(true)} className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4" />
+              Dúvidas
+            </Button>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={createSuggestion.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {createSuggestion.isPending ? "Criando..." : "Criar Ideia"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
