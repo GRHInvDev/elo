@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getUserRentedVehicle, listCars, rentVehicle } from './_tools/cars';
 import { routeItems } from '@/const/routes';
-import { UserRole } from '@prisma/client';
+
 
 export const maxDuration = 30;
 
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
 - **Data e Hora:** Hoje é ${format(new Date(), 'PPPPpppp', {locale: ptBR})}.
 - **Plataforma:** Essas são as páginas disponíveis na plataforma:  
-  ${JSON.stringify(routeItems(UserRole.USER))}
+  ${JSON.stringify(routeItems())}
 
 ---
 

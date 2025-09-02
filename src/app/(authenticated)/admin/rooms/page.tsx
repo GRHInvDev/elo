@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { db } from "@/server/db"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { RoomAdmin } from "@/components/room-admin"
+import type { RolesConfig } from "@/types/role-config"
 
 export const metadata: Metadata = {
   title: "Administração de Salas | elo",
@@ -22,7 +23,11 @@ export default async function AdminRoomsPage() {
     where: { id: user.id },
   })
 
-  if (!dbUser || dbUser.role !== "ADMIN") {
+  const roleConfig = dbUser?.role_config as RolesConfig;
+  const hasAdminAccess = !!roleConfig?.sudo ||
+                        !!roleConfig?.admin_pages?.includes("/admin");
+
+  if (!dbUser || !hasAdminAccess) {
     redirect("/dashboard")
   }
 

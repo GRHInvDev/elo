@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
+import { useAccessControl } from "@/hooks/use-access-control"
 
 export interface Room {
   id: string
@@ -35,6 +36,7 @@ interface RoomDialogProps {
 export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
   const { toast } = useToast()
   const utils = api.useUtils()
+  const { canCreateBooking } = useAccessControl()
   const createBooking = api.booking.create.useMutation({
     onSuccess: async () => {
       toast({
@@ -57,6 +59,24 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
   })
 
   if (!room) return undefined
+
+  if (!canCreateBooking()) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Acesso Negado</DialogTitle>
+            <DialogDescription>
+              Você não tem permissão para fazer agendamentos de salas.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()

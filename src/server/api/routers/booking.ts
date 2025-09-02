@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { canCreateBooking } from "@/lib/access-control"
+import type { RolesConfig } from "@/types/role-config"
 
 export const createBookingSchema = z.object({
   id: z.string().optional(),
@@ -12,6 +14,19 @@ export const createBookingSchema = z.object({
 
 export const bookingRouter = createTRPCRouter({
   create: protectedProcedure.input(createBookingSchema).mutation(async ({ ctx, input }) => {
+    // Verificar se o usuário tem permissão para fazer agendamentos
+    const db_user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true },
+    })
+
+    if (!canCreateBooking(db_user?.role_config as RolesConfig)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para fazer agendamentos",
+      })
+    }
+
     // Verifica se a sala existe
     const room = await ctx.db.room.findUnique({
       where: { id: input.roomId },
@@ -48,12 +63,30 @@ export const bookingRouter = createTRPCRouter({
       })
     }
 
-    return ctx.db.booking.create({
+    const booking = await ctx.db.booking.create({
       data: {
         ...input,
         userId: ctx.auth.userId,
       },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+          }
+        },
+        room: {
+          select: {
+            name: true,
+          }
+        }
+      }
     })
+
+    // Notificações temporariamente desabilitadas
+    // TODO: Reimplementar sistema de notificações
+
+    return booking
   }),
 
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {

@@ -28,7 +28,7 @@ export const useNotifications = ({
   })
 
   const notificationsData = notificationsQuery.data
-  const isLoading = notificationsQuery.isLoading || false
+  const isLoading = notificationsQuery.isLoading
   const refetch = notificationsQuery.refetch
   const error = notificationsQuery.error
 
@@ -215,9 +215,9 @@ export const useNotifications = ({
     refetch,
 
     // Estados das mutations
-    isMarkingAsRead: markAsReadMutation.isPending || false,
-    isMarkingAllAsRead: markAllAsReadMutation.isPending || false,
-    isDeleting: deleteMutation.isPending || false
+    isMarkingAsRead: markAsReadMutation.isPending,
+    isMarkingAllAsRead: markAllAsReadMutation.isPending,
+    isDeleting: deleteMutation.isPending
   }
 }
 
@@ -230,7 +230,7 @@ export const useNotificationCount = () => {
 
   return {
     unreadCount: notificationQuery.data?.unreadCount ?? 0,
-    isLoading: notificationQuery.isLoading || false,
+    isLoading: notificationQuery.isLoading,
     refetch: notificationQuery.refetch
   }
 }

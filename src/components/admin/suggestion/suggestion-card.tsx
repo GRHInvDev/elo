@@ -90,7 +90,7 @@ export function SuggestionsCard() {
   useEffect(() => {
     if (userData) {
       const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
-      setSubmittedName(fullName || userData.email)
+      setSubmittedName(fullName ?? userData.email ?? "")
     }
   }, [userData])
 
@@ -339,7 +339,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
   useEffect(() => {
     if (userData) {
       const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(" ")
-      setSubmittedName(fullName || userData.email)
+      setSubmittedName(fullName ?? userData.email ?? "")
     }
   }, [userData])
 

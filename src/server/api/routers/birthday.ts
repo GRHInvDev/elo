@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
+import type { RolesConfig } from "@/types/role-config"
 
 const createBirthdaySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -76,7 +77,10 @@ export const birthdayRouter = createTRPCRouter({
       where: { id: ctx.auth.userId },
     })
 
-    if (birthday.userId !== ctx.auth.userId && user?.role !== "ADMIN") {
+    const roleConfig = user?.role_config as RolesConfig;
+    const hasAdminAccess = roleConfig?.sudo || roleConfig?.admin_pages?.includes("/admin");
+    
+    if (birthday.userId !== ctx.auth.userId && !hasAdminAccess) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Você não tem permissão para deletar este aniversário",

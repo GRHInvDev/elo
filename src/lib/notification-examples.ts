@@ -1,28 +1,93 @@
 // Exemplos de uso do Sistema de Notificações
 // Este arquivo serve como referência para implementar notificações em diferentes partes do sistema
 
-import { NotificationService } from './notification-service'
+import { api } from '@/trpc/server'
+import type { RolesConfig } from '@/types/role-config'
+import { db } from '@/server/db'
+
+// Função auxiliar para verificar se o usuário pode receber notificações
+async function canReceiveNotifications(userId: string): Promise<boolean> {
+  try {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { role_config: true }
+    })
+    const roleConfig = user?.role_config as RolesConfig
+    
+    console.log('Roles data:', JSON.stringify(roleConfig, null, 2));
+    console.log('Roles type:', typeof roleConfig);
+    
+    // Se é sudo ou não é totem, pode receber notificações
+    return !!roleConfig?.sudo || !roleConfig?.isTotem
+  } catch {
+    return false
+  }
+}
 
 // 1. Notificações de Ideias
 export const suggestionNotificationExamples = {
   // Quando uma Ideia é criada
   onSuggestionCreated: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
-    await NotificationService.notifySuggestionCreated(suggestionId, authorId, suggestionNumber)
+    if (!(await canReceiveNotifications(authorId))) return
+    
+    await api.notification.create({
+      title: "Nova Ideia Criada",
+      message: `Sua Ideia #${suggestionNumber} foi criada com sucesso.`,
+      type: "INFO",
+      channel: "IN_APP",
+      userId: authorId,
+      entityId: suggestionId,
+      entityType: "suggestion",
+      actionUrl: `/suggestions/${suggestionId}`
+    })
   },
 
   // Quando uma Ideia é aprovada
   onSuggestionApproved: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
-    await NotificationService.notifySuggestionApproved(suggestionId, authorId, suggestionNumber)
+    if (!(await canReceiveNotifications(authorId))) return
+    
+    await api.notification.create({
+      title: "Ideia Aprovada",
+      message: `Sua Ideia #${suggestionNumber} foi aprovada!`,
+      type: "SUCCESS",
+      channel: "IN_APP",
+      userId: authorId,
+      entityId: suggestionId,
+      entityType: "suggestion",
+      actionUrl: `/suggestions/${suggestionId}`
+    })
   },
 
   // Quando uma Ideia é rejeitada
   onSuggestionRejected: async (suggestionId: string, authorId: string, suggestionNumber: number, reason?: string) => {
-    await NotificationService.notifySuggestionRejected(suggestionId, authorId, suggestionNumber, reason)
+    if (!(await canReceiveNotifications(authorId))) return
+    
+    await api.notification.create({
+      title: "Ideia Rejeitada",
+      message: `Sua Ideia #${suggestionNumber} foi rejeitada.${reason ? ` Motivo: ${reason}` : ''}`,
+      type: "WARNING",
+      channel: "IN_APP",
+      userId: authorId,
+      entityId: suggestionId,
+      entityType: "suggestion",
+      actionUrl: `/suggestions/${suggestionId}`
+    })
   },
 
   // Quando uma Ideia é atualizada
   onSuggestionUpdated: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
-    await NotificationService.notifySuggestionUpdated(suggestionId, authorId, suggestionNumber)
+    if (!(await canReceiveNotifications(authorId))) return
+    
+    await api.notification.create({
+      title: "Ideia Atualizada",
+      message: `Sua Ideia #${suggestionNumber} foi atualizada.`,
+      type: "INFO",
+      channel: "IN_APP",
+      userId: authorId,
+      entityId: suggestionId,
+      entityType: "suggestion",
+      actionUrl: `/suggestions/${suggestionId}`
+    })
   }
 }
 
@@ -30,32 +95,74 @@ export const suggestionNotificationExamples = {
 export const kpiNotificationExamples = {
   // Quando KPIs são adicionados a uma Ideia
   onKpiAdded: async (suggestionId: string, authorId: string, kpiName: string) => {
-    await NotificationService.notifyKpiAdded(suggestionId, authorId, kpiName)
+    if (!(await canReceiveNotifications(authorId))) return
+    
+    await api.notification.create({
+      title: "KPI Adicionado",
+      message: `O KPI "${kpiName}" foi adicionado à sua Ideia.`,
+      type: "INFO",
+      channel: "IN_APP",
+      userId: authorId,
+      entityId: suggestionId,
+      entityType: "suggestion",
+      actionUrl: `/suggestions/${suggestionId}`
+    })
   }
 }
 
 // 3. Notificações de Sistema
 export const systemNotificationExamples = {
-  // Notificação de manutenção
-  onSystemMaintenance: async (userIds: string[], message: string) => {
-    await NotificationService.notifySystemMaintenance(userIds, message)
-  },
-
   // Notificações genéricas
   onSuccess: async (userId: string, title: string, message: string) => {
-    await NotificationService.notifySuccess(userId, title, message)
+    if (!(await canReceiveNotifications(userId))) return
+    
+    await api.notification.create({
+      title,
+      message,
+      type: "SUCCESS",
+      channel: "IN_APP",
+      userId,
+      entityType: "system"
+    })
   },
 
   onError: async (userId: string, title: string, message: string) => {
-    await NotificationService.notifyError(userId, title, message)
+    if (!(await canReceiveNotifications(userId))) return
+    
+    await api.notification.create({
+      title,
+      message,
+      type: "ERROR",
+      channel: "IN_APP",
+      userId,
+      entityType: "system"
+    })
   },
 
   onWarning: async (userId: string, title: string, message: string) => {
-    await NotificationService.notifyWarning(userId, title, message)
+    if (!(await canReceiveNotifications(userId))) return
+    
+    await api.notification.create({
+      title,
+      message,
+      type: "WARNING",
+      channel: "IN_APP",
+      userId,
+      entityType: "system"
+    })
   },
 
   onInfo: async (userId: string, title: string, message: string) => {
-    await NotificationService.notifyInfo(userId, title, message)
+    if (!(await canReceiveNotifications(userId))) return
+    
+    await api.notification.create({
+      title,
+      message,
+      type: "INFO",
+      channel: "IN_APP",
+      userId,
+      entityType: "system"
+    })
   }
 }
 
@@ -63,10 +170,13 @@ export const systemNotificationExamples = {
 export const integrationExamples = {
   // Exemplo: Notificação quando um pedido é criado
   onOrderCreated: async (userId: string, orderId: string, orderNumber: string) => {
-    await NotificationService.createNotification({
+    if (!(await canReceiveNotifications(userId))) return
+    
+    await api.notification.create({
       title: "Pedido Criado",
       message: `Seu pedido #${orderNumber} foi criado com sucesso.`,
       type: "SUCCESS",
+      channel: "IN_APP",
       userId,
       entityId: orderId,
       entityType: "order",
@@ -76,27 +186,19 @@ export const integrationExamples = {
 
   // Exemplo: Notificação quando um evento é criado
   onEventCreated: async (userId: string, eventId: string, eventTitle: string) => {
-    await NotificationService.createNotification({
+    if (!(await canReceiveNotifications(userId))) return
+    
+    await api.notification.create({
       title: "Novo Evento",
       message: `O evento "${eventTitle}" foi criado.`,
       type: "INFO",
+      channel: "IN_APP",
       userId,
       entityId: eventId,
       entityType: "event",
       actionUrl: `/events/${eventId}`
     })
   },
-
-  // Exemplo: Notificação em lote para todos os administradores
-  notifyAllAdmins: async (title: string, message: string, adminUserIds: string[]) => {
-    await NotificationService.createBulkNotification({
-      title,
-      message,
-      type: "WARNING",
-      userIds: adminUserIds,
-      data: { adminAlert: true }
-    })
-  }
 }
 
 // 5. Como usar em componentes React
@@ -143,55 +245,5 @@ export const reactComponentExamples = {
       </div>
     )
   }
-  `
-}
-
-// 6. Boas práticas para implementação
-export const bestPractices = {
-  // 1. Sempre use try/catch ao criar notificações
-  safeNotificationCreation: `
-  try {
-    await NotificationService.notifySuggestionCreated(suggestionId, authorId, number)
-  } catch (error) {
-    console.error('Erro ao criar notificação:', error)
-    // Não falhar a operação principal
-  }
-  `,
-
-  // 2. Use tipos específicos de notificação
-  specificTypes: `
-  // ✅ Bom: Use tipos específicos
-  await NotificationService.notifySuggestionApproved(id, userId, number)
-
-  // ❌ Ruim: Use tipos genéricos
-  await NotificationService.createNotification({
-    type: 'INFO',
-    title: 'Ideia Aprovada',
-    message: 'Sua Ideia foi aprovada',
-    userId
-  })
-  `,
-
-  // 3. Inclua sempre entityId e entityType para navegação
-  includeEntityInfo: `
-  await NotificationService.createNotification({
-    title: 'Novo Pedido',
-    message: 'Seu pedido foi criado',
-    userId,
-    entityId: orderId,        // ✅ Importante para navegação
-    entityType: 'order',      // ✅ Importante para contexto
-    actionUrl: '/orders/\${orderId}' // ✅ Opcional, mas recomendado
-  })
-  `,
-
-  // 4. Use notificações em lote para eficiência
-  bulkNotifications: `
-  // ✅ Bom: Use bulk para múltiplos usuários
-  await NotificationService.createBulkNotification({
-    title: 'Manutenção do Sistema',
-    message: 'O sistema ficará indisponível hoje às 22h',
-    userIds: allUserIds,
-    type: 'SYSTEM_MAINTENANCE'
-  })
   `
 }

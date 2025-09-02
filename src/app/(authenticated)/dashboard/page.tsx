@@ -11,7 +11,7 @@ import NewsDisplay from "@/components/dashboard/news-displ"
 import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
-import { UserRole } from "@prisma/client"
+
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/complete-profile-modal"
 import { useState, useEffect } from "react"
@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const { data: user, refetch: refetchUser } = api.user.me.useQuery()
 
   // Tipagem para os dados do usuário
-  const userRole = user?.role ?? UserRole.USER
+  // Removido: userRole não é mais necessário com novo sistema
   const userEnterprise = user?.enterprise ?? null
   const userSetor = user?.setor ?? null
 
@@ -100,7 +100,7 @@ export default function DashboardPage() {
               </h1>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {
-                  routeItems(userRole).map((m,i)=> m.title !== "Dashboard" && (
+                  routeItems(user?.role_config).map((m,i)=> m.title !== "Dashboard" && (
                     <div key={i} className="col-span-1">
                       <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-3 rounded-lg gap-x-2 text-sm">
                         <m.icon className="size-4"/>
@@ -274,10 +274,10 @@ export default function DashboardPage() {
       {/* Modal para completar perfil */}
       <CompleteProfileModal
         isOpen={showProfileModal}
-        user={user ? {
+        user={user?.id ? {
           id: user.id,
-          enterprise: user.enterprise,
-          setor: user.setor
+          enterprise: user.enterprise ?? null,
+          setor: user.setor ?? null
         } : null}
         onSuccess={() => {
           void refetchUser()

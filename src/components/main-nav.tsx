@@ -6,18 +6,17 @@ import { usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 import { LucideLink, Menu } from "lucide-react"
-import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { SettingsMenu } from "./settings-menu"
 import { Separator } from "./ui/separator"
 import { routeItems } from "@/const/routes"
 import { DialogTitle } from "./ui/dialog"
-import { UserRole } from "@prisma/client"
+import { useAccessControl } from "@/hooks/use-access-control"
 
 export function MainNav() {
   const pathname = usePathname()
-  const { data: user } = api.user.me.useQuery()
+  const { db_user } = useAccessControl()
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -34,7 +33,7 @@ export function MainNav() {
           </SheetTrigger>
           <SheetContent side="left" className="w-[240px] sm:w-[300px] flex flex-col justify-between">
             <div className="flex flex-1 flex-col space-y-4 mt-8">
-              {[...routeItems(user?.role ?? UserRole.USER)].map((item) => {if (item) return (
+              {[...routeItems(db_user?.role_config)].map((item) => {if (item) return (
                 <Link
                   key={item.href}
                   href={item.href}

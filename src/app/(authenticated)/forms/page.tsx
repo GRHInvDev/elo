@@ -6,6 +6,8 @@ import { Suspense } from "react"
 import { FormsSkeleton } from "@/components/forms/forms-skeleton"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { api } from "@/trpc/server"
+import { canCreateForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Formulários",
@@ -13,6 +15,8 @@ export const metadata = {
 }
 
 export default async function FormsPage() {
+  const db_user = await api.user.me()
+  const userCanCreateForm = canCreateForm(db_user?.role_config);
   return (
     <DashboardShell>
       <div className="flex items-center justify-between mb-8 gap-y-4 flex-col md:flex-row">
@@ -52,12 +56,14 @@ export default async function FormsPage() {
               Minhas Respostas
             </Button>
           </Link>
-          <Link href="/forms/new">
-            <Button className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo Formulário
-            </Button>
-          </Link>
+          {userCanCreateForm && (
+            <Link href="/forms/new">
+              <Button className="w-full">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Novo Formulário
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

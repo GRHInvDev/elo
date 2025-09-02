@@ -8,23 +8,35 @@ import { ptBR } from "date-fns/locale"
 import { type Field } from "@/lib/form-types"
 import { auth } from "@clerk/nextjs/server"
 import { DeleteFormButton } from "./delete-form-button"
+import { getAccessibleForms, canCreateForm } from "@/lib/access-control"
 
 export async function FormsList() {
-  const forms = await api.form.list()
-  const user = await auth();
+  const allForms = await api.form.list()
+  const user = await auth()
+  const db_user = await api.user.me()
+  
+  // Filtrar formulários baseado nas permissões do usuário
+  const forms = getAccessibleForms(db_user?.role_config, allForms)
+  const userCanCreateForm = canCreateForm(db_user?.role_config);
 
   if (forms.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
         <h3 className="text-lg font-medium">Nenhum formulário encontrado</h3>
-        <p className="text-muted-foreground mt-1 mb-4">Comece criando seu primeiro formulário personalizado.</p>
-        <Link href="/forms/new">
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Criar Formulário
-          </Button>
-        </Link>
+        <p className="text-muted-foreground mt-1 mb-4">
+          {db_user?.role_config?.sudo || allForms.length === 0
+            ? "Comece criando seu primeiro formulário personalizado."
+            : "Você não tem acesso a formulários ou não há formulários disponíveis para você."}
+        </p>
+        {userCanCreateForm && (
+          <Link href="/forms/new">
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Criar Formulário
+            </Button>
+          </Link>
+        )}
       </div>
     )
   }

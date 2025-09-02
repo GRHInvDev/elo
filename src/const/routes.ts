@@ -1,13 +1,14 @@
-import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb } from "lucide-react"
-import { UserRole } from "@prisma/client"
+import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb, LucideUsers } from "lucide-react"
+import { type RolesConfig } from "@/types/role-config"
 
-export const routeItems = (role: UserRole): {
+export const routeItems = (roleConfig?: RolesConfig | null): {
   title: string
   icon: React.ElementType
   describe: string
   href: string
 }[] => {
-  if (role === UserRole.TOTEM) {
+  // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes)
+  if (roleConfig && 'isTotem' in roleConfig && roleConfig.isTotem) {
     return [
       {
         title: "Dashboard",
@@ -85,13 +86,28 @@ export const routeItems = (role: UserRole): {
       href: "/forms",
     }
   ]
-  if (role === UserRole.ADMIN) {
+  
+  // Verificar acesso admin usando role_config granular
+  const hasAdminAccess = !!roleConfig?.sudo ||
+                        !!roleConfig?.admin_pages?.includes("/admin");
+
+  if (hasAdminAccess) {
     items.push({
       title: "Admin",
       icon: LucideTerminalSquare,
       describe: "Página de administração",
       href: "/admin",
     })
+
+    // Página de configuração de usuários - apenas para sudo
+    if (roleConfig?.sudo) {
+      items.push({
+        title: "Configurar Usuários",
+        icon: LucideUsers,
+        describe: "Gerenciar permissões de usuários",
+        href: "/admin/users",
+      })
+    }
   }
   return items
 }

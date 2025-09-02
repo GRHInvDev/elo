@@ -1,8 +1,48 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideCake, LucideMapPin, LucideUtensils, Lightbulb } from "lucide-react";
 import Link from "next/link";
+import { checkAdminAccess, hasAdminAccess } from "@/lib/access-control";
 
-export default function Page() {
+export default async function Page() {
+    const db_user = await checkAdminAccess("/admin");
+    
+    // Definir módulos admin disponíveis
+    const adminModules = [
+        {
+            href: '/admin/rooms',
+            route: '/rooms',
+            icon: LucideMapPin,
+            title: 'Salas',
+            description: 'Gerenciar salas de reunião 📑'
+        },
+        {
+            href: '/admin/birthday',
+            route: '/birthday',
+            icon: LucideCake,
+            title: 'Aniversários',
+            description: 'Gerencie os aniversários 🎉'
+        },
+        {
+            href: '/admin/food',
+            route: '/food',
+            icon: LucideUtensils,
+            title: 'Almoços',
+            description: 'Gerencie os pedidos de Almoço 🍔'
+        },
+        {
+            href: '/admin/suggestions',
+            route: '/ideas',
+            icon: Lightbulb,
+            title: 'Ideias',
+            description: 'Gerencie as Ideias 💡'
+        }
+    ];
+
+    // Filtrar módulos baseado nas permissões
+    const availableModules = adminModules.filter(module => 
+        hasAdminAccess(db_user.role_config, module.route)
+    );
+
     return (
         <div className="p-4">
             <Card>
@@ -10,58 +50,24 @@ export default function Page() {
                     <CardTitle>Gerenciar</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    <Link href={'/admin/rooms'}>
-                        <Card>
-                            <CardHeader>
-                                <LucideMapPin/>
-                                <CardTitle>
-                                    Salas
-                                </CardTitle>
-                            </CardHeader>
-                            <CardFooter>
-                                <CardDescription>Gerenciar salas de reunião 📑</CardDescription>
-                            </CardFooter>
-                        </Card>
-                    </Link>
-                    <Link href={'/admin/birthday'}>
-                        <Card>
-                            <CardHeader>
-                                <LucideCake/>
-                                <CardTitle>
-                                    Aniversários
-                                </CardTitle>
-                            </CardHeader>
-                            <CardFooter>
-                                <CardDescription>Gerencie os aniversários 🎉</CardDescription>
-                            </CardFooter>
-                        </Card>
-                    </Link>
-                    <Link href={'/admin/food'}>
-                        <Card>
-                            <CardHeader>
-                                <LucideUtensils/>
-                                <CardTitle>
-                                    Almoços
-                                </CardTitle>
-                            </CardHeader>
-                            <CardFooter>
-                                <CardDescription>Gerencie os pedidos de Almoço 🍔</CardDescription>
-                            </CardFooter>
-                        </Card>
-                    </Link>
-                    <Link href={'/admin/suggestions'}>
-                        <Card>
-                            <CardHeader>
-                            <Lightbulb/>
-                            <CardTitle>
-                                    Ideias
-                                </CardTitle>
-                            </CardHeader>
-                            <CardFooter>
-                                <CardDescription>Gerencie as Ideias 💡</CardDescription>
-                            </CardFooter>
-                        </Card>
-                    </Link>
+                    {availableModules.map((module) => {
+                        const IconComponent = module.icon;
+                        return (
+                            <Link key={module.href} href={module.href}>
+                                <Card>
+                                    <CardHeader>
+                                        <IconComponent/>
+                                        <CardTitle>
+                                            {module.title}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardFooter>
+                                        <CardDescription>{module.description}</CardDescription>
+                                    </CardFooter>
+                                </Card>
+                            </Link>
+                        );
+                    })}
                 </CardContent>
             </Card>
         </div>

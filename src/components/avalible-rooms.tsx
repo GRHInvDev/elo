@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 export function AvailableRooms({ className, filial }: { className?: string; filial?: string }) {
   const [now] = useState(new Date())
   const { data: rooms, isLoading } = api.room.listAvailable.useQuery({ date: now, filial })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filtered = rooms?.filter((r) => !filial || (r as { filial?: string }).filial === filial)
   if (isLoading) {
     return (

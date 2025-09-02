@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { createRestaurantSchema, updateRestaurantSchema, restaurantIdSchema } from "@/schemas/restaurant.schema"
 

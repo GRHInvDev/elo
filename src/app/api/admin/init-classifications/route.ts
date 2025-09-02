@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { db } from "@/server/db"
+import type { RolesConfig } from "@/types/role-config"
 
 export async function POST() {
   try {
@@ -12,10 +13,14 @@ export async function POST() {
 
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { role: true }
+      select: { role_config: true }
     })
 
-    if (user?.role !== "ADMIN") {
+    const roleConfig = user?.role_config as RolesConfig;
+    const hasAdminAccess = !!roleConfig?.sudo ||
+                          !!roleConfig?.admin_pages?.includes("/admin");
+
+    if (!hasAdminAccess) {
       return NextResponse.json({ error: "Acesso negado - Admin necessário" }, { status: 403 })
     }
 

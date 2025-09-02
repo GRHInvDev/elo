@@ -53,12 +53,35 @@ export async function POST(req: Request) {
     first_name: string | null
     last_name: string | null
     image_url: string
-    public_metadata: { role?: string }
+    public_metadata: { admin?: boolean; isTotem?: boolean }
   }
 
   // Handle the webhook
   switch (evt.type) {
     case "user.created":
+      // Determinar configuração inicial baseada nos metadados
+      let initialConfig = {
+        sudo: false,
+        admin_pages: [] as string[],
+        forms: {
+          can_create_form: false,
+          unlocked_forms: []
+        },
+        isTotem: public_metadata?.isTotem ?? false
+      };
+
+      if (public_metadata?.admin) {
+        initialConfig = {
+          sudo: true,
+          admin_pages: ["/admin", "/food", "/rooms", "/ideas", "/birthday"] as string[],
+          forms: {
+            can_create_form: true,
+            unlocked_forms: []
+          },
+          isTotem: false
+        };
+      }
+
       await db.user.create({
         data: {
           id,
@@ -66,7 +89,7 @@ export async function POST(req: Request) {
           firstName: first_name ?? "",
           lastName: last_name ?? "",
           imageUrl: image_url,
-          role: public_metadata?.role === "admin" ? "ADMIN" : "USER",
+          role_config: initialConfig,
         },
       })
       break
@@ -78,7 +101,7 @@ export async function POST(req: Request) {
           firstName: first_name ?? "",
           lastName: last_name ?? "",
           imageUrl: image_url,
-          role: public_metadata?.role === "admin" ? "ADMIN" : "USER",
+          // Manter role_config existente, apenas atualizar dados pessoais
         },
       })
       break

@@ -1,6 +1,51 @@
 "use client"
 
 import type React from "react"
+import type { RolesConfig } from "@/types/role-config"
+
+// Define interfaces específicas para os tipos de dados
+interface AuthorWithRoleConfig {
+  firstName: string | null
+  lastName: string | null
+  imageUrl: string | null
+  role_config: RolesConfig
+  enterprise?: string
+}
+
+interface PostWithAuthor {
+  id: string
+  title: string
+  content: string
+  authorId: string
+  imageUrl: string | null
+  createdAt: Date
+  author: AuthorWithRoleConfig
+}
+
+interface EventWithAuthor {
+  id: string
+  title: string
+  description: string
+  location: string
+  startDate: Date
+  endDate: Date
+  authorId: string
+  published: boolean
+  createdAt: Date
+  author: AuthorWithRoleConfig
+}
+
+interface FlyerWithAuthor {
+  id: string
+  title: string
+  description: string
+  imageUrl: string
+  iframe: string | null
+  authorId: string
+  published: boolean
+  createdAt: Date
+  author: AuthorWithRoleConfig
+}
 
 import { useState } from "react"
 import { format } from "date-fns"
@@ -61,6 +106,11 @@ export function ContentFeed({ className }: { className?: string }) {
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
   const { data: events } = api.event.list.useQuery()
   const { data: flyers } = api.flyer.list.useQuery()
+
+  // Type cast dos dados para incluir role_config
+  const postsWithRoleConfig = posts as PostWithAuthor[] | undefined
+  const eventsWithRoleConfig = events as EventWithAuthor[] | undefined
+  const flyersWithRoleConfig = flyers as FlyerWithAuthor[] | undefined
 
   const createPost = api.post.create.useMutation({
     onSuccess: async () => {
@@ -178,22 +228,22 @@ export function ContentFeed({ className }: { className?: string }) {
                     </div>
                   ))}
                 </div>
-              ) : !posts?.length ? (
+              ) : !postsWithRoleConfig?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum post publicado ainda.</p>
               ) : (
                 <div className="space-y-4">
-                  {posts.map((post) => (
+                  {postsWithRoleConfig?.map((post) => (
                     <PostItem key={post.id} post={post} />
                   ))}
                 </div>
               )}
             </TabsContent>
             <TabsContent value="events" className="mt-4">
-              {!events?.length ? (
+              {!eventsWithRoleConfig?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum evento agendado.</p>
               ) : (
                 <div className="space-y-4">
-                  {events.map((event) => (
+                  {eventsWithRoleConfig?.map((event) => (
                     <Card key={event.id}>
                       <CardHeader>
                         <div className="flex items-center gap-3">
@@ -204,7 +254,7 @@ export function ContentFeed({ className }: { className?: string }) {
                           <div>
                             <p className="text-sm font-semibold text-foreground flex items-center">
                               {event.author.firstName}
-                              {event.author.role == "ADMIN" ? (
+                              {event.author.role_config?.sudo ? (
                                 <LucideVerified className={"ml-2 text-blue-500 size-4"} />
                               ) : (
                                 <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
@@ -230,11 +280,11 @@ export function ContentFeed({ className }: { className?: string }) {
               )}
             </TabsContent>
             <TabsContent value="flyers" className="mt-4">
-              {!flyers?.length ? (
+              {!flyersWithRoleConfig?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum encarte publicado.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
-                  {flyers.map((flyer) => (
+                  {flyersWithRoleConfig?.map((flyer) => (
                     <Card key={flyer.id} className="flex flex-col">
                       <CardHeader>
                         <div className="flex items-center gap-3">
@@ -245,7 +295,7 @@ export function ContentFeed({ className }: { className?: string }) {
                           <div>
                             <p className="text-sm font-semibold text-foreground flex items-center">
                               {flyer.author.firstName}
-                              {flyer.author.role == "ADMIN" ? (
+                              {flyer.author.role_config?.sudo ? (
                                 <LucideVerified className={"ml-2 text-blue-500 size-4"} />
                               ) : (
                                 <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
@@ -316,7 +366,7 @@ interface PostItemProps {
       firstName: string | null
       lastName: string | null
       imageUrl: string | null
-      role?: string
+      role_config?: RolesConfig
       enterprise?: string
     }
     createdAt: Date
@@ -475,7 +525,7 @@ function PostItem({ post }: PostItemProps) {
             <div>
               <p className="text-sm font-semibold text-foreground flex items-center">
                 {post.author.firstName} {post.author.lastName}
-                {post.author.role === "ADMIN" && <LucideVerified className={"ml-2 text-blue-500 size-4"} />}
+                {post.author.role_config?.sudo && <LucideVerified className={"ml-2 text-blue-500 size-4"} />}
               </p>
               <p className="text-xs text-muted-foreground">
                 {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
@@ -719,7 +769,7 @@ function PostItem({ post }: PostItemProps) {
                         <p className="font-medium text-sm">
                           {comment.user.firstName} {comment.user.lastName}
                         </p>
-                        {(comment.userId === auth.userId || userMe?.role === "ADMIN") && (
+                        {(comment.userId === auth.userId || userMe?.role_config?.sudo) && (
                           <Button
                             variant="ghost"
                             size="icon"
