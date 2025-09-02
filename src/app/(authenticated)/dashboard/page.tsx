@@ -281,8 +281,8 @@ export default function DashboardPage() {
         } : null}
         onSuccess={() => {
           void refetchUser()
-          setShowProfileModal(false)
         }}
+        onClose={() => setShowProfileModal(false)}
       />
     </div>
   )

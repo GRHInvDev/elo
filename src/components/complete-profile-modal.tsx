@@ -18,6 +18,7 @@ interface CompleteProfileModalProps {
     setor: string | null
   } | null
   onSuccess: () => void
+  onClose?: () => void
 }
 
 const enterprises = [
@@ -37,7 +38,7 @@ const setores = [
   { value: "RECURSOS HUMANOS", label: "Recursos Humanos" },
 ]
 
-export function CompleteProfileModal({ isOpen, user, onSuccess }: CompleteProfileModalProps) {
+export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: CompleteProfileModalProps) {
   const [enterprise, setEnterprise] = useState("")
   const [setor, setSetor] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -59,6 +60,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess }: CompleteProfil
         description: "Seus dados foram salvos com sucesso.",
       })
       onSuccess()
+      onClose?.()
     },
     onError: (error) => {
       toast({
