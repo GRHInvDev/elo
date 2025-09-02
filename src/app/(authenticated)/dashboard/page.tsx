@@ -274,7 +274,6 @@ export default function DashboardPage() {
       {/* Modal para completar perfil */}
       <CompleteProfileModal
         isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
         user={user ? {
           id: user.id,
           enterprise: user.enterprise,
@@ -282,6 +281,7 @@ export default function DashboardPage() {
         } : null}
         onSuccess={() => {
           void refetchUser()
+          setShowProfileModal(false)
         }}
       />
     </div>
