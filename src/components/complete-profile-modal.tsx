@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/trpc/react"
@@ -12,13 +12,13 @@ import { Loader2 } from "lucide-react"
 
 interface CompleteProfileModalProps {
   isOpen: boolean
-  onClose: () => void
   user: {
     id: string
     enterprise: string | null
     setor: string | null
   } | null
   onSuccess: () => void
+  onClose?: () => void
 }
 
 const enterprises = [
@@ -38,7 +38,7 @@ const setores = [
   { value: "RECURSOS HUMANOS", label: "Recursos Humanos" },
 ]
 
-export function CompleteProfileModal({ isOpen, onClose, user, onSuccess }: CompleteProfileModalProps) {
+export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: CompleteProfileModalProps) {
   const [enterprise, setEnterprise] = useState("")
   const [setor, setSetor] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -56,11 +56,11 @@ export function CompleteProfileModal({ isOpen, onClose, user, onSuccess }: Compl
   const updateProfileMutation = api.user.updateProfile.useMutation({
     onSuccess: () => {
       toast({
-        title: "Perfil atualizado!",
+        title: "Perfil completado!",
         description: "Seus dados foram salvos com sucesso.",
       })
       onSuccess()
-      onClose()
+      onClose?.()
     },
     onError: (error) => {
       toast({
@@ -104,12 +104,12 @@ export function CompleteProfileModal({ isOpen, onClose, user, onSuccess }: Compl
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen}>
+      <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Complete seu perfil</DialogTitle>
+          <DialogTitle>Perfil Obrigatório</DialogTitle>
           <DialogDescription>
-            Para uma melhor experiência, precisamos que você complete algumas informações importantes.
+            Para continuar usando a plataforma, é necessário completar seu perfil com informações de empresa e setor.
           </DialogDescription>
         </DialogHeader>
 
@@ -146,18 +146,15 @@ export function CompleteProfileModal({ isOpen, onClose, user, onSuccess }: Compl
             </Select>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-center pt-6">
             <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
+              type="submit"
               disabled={isLoading}
+              size="lg"
+              className="min-w-[120px]"
             >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar
+              {isLoading ? "Salvando..." : "Completar Perfil"}
             </Button>
           </div>
         </form>
