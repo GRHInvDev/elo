@@ -1,6 +1,8 @@
+"use client"
+
 import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
-import { api } from "@/trpc/server"
+import { api } from "@/trpc/react"
 import { cn } from "@/lib/utils"
 import { LinkIcon, LucideGraduationCap, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
 import { VideosCarousel } from "@/components/dashboard/videos-carousel"
@@ -11,11 +13,27 @@ import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
 import { UserRole } from "@prisma/client"
 import { SuggestionsWrapper } from "./suggestions-wrapper"
+import { CompleteProfileModal } from "@/components/complete-profile-modal"
+import { useState, useEffect } from "react"
 
-export default async function DashboardPage() {
-  // Buscar dados usando server-side tRPC
-  const birthdays = await api.birthday.listCurrentMonth()
-  const user = await api.user.me() 
+export default function DashboardPage() {
+  const [showProfileModal, setShowProfileModal] = useState(false)
+
+  // Buscar dados usando client-side tRPC
+  const { data: birthdays } = api.birthday.listCurrentMonth.useQuery()
+  const { data: user, refetch: refetchUser } = api.user.me.useQuery()
+
+  // Tipagem para os dados do usuário
+  const userRole = user?.role ?? UserRole.USER
+  const userEnterprise = user?.enterprise ?? null
+  const userSetor = user?.setor ?? null
+
+  // Verificar se os campos obrigatórios estão preenchidos
+  useEffect(() => {
+    if (user && (!userEnterprise || !userSetor)) {
+      setShowProfileModal(true)
+    }
+  }, [user, userEnterprise, userSetor])
 
   const posts: {
     imageRef: string,
@@ -58,9 +76,9 @@ export default async function DashboardPage() {
           <MainCarousel className={cn("w-full", (birthdays?.length==0) && "md:col-span-1")} itens={posts}/>
         }
         {
-          birthdays?.length> 0 &&
-          <BirthdaysCarousel className="w-full" itens={birthdays?.map((b)=>({
-            imageRef: b.imageUrl??"",
+          birthdays && birthdays.length > 0 &&
+          <BirthdaysCarousel className="w-full" itens={birthdays.map((b)=>({
+            imageRef: b.imageUrl ?? "",
             title: b.name
           }))}/>
         }
@@ -82,7 +100,7 @@ export default async function DashboardPage() {
               </h1>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {
-                  routeItems(user?.role ?? UserRole.USER).map((m,i)=> m.title !== "Dashboard" && (
+                  routeItems(userRole).map((m,i)=> m.title !== "Dashboard" && (
                     <div key={i} className="col-span-1">
                       <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-3 rounded-lg gap-x-2 text-sm">
                         <m.icon className="size-4"/>
@@ -252,6 +270,20 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal para completar perfil */}
+      <CompleteProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        user={user ? {
+          id: user.id,
+          enterprise: user.enterprise,
+          setor: user.setor
+        } : null}
+        onSuccess={() => {
+          void refetchUser()
+        }}
+      />
     </div>
   )
 }
