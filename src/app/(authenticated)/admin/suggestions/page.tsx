@@ -32,7 +32,7 @@ type SuggestionLocal = {
   submittedName: string | null
   submittedSector: string | null
   isNameVisible: boolean
-  description: string // Solução proposta (do banco)
+  description: string // Solução proposta
   problem: string | null // Problema identificado (do banco)
   contribution: { type: string; other?: string }
   dateRef: Date | null
