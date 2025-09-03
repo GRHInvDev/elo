@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Card, CardContent } from "@/components/ui/card"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AlertCircle, Loader2, Users, ChevronDown, Lock, Globe } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface FormBuilderWithSaveProps {
@@ -20,6 +22,9 @@ interface FormBuilderWithSaveProps {
   initialTitle?: string
   initialDescription?: string
   initialFields?: Field[]
+  initialIsPrivate?: boolean
+  initialAllowedUsers?: string[]
+  initialAllowedSectors?: string[]
 }
 
 export function FormBuilderWithSave({
@@ -28,13 +33,22 @@ export function FormBuilderWithSave({
   initialTitle = "Novo Formulário",
   initialDescription = "",
   initialFields = [],
+  initialIsPrivate = false,
+  initialAllowedUsers = [],
+  initialAllowedSectors = [],
 }: FormBuilderWithSaveProps) {
   const [title, setTitle] = useState(initialTitle)
   const [description, setDescription] = useState(initialDescription)
   const [fields, setFields] = useState<Field[]>(initialFields)
+  const [isPrivate, setIsPrivate] = useState(initialIsPrivate)
+  const [allowedUsers, setAllowedUsers] = useState<string[]>(initialAllowedUsers)
+  const [allowedSectors, setAllowedSectors] = useState<string[]>(initialAllowedSectors)
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
+
+  // Buscar usuários e setores para o filtro
+  const { data: usersAndSectors } = api.form.getUsersAndSectors.useQuery()
 
   const createForm = api.form.create.useMutation({
     onSuccess: (data) => {
@@ -76,6 +90,9 @@ export function FormBuilderWithSave({
         title,
         description: description || undefined,
         fields,
+        isPrivate,
+        allowedUsers,
+        allowedSectors,
       })
     } else if (mode === "edit" && formId) {
       updateForm.mutate({
@@ -83,6 +100,9 @@ export function FormBuilderWithSave({
         title,
         description: description || undefined,
         fields,
+        isPrivate,
+        allowedUsers,
+        allowedSectors,
       })
     }
   }
@@ -115,6 +135,129 @@ export function FormBuilderWithSave({
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Seção de Visibilidade */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {isPrivate ? <Lock className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
+            Configurações de Visibilidade
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isPrivate"
+              checked={isPrivate}
+              onCheckedChange={(checked) => {
+                setIsPrivate(checked === true)
+                if (!checked) {
+                  setAllowedUsers([])
+                  setAllowedSectors([])
+                }
+              }}
+            />
+            <Label htmlFor="isPrivate" className="font-medium">
+              Formulário Privado
+            </Label>
+          </div>
+          
+          {!isPrivate && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+              <Globe className="h-4 w-4 text-green-600" />
+              <span className="text-sm text-green-700">
+                Este formulário será público e visível para todos os usuários.
+              </span>
+            </div>
+          )}
+
+          {isPrivate && (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Configurar Acesso
+                  </div>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 mt-4">
+                <div className="space-y-3 p-4 border rounded-lg">
+                  <div>
+                    <Label className="text-sm font-medium">Usuários Específicos</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Selecione usuários específicos que podem ver este formulário
+                    </p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {usersAndSectors?.users.map((user) => (
+                        <div key={user.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`user_${user.id}`}
+                            checked={allowedUsers.includes(user.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setAllowedUsers([...allowedUsers, user.id])
+                              } else {
+                                setAllowedUsers(allowedUsers.filter(id => id !== user.id))
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`user_${user.id}`} className="text-sm">
+                            {user.name} ({user.email})
+                            {user.setor && <span className="text-muted-foreground"> - {user.setor}</span>}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Setores</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Selecione setores inteiros que podem ver este formulário
+                    </p>
+                    <div className="space-y-2">
+                      {usersAndSectors?.sectors.filter(Boolean).map((sector) => (
+                        <div key={sector} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`sector_${sector}`}
+                            checked={allowedSectors.includes(sector)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setAllowedSectors([...allowedSectors, sector])
+                              } else {
+                                setAllowedSectors(allowedSectors.filter(s => s !== sector))
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`sector_${sector}`} className="text-sm">
+                            {sector}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {(allowedUsers.length > 0 || allowedSectors.length > 0) && (
+                    <div className="pt-2 border-t">
+                      <Label className="text-sm font-medium">Resumo do Acesso:</Label>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {allowedUsers.length > 0 && (
+                          <div>• {allowedUsers.length} usuário(s) específico(s)</div>
+                        )}
+                        {allowedSectors.length > 0 && (
+                          <div>• {allowedSectors.length} setor(es): {allowedSectors.join(", ")}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </CardContent>
       </Card>
 
