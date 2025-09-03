@@ -13,7 +13,7 @@ export async function checkAdminAccess(route: string) {
   if (db_user.role_config.sudo) return db_user;
   
   // Verifica se a rota está nas páginas admin permitidas
-  if (!db_user.role_config.admin_pages?.includes(route)) {
+  if (!Array.isArray(db_user.role_config.admin_pages) || !db_user.role_config.admin_pages.includes(route)) {
     redirect("/dashboard");
   }
 
@@ -22,16 +22,17 @@ export async function checkAdminAccess(route: string) {
 
 export async function checkFormAccess(formId: string) {
   const db_user = await api.user.me();
-  
+
   if (!db_user?.role_config) {
     redirect("/dashboard");
   }
 
   // Se é sudo, pode acessar qualquer formulário
   if (db_user.role_config.sudo) return db_user;
-  
-  // Verifica se o formulário está na lista de desbloqueados
-  if (!db_user.role_config.forms?.unlocked_forms.includes(formId)) {
+
+  // NOVA REGRA: Pode acessar qualquer formulário, exceto os hidden_forms
+  const isHidden = db_user.role_config.forms?.hidden_forms?.includes(formId) ?? false;
+  if (isHidden) {
     redirect("/dashboard");
   }
 
@@ -63,7 +64,7 @@ export function hasAdminAccess(roleConfig: RolesConfig | null, route: string): b
   if (roleConfig.sudo) return true;
   
   // Verifica se a rota está nas páginas admin permitidas
-  return roleConfig.admin_pages?.includes(route) ?? false;
+  return Array.isArray(roleConfig.admin_pages) && roleConfig.admin_pages.includes(route);
 }
 
 export function canCreateForm(roleConfig: RolesConfig | null): boolean {
@@ -106,26 +107,69 @@ export function canCreateBooking(roleConfig: RolesConfig | null): boolean {
   return roleConfig.content?.can_create_booking ?? false;
 }
 
-export function canAccessForm(roleConfig: RolesConfig | null, formId: string): boolean {
+export function canLocateCars(roleConfig: RolesConfig | null): boolean {
   if (!roleConfig) return false;
+  
+  // Se é sudo, pode fazer agendamentos de carros
+  if (roleConfig.sudo) return true;
+  
+  // Verifica se pode fazer agendamentos de carros
+  return roleConfig.content?.can_locate_cars ?? false;
+}
+
+// Funções de visualização (acesso à página)
+export function canViewCars(): boolean {
+  // Todos podem visualizar a página de carros
+  return true;
+}
+
+export function canViewEvents(): boolean {
+  // Todos podem visualizar a página de eventos
+  return true;
+}
+
+export function canViewFlyers(): boolean {
+  // Todos podem visualizar a página de encartes
+  return true;
+}
+
+export function canViewShop(): boolean {
+  // Todos podem visualizar a página de shop
+  return true;
+}
+
+export function canViewForms(roleConfig: RolesConfig | null): boolean {
+  if (!roleConfig) return false;
+  
+  // Se é sudo, pode visualizar
+  if (roleConfig.sudo) return true;
+  
+  // TODOS podem visualizar a página de formulários
+  // A filtragem dos formulários específicos é feita no componente FormsList
+  return true;
+}
+
+export function canAccessForm(roleConfig: RolesConfig | null, formId: string): boolean {
+  if (!roleConfig) return true; // Se não tem config, pode acessar
   
   // Se é sudo, pode acessar qualquer formulário
   if (roleConfig.sudo) return true;
   
-  // Verifica se o formulário está na lista de desbloqueados
-  return roleConfig.forms?.unlocked_forms.includes(formId) ?? false;
+  // NOVA REGRA: Pode acessar qualquer formulário, exceto os hidden_forms
+  const isHidden = roleConfig.forms?.hidden_forms?.includes(formId) ?? false;
+  return !isHidden;
 }
 
 export function getAccessibleForms<T extends { id: string }>(
   roleConfig: RolesConfig | null,
   forms: T[]
 ): T[] {
-  if (!roleConfig) return [];
+  if (!roleConfig) return forms; // Se não tem config, mostra todos
 
   // Se é sudo, retorna todos os formulários
   if (roleConfig.sudo) return forms;
 
-  // Por padrão, mostra todos os formulários, mas oculta os da lista hidden_forms
+  // NOVA REGRA: Todos podem ver todos os formulários, exceto os hidden_forms
   return forms.filter(form => {
     const isHidden = roleConfig.forms?.hidden_forms?.includes(form.id) ?? false;
     return !isHidden;

@@ -1,0 +1,182 @@
+---
+alwaysApply: true
+description: "Padrões de segurança e controle de acesso"
+---
+
+# Segurança e Controle de Acesso
+
+## Sistema de Roles Granular
+```typescript
+// ✅ Bom: Verificação de permissões granular
+import { useAccessControl } from "@/hooks/use-access-control"
+
+interface AdminPanelProps {
+  children: React.ReactNode
+}
+
+export function AdminPanel({ children }: AdminPanelProps) {
+  const { hasPermission, hasRole } = useAccessControl()
+
+  // Verificar se usuário tem permissão específica
+  if (!hasPermission('admin_pages.view_dashboard')) {
+    return <AccessDenied />
+  }
+
+  return <>{children}</>
+}
+
+// ✅ Bom: Hook personalizado para controle de acesso
+export const useAccessControl = () => {
+  const { user } = useUser()
+
+  const hasPermission = (permission: string): boolean => {
+    if (!user?.role_config) return false
+
+    // Verificar se é sudo
+    if (user.role_config.sudo) return true
+
+    // Verificar permissões específicas
+    return checkPermission(user.role_config, permission)
+  }
+
+  const hasRole = (role: string): boolean => {
+    // Lógica para verificar roles
+    return user?.role === role
+  }
+
+  return { hasPermission, hasRole }
+}
+```
+
+## Validação de Dados
+```typescript
+// ✅ Bom: Validação com Zod
+import { z } from "zod"
+
+const createUserSchema = z.object({
+  email: z.string().email("Email inválido"),
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  role: z.enum(["USER", "ADMIN", "MODERATOR"]),
+  enterprise: z.nativeEnum(Enterprise)
+})
+
+const updateUserSchema = createUserSchema.partial().extend({
+  id: z.string().cuid("ID inválido")
+})
+
+// Uso na API
+export const userRouter = createTRPCRouter({
+  create: protectedProcedure
+    .input(createUserSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Lógica de criação
+      return await ctx.db.user.create({ data: input })
+    }),
+
+  update: protectedProcedure
+    .input(updateUserSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Verificar permissões
+      if (!ctx.user.role_config?.sudo && ctx.user.id !== input.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para editar este usuário"
+        })
+      }
+
+      // Lógica de atualização
+      return await ctx.db.user.update({
+        where: { id: input.id },
+        data: input
+      })
+    })
+})
+```
+
+## Sanitização e Segurança
+```typescript
+// ✅ Bom: Sanitização de inputs
+import DOMPurify from 'isomorphic-dompurify'
+
+function sanitizeHtml(dirty: string): string {
+  return DOMPurify.sanitize(dirty, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u'],
+    ALLOWED_ATTR: []
+  })
+}
+
+// ✅ Bom: Validação de uploads
+const uploadSchema = z.object({
+  file: z.instanceof(File).refine(
+    (file) => file.size <= 5 * 1024 * 1024, // 5MB
+    "Arquivo deve ter no máximo 5MB"
+  ).refine(
+    (file) => ['image/jpeg', 'image/png', 'image/webp'].includes(file.type),
+    "Tipo de arquivo não permitido"
+  )
+})
+```
+
+## Tratamento de Erros Seguro
+```typescript
+// ✅ Bom: Não expor informações sensíveis
+export const userRouter = createTRPCRouter({
+  getProfile: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const user = await ctx.db.user.findUnique({
+          where: { id: ctx.user.id },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            // Não incluir senha, tokens, etc.
+          }
+        })
+
+        if (!user) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Usuário não encontrado"
+          })
+        }
+
+        return user
+      } catch (error) {
+        // Log do erro para monitoramento
+        console.error("Erro ao buscar perfil:", error)
+
+        // Não expor detalhes do erro para o cliente
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Erro interno do servidor"
+        })
+      }
+    })
+})
+```
+
+## Rate Limiting e Proteção
+```typescript
+// ✅ Bom: Implementar rate limiting
+import rateLimit from 'express-rate-limit'
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limite de 100 requests por windowMs
+  message: 'Muitas requisições, tente novamente mais tarde'
+})
+
+// Uso em rotas sensíveis
+app.use('/api/auth/', limiter)
+```
+
+## Regras Gerais de Segurança
+- Sempre valide dados de entrada
+- Use prepared statements (Prisma já faz isso)
+- Implemente controle de acesso granular
+- Não exponha informações sensíveis em logs/erros
+- Use HTTPS em produção
+- Implemente rate limiting para APIs públicas
+- Sanitize conteúdo HTML antes de renderizar
+- Valide tipos de arquivo e tamanho em uploads

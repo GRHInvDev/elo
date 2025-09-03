@@ -14,8 +14,8 @@ const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   const roleConfig = user?.role_config as RolesConfig | null;
   
   // Verificar se tem permissão admin
-  const hasAdminAccess = !!roleConfig?.sudo || 
-                        !!roleConfig?.admin_pages?.includes("/admin");
+  const hasAdminAccess = !!roleConfig?.sudo ||
+                        (Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin"));
 
   if (!hasAdminAccess) {
     throw new TRPCError({
@@ -163,11 +163,18 @@ export const userRouter = createTRPCRouter({
       roleConfig: z.object({
         sudo: z.boolean(),
         admin_pages: z.array(z.string()).optional(),
-              forms: z.object({
-        can_create_form: z.boolean(),
-        unlocked_forms: z.array(z.string()),
-        hidden_forms: z.array(z.string()).optional()
-      }).optional()
+        forms: z.object({
+          can_create_form: z.boolean(),
+          unlocked_forms: z.array(z.string()),
+          hidden_forms: z.array(z.string()).optional()
+        }).optional(),
+        content: z.object({
+          can_create_event: z.boolean(),
+          can_create_flyer: z.boolean(),
+          can_create_booking: z.boolean(),
+          can_locate_cars: z.boolean()
+        }).optional(),
+        isTotem: z.boolean().optional()
       })
     }))
     .mutation(async ({ ctx, input }) => {

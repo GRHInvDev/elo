@@ -1,9 +1,12 @@
 // Exemplos de uso do Sistema de Notificações
 // Este arquivo serve como referência para implementar notificações em diferentes partes do sistema
 
-import { api } from '@/trpc/server'
+import { createCaller } from '@/server/api/root'
+import { createTRPCContext } from '@/server/api/trpc'
+import { headers } from 'next/headers'
 import type { RolesConfig } from '@/types/role-config'
 import { db } from '@/server/db'
+import { cache } from 'react'
 
 // Função auxiliar para verificar se o usuário pode receber notificações
 async function canReceiveNotifications(userId: string): Promise<boolean> {
@@ -14,9 +17,6 @@ async function canReceiveNotifications(userId: string): Promise<boolean> {
     })
     const roleConfig = user?.role_config as RolesConfig
     
-    console.log('Roles data:', JSON.stringify(roleConfig, null, 2));
-    console.log('Roles type:', typeof roleConfig);
-    
     // Se é sudo ou não é totem, pode receber notificações
     return !!roleConfig?.sudo || !roleConfig?.isTotem
   } catch {
@@ -24,13 +24,34 @@ async function canReceiveNotifications(userId: string): Promise<boolean> {
   }
 }
 
+// Criar caller para notificações
+const createNotificationCaller = cache(async () => {
+  try {
+    const heads = new Headers(await headers());
+    heads.set("x-trpc-source", "rsc");
+
+    const context = await createTRPCContext({
+      headers: heads,
+    });
+
+    return createCaller(context);
+  } catch {
+    // Fallback para contexto sem headers (quando usado fora de RSC)
+    const context = await createTRPCContext({
+      headers: new Headers(),
+    });
+    return createCaller(context);
+  }
+});
+
 // 1. Notificações de Ideias
 export const suggestionNotificationExamples = {
   // Quando uma Ideia é criada
   onSuggestionCreated: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
     if (!(await canReceiveNotifications(authorId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title: "Nova Ideia Criada",
       message: `Sua Ideia #${suggestionNumber} foi criada com sucesso.`,
       type: "INFO",
@@ -46,7 +67,8 @@ export const suggestionNotificationExamples = {
   onSuggestionApproved: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
     if (!(await canReceiveNotifications(authorId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title: "Ideia Aprovada",
       message: `Sua Ideia #${suggestionNumber} foi aprovada!`,
       type: "SUCCESS",
@@ -62,7 +84,8 @@ export const suggestionNotificationExamples = {
   onSuggestionRejected: async (suggestionId: string, authorId: string, suggestionNumber: number, reason?: string) => {
     if (!(await canReceiveNotifications(authorId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title: "Ideia Rejeitada",
       message: `Sua Ideia #${suggestionNumber} foi rejeitada.${reason ? ` Motivo: ${reason}` : ''}`,
       type: "WARNING",
@@ -78,7 +101,8 @@ export const suggestionNotificationExamples = {
   onSuggestionUpdated: async (suggestionId: string, authorId: string, suggestionNumber: number) => {
     if (!(await canReceiveNotifications(authorId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title: "Ideia Atualizada",
       message: `Sua Ideia #${suggestionNumber} foi atualizada.`,
       type: "INFO",
@@ -97,7 +121,8 @@ export const kpiNotificationExamples = {
   onKpiAdded: async (suggestionId: string, authorId: string, kpiName: string) => {
     if (!(await canReceiveNotifications(authorId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title: "KPI Adicionado",
       message: `O KPI "${kpiName}" foi adicionado à sua Ideia.`,
       type: "INFO",
@@ -116,7 +141,8 @@ export const systemNotificationExamples = {
   onSuccess: async (userId: string, title: string, message: string) => {
     if (!(await canReceiveNotifications(userId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title,
       message,
       type: "SUCCESS",
@@ -129,7 +155,8 @@ export const systemNotificationExamples = {
   onError: async (userId: string, title: string, message: string) => {
     if (!(await canReceiveNotifications(userId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title,
       message,
       type: "ERROR",
@@ -142,7 +169,8 @@ export const systemNotificationExamples = {
   onWarning: async (userId: string, title: string, message: string) => {
     if (!(await canReceiveNotifications(userId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title,
       message,
       type: "WARNING",
@@ -155,7 +183,8 @@ export const systemNotificationExamples = {
   onInfo: async (userId: string, title: string, message: string) => {
     if (!(await canReceiveNotifications(userId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title,
       message,
       type: "INFO",
@@ -172,7 +201,8 @@ export const integrationExamples = {
   onOrderCreated: async (userId: string, orderId: string, orderNumber: string) => {
     if (!(await canReceiveNotifications(userId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title: "Pedido Criado",
       message: `Seu pedido #${orderNumber} foi criado com sucesso.`,
       type: "SUCCESS",
@@ -188,7 +218,8 @@ export const integrationExamples = {
   onEventCreated: async (userId: string, eventId: string, eventTitle: string) => {
     if (!(await canReceiveNotifications(userId))) return
     
-    await api.notification.create({
+    const caller = await createNotificationCaller();
+    await caller.notification.create({
       title: "Novo Evento",
       message: `O evento "${eventTitle}" foi criado.`,
       type: "INFO",

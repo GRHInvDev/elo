@@ -2,11 +2,12 @@ import { api } from "@/trpc/server"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { ResponsesList } from "@/components/forms/responses-list"
 import { Suspense } from "react"
 import { ResponsesSkeleton } from "@/components/forms/responses-skeleton"
 import { DashboardShell } from "@/components/dashboard-shell"
+import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Respostas do Formulário",
@@ -21,7 +22,14 @@ interface ResponsesPageProps {
 
 export default async function ResponsesPage({ params }: ResponsesPageProps) {
   const { id } = await params
-  const form = await api.form.getById({id})
+
+  // Verificar se o usuário pode acessar o formulário
+  const userData = await api.user.me()
+  if (!canAccessForm(userData?.role_config, id)) {
+    redirect("/forms")
+  }
+
+  const form = await api.form.getById(id)
 
   if (!form) {
     notFound()

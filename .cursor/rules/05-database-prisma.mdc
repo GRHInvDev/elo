@@ -1,0 +1,112 @@
+---
+alwaysApply: true
+description: "Padrões para modelagem e consultas com Prisma"
+---
+
+# Padrões de Banco de Dados com Prisma
+
+## Estrutura de Models
+```prisma
+// ✅ Bom: Model bem estruturado
+model User {
+  id               String             @id
+  email            String             @unique
+  firstName        String?
+  lastName         String?
+  role             UserRole           @default(USER)
+  enterprise       Enterprise         @default(NA)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  // Relações
+  posts            Post[]
+  comments         Comment[]
+
+  // Índices
+  @@index([role, enterprise])
+  @@map("users")
+}
+
+model Post {
+  id            String     @id @default(cuid())
+  title         String
+  content       String
+  published     Boolean    @default(false)
+  authorId      String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relações
+  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments      Comment[]
+  reactions     Reaction[]
+
+  // Índices
+  @@index([authorId, published, createdAt])
+  @@map("posts")
+}
+```
+
+## Consultas Eficientes
+```typescript
+// ✅ Bom: Consultas otimizadas
+const userWithPosts = await db.user.findUnique({
+  where: { id: userId },
+  select: {
+    id: true,
+    email: true,
+    firstName: true,
+    lastName: true,
+    posts: {
+      where: { published: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        createdAt: true
+      }
+    }
+  }
+})
+
+// ❌ Ruim: Busca desnecessária de dados
+const user = await db.user.findUnique({
+  where: { id: userId }
+})
+// Busca posts separadamente
+const posts = await db.post.findMany({
+  where: { authorId: userId }
+})
+```
+
+## Transações
+```typescript
+// ✅ Bom: Uso de transações
+const result = await db.$transaction(async (tx) => {
+  // Criar usuário
+  const user = await tx.user.create({
+    data: { email, name }
+  })
+
+  // Criar perfil relacionado
+  const profile = await tx.profile.create({
+    data: {
+      userId: user.id,
+      bio: "Nova bio"
+    }
+  })
+
+  return { user, profile }
+})
+```
+
+## Regras de Boas Práticas
+- Use `@map()` para nomes de tabelas customizados
+- Sempre defina `@default()` para campos obrigatórios
+- Use `@unique` para campos únicos
+- Crie índices (`@@index`) para campos frequentemente filtrados
+- Use `onDelete: Cascade` para relações dependentes
+- Prefira `select` sobre buscar todos os campos
+- Use transações para operações relacionadas
+- Use enums para valores fixos

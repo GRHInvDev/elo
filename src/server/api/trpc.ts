@@ -140,7 +140,7 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   // Verificar se é sudo ou tem acesso admin
   const roleConfig = user.role_config as RolesConfig;
   const hasAdminAccess = !!roleConfig?.sudo ||
-                        !!roleConfig?.admin_pages?.includes("/admin");
+                        (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.includes("/admin"));
 
   if (!hasAdminAccess) {
     throw new TRPCError({ code: "FORBIDDEN" })

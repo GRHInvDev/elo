@@ -1,6 +1,9 @@
-import { api } from '@/trpc/server'
+import { createCaller } from '@/server/api/root'
+import { createTRPCContext } from '@/server/api/trpc'
+import { headers } from 'next/headers'
 import type { RolesConfig } from '@/types/role-config'
 import { db } from '@/server/db'
+import { cache } from 'react'
 
 // Flag para habilitar/desabilitar notificações globalmente
 export const NOTIFICATIONS_ENABLED = process.env.NEXT_PUBLIC_NOTIFICATIONS_ENABLED === 'true'
@@ -36,6 +39,26 @@ export const NOTIFICATION_CONFIG = {
   }
 } as const
 
+// Criar caller para notificações
+const createNotificationCaller = cache(async () => {
+  try {
+    const heads = new Headers(await headers());
+    heads.set("x-trpc-source", "rsc");
+
+    const context = await createTRPCContext({
+      headers: heads,
+    });
+
+    return createCaller(context);
+  } catch {
+    // Fallback para contexto sem headers (quando usado fora de RSC)
+    const context = await createTRPCContext({
+      headers: new Headers(),
+    });
+    return createCaller(context);
+  }
+});
+
 // Função auxiliar para verificar se o usuário pode receber notificações
 async function canReceiveNotifications(userId: string): Promise<boolean> {
   try {
@@ -44,9 +67,6 @@ async function canReceiveNotifications(userId: string): Promise<boolean> {
       select: { role_config: true }
     })
     const roleConfig = user?.role_config as RolesConfig | null
-    
-    console.log('Roles data:', JSON.stringify(roleConfig, null, 2));
-    console.log('Roles type:', typeof roleConfig);
     
     // Se é sudo ou não é totem, pode receber notificações
     return !!roleConfig?.sudo || !roleConfig?.isTotem
@@ -102,7 +122,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(authorId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title: "Nova Ideia Criada",
           message: `Sua Ideia #${suggestionNumber} foi criada com sucesso.`,
           type: "INFO",
@@ -124,7 +145,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(authorId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title: "Ideia Atualizada",
           message: `Sua Ideia #${suggestionNumber} foi atualizada.`,
           type: "INFO",
@@ -146,7 +168,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(authorId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title: "Ideia Aprovada",
           message: `Sua Ideia #${suggestionNumber} foi aprovada!`,
           type: "SUCCESS",
@@ -168,7 +191,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(authorId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title: "Ideia Rejeitada",
           message: `Sua Ideia #${suggestionNumber} foi rejeitada.${reason ? ` Motivo: ${reason}` : ''}`,
           type: "WARNING",
@@ -190,7 +214,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(authorId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title: "Classificação Atualizada",
           message: `A classificação da sua Ideia #${suggestionNumber} foi atualizada.`,
           type: "INFO",
@@ -212,7 +237,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(authorId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title: "KPI Adicionado",
           message: `O KPI "${kpiName}" foi adicionado à sua Ideia.`,
           type: "INFO",
@@ -235,7 +261,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(authorId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title: "KPI Criado",
           message: `O KPI "${kpiName}" foi criado com sucesso.`,
           type: "SUCCESS",
@@ -267,7 +294,8 @@ export class NotificationManager {
           entityType: 'system' as const
         }))
         
-        await api.notification.createBulk({ 
+        const caller = await createNotificationCaller();
+        await caller.notification.createBulk({ 
           title: 'Manutenção do Sistema',
           message,
           userIds: validUsers,
@@ -285,7 +313,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(userId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title,
           message,
           type: "ERROR",
@@ -305,7 +334,8 @@ export class NotificationManager {
       try {
         if (!(await canReceiveNotifications(userId))) return
         
-        await api.notification.create({
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
           title,
           message,
           type: "WARNING",

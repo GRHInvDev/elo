@@ -31,7 +31,7 @@ const adminMiddleware = middleware(async ({ ctx, next }) => {
   })
 
   const roleConfig = user?.role_config as RolesConfig;
-  const hasAdminAccess = roleConfig?.sudo || roleConfig?.admin_pages?.includes("/admin");
+  const hasAdminAccess = roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.includes("/admin"));
   
   if (!user || !hasAdminAccess) {
     throw new TRPCError({

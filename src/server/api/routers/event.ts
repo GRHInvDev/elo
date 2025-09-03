@@ -59,15 +59,7 @@ export const eventRouter = createTRPCRouter({
       const usersToNotify = usersWithEventAccess.filter(user => {
         if (!user.role_config) return false;
 
-        const roleConfig = user.role_config as {
-          sudo?: boolean;
-          isTotem?: boolean;
-          content?: {
-            can_create_event?: boolean;
-            can_create_flyer?: boolean;
-            can_create_booking?: boolean;
-          };
-        };
+        const roleConfig = user.role_config as RolesConfig;
 
         // Se é sudo, tem acesso a tudo
         if (roleConfig.sudo) return true;

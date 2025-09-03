@@ -161,7 +161,7 @@ function UserCard({ user }: UserCardProps) {
     routes.push("Dashboard")
 
     // Verifica páginas admin
-    if (roleConfig.admin_pages) {
+    if (Array.isArray(roleConfig.admin_pages)) {
       if (roleConfig.admin_pages.includes("/admin")) {
         routes.push("Admin")
       }
@@ -301,6 +301,7 @@ function UserPermissionsEditor({ currentConfig, allForms, onSave, onCancel }: Us
                       can_create_event: e.target.checked,
                       can_create_flyer: config.content?.can_create_flyer ?? false,
                       can_create_booking: config.content?.can_create_booking ?? false,
+                      can_locate_cars: config.content?.can_locate_cars ?? false,
                     },
                   })
                 }
@@ -319,6 +320,7 @@ function UserPermissionsEditor({ currentConfig, allForms, onSave, onCancel }: Us
                       can_create_event: config.content?.can_create_event ?? false,
                       can_create_flyer: e.target.checked,
                       can_create_booking: config.content?.can_create_booking ?? false,
+                      can_locate_cars: config.content?.can_locate_cars ?? false,
                     },
                   })
                 }
@@ -337,6 +339,7 @@ function UserPermissionsEditor({ currentConfig, allForms, onSave, onCancel }: Us
                       can_create_event: config.content?.can_create_event ?? false,
                       can_create_flyer: config.content?.can_create_flyer ?? false,
                       can_create_booking: e.target.checked,
+                      can_locate_cars: config.content?.can_locate_cars ?? false,
                     },
                   })
                 }
@@ -370,6 +373,10 @@ function UserPermissionsEditor({ currentConfig, allForms, onSave, onCancel }: Us
           </div>
 
           <Label className="text-sm font-medium">Formulários Ocultos</Label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Selecione os formulários que devem ficar ocultos para este usuário. 
+            Por padrão, todos os usuários podem ver todos os formulários.
+          </p>
           <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
             {allForms.map((form) => (
               <div key={form.id} className="flex items-center space-x-2">

@@ -9,7 +9,7 @@ export const listCars: Tool = {
     `,
   parameters: z.object({}),
   execute: async () => {
-    return await api.vehicle.getAll({});
+    return await api.vehicle.getAll();
   }
 }
 
@@ -27,16 +27,17 @@ export const rentVehicle: Tool = {
     destiny: z.string().describe("The rent trip destiny"),
     driver: z.string().describe("The driver for the car"),
     possibleEnd: z.string().describe('The possible end date and time in ISO format (e.g., "2023-04-15T14:00:00Z")'),
-    startDate: z.string().describe('The start date and time in ISO format (e.g., "2023-04-15T14:00:00Z")'),
-    vehicleId: z.string().describe('the vehicle ID. Use the tool listCars to get the Id by car')
+    vehicleId: z.string().describe('the vehicle ID. Use the tool listCars to get the Id by car'),
+    passangers: z.string().optional().describe('The passengers for the trip'),
+    startDate: z.string().optional().describe('The start date and time in ISO format (e.g., "2023-04-15T14:00:00Z")')
   }),
   execute: async ({destiny, driver, possibleEnd, vehicleId, passangers, startDate}: {
     destiny: string,
     driver: string,
     possibleEnd: string,
     vehicleId: string,
-    passangers: string,
-    startDate: string
+    passangers?: string,
+    startDate?: string
   }) => {
     return await api.vehicleRent.create({
       destiny,
@@ -44,7 +45,7 @@ export const rentVehicle: Tool = {
       possibleEnd: new Date(possibleEnd),
       vehicleId,
       passangers,
-      startDate: new Date(startDate)
+      startDate: startDate ? new Date(startDate) : new Date()
     })
   }
 }

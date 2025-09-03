@@ -1,0 +1,171 @@
+---
+alwaysApply: false
+description: "Guia rápido de referência das regras mais importantes"
+---
+
+# 🚀 Guia Rápido - Regras Essenciais
+
+## 📁 Estrutura de Arquivos
+```
+✅ src/components/ui/     # Componentes base (shadcn)
+✅ src/components/[mod]/  # Componentes específicos
+✅ src/hooks/            # Hooks customizados
+✅ src/lib/              # Utilitários
+✅ src/server/api/       # Endpoints tRPC
+✅ src/types/            # Definições TypeScript
+```
+
+## 🔧 Imports Essenciais
+```typescript
+// ✅ Correto
+import { Button } from "@/components/ui/button"
+import { api } from "@/trpc/react"
+import { cn } from "@/lib/utils"
+import type { User } from "@/types/user"
+
+// ❌ Evite
+import { Button } from "../../../components/ui/button"
+```
+
+## ⚛️ Componentes React
+```tsx
+"use client"
+
+interface ComponentProps {
+  required: string
+  optional?: number
+  className?: string
+}
+
+export function ComponentName({ required, optional, className }: ComponentProps) {
+  return (
+    <div className={cn("base-classes", className)}>
+      {/* JSX */}
+    </div>
+  )
+}
+```
+
+## 🎯 tRPC Procedures
+```typescript
+// server/api/routers/example.ts
+export const exampleRouter = createTRPCRouter({
+  getById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.example.findUnique({
+        where: { id: input.id }
+      })
+    }),
+
+  create: protectedProcedure
+    .input(createSchema)
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.example.create({ data: input })
+    })
+})
+```
+
+## 🎨 UI/UX Patterns
+```tsx
+// Sistema de design consistente
+<Card className={cn("", className)}>
+  <CardHeader>
+    <CardTitle>Título</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <p>Conteúdo</p>
+    <Button variant="default">Ação</Button>
+  </CardContent>
+</Card>
+```
+
+## 🔒 Controle de Acesso
+```typescript
+// Verificar permissões
+const { hasPermission } = useAccessControl()
+
+if (!hasPermission('admin.view_dashboard')) {
+  return <AccessDenied />
+}
+```
+
+## 📝 Formulários
+```tsx
+// React Hook Form + Zod
+const {
+  register,
+  handleSubmit,
+  formState: { errors, isSubmitting }
+} = useForm<FormData>({
+  resolver: zodResolver(schema)
+})
+
+return (
+  <form onSubmit={handleSubmit(onSubmit)}>
+    <Input {...register("email")} />
+    {errors.email && <p>{errors.email.message}</p>}
+    <Button disabled={isSubmitting}>Salvar</Button>
+  </form>
+)
+```
+
+## ⚡ Performance
+```tsx
+// Memoização
+const MemoizedComponent = memo<ComponentProps>(({ ... }) => {
+  const expensiveValue = useMemo(() => computeExpensive(), [deps])
+
+  const handleClick = useCallback(() => {
+    // ação
+  }, [deps])
+
+  return <div />
+})
+```
+
+## 🧪 Testes
+```typescript
+describe('ComponentName', () => {
+  it('deve renderizar corretamente', () => {
+    render(<ComponentName />)
+    expect(screen.getByText('texto')).toBeInTheDocument()
+  })
+})
+```
+
+## 📚 JSDoc
+```typescript
+/**
+ * Descrição da função
+ * @param param - Descrição do parâmetro
+ * @returns Descrição do retorno
+ */
+export function myFunction(param: string): string {
+  return param
+}
+```
+
+## 🎯 Lembretes Rápidos
+
+### ✅ FAÇA
+- Use TypeScript rigoroso
+- Sempre valide inputs
+- Memoize quando necessário
+- Escreva testes
+- Documente código complexo
+- Use aliases de import
+- Mantenha componentes pequenos
+
+### ❌ NÃO FAÇA
+- Use `any` desnecessariamente
+- Ignore erros de TypeScript
+- Crie componentes muito grandes
+- Esqueça de tratar loading states
+- Use caminhos relativos longos
+- Deixe código sem testes
+- Ignore regras de acessibilidade
+
+---
+
+**💡 Dica**: Use `Cmd/Ctrl + Shift + P` → "Apply Rule" para aplicar regras específicas no Cursor.

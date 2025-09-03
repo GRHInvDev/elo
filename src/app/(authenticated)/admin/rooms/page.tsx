@@ -25,7 +25,7 @@ export default async function AdminRoomsPage() {
 
   const roleConfig = dbUser?.role_config as RolesConfig;
   const hasAdminAccess = !!roleConfig?.sudo ||
-                        !!roleConfig?.admin_pages?.includes("/admin");
+                        (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.includes("/admin"));
 
   if (!dbUser || !hasAdminAccess) {
     redirect("/dashboard")

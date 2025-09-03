@@ -2,7 +2,7 @@ import { api } from "@/trpc/server"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Pencil, FileText, MessageSquare } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { FormPreview } from "@/components/forms/form-preview"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -11,6 +11,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { auth } from "@clerk/nextjs/server"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Visualizar Formulário",
@@ -25,8 +26,14 @@ interface FormPageProps {
 
 export default async function FormPage({ params }: FormPageProps) {
   const {id} = await params;
-  const form = await api.form.getById({id})
+  const form = await api.form.getById(id)
   const user = await auth();
+  const userData = await api.user.me()
+
+  // Verificar se o usuário tem permissão para acessar este formulário
+  if (!canAccessForm(userData.role_config, id)) {
+    redirect("/forms")
+  }
 
   if (!form) {
     notFound()

@@ -23,11 +23,15 @@ export async function FormsList() {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium">Nenhum formulário encontrado</h3>
+        <h3 className="text-lg font-medium">
+          {userCanCreateForm ? "Nenhum formulário encontrado" : "Nenhum formulário disponível"}
+        </h3>
         <p className="text-muted-foreground mt-1 mb-4">
-          {db_user?.role_config?.sudo || allForms.length === 0
+          {userCanCreateForm
             ? "Comece criando seu primeiro formulário personalizado."
-            : "Você não tem acesso a formulários ou não há formulários disponíveis para você."}
+            : allForms.length === 0
+            ? "Ainda não há formulários criados no sistema."
+            : "Não há formulários disponíveis para você no momento."}
         </p>
         {userCanCreateForm && (
           <Link href="/forms/new">

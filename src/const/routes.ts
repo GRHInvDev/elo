@@ -1,4 +1,4 @@
-import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb, LucideUsers } from "lucide-react"
+import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
 export const routeItems = (roleConfig?: RolesConfig | null): {
@@ -88,8 +88,7 @@ export const routeItems = (roleConfig?: RolesConfig | null): {
   ]
   
   // Verificar acesso admin usando role_config granular
-  const hasAdminAccess = !!roleConfig?.sudo ||
-                        !!roleConfig?.admin_pages?.includes("/admin");
+  const hasAdminAccess = !!roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin"));
 
   if (hasAdminAccess) {
     items.push({
@@ -98,16 +97,6 @@ export const routeItems = (roleConfig?: RolesConfig | null): {
       describe: "Página de administração",
       href: "/admin",
     })
-
-    // Página de configuração de usuários - apenas para sudo
-    if (roleConfig?.sudo) {
-      items.push({
-        title: "Configurar Usuários",
-        icon: LucideUsers,
-        describe: "Gerenciar permissões de usuários",
-        href: "/admin/users",
-      })
-    }
   }
   return items
 }

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { LucideCake, LucideMapPin, LucideUtensils, Lightbulb } from "lucide-react";
+import { LucideCake, LucideMapPin, LucideUtensils, Lightbulb, Users } from "lucide-react";
 import Link from "next/link";
 import { checkAdminAccess, hasAdminAccess } from "@/lib/access-control";
 
@@ -8,6 +8,13 @@ export default async function Page() {
     
     // Definir módulos admin disponíveis
     const adminModules = [
+        {
+            href: '/admin/users',
+            route: '/users',
+            icon: Users,
+            title: 'Usuários',
+            description: 'Gerenciar usuários e permissões 👥'
+        },
         {
             href: '/admin/rooms',
             route: '/rooms',
@@ -39,9 +46,14 @@ export default async function Page() {
     ];
 
     // Filtrar módulos baseado nas permissões
-    const availableModules = adminModules.filter(module => 
-        hasAdminAccess(db_user.role_config, module.route)
-    );
+    const availableModules = adminModules.filter(module => {
+        // Página de usuários só para sudo
+        if (module.route === '/users') {
+            return db_user.role_config?.sudo === true;
+        }
+        // Outras páginas usam a verificação padrão
+        return hasAdminAccess(db_user.role_config, module.route);
+    });
 
     return (
         <div className="p-4">

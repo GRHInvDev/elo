@@ -14,7 +14,7 @@ export function useAccessControl() {
     if (db_user.role_config.sudo) return true;
     
     // Verifica se a rota está nas páginas admin permitidas
-    return db_user.role_config.admin_pages?.includes(route) ?? false;
+    return Array.isArray(db_user.role_config.admin_pages) && db_user.role_config.admin_pages.includes(route);
   };
 
   const canCreateForm = (): boolean => {
@@ -28,25 +28,27 @@ export function useAccessControl() {
   };
 
   const canAccessForm = (formId: string): boolean => {
-    if (!db_user?.role_config) return false;
+    if (!db_user?.role_config) return true; // Se não tem config, pode acessar
     
     // Se é sudo, pode acessar qualquer formulário
     if (db_user.role_config.sudo) return true;
     
-    // Verifica se o formulário está na lista de desbloqueados
-    return db_user.role_config.forms?.unlocked_forms.includes(formId) ?? false;
+    // NOVA REGRA: Pode acessar qualquer formulário, exceto os hidden_forms
+    const isHidden = db_user.role_config.forms?.hidden_forms?.includes(formId) ?? false;
+    return !isHidden;
   };
 
   const getAccessibleForms = <T extends { id: string }>(forms: T[]): T[] => {
-    if (!db_user?.role_config) return [];
+    if (!db_user?.role_config) return forms; // Se não tem config, mostra todos
     
     // Se é sudo, retorna todos os formulários
     if (db_user.role_config.sudo) return forms;
     
-    // Filtra apenas os formulários desbloqueados
-    return forms.filter(form => 
-      db_user.role_config.forms?.unlocked_forms.includes(form.id) ?? false
-    );
+    // NOVA REGRA: Todos podem ver todos os formulários, exceto os hidden_forms
+    return forms.filter(form => {
+      const isHidden = db_user.role_config.forms?.hidden_forms?.includes(form.id) ?? false;
+      return !isHidden;
+    });
   };
 
   const canCreateEvent = (): boolean => {

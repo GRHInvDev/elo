@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button"
 import { PlusCircle, FileText, LucideFileVideo, LucideKanbanSquare } from "lucide-react"
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { currentUser } from "@clerk/nextjs/server"
 import { FormsList } from "@/components/forms/forms-list"
 import { Suspense } from "react"
 import { FormsSkeleton } from "@/components/forms/forms-skeleton"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { api } from "@/trpc/server"
-import { canCreateForm } from "@/lib/access-control"
+import { canViewForms, canCreateForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Formulários",
@@ -15,14 +17,33 @@ export const metadata = {
 }
 
 export default async function FormsPage() {
-  const db_user = await api.user.me()
-  const userCanCreateForm = canCreateForm(db_user?.role_config);
+  const user = await currentUser()
+
+  if (!user) {
+    redirect("/sign-in?redirect_url=/forms")
+  }
+
+  // Buscar dados do usuário para verificar permissões
+  const userData = await api.user.me()
+
+  // Verificar se o usuário tem permissão para visualizar a página de formulários
+  if (!canViewForms(userData.role_config)) {
+    redirect("/dashboard")
+  }
+
+  // Verificar se o usuário tem permissão para criar formulários
+  const userCanCreateForm = canCreateForm(userData.role_config)
   return (
     <DashboardShell>
       <div className="flex items-center justify-between mb-8 gap-y-4 flex-col md:flex-row">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Formulários</h1>
-          <p className="text-muted-foreground mt-2 mb-4">Crie, gerencie e responda formulários personalizados.</p>
+          <p className="text-muted-foreground mt-2 mb-4">
+            {userCanCreateForm 
+              ? "Crie, gerencie e responda formulários personalizados." 
+              : "Responda aos formulários disponíveis para você."
+            }
+          </p>
           <div className="flex gap-2">
             <Dialog>
               <DialogTrigger asChild>

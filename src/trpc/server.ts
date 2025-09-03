@@ -1,84 +1,171 @@
 import "server-only";
 
-import { createHydrationHelpers } from "@trpc/react-query/rsc";
+import { createCaller } from "@/server/api/root";
+import { createTRPCContext } from "@/server/api/trpc";
 import { headers } from "next/headers";
 import { cache } from "react";
+import type { NotificationType, NotificationChannel } from "@prisma/client";
 
-import type { AppRouter } from "@/server/api/root";
-import { createTRPCContext } from "@/server/api/trpc";
-import { createQueryClient } from "./query-client";
-
-/**
- * This wraps the `createTRPCContext` helper and provides the required context for the tRPC API when
- * handling a tRPC call from a React Server Component.
- */
-const createContext = cache(async () => {
+// Simplified server-side caller for RSC
+const createServerCaller = cache(async () => {
   const heads = new Headers(await headers());
   heads.set("x-trpc-source", "rsc");
 
-  return createTRPCContext({
+  const context = await createTRPCContext({
     headers: heads,
   });
+
+  return createCaller(context);
 });
 
-const getQueryClient = cache(createQueryClient);
-
-// Lazy initialization com tipos corretos
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-let callerInstance: ReturnType<typeof import("@/server/api/root").createCaller> | null = null;
-
-const getCaller = async () => {
-  if (!callerInstance) {
-    // Dynamic import para evitar dependência circular
-    const { createCaller } = await import("@/server/api/root");
-    const context = await createContext();
-    callerInstance = createCaller(context);
-  }
-  return callerInstance;
-};
-
-// Criar um caller proxy que resolve dinamicamente
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-const createCallerProxy = (): ReturnType<typeof import("@/server/api/root").createCaller> => {
-  const handler: ProxyHandler<object> = {
-    get(target, prop) {
-      if (typeof prop !== 'string') {
-        return undefined;
-      }
-      
-      // Retorna um proxy para o router específico
-      return new Proxy({}, {
-        get(routerTarget, routerProp) {
-          if (typeof routerProp !== 'string') {
-            return undefined;
-          }
-          
-          // Retorna a função que chama o método correto
-          return async (...args: unknown[]) => {
-            const caller = await getCaller();
-            const router = (caller as Record<string, unknown>)[prop];
-            
-            if (router && typeof router === 'object') {
-              const method = (router as Record<string, unknown>)[routerProp];
-              if (typeof method === 'function') {
-                return method.apply(router, args) as unknown;
-              }
-            }
-            
-            throw new Error(`Method ${prop}.${routerProp} not found`);
-          };
-        }
-      });
+export const api = {
+  user: {
+    me: async () => {
+      const caller = await createServerCaller();
+      return caller.user.me();
     }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  return new Proxy({}, handler) as ReturnType<typeof import("@/server/api/root").createCaller>;
+  },
+  vehicleRent: {
+    getMyActiveRent: async () => {
+      const caller = await createServerCaller();
+      return caller.vehicleRent.getMyActiveRent();
+    },
+    create: async (input: {
+      destiny: string;
+      driver: string;
+      possibleEnd: Date;
+      vehicleId: string;
+      startDate: Date;
+      passangers?: string;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.vehicleRent.create(input);
+    }
+  },
+  vehicle: {
+    getAll: async (input?: {
+      limit?: number;
+      cursor?: string;
+      enterprise?: "NA" | "Box" | "RHenz" | "Cristallux";
+      availble?: boolean;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.vehicle.getAll(input ?? {});
+    },
+    getById: async (id: string) => {
+      const caller = await createServerCaller();
+      return caller.vehicle.getById({ id });
+    }
+  },
+  form: {
+    list: async () => {
+      const caller = await createServerCaller();
+      return caller.form.list();
+    },
+    getById: async (id: string) => {
+      const caller = await createServerCaller();
+      return caller.form.getById({ id });
+    },
+  },
+  formResponse: {
+    getById: async (responseId: string) => {
+      const caller = await createServerCaller();
+      return caller.formResponse.getById({ responseId });
+    },
+    listByForm: async (formId: string) => {
+      const caller = await createServerCaller();
+      return caller.formResponse.listByForm({ formId });
+    }
+  },
+  booking: {
+    create: async (input: {
+      roomId: string;
+      title: string;
+      start: Date;
+      end: Date;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.booking.create(input);
+    },
+    list: async (input: {
+      startDate: Date;
+      endDate: Date;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.booking.list(input);
+    },
+    listMine: async () => {
+      const caller = await createServerCaller();
+      return caller.booking.listMine();
+    },
+    delete: async (input: { id: string }) => {
+      const caller = await createServerCaller();
+      return caller.booking.delete(input);
+    }
+  },
+  room: {
+    list: async (input?: {
+      floor?: number;
+      filial?: string;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.room.list(input);
+    },
+    listAvailable: async (input: {
+      date: Date;
+      filial?: string;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.room.listAvailable(input);
+    },
+    byId: async (input: { id: string }) => {
+      const caller = await createServerCaller();
+      return caller.room.byId(input);
+    },
+    checkAvailability: async (input: {
+      roomId: string;
+      start: Date;
+      end: Date;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.room.checkAvailability(input);
+    }
+  },
+  product: {
+    getAll: async () => {
+      const caller = await createServerCaller();
+      return caller.product.getAll();
+    },
+  },
+  notification: {
+    create: async (data: {
+      title: string;
+      message: string;
+      userId: string;
+      type?: NotificationType;
+      channel?: NotificationChannel;
+      entityId?: string;
+      entityType?: string;
+      actionUrl?: string;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.notification.create(data);
+    },
+    createBulk: async (data: {
+      title: string;
+      message: string;
+      userIds: string[];
+      notifications: {
+        title: string;
+        message: string;
+        userId: string;
+        type?: NotificationType;
+        channel?: NotificationChannel;
+        entityType?: string;
+      }[];
+    }) => {
+      const caller = await createServerCaller();
+      return caller.notification.createBulk(data);
+    }
+  }
 };
-
-const caller = createCallerProxy();
-
-export const { trpc: api, HydrateClient } = createHydrationHelpers<AppRouter>(
-  caller,
-  getQueryClient
-);

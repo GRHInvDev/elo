@@ -4,6 +4,10 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Car, Calendar, LucideFileVideo, User2Icon, MapPin, PlusCircle } from "lucide-react"
 import { api } from "@/trpc/server"
+import type { VehicleRent, Vehicle } from "@prisma/client"
+import { canViewCars, canLocateCars } from "@/lib/access-control"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { RolesConfig } from "@/types/role-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +27,17 @@ export default async function DashboardPage() {
   if (!user) {
     redirect("/sign-in?redirect_url=/dashboard")
   }
+
+  // Buscar dados do usuário para verificar permissões
+  const userData = await api.user.me()
+
+  // Verificar se o usuário tem permissão para visualizar a página de carros
+  if (!canViewCars()) {
+    redirect("/dashboard")
+  }
+
+  // Verificar se o usuário tem permissão para fazer reservas (para mostrar botões de ação)
+  const canReserve = canLocateCars(userData.role_config)
 
   const activeRent = await api.vehicleRent.getMyActiveRent()
 
@@ -54,7 +69,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-        {activeRent?.map((actvRent, i)=> (
+        {activeRent?.map((actvRent: VehicleRent & { vehicle: Vehicle }, i: number)=> (
         <div key={i} className="mb-4 border-b last:border-0">
           <CardHeader>
             <CardTitle>Veículo Reservado</CardTitle>
@@ -107,7 +122,7 @@ export default async function DashboardPage() {
       )) }
         </Card>
       </div>
-      { activeRent.length > 0 && (
+      { activeRent && activeRent.length > 0 && canReserve && (
         <div className="flex items-center justify-center w-full mt-4">
           <Link href="/cars/details">
             <Button>
@@ -117,14 +132,23 @@ export default async function DashboardPage() {
           </Link>
         </div>
       )}
-      { activeRent.length === 0 && (
+      { (!activeRent || activeRent.length === 0) && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <h2 className="mb-2 text-xl font-semibold">Nenhum veículo reservado</h2>
-            <p className="mb-6 text-center text-muted-foreground">Você não possui nenhum veículo reservado no momento.</p>
-            <Button asChild>
-              <Link href="/cars/details">Reservar um veículo</Link>
-            </Button>
+            <h2 className="mb-2 text-xl font-semibold">
+              {canReserve ? "Nenhum veículo reservado" : "Visualização de Veículos"}
+            </h2>
+            <p className="mb-6 text-center text-muted-foreground">
+              {canReserve
+                ? "Você não possui nenhum veículo reservado no momento."
+                : "Você pode visualizar os veículos disponíveis, mas não possui permissão para fazer reservas."
+              }
+            </p>
+            {canReserve && (
+              <Button asChild>
+                <Link href="/cars/details">Reservar um veículo</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

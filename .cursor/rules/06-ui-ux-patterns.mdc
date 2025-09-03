@@ -1,0 +1,149 @@
+---
+alwaysApply: true
+description: "Padrões de UI/UX com Tailwind CSS e shadcn/ui"
+---
+
+# Padrões de UI/UX
+
+## Sistema de Design
+```tsx
+// ✅ Bom: Uso consistente do sistema de design
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
+
+interface UserCardProps {
+  user: User
+  className?: string
+}
+
+export function UserCard({ user, className }: UserCardProps) {
+  return (
+    <Card className={cn("", className)}>
+      <CardHeader>
+        <CardTitle>{user.name}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">{user.email}</p>
+        <Button className="mt-4">Editar</Button>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+## Classes CSS e Estilos
+```tsx
+// ✅ Bom: Uso do cn() para combinar classes
+<div className={cn(
+  "flex items-center justify-between p-4 border rounded-lg",
+  isActive && "bg-primary/5 border-primary",
+  className
+)}>
+  {/* conteúdo */}
+</div>
+
+// ✅ Bom: Classes semânticas
+<button className="btn-primary hover:btn-primary-hover focus:btn-primary-focus">
+  Clique aqui
+</button>
+```
+
+## Componentes de Layout
+```tsx
+// ✅ Bom: Layout responsivo
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {items.map(item => (
+    <Card key={item.id}>
+      {/* conteúdo do card */}
+    </Card>
+  ))}
+</div>
+
+// ✅ Bom: Flexbox patterns
+<div className="flex flex-col space-y-4">
+  <header className="flex items-center justify-between">
+    <h1>Título</h1>
+    <Button>ação</Button>
+  </header>
+
+  <main className="flex-1">
+    {/* conteúdo principal */}
+  </main>
+
+  <footer className="border-t pt-4">
+    {/* rodapé */}
+  </footer>
+</div>
+```
+
+## Estados e Feedback Visual
+```tsx
+// ✅ Bom: Estados de loading e erro
+function DataComponent() {
+  const { data, isLoading, error } = useQuery()
+
+  if (isLoading) {
+    return <Skeleton className="h-32 w-full" />
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Erro ao carregar dados
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* dados */}
+    </div>
+  )
+}
+```
+
+## Acessibilidade
+```tsx
+// ✅ Bom: Componentes acessíveis
+<button
+  className="btn-primary"
+  aria-label="Editar usuário"
+  disabled={isLoading}
+>
+  {isLoading ? (
+    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+  ) : (
+    <Edit className="h-4 w-4" aria-hidden="true" />
+  )}
+  Editar
+</button>
+
+// ✅ Bom: Formulários acessíveis
+<form onSubmit={handleSubmit} className="space-y-4">
+  <div>
+    <Label htmlFor="email">Email</Label>
+    <Input
+      id="email"
+      type="email"
+      aria-describedby="email-error"
+      aria-invalid={!!errors.email}
+    />
+    {errors.email && (
+      <p id="email-error" className="text-destructive text-sm">
+        {errors.email}
+      </p>
+    )}
+  </div>
+</form>
+```
+
+## Tema e Design System
+- Use variáveis CSS do Tailwind (`text-primary`, `bg-secondary`, etc.)
+- Mantenha consistência visual através do design system
+- Use `dark:` prefix para modo escuro
+- Prefira componentes do shadcn/ui sobre estilos customizados

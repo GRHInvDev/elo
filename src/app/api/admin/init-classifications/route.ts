@@ -18,7 +18,7 @@ export async function POST() {
 
     const roleConfig = user?.role_config as RolesConfig;
     const hasAdminAccess = !!roleConfig?.sudo ||
-                          !!roleConfig?.admin_pages?.includes("/admin");
+                          (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.includes("/admin"));
 
     if (!hasAdminAccess) {
       return NextResponse.json({ error: "Acesso negado - Admin necessário" }, { status: 403 })
