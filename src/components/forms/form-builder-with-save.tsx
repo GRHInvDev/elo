@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, Loader2, Users, ChevronDown, Lock, Globe } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { UserSearch } from "@/components/forms/user-search"
 
 interface FormBuilderWithSaveProps {
   mode: "create" | "edit"
@@ -186,33 +187,13 @@ export function FormBuilderWithSave({
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4 mt-4">
                 <div className="space-y-3 p-4 border rounded-lg">
-                  <div>
-                    <Label className="text-sm font-medium">Usuários Específicos</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Selecione usuários específicos que podem ver este formulário
-                    </p>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {usersAndSectors?.users.map((user) => (
-                        <div key={user.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`user_${user.id}`}
-                            checked={allowedUsers.includes(user.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setAllowedUsers([...allowedUsers, user.id])
-                              } else {
-                                setAllowedUsers(allowedUsers.filter(id => id !== user.id))
-                              }
-                            }}
-                          />
-                          <Label htmlFor={`user_${user.id}`} className="text-sm">
-                            {user.name} ({user.email})
-                            {user.setor && <span className="text-muted-foreground"> - {user.setor}</span>}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <UserSearch
+                    users={usersAndSectors?.users || []}
+                    selectedUsers={allowedUsers}
+                    onSelectionChange={setAllowedUsers}
+                    placeholder="Buscar colaboradores..."
+                    maxHeight="300px"
+                  />
 
                   <div>
                     <Label className="text-sm font-medium">Setores</Label>
