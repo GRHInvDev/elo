@@ -19,15 +19,14 @@ import {
   Settings, 
   Shield, 
   Edit3, 
-  Routes, 
+  Route, 
   Key, 
   ChevronDown, 
-  ChevronRight,
-  Save,
   X,
   Info,
   FileText,
-  AlertTriangle
+
+  Save
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
 
@@ -46,7 +45,7 @@ const AVAILABLE_ROUTES = [
 ]
 
 // Mapear rotas para suas permissões relacionadas
-const ROUTE_PERMISSIONS_MAP = {
+const ROUTE_PERMISSIONS_MAP: Record<string, string[]> = {
   "events": ["can_create_event"],
   "flyers": ["can_create_flyer"],
   "rooms": ["can_create_booking"],
@@ -56,7 +55,7 @@ const ROUTE_PERMISSIONS_MAP = {
 
 export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedUser, setSelectedUser] = useState<string | null>(null)
+
   const { isSudo } = useAccessControl()
 
   const { data: users, isLoading, refetch } = api.user.listUsers.useQuery({
@@ -64,6 +63,17 @@ export default function UsersManagementPage() {
   })
 
   const { data: allForms } = api.form.list.useQuery()
+
+  const filteredUsers = useMemo(() => {
+    if (!users) return []
+    return users.filter(user => 
+      !searchTerm ||
+      !!user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      !!user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.setor?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [users, searchTerm])
 
   // Verificar se é sudo
   if (!isSudo) {
@@ -81,17 +91,6 @@ export default function UsersManagementPage() {
       </DashboardShell>
     )
   }
-
-  const filteredUsers = useMemo(() => {
-    if (!users) return []
-    return users.filter(user => 
-      !searchTerm ||
-      user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.setor?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [users, searchTerm])
 
   return (
     <DashboardShell>
@@ -194,10 +193,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const [isEditingBasic, setIsEditingBasic] = useState(false)
   const [isEditingPermissions, setIsEditingPermissions] = useState(false)
   const [basicData, setBasicData] = useState({
-    firstName: user.firstName || "",
-    lastName: user.lastName || "",
+    firstName: user.firstName ?? "",
+    lastName: user.lastName ?? "",
     email: user.email,
-    setor: user.setor || "",
+    setor: user.setor ?? "",
   })
   const [permissionsData, setPermissionsData] = useState<RolesConfig>(
     user.role_config || {
@@ -262,7 +261,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   }
 
   const handleRouteToggle = (routeId: string, checked: boolean) => {
-    const currentRoutes = permissionsData.accessible_routes || []
+    const currentRoutes = permissionsData.accessible_routes ?? []
     const newRoutes = checked
       ? [...currentRoutes, routeId]
       : currentRoutes.filter(r => r !== routeId)
@@ -275,10 +274,18 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     // Auto-selecionar permissões relacionadas se a rota for ativada
     if (checked && ROUTE_PERMISSIONS_MAP[routeId]) {
       const relatedPermissions = ROUTE_PERMISSIONS_MAP[routeId]
-      const newContent = { ...permissionsData.content }
+      const newContent = { 
+        can_create_event: false,
+        can_create_flyer: false,
+        can_create_booking: false,
+        can_locate_cars: false,
+        ...permissionsData.content 
+      }
       
-      relatedPermissions.forEach(permission => {
-        newContent[permission] = true
+      relatedPermissions.forEach((permission: string) => {
+        if (permission in newContent) {
+          (newContent as Record<string, boolean>)[permission] = true
+        }
       })
 
       setPermissionsData({
@@ -383,9 +390,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     <X className="h-4 w-4 mr-2" />
                     Cancelar
                   </Button>
-                  <Button onClick={handleSaveBasicInfo} disabled={updateBasicInfo.isLoading}>
+                  <Button onClick={handleSaveBasicInfo} disabled={updateBasicInfo.isPending}>
                     <Save className="h-4 w-4 mr-2" />
-                    {updateBasicInfo.isLoading ? "Salvando..." : "Salvar"}
+                    {updateBasicInfo.isPending ? "Salvando..." : "Salvar"}
                   </Button>
                 </div>
               </div>
@@ -402,7 +409,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Setor</Label>
-                    <p className="text-sm text-muted-foreground">{user.setor || "Não informado"}</p>
+                    <p className="text-sm text-muted-foreground">{user.setor ?? "Não informado"}</p>
                   </div>
                 </div>
                 <Button onClick={() => setIsEditingBasic(true)} size="sm">
@@ -434,7 +441,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 {/* Seção de Rotas */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Routes className="h-4 w-4" />
+                    <Route className="h-4 w-4" />
                     <Label className="text-base font-semibold">Controle de Rotas</Label>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
@@ -461,7 +468,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <div key={route.id} className="flex items-start space-x-2 p-2 border rounded">
                             <Checkbox
                               id={`route_${route.id}`}
-                              checked={permissionsData.accessible_routes?.includes(route.id) || false}
+                              checked={permissionsData.accessible_routes?.includes(route.id) ?? false}
                               onCheckedChange={(checked) => handleRouteToggle(route.id, checked === true)}
                             />
                             <div className="flex-1">
@@ -472,7 +479,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                               {ROUTE_PERMISSIONS_MAP[route.id] && (
                                 <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
                                   <Info className="h-3 w-3" />
-                                  Auto-ativa: {ROUTE_PERMISSIONS_MAP[route.id].join(", ")}
+                                  Auto-ativa: {ROUTE_PERMISSIONS_MAP[route.id]!.join(", ")}
                                 </p>
                               )}
                             </div>
@@ -502,16 +509,16 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="create_event"
-                            checked={permissionsData.content?.can_create_event || false}
+                            checked={permissionsData.content?.can_create_event ?? false}
                             onCheckedChange={(checked) =>
                               setPermissionsData({
                                 ...permissionsData,
                                 content: {
                                   ...permissionsData.content,
                                   can_create_event: checked === true,
-                                  can_create_flyer: permissionsData.content?.can_create_flyer || false,
-                                  can_create_booking: permissionsData.content?.can_create_booking || false,
-                                  can_locate_cars: permissionsData.content?.can_locate_cars || false,
+                                  can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
+                                  can_create_booking: permissionsData.content?.can_create_booking ?? false,
+                                  can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
                                 },
                               })
                             }
@@ -521,16 +528,16 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="create_flyer"
-                            checked={permissionsData.content?.can_create_flyer || false}
+                            checked={permissionsData.content?.can_create_flyer ?? false}
                             onCheckedChange={(checked) =>
                               setPermissionsData({
                                 ...permissionsData,
                                 content: {
                                   ...permissionsData.content,
-                                  can_create_event: permissionsData.content?.can_create_event || false,
+                                  can_create_event: permissionsData.content?.can_create_event ?? false,
                                   can_create_flyer: checked === true,
-                                  can_create_booking: permissionsData.content?.can_create_booking || false,
-                                  can_locate_cars: permissionsData.content?.can_locate_cars || false,
+                                  can_create_booking: permissionsData.content?.can_create_booking ?? false,
+                                  can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
                                 },
                               })
                             }
@@ -540,16 +547,16 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="create_booking"
-                            checked={permissionsData.content?.can_create_booking || false}
+                            checked={permissionsData.content?.can_create_booking ?? false}
                             onCheckedChange={(checked) =>
                               setPermissionsData({
                                 ...permissionsData,
                                 content: {
                                   ...permissionsData.content,
-                                  can_create_event: permissionsData.content?.can_create_event || false,
-                                  can_create_flyer: permissionsData.content?.can_create_flyer || false,
+                                  can_create_event: permissionsData.content?.can_create_event ?? false,
+                                  can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
                                   can_create_booking: checked === true,
-                                  can_locate_cars: permissionsData.content?.can_locate_cars || false,
+                                  can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
                                 },
                               })
                             }
@@ -559,15 +566,15 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="locate_cars"
-                            checked={permissionsData.content?.can_locate_cars || false}
+                            checked={permissionsData.content?.can_locate_cars ?? false}
                             onCheckedChange={(checked) =>
                               setPermissionsData({
                                 ...permissionsData,
                                 content: {
                                   ...permissionsData.content,
-                                  can_create_event: permissionsData.content?.can_create_event || false,
-                                  can_create_flyer: permissionsData.content?.can_create_flyer || false,
-                                  can_create_booking: permissionsData.content?.can_create_booking || false,
+                                  can_create_event: permissionsData.content?.can_create_event ?? false,
+                                  can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
+                                  can_create_booking: permissionsData.content?.can_create_booking ?? false,
                                   can_locate_cars: checked === true,
                                 },
                               })
@@ -584,15 +591,15 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="create_form"
-                            checked={permissionsData.forms?.can_create_form || false}
+                            checked={permissionsData.forms?.can_create_form ?? false}
                             onCheckedChange={(checked) =>
                               setPermissionsData({
                                 ...permissionsData,
                                 forms: {
                                   ...permissionsData.forms,
                                   can_create_form: checked === true,
-                                  unlocked_forms: permissionsData.forms?.unlocked_forms || [],
-                                  hidden_forms: permissionsData.forms?.hidden_forms || [],
+                                  unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
+                                  hidden_forms: permissionsData.forms?.hidden_forms ?? [],
                                 },
                               })
                             }
@@ -621,9 +628,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       <div key={form.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={`hidden_${form.id}`}
-                          checked={permissionsData.forms?.hidden_forms?.includes(form.id) || false}
+                          checked={permissionsData.forms?.hidden_forms?.includes(form.id) ?? false}
                           onCheckedChange={(checked) => {
-                            const currentHidden = permissionsData.forms?.hidden_forms || [];
+                            const currentHidden = permissionsData.forms?.hidden_forms ?? [];
                             const newHidden = checked
                               ? [...currentHidden, form.id]
                               : currentHidden.filter(id => id !== form.id);
@@ -632,8 +639,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                               ...permissionsData,
                               forms: {
                                 ...permissionsData.forms,
-                                can_create_form: permissionsData.forms?.can_create_form || false,
-                                unlocked_forms: permissionsData.forms?.unlocked_forms || [],
+                                can_create_form: permissionsData.forms?.can_create_form ?? false,
+                                unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
                                 hidden_forms: newHidden,
                               },
                             });
@@ -655,9 +662,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     <X className="h-4 w-4 mr-2" />
                     Cancelar
                   </Button>
-                  <Button onClick={handleSavePermissions} disabled={updateRoleConfig.isLoading}>
+                  <Button onClick={handleSavePermissions} disabled={updateRoleConfig.isPending}>
                     <Save className="h-4 w-4 mr-2" />
-                    {updateRoleConfig.isLoading ? "Salvando..." : "Salvar Permissões"}
+                    {updateRoleConfig.isPending ? "Salvando..." : "Salvar Permissões"}
                   </Button>
                 </div>
               </div>
@@ -692,7 +699,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   </div>
                 </div>
 
-                {permissionsData.forms?.hidden_forms?.length > 0 && (
+                {permissionsData.forms?.hidden_forms && permissionsData.forms.hidden_forms.length > 0 && (
                   <div>
                     <Label className="text-sm font-medium">Formulários Ocultos</Label>
                     <p className="text-sm text-muted-foreground">

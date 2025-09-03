@@ -2,6 +2,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { z } from "zod";
 import type { Field } from "@/lib/form-types"
 import { type InputJsonValue } from "@prisma/client/runtime/library";
+import type { RolesConfig } from "@/types/role-config";
 
 
 export const formsRouter = createTRPCRouter({
@@ -112,7 +113,7 @@ export const formsRouter = createTRPCRouter({
             }
 
             // Verificar se tem permissões especiais no role_config (hidden_forms)
-            const roleConfig = currentUser.role_config as any;
+            const roleConfig = currentUser.role_config as RolesConfig;
             if (roleConfig?.forms?.hidden_forms?.includes(form.id)) {
                 return false;
             }

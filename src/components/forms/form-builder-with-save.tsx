@@ -224,10 +224,10 @@ export function FormBuilderWithSave({
                         <div key={sector} className="flex items-center space-x-2">
                           <Checkbox
                             id={`sector_${sector}`}
-                            checked={allowedSectors.includes(sector)}
+                            checked={allowedSectors.includes(sector!)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setAllowedSectors([...allowedSectors, sector])
+                                setAllowedSectors([...allowedSectors, sector!])
                               } else {
                                 setAllowedSectors(allowedSectors.filter(s => s !== sector))
                               }

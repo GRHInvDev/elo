@@ -1,4 +1,4 @@
-import { type Enterprise } from "@prisma/client";
+import type { Prisma, Enterprise } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { z } from "zod"
 import { type RolesConfig } from "@/types/role-config"
@@ -179,7 +179,7 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      const where: any = {}
+      const where: Prisma.UserWhereInput = {}
 
       // Busca por setor
       if (input.sector) {
@@ -270,7 +270,7 @@ export const userRouter = createTRPCRouter({
       return ctx.db.user.update({
         where: { id: input.userId },
         data: {
-          role_config: input.roleConfig as any,
+          role_config: input.roleConfig as RolesConfig,
         },
       })
     }),
