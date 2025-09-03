@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Search, X, Users, Check, ChevronDown } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 interface User {
   id: string
@@ -44,7 +42,7 @@ export function UserSearch({
     return users.filter(user => 
       user.name.toLowerCase().includes(term) ||
       user.email.toLowerCase().includes(term) ||
-      (user.setor && user.setor.toLowerCase().includes(term))
+      (!!user.setor && user.setor.toLowerCase().includes(term))
     )
   }, [users, searchTerm])
 

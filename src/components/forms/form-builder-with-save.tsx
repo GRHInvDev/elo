@@ -188,7 +188,7 @@ export function FormBuilderWithSave({
               <CollapsibleContent className="space-y-4 mt-4">
                 <div className="space-y-3 p-4 border rounded-lg">
                   <UserSearch
-                    users={usersAndSectors?.users || []}
+                    users={usersAndSectors?.users ?? []}
                     selectedUsers={allowedUsers}
                     onSelectionChange={setAllowedUsers}
                     placeholder="Buscar colaboradores..."
