@@ -12,6 +12,7 @@ import { ZodError } from "zod";
 import { currentUser } from "@clerk/nextjs/server"
 
 import { db } from "@/server/db";
+import type { RolesConfig } from "@/types/role-config";
 
 /**
  * 1. CONTEXT
@@ -126,9 +127,22 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   const user = await ctx.db.user.findUnique({
     where: { id: ctx.auth.userId },
+    select: {
+      id: true,
+      role_config: true,
+    }
   })
 
-  if (!user || user?.role !== "ADMIN") {
+  if (!user) {
+    throw new TRPCError({ code: "FORBIDDEN" })
+  }
+
+  // Verificar se é sudo ou tem acesso admin
+  const roleConfig = user.role_config as RolesConfig;
+  const hasAdminAccess = !!roleConfig?.sudo ||
+                        (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.includes("/admin"));
+
+  if (!hasAdminAccess) {
     throw new TRPCError({ code: "FORBIDDEN" })
   }
 

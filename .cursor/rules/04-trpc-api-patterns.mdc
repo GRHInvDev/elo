@@ -1,0 +1,107 @@
+---
+alwaysApply: true
+description: "Padrões para API com tRPC"
+---
+
+# Padrões de API com tRPC
+
+## Estrutura de Procedures
+```typescript
+// server/api/routers/example.ts
+import { z } from "zod"
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
+
+export const exampleRouter = createTRPCRouter({
+  // Query para buscar dados
+  getAll: protectedProcedure
+    .query(async ({ ctx }) => {
+      return await ctx.db.example.findMany()
+    }),
+
+  // Query com input validado
+  getById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.example.findUnique({
+        where: { id: input.id }
+      })
+    }),
+
+  // Mutation para criar
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      description: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.example.create({
+        data: input
+      })
+    }),
+
+  // Mutation para atualizar
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string().min(1).optional(),
+      description: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input
+      return await ctx.db.example.update({
+        where: { id },
+        data
+      })
+    }),
+
+  // Mutation para deletar
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.example.delete({
+        where: { id: input.id }
+      })
+    })
+})
+```
+
+## Uso no Cliente
+```typescript
+// Em componentes React
+import { api } from "@/trpc/react"
+
+function ExampleComponent() {
+  // Queries
+  const { data: examples, isLoading } = api.example.getAll.useQuery()
+  const { data: example } = api.example.getById.useQuery({ id: "123" })
+
+  // Mutations
+  const createExample = api.example.create.useMutation()
+  const updateExample = api.example.update.useMutation()
+  const deleteExample = api.example.delete.useMutation()
+
+  const handleCreate = async () => {
+    try {
+      await createExample.mutateAsync({
+        name: "Novo exemplo",
+        description: "Descrição do exemplo"
+      })
+    } catch (error) {
+      console.error("Erro ao criar:", error)
+    }
+  }
+
+  return (
+    <div>
+      {/* JSX aqui */}
+    </div>
+  )
+}
+```
+
+## Regras Importantes
+- Use `protectedProcedure` para rotas que precisam de autenticação
+- Sempre valide inputs com Zod schemas
+- Use `ctx.db` para acessar o Prisma client
+- Trate erros adequadamente nos mutations
+- Use `useQuery` para dados e `useMutation` para operações

@@ -5,6 +5,8 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema } from "@/schemas/vehicle-rent.schema"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailReservaCarro } from "@/lib/mail/html-mock"
+import { canLocateCars } from "@/lib/access-control"
+import type { RolesConfig } from "@/types/role-config"
 
 
 export const vehicleRentRouter = createTRPCRouter({
@@ -114,11 +116,24 @@ export const vehicleRentRouter = createTRPCRouter({
   }),
 
   create: protectedProcedure.input(createVehicleRentSchema).mutation(async ({ ctx, input }) => {
-    const userId = ctx.auth.userId
-    const { vehicleId, startDate, possibleEnd } = input
+    // Verificar se o usuário tem permissão para fazer agendamentos de carros
+    const db_user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true },
+    })
 
-    console.log(startDate)
-    console.log(possibleEnd)
+    if (!canLocateCars(db_user?.role_config as RolesConfig)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para fazer agendamentos de carros",
+      })
+    }
+
+    const userId = ctx.auth.userId
+    const { vehicleId, startDate, possibleEnd, driver, destiny, passangers } = input
+
+    console.log("Input completo:", input)
+    console.log("Campos extraídos:", { vehicleId, startDate, possibleEnd, driver, destiny, passangers })
 
     const newStartDate = new Date(startDate ?? new Date()).setHours(new Date(startDate ?? new Date()).getHours() - 3);
     const newPossibleEnd = new Date(possibleEnd ?? new Date()).setHours(new Date(possibleEnd ?? new Date()).getHours() - 3);
@@ -130,6 +145,20 @@ export const vehicleRentRouter = createTRPCRouter({
       })
     }
 
+    if (!driver || driver.trim().length <= 2) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Nome do motorista é obrigatório e deve ter pelo menos 3 caracteres.",
+      })
+    }
+
+    if (!destiny || destiny.trim().length <= 2) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Destino é obrigatório e deve ter pelo menos 3 caracteres.",
+      })
+    }
+
     // Usar uma transação para garantir que a verificação de disponibilidade e a criação da reserva sejam atômicas
     return ctx.db.$transaction(async (tx) => {
       // 1. Verificar se o veículo existe
@@ -137,6 +166,8 @@ export const vehicleRentRouter = createTRPCRouter({
         where: { id: vehicleId },
         select: { id: true, kilometers: true },
       })
+
+      console.log("Veículo encontrado:", vehicle)
 
       if (!vehicle) {
         throw new TRPCError({
@@ -173,18 +204,27 @@ export const vehicleRentRouter = createTRPCRouter({
       }
 
       // 3. Criar a reserva
+      const rentData = {
+        userId,
+        startDate: new Date(newStartDate),
+        possibleEnd: new Date(newPossibleEnd),
+        vehicleId: vehicleId,
+        initialKm: BigInt(vehicle.kilometers.toString()),
+        driver: driver || "",
+        destiny: destiny || "",
+        passangers: passangers ?? null,
+      }
+
+      console.log("Dados a serem salvos no banco:", rentData)
+
       const rent = await tx.vehicleRent.create({
-        data: {
-          userId,
-          startDate: new Date(newStartDate),
-          possibleEnd: new Date(newPossibleEnd),
-          vehicleId: vehicleId,
-          initialKm: vehicle.kilometers,
-        },
+        data: rentData,
         include: {
           vehicle: true,
         },
       })
+
+      console.log("Reserva criada com sucesso:", rent.id)
 
       return rent
     })

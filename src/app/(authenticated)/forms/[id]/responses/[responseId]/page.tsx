@@ -2,7 +2,7 @@ import { api } from "@/trpc/server"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -12,6 +12,7 @@ import { StatusUpdateButton } from "@/components/forms/status-update-button"
 import { ResponseDetails } from "@/components/forms/response-details"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
+import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Detalhes da Resposta",
@@ -27,14 +28,25 @@ interface ResponseDetailsPageProps {
 
 export default async function ResponseDetailsPage({ params }: ResponseDetailsPageProps) {
   const {id, responseId} = await params;
-  const response = await api.formResponse.getById({ responseId }).catch(() => null)
+
+  // Verificar se o usuário pode acessar o formulário
+  const userData = await api.user.me()
+  if (!canAccessForm(userData?.role_config, id)) {
+    redirect("/forms")
+  }
+
+  const response = await api.formResponse.getById(responseId)
 
   if (!response) {
     notFound()
   }
 
-  const currentUser = await api.user.me()
-  const isOwner = response.form.userId === currentUser?.id
+  // Verificar se a resposta pertence ao formulário correto
+  if (response.formId !== id) {
+    notFound()
+  }
+
+  const isOwner = response.form.userId === userData?.id
 
   function getStatusBadge(status: string) {
     switch (status) {

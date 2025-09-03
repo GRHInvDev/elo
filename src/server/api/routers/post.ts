@@ -31,34 +31,8 @@ export const postRouter = createTRPCRouter({
       }
     })
 
-    // Criar notificações para todos os usuários (exceto o autor)
-    try {
-      const allUsers = await ctx.db.user.findMany({
-        where: {
-          id: { not: ctx.auth.userId }
-        },
-        select: { id: true }
-      })
-
-      if (allUsers.length > 0) {
-        const notifications = allUsers.map(user => ({
-          title: "Novo Post Publicado",
-          message: `${post.author.firstName ?? 'Usuário'} publicou um novo post: "${post.title}"`,
-          type: "INFO" as const,
-          channel: "IN_APP" as const,
-          userId: user.id,
-          entityId: post.id,
-          entityType: "post",
-          actionUrl: `/news` // Ajustado para a rota correta
-        }))
-
-        await ctx.db.notification.createMany({
-          data: notifications
-        })
-      }
-    } catch (notificationError) {
-      console.error("Erro ao criar notificações de post:", notificationError)
-    }
+    // Notificações temporariamente desabilitadas
+    // TODO: Reimplementar sistema de notificações
 
     return post
   }),
@@ -112,7 +86,7 @@ export const postRouter = createTRPCRouter({
             firstName: true,
             lastName: true,
             imageUrl: true,
-            role: true,
+            role_config: true,
             enterprise: true,
           },
         },

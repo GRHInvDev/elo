@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
 
 export async function ResponsesList({ formId }: { formId: string }) {
-  const responses = await api.formResponse.listByForm({ formId })
-  const form = await api.form.getById({ id: formId })
+  const responses = await api.formResponse.listByForm(formId)
+  const form = await api.form.getById(formId)
   const currentUser = await api.user.me();
   const isOwner = form?.userId === currentUser?.id
 

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client"
 import type { InputJsonValue } from "@prisma/client/runtime/library"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
+import type { RolesConfig } from "@/types/role-config"
 
 const StatusEnum = z.enum(["NEW","IN_REVIEW","APPROVED","IN_PROGRESS","DONE","NOT_IMPLEMENTED"])
 
@@ -26,10 +27,13 @@ const adminMiddleware = middleware(async ({ ctx, next }) => {
 
   const user = await ctx.db.user.findUnique({
     where: { id: ctx.auth.userId },
-    select: { role: true, email: true },
+    select: { role_config: true, email: true },
   })
 
-  if (!user || user.role !== "ADMIN") {
+  const roleConfig = user?.role_config as RolesConfig;
+  const hasAdminAccess = roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.includes("/admin"));
+  
+  if (!user || !hasAdminAccess) {
     throw new TRPCError({
       code: "FORBIDDEN", 
       message: "Acesso negado. Apenas administradores podem acessar esta funcionalidade.",
@@ -165,7 +169,7 @@ export const suggestionRouter = createTRPCRouter({
       // Validar se o analista existe (se fornecido)
       if (input.analystId) {
         const analystExists = await ctx.db.user.findUnique({
-          where: { id: input.analystId, role: "ADMIN" },
+          where: { id: input.analystId },
           select: { id: true },
         })
         if (!analystExists) {

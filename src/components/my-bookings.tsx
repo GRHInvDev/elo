@@ -28,6 +28,7 @@ export function MyBookings({ className, filial }: { className?: string; filial?:
   const auth = useAuth(); 
 
   const { data: bookings, isLoading } = api.booking.listMine.useQuery()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filtered = bookings?.filter((b) => !filial || b.room.filial === filial)
   
   const deleteBooking = api.booking.delete.useMutation({

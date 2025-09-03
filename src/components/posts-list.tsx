@@ -14,6 +14,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import Image from "next/image"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { type AppRouter } from "@/server/api/root"
+import type { RolesConfig } from "@/types/role-config"
+
+// Tipos auxiliares simplificados
+type SafePost = Post & { author: { role_config?: RolesConfig } }
+type SafeFlyer = Flyer & { author: { role_config?: RolesConfig } }
 
 // The number of seconds each slide will be displayed
 const ROTATION_INTERVAL = 20 * 1000
@@ -28,6 +33,11 @@ type PostFlyerArr = {
 export function PostList({ className }: { className?: string }) {
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
   const { data: flyers, isLoading: isLoadingFlyers } = api.flyer.list.useQuery()
+
+  // Type cast dos dados para incluir role_config tipado
+  const postsWithRoleConfig = posts as SafePost[] | undefined
+  const flyersWithRoleConfig = flyers as SafeFlyer[] | undefined
+
   const [combinedItems, setCombinedItems] = useState<Array<{ type: keyof PostFlyerArr; data: PostFlyerArr[keyof PostFlyerArr] }>>([])
 
   // Carousel API state
@@ -37,12 +47,12 @@ export function PostList({ className }: { className?: string }) {
 
   // Combine posts and flyers into a single array for the carousel
   useEffect(() => {
-    if (posts && flyers) {
-      const postItems = posts.map((post) => ({ type: "post" as const, data: post }))
-      const flyerItems = flyers.map((flyer) => ({ type: "flyer" as const, data: flyer }))
+    if (postsWithRoleConfig && flyersWithRoleConfig) {
+      const postItems = postsWithRoleConfig.map((post) => ({ type: "post" as const, data: post }))
+      const flyerItems = flyersWithRoleConfig.map((flyer) => ({ type: "flyer" as const, data: flyer }))
       setCombinedItems([...postItems, ...flyerItems])
     }
-  }, [posts, flyers])
+  }, [postsWithRoleConfig, flyersWithRoleConfig])
 
   // Set up carousel API
   useEffect(() => {
@@ -117,9 +127,9 @@ export function PostList({ className }: { className?: string }) {
               <div>
                 <CardContent className="p-6">
                   {item.type === "post" ? (
-                    <PostContent post={item.data as Post} isActive={index === current} />
+                    <PostContent post={item.data as SafePost} isActive={index === current} />
                   ) : (
-                    <FlyerContent flyer={item.data as Flyer} />
+                    <FlyerContent flyer={item.data as SafeFlyer} />
                   )}
                 </CardContent>
               </div>
@@ -145,7 +155,7 @@ export function PostList({ className }: { className?: string }) {
   )
 }
 
-function PostContent({ post, isActive }: { post: Post; isActive: boolean }) {
+function PostContent({ post, isActive }: { post: SafePost; isActive: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollSpeed, setScrollSpeed] = useState(1); // Pixels por movimento
 
@@ -194,7 +204,10 @@ function PostContent({ post, isActive }: { post: Post; isActive: boolean }) {
           <div>
             <p className="text-lg font-medium text-foreground flex items-center">
               {post.author.firstName}{" "}
-              {post.author.role === "ADMIN" ? (
+              {post.author.role_config && 
+               typeof post.author.role_config === 'object' && 
+               'sudo' in post.author.role_config && 
+               post.author.role_config.sudo ? (
                 <LucideVerified className="ml-2 text-blue-500 size-6" />
               ) : (
                 <LucideLink className="-rotate-45 ml-2 size-4 text-muted-foreground" />
@@ -232,19 +245,19 @@ function PostContent({ post, isActive }: { post: Post; isActive: boolean }) {
 
 
 
-function FlyerContent({ flyer }: { flyer: Flyer }) {
+function FlyerContent({ flyer }: { flyer: SafeFlyer }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Avatar className="size-12">
-            <AvatarImage src={flyer.author.imageUrl ?? undefined} />
-            <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={(flyer.author as { imageUrl?: string | null }).imageUrl ?? undefined} />
+            <AvatarFallback>{(flyer.author as { firstName?: string | null }).firstName?.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div>
             <p className="text-lg font-medium text-foreground flex items-center">
-              {flyer.author.firstName}{" "}
-              {flyer.author.role === "ADMIN" ? (
+              {(flyer.author as { firstName?: string | null }).firstName}{" "}
+              {(flyer.author as { role_config?: RolesConfig }).role_config?.sudo ? (
                 <LucideVerified className="ml-2 text-blue-500 size-6" />
               ) : (
                 <LucideLink className="-rotate-45 ml-2 size-4 text-muted-foreground" />

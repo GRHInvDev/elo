@@ -16,7 +16,7 @@ export default async function RentVehiclePage({
     redirect(`/sign-in?redirect_url=/vehicles/${id}/rent`)
   }
 
-  const vehicle = await api.vehicle.getById({ id }).catch(() => null)
+  const vehicle = await api.vehicle.getById(id).catch(() => null)
 
   if (!vehicle) {
     notFound()

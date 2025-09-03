@@ -1,4 +1,9 @@
-import { NotificationService } from './notification-service'
+import { createCaller } from '@/server/api/root'
+import { createTRPCContext } from '@/server/api/trpc'
+import { headers } from 'next/headers'
+import type { RolesConfig } from '@/types/role-config'
+import { db } from '@/server/db'
+import { cache } from 'react'
 
 // Flag para habilitar/desabilitar notificações globalmente
 export const NOTIFICATIONS_ENABLED = process.env.NEXT_PUBLIC_NOTIFICATIONS_ENABLED === 'true'
@@ -34,6 +39,55 @@ export const NOTIFICATION_CONFIG = {
   }
 } as const
 
+// Criar caller para notificações
+const createNotificationCaller = cache(async () => {
+  try {
+    const heads = new Headers(await headers());
+    heads.set("x-trpc-source", "rsc");
+
+    const context = await createTRPCContext({
+      headers: heads,
+    });
+
+    return createCaller(context);
+  } catch {
+    // Fallback para contexto sem headers (quando usado fora de RSC)
+    const context = await createTRPCContext({
+      headers: new Headers(),
+    });
+    return createCaller(context);
+  }
+});
+
+// Função auxiliar para verificar se o usuário pode receber notificações
+async function canReceiveNotifications(userId: string): Promise<boolean> {
+  try {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { role_config: true }
+    })
+    const roleConfig = user?.role_config as RolesConfig | null
+    
+    // Se é sudo ou não é totem, pode receber notificações
+    return !!roleConfig?.sudo || !roleConfig?.isTotem
+  } catch {
+    return false
+  }
+}
+
+// Função auxiliar para filtrar usuários que podem receber notificações
+async function filterUsersForNotifications(userIds: string[]): Promise<string[]> {
+  const validUsers: string[] = []
+  
+  for (const userId of userIds) {
+    if (await canReceiveNotifications(userId)) {
+      validUsers.push(userId)
+    }
+  }
+  
+  return validUsers
+}
+
 // Classe para gerenciar notificações de forma centralizada
 export class NotificationManager {
   private static instance: NotificationManager
@@ -66,7 +120,19 @@ export class NotificationManager {
   async notifySuggestionCreated(suggestionId: string, authorId: string, suggestionNumber: number) {
     if (this.isEventEnabled('suggestions', 'onCreate')) {
       try {
-        await NotificationService.notifySuggestionCreated(suggestionId, authorId, suggestionNumber)
+        if (!(await canReceiveNotifications(authorId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title: "Nova Ideia Criada",
+          message: `Sua Ideia #${suggestionNumber} foi criada com sucesso.`,
+          type: "INFO",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: suggestionId,
+          entityType: "suggestion",
+          actionUrl: `/suggestions/${suggestionId}`
+        })
         console.log('✅ Notificação de ideia criada enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de ideia criada:', error)
@@ -77,7 +143,19 @@ export class NotificationManager {
   async notifySuggestionUpdated(suggestionId: string, authorId: string, suggestionNumber: number) {
     if (this.isEventEnabled('suggestions', 'onUpdate')) {
       try {
-        await NotificationService.notifySuggestionUpdated(suggestionId, authorId, suggestionNumber)
+        if (!(await canReceiveNotifications(authorId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title: "Ideia Atualizada",
+          message: `Sua Ideia #${suggestionNumber} foi atualizada.`,
+          type: "INFO",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: suggestionId,
+          entityType: "suggestion",
+          actionUrl: `/suggestions/${suggestionId}`
+        })
         console.log('✅ Notificação de ideia atualizada enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de ideia atualizada:', error)
@@ -88,7 +166,19 @@ export class NotificationManager {
   async notifySuggestionApproved(suggestionId: string, authorId: string, suggestionNumber: number) {
     if (this.isEventEnabled('suggestions', 'onStatusChange')) {
       try {
-        await NotificationService.notifySuggestionApproved(suggestionId, authorId, suggestionNumber)
+        if (!(await canReceiveNotifications(authorId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title: "Ideia Aprovada",
+          message: `Sua Ideia #${suggestionNumber} foi aprovada!`,
+          type: "SUCCESS",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: suggestionId,
+          entityType: "suggestion",
+          actionUrl: `/suggestions/${suggestionId}`
+        })
         console.log('✅ Notificação de ideia aprovada enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de ideia aprovada:', error)
@@ -99,7 +189,19 @@ export class NotificationManager {
   async notifySuggestionRejected(suggestionId: string, authorId: string, suggestionNumber: number, reason?: string) {
     if (this.isEventEnabled('suggestions', 'onStatusChange')) {
       try {
-        await NotificationService.notifySuggestionRejected(suggestionId, authorId, suggestionNumber, reason)
+        if (!(await canReceiveNotifications(authorId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title: "Ideia Rejeitada",
+          message: `Sua Ideia #${suggestionNumber} foi rejeitada.${reason ? ` Motivo: ${reason}` : ''}`,
+          type: "WARNING",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: suggestionId,
+          entityType: "suggestion",
+          actionUrl: `/suggestions/${suggestionId}`
+        })
         console.log('✅ Notificação de ideia rejeitada enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de ideia rejeitada:', error)
@@ -110,7 +212,19 @@ export class NotificationManager {
   async notifyClassificationUpdated(suggestionId: string, authorId: string, suggestionNumber: number) {
     if (this.isEventEnabled('suggestions', 'onClassificationUpdate')) {
       try {
-        await NotificationService.notifyClassificationUpdated(suggestionId, authorId, suggestionNumber)
+        if (!(await canReceiveNotifications(authorId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title: "Classificação Atualizada",
+          message: `A classificação da sua Ideia #${suggestionNumber} foi atualizada.`,
+          type: "INFO",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: suggestionId,
+          entityType: "suggestion",
+          actionUrl: `/suggestions/${suggestionId}`
+        })
         console.log('✅ Notificação de classificação atualizada enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de classificação atualizada:', error)
@@ -121,7 +235,19 @@ export class NotificationManager {
   async notifyKpiAdded(suggestionId: string, authorId: string, kpiName: string) {
     if (this.isEventEnabled('suggestions', 'onKpiAdded')) {
       try {
-        await NotificationService.notifyKpiAdded(suggestionId, authorId, kpiName)
+        if (!(await canReceiveNotifications(authorId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title: "KPI Adicionado",
+          message: `O KPI "${kpiName}" foi adicionado à sua Ideia.`,
+          type: "INFO",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: suggestionId,
+          entityType: "suggestion",
+          actionUrl: `/suggestions/${suggestionId}`
+        })
         console.log('✅ Notificação de KPI adicionado enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de KPI adicionado:', error)
@@ -133,11 +259,18 @@ export class NotificationManager {
   async notifyKpiCreated(kpiId: string, authorId: string, kpiName: string) {
     if (this.isEventEnabled('kpis', 'onCreate')) {
       try {
-        await NotificationService.notifySuccess(
-          authorId,
-          'KPI Criado',
-          `O KPI "${kpiName}" foi criado com sucesso.`
-        )
+        if (!(await canReceiveNotifications(authorId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title: "KPI Criado",
+          message: `O KPI "${kpiName}" foi criado com sucesso.`,
+          type: "SUCCESS",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: kpiId,
+          entityType: "kpi"
+        })
         console.log('✅ Notificação de KPI criado enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de KPI criado:', error)
@@ -149,8 +282,26 @@ export class NotificationManager {
   async notifySystemMaintenance(userIds: string[], message: string) {
     if (this.isEventEnabled('system', 'onMaintenance')) {
       try {
-        await NotificationService.notifySystemMaintenance(userIds, message)
-        console.log('✅ Notificação de manutenção enviada para', userIds.length, 'usuários')
+        const validUsers = await filterUsersForNotifications(userIds)
+        if (validUsers.length === 0) return
+        
+        const notifications = validUsers.map(userId => ({
+          title: 'Manutenção do Sistema',
+          message,
+          type: 'SYSTEM_MAINTENANCE' as const,
+          channel: 'IN_APP' as const,
+          userId,
+          entityType: 'system' as const
+        }))
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.createBulk({ 
+          title: 'Manutenção do Sistema',
+          message,
+          userIds: validUsers,
+          notifications 
+        })
+        console.log('✅ Notificação de manutenção enviada para', validUsers.length, 'usuários')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de manutenção:', error)
       }
@@ -160,7 +311,17 @@ export class NotificationManager {
   async notifySystemError(userId: string, title: string, message: string) {
     if (this.isEventEnabled('system', 'onError')) {
       try {
-        await NotificationService.notifyError(userId, title, message)
+        if (!(await canReceiveNotifications(userId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title,
+          message,
+          type: "ERROR",
+          channel: "IN_APP",
+          userId,
+          entityType: "system"
+        })
         console.log('✅ Notificação de erro enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de erro:', error)
@@ -171,7 +332,17 @@ export class NotificationManager {
   async notifySystemWarning(userId: string, title: string, message: string) {
     if (this.isEventEnabled('system', 'onWarning')) {
       try {
-        await NotificationService.notifyWarning(userId, title, message)
+        if (!(await canReceiveNotifications(userId))) return
+        
+        const caller = await createNotificationCaller();
+        await caller.notification.create({
+          title,
+          message,
+          type: "WARNING",
+          channel: "IN_APP",
+          userId,
+          entityType: "system"
+        })
         console.log('✅ Notificação de aviso enviada')
       } catch (error) {
         console.error('❌ Erro ao enviar notificação de aviso:', error)

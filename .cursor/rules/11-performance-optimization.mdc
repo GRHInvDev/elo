@@ -1,0 +1,377 @@
+---
+alwaysApply: true
+description: "Padrões para otimização de performance"
+---
+
+# Performance e Otimização
+
+## React.memo e useMemo
+```tsx
+// ✅ Bom: Memoização de componentes
+import { memo, useMemo } from "react"
+import { cn } from "@/lib/utils"
+
+interface UserCardProps {
+  user: User
+  onEdit?: (user: User) => void
+  className?: string
+}
+
+const UserCard = memo<UserCardProps>(({ user, onEdit, className }) => {
+  // Memoizar cálculos custosos
+  const displayName = useMemo(() => {
+    return user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user.email
+  }, [user.firstName, user.lastName, user.email])
+
+  const handleEdit = useMemo(() => {
+    return () => onEdit?.(user)
+  }, [onEdit, user])
+
+  return (
+    <div className={cn("p-4 border rounded-lg", className)}>
+      <h3 className="font-semibold">{displayName}</h3>
+      <p className="text-muted-foreground">{user.email}</p>
+      {onEdit && (
+        <Button onClick={handleEdit} size="sm">
+          Editar
+        </Button>
+      )}
+    </div>
+  )
+})
+
+UserCard.displayName = "UserCard"
+
+export { UserCard }
+```
+
+## useCallback para Funções
+```tsx
+// ✅ Bom: Uso correto de useCallback
+import { useCallback, useState } from "react"
+import { Button } from "@/components/ui/button"
+
+export function UserList({ users, onUserSelect }: UserListProps) {
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+
+  // ✅ Memoizar função passada como prop
+  const handleUserSelect = useCallback((userId: string) => {
+    setSelectedUserId(userId)
+    onUserSelect?.(userId)
+  }, [onUserSelect])
+
+  // ✅ Memoizar função de filtro
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => user.active)
+  }, [users])
+
+  return (
+    <div className="space-y-2">
+      {filteredUsers.map(user => (
+        <UserItem
+          key={user.id}
+          user={user}
+          isSelected={selectedUserId === user.id}
+          onSelect={handleUserSelect}
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+## Otimização de Listas
+```tsx
+// ✅ Bom: Virtualização para listas grandes
+import { FixedSizeList as List } from 'react-window'
+import { UserItem } from './UserItem'
+
+interface VirtualizedUserListProps {
+  users: User[]
+  height: number
+  itemHeight: number
+  onUserSelect: (userId: string) => void
+}
+
+export function VirtualizedUserList({
+  users,
+  height,
+  itemHeight,
+  onUserSelect
+}: VirtualizedUserListProps) {
+  const ItemRenderer = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const user = users[index]
+
+    return (
+      <div style={style}>
+        <UserItem
+          user={user}
+          onSelect={onUserSelect}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <List
+      height={height}
+      itemCount={users.length}
+      itemSize={itemHeight}
+      width="100%"
+    >
+      {ItemRenderer}
+    </List>
+  )
+}
+```
+
+## Lazy Loading e Code Splitting
+```tsx
+// ✅ Bom: Lazy loading de componentes
+import { lazy, Suspense } from "react"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+
+// Lazy load de páginas
+const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"))
+const UserManagement = lazy(() => import("@/pages/admin/UserManagement"))
+
+// Lazy load de componentes pesados
+const HeavyChart = lazy(() => import("@/components/charts/HeavyChart"))
+
+function AdminPage() {
+  const [currentTab, setCurrentTab] = useState('dashboard')
+
+  return (
+    <div>
+      <Tabs value={currentTab} onValueChange={setCurrentTab}>
+        <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="charts">Relatórios</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard">
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminDashboard />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="users">
+          <Suspense fallback={<LoadingSpinner />}>
+            <UserManagement />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="charts">
+          <Suspense fallback={<LoadingSpinner />}>
+            <HeavyChart />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+// ✅ Bom: Lazy loading dinâmico
+function DynamicImportExample() {
+  const [Component, setComponent] = useState<React.ComponentType | null>(null)
+
+  const loadComponent = async () => {
+    const { default: LoadedComponent } = await import('./HeavyComponent')
+    setComponent(() => LoadedComponent)
+  }
+
+  return (
+    <div>
+      <Button onClick={loadComponent}>
+        Carregar Componente Pesado
+      </Button>
+
+      {Component && (
+        <Suspense fallback={<LoadingSpinner />}>
+          <Component />
+        </Suspense>
+      )}
+    </div>
+  )
+}
+```
+
+## Otimização de Imagens
+```tsx
+// ✅ Bom: Uso otimizado do Next.js Image
+import Image from "next/image"
+
+interface OptimizedImageProps {
+  src: string
+  alt: string
+  width?: number
+  height?: number
+  className?: string
+  priority?: boolean
+}
+
+export function OptimizedImage({
+  src,
+  alt,
+  width = 400,
+  height = 300,
+  className,
+  priority = false
+}: OptimizedImageProps) {
+  return (
+    <div className={cn("relative overflow-hidden", className)}>
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className="object-cover transition-transform hover:scale-105"
+        placeholder="blur"
+        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ..."
+        priority={priority}
+        loading={priority ? "eager" : "lazy"}
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+    </div>
+  )
+}
+```
+
+## Otimização de Queries (tRPC)
+```typescript
+// ✅ Bom: Queries otimizadas
+import { api } from "@/trpc/react"
+
+function UserDashboard() {
+  // ✅ Query com select específico
+  const { data: userStats } = api.user.getStats.useQuery(undefined, {
+    select: (data) => ({
+      totalUsers: data.totalUsers,
+      activeUsers: data.activeUsers,
+      // Não incluir dados desnecessários
+    })
+  })
+
+  // ✅ Query com staleTime para cache
+  const { data: recentPosts } = api.post.getRecent.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    cacheTime: 10 * 60 * 1000, // 10 minutos
+  })
+
+  // ✅ Prefetch de dados relacionados
+  const queryClient = api.useContext()
+
+  const handleViewUser = (userId: string) => {
+    // Prefetch dados do usuário
+    queryClient.user.getById.prefetch({ id: userId })
+  }
+
+  return (
+    <div>
+      <StatsCards stats={userStats} />
+      <RecentPosts posts={recentPosts} onViewUser={handleViewUser} />
+    </div>
+  )
+}
+```
+
+## Debounce e Throttle
+```typescript
+// ✅ Bom: Debounce para busca
+import { useDebounce } from "@/hooks/useDebounce"
+
+function SearchComponent() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
+
+  const { data: searchResults } = api.search.useQuery(
+    { query: debouncedSearchTerm },
+    { enabled: debouncedSearchTerm.length > 2 }
+  )
+
+  return (
+    <div>
+      <Input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="Buscar..."
+      />
+
+      {searchResults?.map(result => (
+        <SearchResult key={result.id} result={result} />
+      ))}
+    </div>
+  )
+}
+
+// ✅ Bom: Throttle para scroll
+import { useThrottle } from "@/hooks/useThrottle"
+
+function InfiniteScrollList({ onLoadMore }: InfiniteScrollListProps) {
+  const throttledLoadMore = useThrottle(onLoadMore, 200)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
+        throttledLoadMore()
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [throttledLoadMore])
+
+  // ... resto do componente
+}
+```
+
+## Bundle Analysis
+```typescript
+// ✅ Bom: Análise de bundle
+// next.config.js
+module.exports = {
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Análise de bundle em desenvolvimento
+    if (!dev && !isServer) {
+      config.plugins.push(
+        new webpack.DefinePlugin({
+          __BUNDLE_ANALYZE__: JSON.stringify(process.env.ANALYZE === 'true')
+        })
+      )
+    }
+
+    return config
+  },
+
+  // Otimizações de build
+  swcMinify: true,
+  experimental: {
+    optimizePackageImports: ['@mantine/core', '@mantine/hooks'],
+    optimizeCss: true
+  }
+}
+
+// package.json scripts
+{
+  "scripts": {
+    "analyze": "ANALYZE=true next build",
+    "analyze:server": "webpack-bundle-analyzer .next/static/chunks/*.js"
+  }
+}
+```
+
+## Regras de Performance
+- Use `React.memo` para componentes que re-renderizam frequentemente
+- Memoize cálculos custosos com `useMemo`
+- Use `useCallback` para funções passadas como props
+- Implemente virtualização para listas grandes
+- Use lazy loading para componentes pesados
+- Otimize imagens com Next.js Image
+- Configure cache apropriado para queries
+- Use debounce/throttle para operações custosas
+- Monitore bundle size e otimize imports
+- Implemente loading states e skeletons
+- Use `React.Profiler` para identificar gargalos

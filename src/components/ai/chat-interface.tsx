@@ -35,6 +35,7 @@ export default function ChatInterface() {
     }
   }  
   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const onSubmit = (e: UIMessage) => {
     const newMessages = messages.concat([e])
     saveMessagesToStorage(newMessages)

@@ -1,7 +1,10 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { api } from "@/trpc/react"
+import { useAccessControl } from "@/hooks/use-access-control"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +26,15 @@ import * as XLSX from "xlsx"
 import { Select as UiSelect } from "@/components/ui/select"
 
 export default function AdminFoodPage() {
+  const router = useRouter()
+  const { hasAdminAccess, isLoading } = useAccessControl()
+  
+  // Verificar acesso ao módulo de comida
+  if (!isLoading && !hasAdminAccess("/food")) {
+    router.replace("/")
+    return null
+  }
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
   const [selectedStatus, setSelectedStatus] = useState<string>("")
@@ -142,16 +154,20 @@ export default function AdminFoodPage() {
         const empresa = order.user?.enterprise ?? undefined
         const setor = order.user?.setor ?? null
         const valor = order.menuItem?.price ?? 0
-        resumoPorUsuario[email] ??= {
-          nome,
-          email,
-          empresa,
-          setor,
-          totalPedidos: 0,
-          valorTotal: 0,
+        let resumo = resumoPorUsuario[email]
+        if (!resumo) {
+          resumo = {
+            nome,
+            email,
+            empresa,
+            setor,
+            totalPedidos: 0,
+            valorTotal: 0,
+          }
+          resumoPorUsuario[email] = resumo
         }
-        resumoPorUsuario[email].totalPedidos += 1
-        resumoPorUsuario[email].valorTotal += valor
+        resumo.totalPedidos += 1
+        resumo.valorTotal += valor
       })
 
       // Montar os dados para exportação

@@ -1,0 +1,61 @@
+---
+alwaysApply: true
+description: "Estrutura de arquivos e padrões de importação"
+---
+
+# Estrutura de Arquivos e Imports
+
+## Sistema de Alias
+```typescript
+// ✅ Sempre use aliases do TypeScript
+import { Button } from "@/components/ui/button"
+import { api } from "@/trpc/react"
+import { cn } from "@/lib/utils"
+import type { User } from "@/types/user"
+
+// ❌ Evite caminhos relativos longos
+import { Button } from "../../../components/ui/button"
+```
+
+## Organização de Imports
+```typescript
+// 1. Imports do React
+import { useState, useEffect } from "react"
+
+// 2. Imports de bibliotecas externas (ordenados alfabeticamente)
+import { format } from "date-fns"
+import { zodResolver } from "@hookform/resolvers/zod"
+
+// 3. Imports internos (ordenados por alias)
+import { Button } from "@/components/ui/button"
+import { api } from "@/trpc/react"
+import { cn } from "@/lib/utils"
+
+// 4. Imports de tipos
+import type { User, UserRole } from "@/types/user"
+
+// 5. Imports de assets
+import logo from "@/public/logo.svg"
+```
+
+## Estrutura de Diretórios
+```
+src/
+├── app/           # Páginas Next.js (App Router)
+├── components/    # Componentes React
+│   ├── ui/       # Componentes base (shadcn/ui)
+│   ├── forms/    # Componentes de formulários
+│   └── [module]/ # Componentes específicos do módulo
+├── hooks/        # Custom hooks
+├── lib/          # Utilitários e configurações
+├── server/       # Lógica do servidor e API
+├── types/        # Definições de tipos
+└── schemas/      # Schemas Zod e validações
+```
+
+## Convenções de Nomenclatura
+- **Arquivos**: kebab-case (ex: `user-profile.tsx`)
+- **Componentes**: PascalCase (ex: `UserProfile`)
+- **Funções/Hooks**: camelCase (ex: `useUserProfile`)
+- **Tipos/Interfaces**: PascalCase (ex: `UserProfileData`)
+- **Constantes**: SCREAMING_SNAKE_CASE (ex: `DEFAULT_PAGE_SIZE`)

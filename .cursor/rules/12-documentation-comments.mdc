@@ -1,0 +1,357 @@
+---
+alwaysApply: true
+description: "Padrões para documentação e comentários no código"
+---
+
+# Documentação e Comentários
+
+## JSDoc para Funções e Componentes
+```typescript
+/**
+ * Hook personalizado para gerenciar estado de formulários complexos
+ * @param initialData - Dados iniciais do formulário
+ * @param validationSchema - Schema de validação Zod
+ * @returns Objeto com estado e funções do formulário
+ *
+ * @example
+ * ```tsx
+ * const { data, errors, setValue, validate } = useFormState({
+ *   name: '',
+ *   email: ''
+ * }, userSchema)
+ * ```
+ */
+export function useFormState<T extends Record<string, any>>(
+  initialData: T,
+  validationSchema?: z.ZodSchema<T>
+): FormStateReturn<T> {
+  // implementação
+}
+
+/**
+ * Componente de cartão de usuário com ações
+ * @param user - Dados do usuário
+ * @param onEdit - Callback chamado ao editar usuário
+ * @param onDelete - Callback chamado ao deletar usuário
+ * @param className - Classes CSS adicionais
+ */
+interface UserCardProps {
+  user: User
+  onEdit?: (user: User) => void
+  onDelete?: (user: User) => void
+  className?: string
+}
+
+export function UserCard({ user, onEdit, onDelete, className }: UserCardProps) {
+  // implementação
+}
+```
+
+## Comentários Inline
+```typescript
+// ✅ Bom: Comentários explicativos
+export function calculateUserScore(user: User): number {
+  let score = 0
+
+  // Pontuação base por atividade
+  score += user.postsCount * 2
+
+  // Bônus por comentários construtivos
+  score += user.helpfulCommentsCount * 1.5
+
+  // Penalização por reports negativos
+  score -= user.reportsCount * 5
+
+  // Garantir score mínimo de 0
+  return Math.max(0, score)
+}
+
+// ❌ Ruim: Comentários óbvios
+export function calculateUserScore(user: User): number {
+  let score = 0
+
+  // Adicionar score
+  score += user.postsCount * 2
+
+  // Adicionar mais score
+  score += user.helpfulCommentsCount * 1.5
+
+  // Subtrair score
+  score -= user.reportsCount * 5
+
+  // Retornar score
+  return Math.max(0, score)
+}
+```
+
+## README e Documentação
+```markdown
+<!-- README.md -->
+# ELO - Sistema de Gestão Empresarial
+
+Sistema completo para gestão de usuários, eventos, veículos e muito mais.
+
+## 🚀 Funcionalidades
+
+- **Gestão de Usuários**: Cadastro, edição e controle de acesso granular
+- **Sistema de Eventos**: Criação e gerenciamento de eventos corporativos
+- **Controle de Veículos**: Aluguel e gestão da frota
+- **Sistema de Notificações**: Notificações em tempo real
+- **Módulo de Alimentação**: Pedidos e gestão de restaurantes
+
+## 🛠️ Tecnologias
+
+- **Frontend**: Next.js 15, React 18, TypeScript
+- **Backend**: tRPC, Prisma, PostgreSQL
+- **Autenticação**: Clerk
+- **UI**: Tailwind CSS, shadcn/ui
+- **Deploy**: Vercel
+
+## 📁 Estrutura do Projeto
+
+```
+src/
+├── app/              # Páginas Next.js (App Router)
+├── components/       # Componentes React reutilizáveis
+├── hooks/           # Hooks customizados
+├── lib/             # Utilitários e configurações
+├── server/          # API e lógica do servidor
+├── types/           # Definições de tipos TypeScript
+├── schemas/         # Schemas Zod para validação
+└── trpc/            # Configuração do tRPC
+```
+
+## 🚀 Instalação e Execução
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/seu-usuario/elo.git
+   cd elo
+   ```
+
+2. **Instale as dependências**
+   ```bash
+   pnpm install
+   ```
+
+3. **Configure as variáveis de ambiente**
+   ```bash
+   cp .env.example .env.local
+   ```
+
+4. **Execute as migrações do banco**
+   ```bash
+   pnpm db:migrate
+   ```
+
+5. **Inicie o servidor de desenvolvimento**
+   ```bash
+   pnpm dev
+   ```
+
+## 📚 Scripts Disponíveis
+
+- `pnpm dev` - Inicia o servidor de desenvolvimento
+- `pnpm build` - Build para produção
+- `pnpm start` - Inicia o servidor de produção
+- `pnpm lint` - Executa o linter
+- `pnpm typecheck` - Verifica tipos TypeScript
+- `pnpm db:generate` - Gera cliente Prisma
+- `pnpm db:migrate` - Executa migrações
+- `pnpm db:studio` - Abre Prisma Studio
+
+## 🔧 Configuração
+
+### Variáveis de Ambiente
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/elo"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key
+CLERK_SECRET_KEY=your_clerk_secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### Configuração do Banco de Dados
+
+O projeto utiliza PostgreSQL como banco de dados principal. As migrações são gerenciadas pelo Prisma.
+
+## 🧪 Testes
+
+```bash
+# Executar todos os testes
+pnpm test
+
+# Executar testes com cobertura
+pnpm test:coverage
+
+# Executar testes em modo watch
+pnpm test:watch
+```
+
+## 📖 Documentação Adicional
+
+- [Arquitetura do Sistema](docs/02-Arquitetura/README.md)
+- [API tRPC](docs/04-API/trpc.md)
+- [Padrões de Desenvolvimento](docs/06-Desenvolvimento/padroes.md)
+- [Guia de Deploy](docs/07-Deploy/README.md)
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+```
+
+## Documentação de API
+```typescript
+// server/api/routers/user.ts
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
+import { z } from "zod"
+
+/**
+ * Router para operações relacionadas a usuários
+ *
+ * Este router fornece endpoints para:
+ * - Buscar usuários
+ * - Criar novos usuários
+ * - Atualizar dados de usuários
+ * - Gerenciar permissões
+ */
+export const userRouter = createTRPCRouter({
+  /**
+   * Busca um usuário pelo ID
+   *
+   * @param id - ID único do usuário
+   * @returns Dados completos do usuário
+   * @throws NOT_FOUND se o usuário não existir
+   * @throws FORBIDDEN se não tiver permissão
+   *
+   * @example
+   * ```typescript
+   * const user = await api.user.getById.query({ id: "user-123" })
+   * ```
+   */
+  getById: protectedProcedure
+    .input(z.object({
+      id: z.string().cuid("ID inválido")
+    }))
+    .query(async ({ ctx, input }) => {
+      // implementação
+    }),
+
+  /**
+   * Lista usuários com paginação e filtros
+   *
+   * @param limit - Número máximo de resultados (padrão: 20)
+   * @param offset - Número de resultados para pular (padrão: 0)
+   * @param search - Termo de busca por nome ou email
+   * @param enterprise - Filtro por empresa
+   * @returns Lista paginada de usuários
+   *
+   * @example
+   * ```typescript
+   * const users = await api.user.list.query({
+   *   limit: 10,
+   *   search: "João",
+   *   enterprise: "BOX"
+   * })
+   * ```
+   */
+  list: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(20),
+      offset: z.number().min(0).default(0),
+      search: z.string().optional(),
+      enterprise: z.nativeEnum(Enterprise).optional()
+    }))
+    .query(async ({ ctx, input }) => {
+      // implementação
+    })
+})
+```
+
+## TODO Comments
+```typescript
+// ✅ Bom: TODOs estruturados
+// TODO: Implementar cache Redis para melhorar performance
+// TODO: Adicionar testes de integração para fluxo de checkout
+// FIXME: Corrigir cálculo de frete para regiões Norte/Nordeste
+// HACK: Workaround temporário para compatibilidade IE11
+
+export function calculateShipping(user: User, items: CartItem[]) {
+  // FIXME: Esta fórmula está incorreta para regiões específicas
+  const baseRate = 10
+  const itemRate = items.length * 2
+
+  // TODO: Implementar tabela de fretes por CEP
+  return baseRate + itemRate
+}
+```
+
+## Changelog
+```markdown
+<!-- CHANGELOG.md -->
+# Changelog
+
+Todas as mudanças significativas neste projeto serão documentadas neste arquivo.
+
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
+e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
+
+## [Não lançado]
+
+### Adicionado
+- Sistema de notificações em tempo real
+- Módulo de gestão de veículos
+- Dashboard administrativo com métricas
+
+### Alterado
+- Migração do sistema de roles para configuração granular
+- Atualização da interface para shadcn/ui v2
+
+### Corrigido
+- Validação de formulários em dispositivos móveis
+- Cache de imagens no módulo de eventos
+
+## [1.4.0] - 2024-01-15
+
+### Adicionado
+- Suporte a múltiplas empresas (Box, RHenz, Cristallux)
+- Sistema de pedidos de alimentação
+- Integração com Google Calendar para eventos
+
+### Alterado
+- Reestruturação da arquitetura para microserviços
+- Atualização do Next.js para v15
+
+### Removido
+- Dependência legacy do Moment.js (substituído por date-fns)
+
+## [1.3.1] - 2023-12-01
+
+### Corrigido
+- Correção crítica de segurança no upload de arquivos
+- Fix de memory leak no componente de calendário
+- Validação de permissões em endpoints de API
+
+### Segurança
+- Atualização de dependências vulneráveis
+- Implementação de rate limiting
+- Sanitização de inputs HTML
+```
+
+## Regras para Documentação
+- Use JSDoc para todas as funções públicas e componentes
+- Documente props de componentes com comentários inline
+- Mantenha README atualizado com informações essenciais
+- Use TODO/FIXME para marcar itens pendentes
+- Documente decisões arquiteturais importantes
+- Mantenha changelog detalhado
+- Use exemplos práticos em documentação
+- Documente APIs com OpenAPI/Swagger quando aplicável

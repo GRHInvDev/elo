@@ -2,10 +2,11 @@ import { api } from "@/trpc/server"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { FormBuilderWithSave } from "@/components/forms/form-builder-with-save"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
+import { canCreateForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Editar Formulário",
@@ -20,7 +21,13 @@ interface EditFormPageProps {
 
 export default async function EditFormPage({ params }: EditFormPageProps) {
   const { id } = await params;
-  const form = await api.form.getById({id})
+  const form = await api.form.getById(id)
+  const userData = await api.user.me()
+
+  // Verificar se o usuário tem permissão para editar formulários
+  if (!canCreateForm(userData.role_config)) {
+    redirect("/forms")
+  }
   
   if (!form) {
     notFound()

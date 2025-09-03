@@ -13,7 +13,7 @@ model User {
   firstName        String?
   lastName         String?
   imageUrl         String?
-  role             UserRole           @default(USER)
+  role_config      Json?              // Configuração granular de roles
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   enterprise       Enterprise         @default(NA)
@@ -388,19 +388,13 @@ model OrderLog {
   @@map("order_logs")
 }
 
-enum UserRole {
-  ADMIN
-  USER
-  TOTEM
-}
+
 
 enum Enterprise {
   NA
   Box
   RHenz
   Cristallux
-  Box_Distribuidor          @map("Box Distribuidor")
-  Box_Distribuidor___Filial @map("Box Distribuidor - Filial")
   Box_Filial                
 }
 
@@ -586,6 +580,13 @@ model NotificationPreference {
   birthdayNotifications Boolean           @default(true)
   soundEnabled         Boolean            @default(true)
   popupEnabled         Boolean            @default(true)
+  // Tipos específicos de notificação
+  successNotifications Boolean            @default(true)
+  errorNotifications   Boolean            @default(true)
+  warningNotifications Boolean            @default(true)
+  suggestionNotifications Boolean         @default(true)
+  kpiNotifications     Boolean            @default(true)
+  maintenanceNotifications Boolean        @default(true)
 
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 

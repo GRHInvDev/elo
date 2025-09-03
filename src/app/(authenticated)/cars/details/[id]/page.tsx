@@ -18,7 +18,7 @@ export default async function VehicleDetailsPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const vehicle = await api.vehicle.getById({ id })
+  const vehicle = await api.vehicle.getById(id)
 
   if (!vehicle) {
     notFound()

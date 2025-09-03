@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { UPLTButton } from "./ui/uplt-button"
+import { useAccessControl } from "@/hooks/use-access-control"
 
 export function CreateFlyerButton() {
   // Estados para cada campo do formulário
@@ -27,15 +28,16 @@ export function CreateFlyerButton() {
   const [description, setDescription] = useState("")
   const [iframe, setIframe] = useState("")
   const [fileUrl, setFileUrl] = useState("")
-  
+
   // Estados de UI
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [imageUploaded, setImageUploaded] = useState(false)
-  
+
   const { toast } = useToast()
   const utils = api.useUtils()
   const sendRef = useRef<(() => Promise<void>) | undefined>()
+  const { canCreateFlyer } = useAccessControl()
 
   const createFlyer = api.flyer.create.useMutation({
     onSuccess: async () => {
@@ -167,6 +169,10 @@ export function CreateFlyerButton() {
 
   // Verificar se o formulário está pronto para envio
   const isFormValid = title && description && (imageUploaded || fileUrl)
+
+  if (!canCreateFlyer()) {
+    return null
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>

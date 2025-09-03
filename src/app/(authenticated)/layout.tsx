@@ -4,19 +4,16 @@ import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
-import { NotificationPopupManager } from "@/components/notifications/notification-popup"
-import { GlobalNotificationManager } from "@/components/notifications/global-notification-manager"
 import { routeItems } from "@/const/routes"
 import Link from "next/link"
 import { api } from "@/trpc/server"
-
-import { UserRole } from "@prisma/client"
 
 export default async function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Usar a API simplificada
   const user = await api.user.me()
 
   return (
@@ -34,7 +31,7 @@ export default async function AuthenticatedLayout({
             </div>
           </div>
           <div className="hidden md:flex w-full justify-around p-4 mt-4">
-            {routeItems(user?.role ?? UserRole.USER).map((r, i)=>(
+            {routeItems(user?.role_config).map((r, i)=>(
               <Link key={i} href={r.href} title={r.title} className="flex items-center gap-2 font-extralight">
                 <r.icon className="size-4"/>
                 <p className="hidden lg:block">{r.title}</p>
@@ -45,8 +42,6 @@ export default async function AuthenticatedLayout({
       </header>
       <main className="flex-1 md:mt-32 mt-16">{children}      </main>
       <FloatingChatButton/>
-      <GlobalNotificationManager />
-      <NotificationPopupManager />
     </div>
   )
 }

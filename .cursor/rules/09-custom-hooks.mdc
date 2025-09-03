@@ -1,0 +1,324 @@
+---
+alwaysApply: true
+description: "Padrões para criação de hooks customizados"
+---
+
+# Custom Hooks
+
+## Estrutura Básica
+```typescript
+// ✅ Bom: Hook bem estruturado
+import { useState, useEffect, useCallback } from "react"
+import { api } from "@/trpc/react"
+
+interface UseDataOptions {
+  enabled?: boolean
+  refetchInterval?: number
+  onSuccess?: (data: DataType) => void
+  onError?: (error: Error) => void
+}
+
+interface UseDataReturn {
+  data: DataType | undefined
+  isLoading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+  isRefetching: boolean
+}
+
+export function useData(id?: string, options: UseDataOptions = {}): UseDataReturn {
+  const {
+    enabled = true,
+    refetchInterval,
+    onSuccess,
+    onError
+  } = options
+
+  const [localData, setLocalData] = useState<DataType | undefined>()
+
+  // Query principal
+  const query = api.data.getById.useQuery(
+    { id: id! },
+    {
+      enabled: enabled && !!id,
+      refetchInterval,
+      onSuccess: (data) => {
+        setLocalData(data)
+        onSuccess?.(data)
+      },
+      onError
+    }
+  )
+
+  // Função de refetch customizada
+  const refetch = useCallback(async () => {
+    try {
+      await query.refetch()
+    } catch (error) {
+      onError?.(error as Error)
+    }
+  }, [query, onError])
+
+  return {
+    data: localData ?? query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch,
+    isRefetching: query.isRefetching
+  }
+}
+```
+
+## Hook de Controle de Estado Complexo
+```typescript
+// ✅ Bom: Hook para formulários complexos
+import { useReducer, useCallback } from "react"
+
+interface FormState {
+  data: Record<string, any>
+  errors: Record<string, string>
+  touched: Record<string, boolean>
+  isSubmitting: boolean
+  isValid: boolean
+}
+
+type FormAction =
+  | { type: 'SET_VALUE'; field: string; value: any }
+  | { type: 'SET_ERROR'; field: string; error: string }
+  | { type: 'SET_TOUCHED'; field: string }
+  | { type: 'SET_SUBMITTING'; isSubmitting: boolean }
+  | { type: 'VALIDATE' }
+  | { type: 'RESET' }
+
+const initialState: FormState = {
+  data: {},
+  errors: {},
+  touched: {},
+  isSubmitting: false,
+  isValid: false
+}
+
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case 'SET_VALUE':
+      return {
+        ...state,
+        data: { ...state.data, [action.field]: action.value }
+      }
+
+    case 'SET_ERROR':
+      return {
+        ...state,
+        errors: { ...state.errors, [action.field]: action.error }
+      }
+
+    case 'SET_TOUCHED':
+      return {
+        ...state,
+        touched: { ...state.touched, [action.field]: true }
+      }
+
+    case 'SET_SUBMITTING':
+      return {
+        ...state,
+        isSubmitting: action.isSubmitting
+      }
+
+    case 'VALIDATE':
+      const isValid = Object.keys(state.errors).length === 0
+      return { ...state, isValid }
+
+    case 'RESET':
+      return initialState
+
+    default:
+      return state
+  }
+}
+
+export function useFormState(initialData: Record<string, any> = {}) {
+  const [state, dispatch] = useReducer(formReducer, {
+    ...initialState,
+    data: initialData
+  })
+
+  const setValue = useCallback((field: string, value: any) => {
+    dispatch({ type: 'SET_VALUE', field, value })
+  }, [])
+
+  const setError = useCallback((field: string, error: string) => {
+    dispatch({ type: 'SET_ERROR', field, error })
+  }, [])
+
+  const setTouched = useCallback((field: string) => {
+    dispatch({ type: 'SET_TOUCHED', field })
+  }, [])
+
+  const validate = useCallback(() => {
+    dispatch({ type: 'VALIDATE' })
+  }, [])
+
+  const reset = useCallback(() => {
+    dispatch({ type: 'RESET' })
+  }, [])
+
+  const setSubmitting = useCallback((isSubmitting: boolean) => {
+    dispatch({ type: 'SET_SUBMITTING', isSubmitting })
+  }, [])
+
+  return {
+    ...state,
+    setValue,
+    setError,
+    setTouched,
+    validate,
+    reset,
+    setSubmitting
+  }
+}
+```
+
+## Hook de Notificações
+```typescript
+// ✅ Bom: Hook para notificações
+import { useCallback } from "react"
+import { toast } from "sonner"
+import { api } from "@/trpc/react"
+
+type NotificationType = 'success' | 'error' | 'warning' | 'info'
+
+interface NotificationOptions {
+  title?: string
+  description?: string
+  duration?: number
+  action?: {
+    label: string
+    onClick: () => void
+  }
+}
+
+export function useNotifications() {
+  const createNotification = api.notification.create.useMutation()
+
+  const notify = useCallback(async (
+    type: NotificationType,
+    message: string,
+    options: NotificationOptions = {}
+  ) => {
+    const { title, description, duration = 5000, action } = options
+
+    // Toast local
+    const toastFn = {
+      success: toast.success,
+      error: toast.error,
+      warning: toast.warning,
+      info: toast.info
+    }[type]
+
+    toastFn(title || message, {
+      description,
+      duration,
+      action: action ? {
+        label: action.label,
+        onClick: action.onClick
+      } : undefined
+    })
+
+    // Notificação persistente (opcional)
+    if (type === 'error' || type === 'warning') {
+      try {
+        await createNotification.mutateAsync({
+          title: title || message,
+          message: description || '',
+          type: type.toUpperCase() as any
+        })
+      } catch (error) {
+        console.error('Erro ao criar notificação:', error)
+      }
+    }
+  }, [createNotification])
+
+  const success = useCallback((message: string, options?: NotificationOptions) => {
+    notify('success', message, options)
+  }, [notify])
+
+  const error = useCallback((message: string, options?: NotificationOptions) => {
+    notify('error', message, options)
+  }, [notify])
+
+  const warning = useCallback((message: string, options?: NotificationOptions) => {
+    notify('warning', message, options)
+  }, [notify])
+
+  const info = useCallback((message: string, options?: NotificationOptions) => {
+    notify('info', message, options)
+  }, [notify])
+
+  return {
+    notify,
+    success,
+    error,
+    warning,
+    info
+  }
+}
+```
+
+## Hook de Debounce
+```typescript
+// ✅ Bom: Hook de debounce reutilizável
+import { useState, useEffect, useRef } from "react"
+
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+
+// Hook para callbacks debounced
+export function useDebouncedCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+): T {
+  const timeoutRef = useRef<NodeJS.Timeout>()
+
+  const debouncedCallback = useCallback((...args: Parameters<T>) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      callback(...args)
+    }, delay)
+  }, [callback, delay])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
+  return debouncedCallback as T
+}
+```
+
+## Regras para Custom Hooks
+- Prefixe com `use` (ex: `useData`, `useForm`)
+- Retorne um objeto com propriedades descritivas
+- Use `useCallback` para funções retornadas
+- Documente parâmetros e retornos com JSDoc
+- Agrupe hooks relacionados em arquivos específicos
+- Teste hooks com `@testing-library/react-hooks`
+- Considere memoização quando apropriado

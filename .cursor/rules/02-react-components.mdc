@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+description: "Padrões para componentes React funcionais"
+---
+
+# Padrões de Componentes React
+
+## Estrutura Básica
+```tsx
+"use client" // Apenas quando necessário
+
+import { useState, useEffect } from "react"
+import { cn } from "@/lib/utils"
+
+interface ComponentNameProps {
+  // Props obrigatórias primeiro
+  requiredProp: string;
+  // Props opcionais depois
+  optionalProp?: number;
+  className?: string;
+}
+
+export function ComponentName({
+  requiredProp,
+  optionalProp,
+  className
+}: ComponentNameProps) {
+  // Estados no topo
+  const [state, setState] = useState(initialValue)
+
+  // Efeitos após estados
+  useEffect(() => {
+    // lógica do efeito
+  }, [dependencies])
+
+  // Funções do componente
+  const handleAction = () => {
+    // lógica da função
+  }
+
+  return (
+    <div className={cn("base-classes", className)}>
+      {/* JSX aqui */}
+    </div>
+  )
+}
+```
+
+## Regras Importantes
+- Use `React.forwardRef` para componentes que precisam de ref
+- Sempre defina `displayName` para componentes com forwardRef
+- Use `useCallback` para funções passadas como props
+- Use `useMemo` para cálculos custosos
+- Agrupe imports: React, bibliotecas externas, componentes internos, tipos, utils

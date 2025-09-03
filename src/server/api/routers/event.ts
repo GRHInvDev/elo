@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { canCreateEvent } from "@/lib/access-control"
+import type { RolesConfig } from "@/types/role-config"
 
 const createEventSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -13,12 +15,80 @@ const createEventSchema = z.object({
 
 export const eventRouter = createTRPCRouter({
   create: protectedProcedure.input(createEventSchema).mutation(async ({ ctx, input }) => {
-    return ctx.db.event.create({
+    // Verificar se o usuário tem permissão para criar eventos
+    const db_user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true },
+    })
+
+    if (!canCreateEvent(db_user?.role_config as RolesConfig)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para criar eventos",
+      })
+    }
+
+    const event = await ctx.db.event.create({
       data: {
         ...input,
         authorId: ctx.auth.userId,
       },
+      include: {
+        author: {
+          select: {
+            firstName: true,
+            lastName: true,
+          }
+        }
+      }
     })
+
+    // Criar notificações para usuários que têm permissão para criar eventos
+    try {
+      const usersWithEventAccess = await ctx.db.user.findMany({
+        where: {
+          id: { not: ctx.auth.userId }
+        },
+        select: {
+          id: true,
+          role_config: true
+        }
+      })
+
+      // Filtrar usuários que podem criar eventos
+      const usersToNotify = usersWithEventAccess.filter(user => {
+        if (!user.role_config) return false;
+
+        const roleConfig = user.role_config as RolesConfig;
+
+        // Se é sudo, tem acesso a tudo
+        if (roleConfig.sudo) return true;
+
+        // Verificar se pode criar eventos
+        return roleConfig.content?.can_create_event === true;
+      })
+
+      if (usersToNotify.length > 0) {
+        const notifications = usersToNotify.map(user => ({
+          title: "Novo Evento Criado",
+          message: `${event.author.firstName ?? 'Usuário'} criou um novo evento: "${event.title}"`,
+          type: "INFO" as const,
+          channel: "IN_APP" as const,
+          userId: user.id,
+          entityId: event.id,
+          entityType: "event",
+          actionUrl: `/events`
+        }))
+
+        await ctx.db.notification.createMany({
+          data: notifications
+        })
+      }
+    } catch (notificationError) {
+      console.error("Erro ao criar notificações de evento:", notificationError instanceof Error ? notificationError.message : notificationError)
+    }
+
+    return event
   }),
 
   update: protectedProcedure
@@ -66,7 +136,7 @@ export const eventRouter = createTRPCRouter({
             firstName: true,
             lastName: true,
             imageUrl: true,
-            role: true,
+            role_config: true,
           },
         },
       },

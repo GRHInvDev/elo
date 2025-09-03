@@ -1,7 +1,9 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { utapi } from "@/server/uploadthing";
+import { utapi } from "@/server/uploadthing"
+import { canCreateFlyer } from "@/lib/access-control";
+import type { RolesConfig } from "@/types/role-config"
 
 const createFlyerSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -13,12 +15,80 @@ const createFlyerSchema = z.object({
 
 export const flyerRouter = createTRPCRouter({
   create: protectedProcedure.input(createFlyerSchema).mutation(async ({ ctx, input }) => {
-    return ctx.db.flyer.create({
+    // Verificar se o usuário tem permissão para criar encartes
+    const db_user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true },
+    })
+
+    if (!canCreateFlyer(db_user?.role_config as RolesConfig)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para criar encartes",
+      })
+    }
+
+    const flyer = await ctx.db.flyer.create({
       data: {
         ...input,
         authorId: ctx.auth.userId,
       },
+      include: {
+        author: {
+          select: {
+            firstName: true,
+            lastName: true,
+          }
+        }
+      }
     })
+
+    // Criar notificações para usuários que têm permissão para criar encartes
+    try {
+      const usersWithFlyerAccess = await ctx.db.user.findMany({
+        where: {
+          id: { not: ctx.auth.userId }
+        },
+        select: {
+          id: true,
+          role_config: true
+        }
+      })
+
+      // Filtrar usuários que podem criar encartes
+      const usersToNotify = usersWithFlyerAccess.filter(user => {
+        if (!user.role_config) return false;
+
+        const roleConfig = user.role_config as RolesConfig;
+
+        // Se é sudo, tem acesso a tudo
+        if (roleConfig.sudo) return true;
+
+        // Verificar se pode criar encartes
+        return roleConfig.content?.can_create_flyer === true;
+      })
+
+      if (usersToNotify.length > 0) {
+        const notifications = usersToNotify.map(user => ({
+          title: "Novo Encarte Criado",
+          message: `${flyer.author.firstName ?? 'Usuário'} criou um novo encarte: "${flyer.title}"`,
+          type: "INFO" as const,
+          channel: "IN_APP" as const,
+          userId: user.id,
+          entityId: flyer.id,
+          entityType: "flyer",
+          actionUrl: `/flyers`
+        }))
+
+        await ctx.db.notification.createMany({
+          data: notifications
+        })
+      }
+    } catch (notificationError) {
+      console.error("Erro ao criar notificações de encarte:", notificationError instanceof Error ? notificationError.message : notificationError)
+    }
+
+    return flyer
   }),
 
   update: protectedProcedure
@@ -70,7 +140,7 @@ export const flyerRouter = createTRPCRouter({
             firstName: true,
             lastName: true,
             imageUrl: true,
-            role: true,
+            role_config: true,
           },
         },
       },

@@ -1,0 +1,41 @@
+---
+alwaysApply: true
+description: "Padrões de TypeScript e tipagem rigorosa"
+---
+
+# Padrões de TypeScript
+
+## Tipagem Estrita
+- Sempre use TypeScript com configurações rigorosas (`strict: true`)
+- Evite usar `any` - prefira tipos específicos ou `unknown`
+- Use `interface` para objetos e `type` para uniões/tipos utilitários
+- Sempre defina tipos de retorno explícitos para funções
+
+## Exemplos de Boas Práticas
+```typescript
+// ✅ Bom: Tipagem específica
+interface User {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
+type ApiResponse<T> = {
+  data: T;
+  error?: string;
+};
+
+// ❌ Ruim: Uso de any
+function processData(data: any): any {
+  return data;
+}
+```
+
+## Imports de Tipos
+```typescript
+// ✅ Bom: Import de tipos
+import type { User, ApiResponse } from '@/types/user';
+
+// ❌ Ruim: Import de valores quando só precisa de tipos
+import { User, ApiResponse } from '@/types/user';
+```

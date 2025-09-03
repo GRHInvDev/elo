@@ -105,7 +105,14 @@ export const notificationRouter = createTRPCRouter({
       entityType: z.string().optional(),
       actionUrl: z.string().url().optional(),
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      data: z.any().optional()
+      data: z.any().optional(),
+      notifications: z.array(z.object({
+        title: z.string().min(1).max(200),
+        message: z.string().min(1).max(1000),
+        type: z.nativeEnum(NotificationType).default(NotificationType.INFO),
+        channel: z.nativeEnum(NotificationChannel).default(NotificationChannel.IN_APP),
+        userId: z.string(),
+      }))
     }))
     .mutation(async ({ ctx, input }) => {
       const notifications = input.userIds.map(userId => ({
@@ -176,7 +183,13 @@ export const notificationRouter = createTRPCRouter({
       foodOrderNotifications: z.boolean().optional(),
       birthdayNotifications: z.boolean().optional(),
       soundEnabled: z.boolean().optional(),
-      popupEnabled: z.boolean().optional()
+      popupEnabled: z.boolean().optional(),
+      successNotifications: z.boolean().optional(),
+      errorNotifications: z.boolean().optional(),
+      warningNotifications: z.boolean().optional(),
+      suggestionNotifications: z.boolean().optional(),
+      kpiNotifications: z.boolean().optional(),
+      maintenanceNotifications: z.boolean().optional()
     }))
     .mutation(async ({ ctx, input }) => {
       return await ctx.db.notificationPreference.upsert({

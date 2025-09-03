@@ -1,0 +1,345 @@
+---
+alwaysApply: true
+description: "Padrões para testes e qualidade de código"
+---
+
+# Padrões de Testes
+
+## Estrutura de Testes
+```
+src/
+├── components/
+│   ├── Button.tsx
+│   ├── Button.test.tsx
+│   └── __tests__/
+│       └── Button/
+│           ├── Button.test.tsx
+│           ├── Button.spec.tsx
+│           └── __snapshots__/
+│               └── Button.test.tsx.snap
+├── hooks/
+│   ├── useNotifications.ts
+│   ├── useNotifications.test.ts
+│   └── __tests__/
+│       └── useNotifications/
+│           ├── index.test.ts
+│           └── utils.test.ts
+└── server/
+    ├── api/
+    │   ├── routers/
+    │   │   ├── user.ts
+    │   │   └── user.test.ts
+    │   └── trpc.ts
+    └── db/
+        ├── queries/
+        │   ├── getUser.ts
+        │   └── getUser.test.ts
+```
+
+## Testes de Componentes
+```typescript
+// ✅ Bom: Teste completo de componente
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { UserForm } from './UserForm'
+import { api } from '@/trpc/react'
+
+// Mock do tRPC
+jest.mock('@/trpc/react', () => ({
+  api: {
+    user: {
+      create: {
+        useMutation: jest.fn()
+      }
+    }
+  }
+}))
+
+const mockCreate = api.user.create.useMutation as jest.MockedFunction<any>
+
+describe('UserForm', () => {
+  let queryClient: QueryClient
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false }
+      }
+    })
+    jest.clearAllMocks()
+  })
+
+  const renderComponent = () => {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <UserForm />
+      </QueryClientProvider>
+    )
+  }
+
+  it('deve renderizar o formulário corretamente', () => {
+    renderComponent()
+
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/nome/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /criar/i })).toBeInTheDocument()
+  })
+
+  it('deve mostrar erro de validação para email inválido', async () => {
+    renderComponent()
+
+    const emailInput = screen.getByLabelText(/email/i)
+    const submitButton = screen.getByRole('button', { name: /criar/i })
+
+    fireEvent.change(emailInput, { target: { value: 'email-invalido' } })
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/email inválido/i)).toBeInTheDocument()
+    })
+  })
+
+  it('deve chamar a API ao submeter formulário válido', async () => {
+    mockCreate.mockReturnValue({
+      mutateAsync: jest.fn().mockResolvedValue({ id: '1', email: 'test@example.com' })
+    })
+
+    renderComponent()
+
+    const emailInput = screen.getByLabelText(/email/i)
+    const nameInput = screen.getByLabelText(/nome/i)
+    const submitButton = screen.getByRole('button', { name: /criar/i })
+
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(nameInput, { target: { value: 'João Silva' } })
+    fireEvent.click(submitButton)
+
+    await waitFor(() => {
+      expect(mockCreate().mutateAsync).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        name: 'João Silva'
+      })
+    })
+  })
+
+  it('deve mostrar loading state durante submissão', async () => {
+    mockCreate.mockReturnValue({
+      mutateAsync: jest.fn().mockImplementation(
+        () => new Promise(resolve => setTimeout(resolve, 100))
+      )
+    })
+
+    renderComponent()
+
+    const emailInput = screen.getByLabelText(/email/i)
+    const nameInput = screen.getByLabelText(/nome/i)
+    const submitButton = screen.getByRole('button', { name: /criar/i })
+
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(nameInput, { target: { value: 'João Silva' } })
+    fireEvent.click(submitButton)
+
+    expect(screen.getByText(/salvando/i)).toBeInTheDocument()
+    expect(submitButton).toBeDisabled()
+  })
+})
+```
+
+## Testes de Hooks
+```typescript
+// ✅ Bom: Teste de hook customizado
+import { renderHook, act, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useNotifications } from './useNotifications'
+
+// Mock do tRPC
+jest.mock('@/trpc/react')
+
+describe('useNotifications', () => {
+  let queryClient: QueryClient
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false }
+      }
+    })
+  })
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  )
+
+  it('deve inicializar com valores padrão', () => {
+    const { result } = renderHook(() => useNotifications(), { wrapper })
+
+    expect(result.current.notifications).toEqual([])
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.unreadCount).toBe(0)
+  })
+
+  it('deve marcar notificação como lida', async () => {
+    const mockMarkAsRead = jest.fn().mockResolvedValue(undefined)
+    const { result } = renderHook(() => useNotifications(), { wrapper })
+
+    await act(async () => {
+      await result.current.markAsRead('notification-id')
+    })
+
+    expect(mockMarkAsRead).toHaveBeenCalledWith({ id: 'notification-id' })
+  })
+
+  it('deve atualizar contagem de não lidas', async () => {
+    const { result, rerender } = renderHook(() => useNotifications(), { wrapper })
+
+    // Simular mudança nos dados
+    act(() => {
+      // Trigger refetch or data change
+      result.current.refetch()
+    })
+
+    await waitFor(() => {
+      expect(result.current.unreadCount).toBeGreaterThan(0)
+    })
+  })
+})
+```
+
+## Testes de API (tRPC)
+```typescript
+// ✅ Bom: Teste de router tRPC
+import { createCaller, createTRPCContext } from '@/server/api/trpc'
+import { appRouter } from '@/server/api/root'
+import { db } from '@/server/db'
+
+// Mock do banco de dados
+jest.mock('@/server/db')
+
+describe('userRouter', () => {
+  let caller: ReturnType<typeof createCaller>
+
+  beforeEach(async () => {
+    const ctx = await createTRPCContext({
+      headers: new Headers(),
+      // mock user session
+      user: { id: 'test-user-id', email: 'test@example.com' }
+    })
+    caller = createCaller(ctx)
+  })
+
+  describe('getById', () => {
+    it('deve retornar usuário quando encontrado', async () => {
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User'
+      }
+
+      ;(db.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
+
+      const result = await caller.user.getById({ id: 'user-1' })
+
+      expect(result).toEqual(mockUser)
+      expect(db.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 'user-1' }
+      })
+    })
+
+    it('deve lançar erro quando usuário não encontrado', async () => {
+      ;(db.user.findUnique as jest.Mock).mockResolvedValue(null)
+
+      await expect(caller.user.getById({ id: 'non-existent' }))
+        .rejects.toThrow('Usuário não encontrado')
+    })
+  })
+
+  describe('create', () => {
+    it('deve criar usuário com dados válidos', async () => {
+      const newUser = {
+        email: 'new@example.com',
+        name: 'New User'
+      }
+
+      const createdUser = { id: 'generated-id', ...newUser }
+      ;(db.user.create as jest.Mock).mockResolvedValue(createdUser)
+
+      const result = await caller.user.create(newUser)
+
+      expect(result).toEqual(createdUser)
+      expect(db.user.create).toHaveBeenCalledWith({
+        data: newUser
+      })
+    })
+
+    it('deve validar email obrigatório', async () => {
+      await expect(caller.user.create({ name: 'Test User' }))
+        .rejects.toThrow()
+    })
+  })
+})
+```
+
+## Configuração de Testes
+```typescript
+// ✅ Bom: Setup de testes
+// jest.config.js
+module.exports = {
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
+  moduleNameMapping: {
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/pages/_app.tsx'
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
+  }
+}
+
+// jest.setup.ts
+import '@testing-library/jest-dom'
+
+// Mock do Next.js router
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn()
+  }),
+  useSearchParams: () => ({
+    get: jest.fn()
+  })
+}))
+
+// Mock do localStorage
+const localStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn()
+}
+global.localStorage = localStorageMock
+```
+
+## Regras para Testes
+- Use `@testing-library/react` para componentes
+- Use `@testing-library/react-hooks` para hooks
+- Teste comportamentos, não implementações
+- Mantenha testes legíveis e descritivos
+- Use `describe` e `it` para organização
+- Mock dependências externas
+- Teste casos de erro e edge cases
+- Mantenha cobertura de código acima de 80%
+- Execute testes em CI/CD

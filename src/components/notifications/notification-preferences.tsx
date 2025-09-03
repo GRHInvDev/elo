@@ -34,7 +34,7 @@ export function NotificationPreferences() {
   // Query para buscar preferências atuais
   const preferencesQuery = api.notification.getPreferences.useQuery()
   const currentPreferences = preferencesQuery.data
-  const isLoadingPreferences = preferencesQuery.isLoading || false
+  const isLoadingPreferences = preferencesQuery.isLoading
   const refetchPreferences = preferencesQuery.refetch
 
   // Mutation para atualizar preferências
@@ -46,7 +46,7 @@ export function NotificationPreferences() {
       })
       void refetchPreferences()
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       toast({
         title: "Erro",
         description: "Erro ao atualizar preferências",
@@ -59,27 +59,23 @@ export function NotificationPreferences() {
   // Atualizar estado quando as preferências são carregadas
   useEffect(() => {
     if (currentPreferences) {
-      const safeGetBoolean = (value: unknown): boolean => {
-        return typeof value === 'boolean' ? value : true
-      }
-
       setPreferences({
-        emailNotifications: safeGetBoolean(currentPreferences.emailNotifications),
-        pushNotifications: safeGetBoolean(currentPreferences.pushNotifications),
-        suggestionUpdates: safeGetBoolean(currentPreferences.suggestionUpdates),
-        systemNotifications: safeGetBoolean(currentPreferences.systemNotifications),
-        postNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).postNotifications),
-        bookingNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).bookingNotifications),
-        foodOrderNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).foodOrderNotifications),
-        birthdayNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).birthdayNotifications),
-        soundEnabled: safeGetBoolean((currentPreferences as Record<string, unknown>).soundEnabled),
-        popupEnabled: safeGetBoolean((currentPreferences as Record<string, unknown>).popupEnabled),
-        successNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).successNotifications),
-        errorNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).errorNotifications),
-        warningNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).warningNotifications),
-        suggestionNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).suggestionNotifications),
-        kpiNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).kpiNotifications),
-        maintenanceNotifications: safeGetBoolean((currentPreferences as Record<string, unknown>).maintenanceNotifications)
+        emailNotifications: currentPreferences.emailNotifications ?? true,
+        pushNotifications: currentPreferences.pushNotifications ?? true,
+        suggestionUpdates: currentPreferences.suggestionUpdates ?? true,
+        systemNotifications: currentPreferences.systemNotifications ?? true,
+        postNotifications: currentPreferences.postNotifications ?? true,
+        bookingNotifications: currentPreferences.bookingNotifications ?? true,
+        foodOrderNotifications: currentPreferences.foodOrderNotifications ?? true,
+        birthdayNotifications: currentPreferences.birthdayNotifications ?? true,
+        soundEnabled: currentPreferences.soundEnabled ?? true,
+        popupEnabled: currentPreferences.popupEnabled ?? true,
+        successNotifications: currentPreferences.successNotifications ?? true,
+        errorNotifications: currentPreferences.errorNotifications ?? true,
+        warningNotifications: currentPreferences.warningNotifications ?? true,
+        suggestionNotifications: currentPreferences.suggestionNotifications ?? true,
+        kpiNotifications: currentPreferences.kpiNotifications ?? true,
+        maintenanceNotifications: currentPreferences.maintenanceNotifications ?? true
       })
     }
   }, [currentPreferences])
