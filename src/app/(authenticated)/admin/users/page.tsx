@@ -260,6 +260,47 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     })
   }
 
+  // Função auxiliar para encontrar rota relacionada a uma permissão
+  const getRouteForPermission = (permission: string): string | null => {
+    for (const [routeId, permissions] of Object.entries(ROUTE_PERMISSIONS_MAP)) {
+      if (permissions.includes(permission)) {
+        return routeId;
+      }
+    }
+    return null;
+  }
+
+  // Função para gerenciar permissão individual e sua rota relacionada
+  const handlePermissionToggle = (permission: string, checked: boolean, updateFn: () => void) => {
+    // Executar a atualização da permissão
+    updateFn();
+
+    // Se a permissão foi desmarcada, verificar se deve desmarcar a rota relacionada
+    if (!checked) {
+      const relatedRoute = getRouteForPermission(permission);
+      if (relatedRoute) {
+        // Usar setTimeout para aguardar a atualização do estado
+        setTimeout(() => {
+          setPermissionsData(prev => {
+            const currentRoutes = prev.accessible_routes ?? [];
+            const newRoutes = currentRoutes.filter(route => route !== relatedRoute);
+            
+            return {
+              ...prev,
+              accessible_routes: newRoutes,
+            };
+          });
+
+          // Mostrar notificação
+          toast({
+            title: "Rota relacionada desativada",
+            description: `A rota ${AVAILABLE_ROUTES.find(r => r.id === relatedRoute)?.name} foi desativada automaticamente.`,
+          });
+        }, 0);
+      }
+    }
+  }
+
   const handleRouteToggle = (routeId: string, checked: boolean) => {
     const currentRoutes = permissionsData.accessible_routes ?? []
     const newRoutes = checked
@@ -271,9 +312,11 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       accessible_routes: newRoutes,
     })
 
-    // Auto-selecionar permissões relacionadas se a rota for ativada
-    if (checked && ROUTE_PERMISSIONS_MAP[routeId]) {
+    // Auto-gerenciar permissões relacionadas quando rota for ativada/desativada
+    if (ROUTE_PERMISSIONS_MAP[routeId]) {
       const relatedPermissions = ROUTE_PERMISSIONS_MAP[routeId]
+      
+      // Atualizar permissões de conteúdo (events, flyers, rooms, cars)
       const newContent = { 
         can_create_event: false,
         can_create_flyer: false,
@@ -282,9 +325,19 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         ...permissionsData.content 
       }
       
+      // Atualizar permissões de formulários
+      let newForms = permissionsData.forms;
+      
       relatedPermissions.forEach((permission: string) => {
         if (permission in newContent) {
-          (newContent as Record<string, boolean>)[permission] = true
+          (newContent as Record<string, boolean>)[permission] = checked
+        } else if (permission === 'can_create_form') {
+          newForms = {
+            ...permissionsData.forms,
+            can_create_form: checked,
+            unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
+            hidden_forms: permissionsData.forms?.hidden_forms ?? [],
+          }
         }
       })
 
@@ -292,12 +345,14 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         ...permissionsData,
         accessible_routes: newRoutes,
         content: newContent,
+        forms: newForms,
       })
 
       // Mostrar notificação
+      const action = checked ? "ativadas" : "desativadas"
       toast({
-        title: "Permissões relacionadas ativadas",
-        description: `As permissões de ação relacionadas à rota ${AVAILABLE_ROUTES.find(r => r.id === routeId)?.name} foram ativadas automaticamente.`,
+        title: `Permissões relacionadas ${action}`,
+        description: `As permissões de ação relacionadas à rota ${AVAILABLE_ROUTES.find(r => r.id === routeId)?.name} foram ${action} automaticamente.`,
       })
     }
   }
@@ -453,9 +508,25 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       <Checkbox
                         id="sudo"
                         checked={permissionsData.sudo}
-                        onCheckedChange={(checked) => 
-                          setPermissionsData({ ...permissionsData, sudo: checked === true })
-                        }
+                        onCheckedChange={(checked) => {
+                          if (checked === true) {
+                            // Quando sudo é marcado, limpar todas as outras permissões
+                            setPermissionsData({ 
+                              ...permissionsData, 
+                              sudo: true,
+                              admin_pages: undefined,
+                              accessible_routes: undefined,
+                              content: undefined,
+                              forms: undefined
+                            });
+                          } else {
+                            // Quando sudo é desmarcado, manter as permissões existentes
+                            setPermissionsData({ 
+                              ...permissionsData, 
+                              sudo: false 
+                            });
+                          }
+                        }}
                       />
                       <Label htmlFor="sudo" className="font-medium text-red-700">
                         Super Admin (Acesso Total)
@@ -510,18 +581,22 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <Checkbox
                             id="create_event"
                             checked={permissionsData.content?.can_create_event ?? false}
-                            onCheckedChange={(checked) =>
-                              setPermissionsData({
-                                ...permissionsData,
-                                content: {
-                                  ...permissionsData.content,
-                                  can_create_event: checked === true,
-                                  can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                  can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                  can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                },
-                              })
-                            }
+                            onCheckedChange={(checked) => {
+                              handlePermissionToggle(
+                                'can_create_event', 
+                                checked === true,
+                                () => setPermissionsData({
+                                  ...permissionsData,
+                                  content: {
+                                    ...permissionsData.content,
+                                    can_create_event: checked === true,
+                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
+                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
+                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
+                                  },
+                                })
+                              );
+                            }}
                           />
                           <Label htmlFor="create_event">Criar Eventos</Label>
                         </div>
@@ -529,18 +604,22 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <Checkbox
                             id="create_flyer"
                             checked={permissionsData.content?.can_create_flyer ?? false}
-                            onCheckedChange={(checked) =>
-                              setPermissionsData({
-                                ...permissionsData,
-                                content: {
-                                  ...permissionsData.content,
-                                  can_create_event: permissionsData.content?.can_create_event ?? false,
-                                  can_create_flyer: checked === true,
-                                  can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                  can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                },
-                              })
-                            }
+                            onCheckedChange={(checked) => {
+                              handlePermissionToggle(
+                                'can_create_flyer', 
+                                checked === true,
+                                () => setPermissionsData({
+                                  ...permissionsData,
+                                  content: {
+                                    ...permissionsData.content,
+                                    can_create_event: permissionsData.content?.can_create_event ?? false,
+                                    can_create_flyer: checked === true,
+                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
+                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
+                                  },
+                                })
+                              );
+                            }}
                           />
                           <Label htmlFor="create_flyer">Criar Encartes</Label>
                         </div>
@@ -548,18 +627,22 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <Checkbox
                             id="create_booking"
                             checked={permissionsData.content?.can_create_booking ?? false}
-                            onCheckedChange={(checked) =>
-                              setPermissionsData({
-                                ...permissionsData,
-                                content: {
-                                  ...permissionsData.content,
-                                  can_create_event: permissionsData.content?.can_create_event ?? false,
-                                  can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                  can_create_booking: checked === true,
-                                  can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                },
-                              })
-                            }
+                            onCheckedChange={(checked) => {
+                              handlePermissionToggle(
+                                'can_create_booking', 
+                                checked === true,
+                                () => setPermissionsData({
+                                  ...permissionsData,
+                                  content: {
+                                    ...permissionsData.content,
+                                    can_create_event: permissionsData.content?.can_create_event ?? false,
+                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
+                                    can_create_booking: checked === true,
+                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
+                                  },
+                                })
+                              );
+                            }}
                           />
                           <Label htmlFor="create_booking">Agendar Salas</Label>
                         </div>
@@ -567,18 +650,22 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <Checkbox
                             id="locate_cars"
                             checked={permissionsData.content?.can_locate_cars ?? false}
-                            onCheckedChange={(checked) =>
-                              setPermissionsData({
-                                ...permissionsData,
-                                content: {
-                                  ...permissionsData.content,
-                                  can_create_event: permissionsData.content?.can_create_event ?? false,
-                                  can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                  can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                  can_locate_cars: checked === true,
-                                },
-                              })
-                            }
+                            onCheckedChange={(checked) => {
+                              handlePermissionToggle(
+                                'can_locate_cars', 
+                                checked === true,
+                                () => setPermissionsData({
+                                  ...permissionsData,
+                                  content: {
+                                    ...permissionsData.content,
+                                    can_create_event: permissionsData.content?.can_create_event ?? false,
+                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
+                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
+                                    can_locate_cars: checked === true,
+                                  },
+                                })
+                              );
+                            }}
                           />
                           <Label htmlFor="locate_cars">Agendar Carros</Label>
                         </div>
@@ -592,17 +679,21 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <Checkbox
                             id="create_form"
                             checked={permissionsData.forms?.can_create_form ?? false}
-                            onCheckedChange={(checked) =>
-                              setPermissionsData({
-                                ...permissionsData,
-                                forms: {
-                                  ...permissionsData.forms,
-                                  can_create_form: checked === true,
-                                  unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
-                                  hidden_forms: permissionsData.forms?.hidden_forms ?? [],
-                                },
-                              })
-                            }
+                            onCheckedChange={(checked) => {
+                              handlePermissionToggle(
+                                'can_create_form', 
+                                checked === true,
+                                () => setPermissionsData({
+                                  ...permissionsData,
+                                  forms: {
+                                    ...permissionsData.forms,
+                                    can_create_form: checked === true,
+                                    unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
+                                    hidden_forms: permissionsData.forms?.hidden_forms ?? [],
+                                  },
+                                })
+                              );
+                            }}
                           />
                           <Label htmlFor="create_form">Criar Formulários</Label>
                         </div>
@@ -617,23 +708,23 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <FileText className="h-4 w-4" />
-                    <Label className="text-base font-semibold">Formulários Ocultos</Label>
+                    <Label className="text-base font-semibold">Formulários Visíveis</Label>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Por padrão, todos os formulários são visíveis. Selecione os formulários que devem ficar ocultos para este usuário.
+                    Por padrão, todos os formulários estão marcados como visíveis. Desmarque os formulários que devem ficar ocultos para este usuário.
                   </p>
                   
                   <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-3">
                     {allForms.map((form) => (
                       <div key={form.id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`hidden_${form.id}`}
-                          checked={permissionsData.forms?.hidden_forms?.includes(form.id) ?? false}
+                          id={`visible_${form.id}`}
+                          checked={!(permissionsData.forms?.hidden_forms?.includes(form.id) ?? false)}
                           onCheckedChange={(checked) => {
                             const currentHidden = permissionsData.forms?.hidden_forms ?? [];
                             const newHidden = checked
-                              ? [...currentHidden, form.id]
-                              : currentHidden.filter(id => id !== form.id);
+                              ? currentHidden.filter(id => id !== form.id) // Remove da lista de ocultos
+                              : [...currentHidden, form.id]; // Adiciona à lista de ocultos
 
                             setPermissionsData({
                               ...permissionsData,
@@ -646,7 +737,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                             });
                           }}
                         />
-                        <Label htmlFor={`hidden_${form.id}`} className="text-sm">
+                        <Label htmlFor={`visible_${form.id}`} className="text-sm">
                           {form.title}
                         </Label>
                       </div>
