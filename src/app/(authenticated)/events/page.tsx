@@ -24,7 +24,7 @@ export default async function EventsPage() {
   const userData = await api.user.me()
 
   // Verificar se o usuário tem permissão para visualizar a página de eventos
-  if (!canViewEvents()) {
+  if (!canViewEvents(userData.role_config)) {
     redirect("/dashboard")
   }
 

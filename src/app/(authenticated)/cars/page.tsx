@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   const userData = await api.user.me()
 
   // Verificar se o usuário tem permissão para visualizar a página de carros
-  if (!canViewCars()) {
+  if (!canViewCars(userData.role_config)) {
     redirect("/dashboard")
   }
 
