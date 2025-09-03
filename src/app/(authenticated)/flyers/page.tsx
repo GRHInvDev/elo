@@ -23,7 +23,7 @@ export default async function FlyersPage() {
   const userData = await api.user.me()
 
   // Verificar se o usuário tem permissão para visualizar a página de encartes
-  if (!canViewFlyers()) {
+  if (!canViewFlyers(userData.role_config)) {
     redirect("/dashboard")
   }
 
