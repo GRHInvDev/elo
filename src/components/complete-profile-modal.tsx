@@ -31,11 +31,12 @@ const setores = [
   { value: "ADMINISTRATIVO", label: "Administrativo" },
   { value: "COMERCIAL", label: "Comercial" },
   { value: "FINANCEIRO", label: "Financeiro" },
-  { value: "INOVACAO", label: "Inovação" },
-  { value: "LOGISTICA", label: "Logística" },
+  { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
+  { value: "TI", label: "Tecnologia da Informação" },
   { value: "MARKETING", label: "Marketing" },
-  { value: "PROMOTORES", label: "Promotores" },
-  { value: "RECURSOS HUMANOS", label: "Recursos Humanos" },
+  { value: "VENDAS", label: "Vendas" },
+  { value: "LOGISTICA", label: "Logística" },
+  { value: "INOVACAO", label: "Inovação" },
 ]
 
 export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: CompleteProfileModalProps) {
