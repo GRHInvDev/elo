@@ -1,5 +1,107 @@
 # 📋 Changelog - ELO Application
 
+## [1.5.0] - 15/01/2025
+
+### 🔐 **MAJOR: Sistema de Controle de Acesso Granular**
+
+#### 🚀 **Novas Funcionalidades**
+
+- **Sistema de Role Config**: Controle de permissões granular e flexível
+  - Configuração de rotas acessíveis por usuário
+  - Permissões específicas por funcionalidade (eventos, encartes, agendamentos)
+  - Controle de visibilidade de formulários
+  - Sistema de Super Admin com acesso total
+- **Módulo de Gerenciamento de Usuários**: Interface administrativa completa
+  - Busca e filtros avançados por nome, email e setor
+  - Edição de dados básicos (nome, email, setor)
+  - Configuração de permissões em tempo real
+  - Interface colapsível para organização
+- **Hook de Controle de Acesso**: Sistema centralizado de verificação de permissões
+  - `useAccessControl()` com múltiplas funções de verificação
+  - Cache automático de permissões
+  - Verificação granular por funcionalidade
+
+#### 🎨 **Melhorias de Interface**
+
+- **Componente Collapsible**: Novo componente UI baseado em Radix UI
+  - Integração com shadcn/ui
+  - Acessibilidade nativa
+  - Animações suaves
+- **Interface de Gerenciamento**: Design intuitivo e responsivo
+  - Cards organizados com informações essenciais
+  - Estados de loading e feedback visual
+  - Notificações toast para ações
+  - Badges para indicar permissões ativas
+
+#### 🔧 **Arquitetura e Segurança**
+
+- **API Routes Aprimoradas**: 7 novos endpoints para gestão de usuários
+  - `listUsers`: Listagem com filtros avançados
+  - `updateRoleConfig`: Atualização de permissões
+  - `updateBasicInfo`: Edição de dados básicos
+  - `listAdmins`: Listagem de usuários administrativos
+- **Middleware de Segurança**: Verificação de permissões em todas as operações
+  - `adminProcedure`: Middleware para operações administrativas
+  - Validação dupla (frontend + backend)
+  - Proteção contra escalação de privilégios
+- **Validação Robusta**: Schemas Zod para todas as operações
+  - Tipagem forte em toda a stack
+  - Validação de entrada e saída
+  - Tratamento de erros padronizado
+
+#### 📊 **Sistema de Permissões**
+
+- **Controle de Rotas**: Seleção granular de páginas acessíveis
+  - Dashboard, Almoços, Salas, Carros, Eventos, Encartes, Shop, Ideias, Formulários, Admin
+  - Auto-ativação de permissões relacionadas
+  - Mapeamento inteligente de rotas para ações
+- **Permissões de Conteúdo**:
+  - `can_create_event`: Criação de eventos
+  - `can_create_flyer`: Criação de encartes
+  - `can_create_booking`: Agendamento de salas
+  - `can_locate_cars`: Agendamento de carros
+- **Controle de Formulários**:
+  - `can_create_form`: Criação de formulários
+  - `unlocked_forms`: Formulários desbloqueados
+  - `hidden_forms`: Formulários ocultos por usuário
+
+#### 🏗️ **Melhorias Técnicas**
+
+- **Tipagem TypeScript**: Sistema de tipos robusto
+  - Interface `RolesConfig` completa
+  - Tipagem de todas as operações
+  - IntelliSense aprimorado
+- **Performance Otimizada**: Queries eficientes
+  - Select específico de campos
+  - Cache de permissões
+  - Lazy loading de componentes
+- **Componentes Reutilizáveis**: Arquitetura modular
+  - Hook `useAccessControl` centralizado
+  - Componentes UI padronizados
+  - Separação de responsabilidades
+
+#### 🔒 **Segurança Aprimorada**
+
+- **Princípio do Menor Privilégio**: Usuários têm apenas permissões necessárias
+- **Verificação Dupla**: Frontend e backend validam permissões
+- **Auditoria**: Logs de alterações de permissões
+- **Controle Granular**: Permissões específicas por funcionalidade
+
+#### 📱 **Experiência do Usuário**
+
+- **Interface Intuitiva**: Design limpo e organizado
+- **Feedback Visual**: Estados claros para todas as ações
+- **Responsividade**: Funciona perfeitamente em mobile e desktop
+- **Acessibilidade**: Componentes acessíveis por padrão
+
+#### 📚 **Documentação**
+
+- **Tipos Documentados**: Interfaces TypeScript bem documentadas
+- **Hooks Documentados**: Funções de controle de acesso explicadas
+- **Padrões Estabelecidos**: Convenções de desenvolvimento definidas
+
+---
+
 ## [1.4.0] - 28/08/2025
 
 ### ✨ **MAJOR: Módulo de Ideias Completo**
@@ -124,20 +226,3 @@
 - **PATCH**: Correções de bugs e melhorias menores
 
 ## 🎯 **Próximas Versões Planejadas**
-
-### 1.5.0 (Q1 2025)
-- Sistema de comentários nas ideias
-- Votação colaborativa
-
-### 1.6.0 (Q2 2025)
-- Relatórios avançados e analytics
-- Dashboard executivo
-
-### 1.7.0 (Q3 2025)
-- API externa para integrações
-- Webhooks automáticos
-
-### 2.0.0 (Q4 2025)
-- Multi-idioma completo
-- Sistema de permissões avançado
-- Testes automatizados abrangentes

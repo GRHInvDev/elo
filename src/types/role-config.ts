@@ -1,6 +1,7 @@
 export type RolesConfig = {
   sudo: boolean; // Se true, dá acesso total ao sistema
   admin_pages: string[] | undefined; // Páginas admin permitidas
+  accessible_routes?: string[]; // Rotas/páginas que o usuário pode acessar
   forms: {
     can_create_form: boolean;  // Pode criar formulários
     unlocked_forms: string[];   // Formulários que devem ficar visíveis para o usuário
