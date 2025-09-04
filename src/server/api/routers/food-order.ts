@@ -263,7 +263,12 @@ export const foodOrderRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const whereClause: Prisma.FoodOrderWhereInput = {
-        ...(input?.startDate && input?.endDate && { orderDate: new Date(input.startDate.setHours(0, 0, 0, 0)) }),
+        ...(input?.startDate && input?.endDate && {
+          orderDate: {
+            gte: input.startDate,
+            lte: input.endDate,
+          }
+        }),
         ...(input?.status && { status: input.status }),
         ...(input?.restaurantId && { restaurantId: input.restaurantId }),
         ...(input?.userId && { userId: input.userId }),
@@ -533,5 +538,177 @@ export const foodOrderRouter = createTRPCRouter({
           menuItem: true,
         },
       })
+    }),
+
+  // Buscar métricas de pedidos por restaurante
+  getMetricsByRestaurant: protectedProcedure
+    .input(
+      z.object({
+        year: z.number(),
+        period: z.enum(["day", "month", "year"]),
+        month: z.number().optional(),
+        date: z.date().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { year, period, month, date } = input
+
+      // Definir o período de busca baseado no tipo selecionado
+      let startDate: Date
+      let endDate: Date
+
+      if (period === "year") {
+        startDate = new Date(year, 0, 1) // 1 de janeiro
+        endDate = new Date(year, 11, 31, 23, 59, 59, 999) // 31 de dezembro
+      } else if (period === "month" && month) {
+        // Para período mensal específico
+        startDate = new Date(year, month - 1, 1)
+        endDate = new Date(year, month, 0, 23, 59, 59, 999)
+      } else if (period === "day" && date) {
+        // Para período de dia específico
+        startDate = new Date(date)
+        startDate.setHours(0, 0, 0, 0)
+        endDate = new Date(date)
+        endDate.setHours(23, 59, 59, 999)
+      } else {
+        // Fallback: buscar dados de todos os meses do ano
+        startDate = new Date(year, 0, 1)
+        endDate = new Date(year, 11, 31, 23, 59, 59, 999)
+      }
+
+      // Buscar pedidos agrupados por restaurante
+      const orders = await ctx.db.foodOrder.findMany({
+        where: {
+          orderDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+          status: {
+            not: "CANCELLED", // Excluir pedidos cancelados
+          },
+        },
+        include: {
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+              city: true,
+            },
+          },
+          menuItem: {
+            select: {
+              price: true,
+            },
+          },
+        },
+      })
+
+      // Agrupar por restaurante
+      const metricsMap = new Map<string, {
+        restaurantId: string
+        restaurantName: string
+        restaurantCity: string
+        totalOrders: number
+        totalRevenue: number
+      }>()
+
+      orders.forEach((order) => {
+        const restaurantId = order.restaurantId
+        const key = restaurantId
+
+        if (!metricsMap.has(key)) {
+          metricsMap.set(key, {
+            restaurantId,
+            restaurantName: order.restaurant.name,
+            restaurantCity: order.restaurant.city,
+            totalOrders: 0,
+            totalRevenue: 0,
+          })
+        }
+
+        const metric = metricsMap.get(key)!
+        metric.totalOrders += 1
+        metric.totalRevenue += order.menuItem.price
+      })
+
+      return Array.from(metricsMap.values()).sort((a, b) => b.totalOrders - a.totalOrders)
+    }),
+
+  // Buscar dados para gráficos de pedidos por restaurante
+  getChartDataByRestaurant: protectedProcedure
+    .input(
+      z.object({
+        year: z.number(),
+        period: z.enum(["day", "month", "year"]),
+        month: z.number().optional(),
+        date: z.date().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { year, period, month, date } = input
+
+      let startDate: Date
+      let endDate: Date
+
+      if (period === "year") {
+        startDate = new Date(year, 0, 1)
+        endDate = new Date(year, 11, 31, 23, 59, 59, 999)
+      } else if (period === "month" && month) {
+        startDate = new Date(year, month - 1, 1)
+        endDate = new Date(year, month, 0, 23, 59, 59, 999)
+      } else if (period === "day" && date) {
+        startDate = new Date(date)
+        startDate.setHours(0, 0, 0, 0)
+        endDate = new Date(date)
+        endDate.setHours(23, 59, 59, 999)
+      } else {
+        startDate = new Date(year, 0, 1)
+        endDate = new Date(year, 11, 31, 23, 59, 59, 999)
+      }
+
+      const orders = await ctx.db.foodOrder.findMany({
+        where: {
+          orderDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+          status: {
+            not: "CANCELLED",
+          },
+        },
+        include: {
+          restaurant: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+
+      // Agrupar por restaurante para dados do gráfico
+      const chartDataMap = new Map<string, {
+        restaurant: string
+        orders: number
+      }>()
+
+      orders.forEach((order) => {
+        const restaurantName = order.restaurant.name
+        const key = restaurantName
+
+        if (!chartDataMap.has(key)) {
+          chartDataMap.set(key, {
+            restaurant: restaurantName,
+            orders: 0,
+          })
+        }
+
+        const data = chartDataMap.get(key)!
+        data.orders += 1
+      })
+
+      return Array.from(chartDataMap.values())
+        .sort((a, b) => b.orders - a.orders)
+        .slice(0, 10) // Limitar aos top 10 restaurantes
     }),
 }) 
