@@ -191,7 +191,7 @@ export function canAccessForm(roleConfig: RolesConfig | null, formId: string): b
   // Se é sudo, pode acessar qualquer formulário
   if (roleConfig.sudo) return true;
   
-  // Primeiro verifica se tem permissão para visualizar formulários
+  // Primeiro verifica se tem permissão para visualizar formulárioss
   if (!roleConfig.forms?.can_view_forms) return false;
   
   // Se tem permissão para ver, verifica se não está na lista de ocultos
