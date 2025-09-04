@@ -54,8 +54,8 @@ function Calendar({
         day_hidden: "invisible",
         ...classNames,
       }}
-      lang="ptBR"
       locale={ptBR}
+      weekStartsOn={1} // Segunda-feira como primeiro dia da semana
       components={{
         IconLeft: ({ className, ...props }) => (
           <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
