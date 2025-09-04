@@ -206,15 +206,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     setor: user.setor ?? "none",
   })
   const [permissionsData, setPermissionsData] = useState<RolesConfig>(
-    user.role_config || {
-      sudo: false,
-      admin_pages: [],
-      can_create_form: false,
-      can_create_event: false,
-      can_create_flyer: false,
-      can_create_booking: false,
-      can_locate_cars: false,
-      isTotem: false,
+    {
+      sudo: user.role_config?.sudo ?? false,
+      admin_pages: user.role_config?.admin_pages ?? [],
+      can_create_form: user.role_config?.can_create_form ?? false,
+      can_create_event: user.role_config?.can_create_event ?? false,
+      can_create_flyer: user.role_config?.can_create_flyer ?? false,
+      can_create_booking: user.role_config?.can_create_booking ?? false,
+      can_locate_cars: user.role_config?.can_locate_cars ?? false,
+      isTotem: user.role_config?.isTotem ?? false,
+      visible_forms: user.role_config?.visible_forms,
+      hidden_forms: user.role_config?.hidden_forms,
     }
   )
   const [adminRoutesData, setAdminRoutesData] = useState<string[]>(
@@ -286,7 +288,18 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const handleSavePermissions = () => {
     updateRoleConfig.mutate({
       userId: user.id,
-      roleConfig: permissionsData,
+      roleConfig: {
+        sudo: permissionsData.sudo ?? false,
+        admin_pages: permissionsData.admin_pages ?? [],
+        can_create_form: permissionsData.can_create_form ?? false,
+        can_create_event: permissionsData.can_create_event ?? false,
+        can_create_flyer: permissionsData.can_create_flyer ?? false,
+        can_create_booking: permissionsData.can_create_booking ?? false,
+        can_locate_cars: permissionsData.can_locate_cars ?? false,
+        isTotem: permissionsData.isTotem ?? false,
+        visible_forms: permissionsData.visible_forms,
+        hidden_forms: permissionsData.hidden_forms,
+      },
     })
   }
 
@@ -302,8 +315,16 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     updateRoleConfig.mutate({
       userId: user.id,
       roleConfig: {
-        ...permissionsData,
-        admin_pages: adminRoutesData,
+        sudo: permissionsData.sudo ?? false,
+        admin_pages: adminRoutesData ?? [],
+        can_create_form: permissionsData.can_create_form ?? false,
+        can_create_event: permissionsData.can_create_event ?? false,
+        can_create_flyer: permissionsData.can_create_flyer ?? false,
+        can_create_booking: permissionsData.can_create_booking ?? false,
+        can_locate_cars: permissionsData.can_locate_cars ?? false,
+        isTotem: permissionsData.isTotem ?? false,
+        visible_forms: permissionsData.visible_forms,
+        hidden_forms: permissionsData.hidden_forms,
       },
     })
   }

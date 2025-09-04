@@ -247,6 +247,8 @@ export const userRouter = createTRPCRouter({
         can_create_booking: z.boolean(),
         can_locate_cars: z.boolean(),
         isTotem: z.boolean().optional(),
+        visible_forms: z.array(z.string()).optional(),
+        hidden_forms: z.array(z.string()).optional(),
       })
     }))
     .mutation(async ({ ctx, input }) => {
