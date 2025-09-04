@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { api } from "@/trpc/server";
 import { type RolesConfig } from "@/types/role-config";
+import { hasAccessToAdminRoute } from "@/const/admin-routes";
 
 export async function checkAdminAccess(route: string) {
   const db_user = await api.user.me();
@@ -12,8 +13,8 @@ export async function checkAdminAccess(route: string) {
   // Se é sudo, tem acesso a tudo
   if (db_user.role_config.sudo) return db_user;
   
-  // Verifica se a rota está nas páginas admin permitidas
-  if (!Array.isArray(db_user.role_config.admin_pages) || !db_user.role_config.admin_pages.includes(route)) {
+  // Verifica se tem acesso à rota específica usando a função centralizada
+  if (!hasAccessToAdminRoute(db_user.role_config.admin_pages || [], route)) {
     redirect("/dashboard");
   }
 
@@ -59,8 +60,8 @@ export function hasAdminAccess(roleConfig: RolesConfig | null, route: string): b
   // Se é sudo, tem acesso a tudo
   if (roleConfig.sudo) return true;
   
-  // Verifica se a rota está nas páginas admin permitidas
-  return Array.isArray(roleConfig.admin_pages) && roleConfig.admin_pages.includes(route);
+  // Usa a função centralizada para verificar acesso
+  return hasAccessToAdminRoute(roleConfig.admin_pages || [], route);
 }
 
 export function canCreateForm(roleConfig: RolesConfig | null): boolean {

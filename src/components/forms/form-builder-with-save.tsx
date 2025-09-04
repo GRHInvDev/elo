@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
@@ -49,7 +50,7 @@ export function FormBuilderWithSave({
   const router = useRouter()
 
   // Buscar usuários e setores para o filtro
-  const { data: usersAndSectors } = api.form.getUsersAndSectors.useQuery()
+  const { data: usersAndSectors } = api.form.getUsersForFormVisibility.useQuery()
 
   const createForm = api.form.create.useMutation({
     onSuccess: (data) => {
@@ -186,23 +187,29 @@ export function FormBuilderWithSave({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4 mt-4">
-                <div className="space-y-3 p-4 border rounded-lg">
+                <div className="space-y-6 p-4 border rounded-lg">
+                  {/* Busca e seleção de usuários específicos */}
                   <UserSearch
-                    users={usersAndSectors?.users ?? []}
+                    users={usersAndSectors?.map(user => ({
+                      id: user.id,
+                      name: user.name,
+                      email: user.email,
+                      setor: user.setor,
+                    })) ?? []}
                     selectedUsers={allowedUsers}
                     onSelectionChange={setAllowedUsers}
-                    placeholder="Buscar colaboradores..."
+                    placeholder="Buscar colaboradores por nome, email ou setor..."
                     maxHeight="300px"
                   />
 
-                  <div>
-                    <Label className="text-sm font-medium">Setores</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Selecione setores inteiros que podem ver este formulário
+                  <div className="border-t pt-4">
+                    <Label className="text-sm font-medium">Setores Completos</Label>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Selecione setores inteiros para dar acesso a todos os funcionários do setor
                     </p>
-                    <div className="space-y-2">
-                      {usersAndSectors?.sectors.filter(Boolean).map((sector) => (
-                        <div key={sector} className="flex items-center space-x-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[...new Set(usersAndSectors?.map(user => user.setor).filter(Boolean))].sort().map((sector) => (
+                        <div key={sector} className="flex items-center space-x-2 p-2 rounded-lg border bg-muted/20">
                           <Checkbox
                             id={`sector_${sector}`}
                             checked={allowedSectors.includes(sector!)}
@@ -214,24 +221,47 @@ export function FormBuilderWithSave({
                               }
                             }}
                           />
-                          <Label htmlFor={`sector_${sector}`} className="text-sm">
+                          <Label htmlFor={`sector_${sector}`} className="text-sm font-medium">
                             {sector}
                           </Label>
                         </div>
                       ))}
                     </div>
+
+                    {allowedSectors.length > 0 && (
+                      <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <Label className="text-sm font-medium text-blue-800">
+                          Setores com Acesso Total ({allowedSectors.length})
+                        </Label>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {allowedSectors.map((sector) => (
+                            <Badge key={sector} variant="secondary" className="bg-blue-100 text-blue-800">
+                              {sector}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {(allowedUsers.length > 0 || allowedSectors.length > 0) && (
-                    <div className="pt-2 border-t">
-                      <Label className="text-sm font-medium">Resumo do Acesso:</Label>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {allowedUsers.length > 0 && (
-                          <div>• {allowedUsers.length} usuário(s) específico(s)</div>
-                        )}
-                        {allowedSectors.length > 0 && (
-                          <div>• {allowedSectors.length} setor(es): {allowedSectors.join(", ")}</div>
-                        )}
+                    <div className="border-t pt-4">
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <Label className="text-sm font-medium text-green-800">
+                          📋 Resumo do Acesso
+                        </Label>
+                        <div className="text-sm text-green-700 mt-1 space-y-1">
+                          <div>✅ <strong>Criador:</strong> Sempre tem acesso</div>
+                          {allowedUsers.length > 0 && (
+                            <div>👥 <strong>Usuários específicos:</strong> {allowedUsers.length} pessoa(s)</div>
+                          )}
+                          {allowedSectors.length > 0 && (
+                            <div>🏢 <strong>Setores completos:</strong> {allowedSectors.join(", ")}</div>
+                          )}
+                          <div className="text-xs text-green-600 mt-2 italic">
+                            Todos os outros usuários não verão este formulário
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

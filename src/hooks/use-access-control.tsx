@@ -3,6 +3,7 @@
 import { api } from "@/trpc/react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { type RolesConfig } from "@/types/role-config";
+import { hasAccessToAdminRoute } from "@/const/admin-routes";
 
 export function useAccessControl() {
   const { data: db_user } = api.user.me.useQuery();
@@ -13,8 +14,8 @@ export function useAccessControl() {
     // Se é sudo, tem acesso a tudo
     if (db_user.role_config.sudo) return true;
     
-    // Verifica se a rota está nas páginas admin permitidas
-    return Array.isArray(db_user.role_config.admin_pages) && db_user.role_config.admin_pages.includes(route);
+    // Usa a função centralizada para verificar acesso
+    return hasAccessToAdminRoute(db_user.role_config.admin_pages || [], route);
   };
 
   const canViewForms = (): boolean => {

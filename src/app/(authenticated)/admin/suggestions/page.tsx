@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -15,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "@hello-pangea/dnd"
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
+import { useAccessControl } from "@/hooks/use-access-control"
 import type { RouterOutputs } from "@/trpc/react"
 import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
@@ -104,10 +106,6 @@ function getStatusColor(status: string): string {
 function formatIdeaNumber(ideaNumber: number): string {
   return ideaNumber.toString().padStart(3, '0')
 }
-
-
-
-
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
@@ -1459,7 +1457,7 @@ function SuggestionDetailsModal({
           <Button
             onClick={handleSave}
             disabled={updateMutation.isPending}
-          >
+            >
             {updateMutation.isPending ? "Salvando..." : "Salvar Classificações"}
           </Button>
         </div>
@@ -1469,6 +1467,10 @@ function SuggestionDetailsModal({
 }
 
 export default function AdminSuggestionsPage() {
+  const router = useRouter()
+  const { hasAdminAccess, isLoading } = useAccessControl()
+
+  // TODOS os hooks devem vir ANTES de qualquer verificação condicional ou early return
   const { data: dbSuggestions = [], refetch } = api.suggestion.list.useQuery({
     status: ["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"],
     take: 1000, // Buscar até 1000 Ideias (valor alto para pegar todas)
@@ -1477,12 +1479,6 @@ export default function AdminSuggestionsPage() {
   // Query para obter o usuário atual
   const { data: currentUser } = api.user.me.useQuery()
 
-
-
-  const suggestions = useMemo(() =>
-    dbSuggestions.map((s) => convertDBToLocal(s)),
-    [dbSuggestions]
-  )
 
   const updateMutation = api.suggestion.updateAdmin.useMutation({
     onSuccess: () => {
@@ -1561,7 +1557,10 @@ export default function AdminSuggestionsPage() {
     setIsSuggestionModalOpen(false)
   }
 
-
+  const suggestions = useMemo(() =>
+    dbSuggestions.map((s) => convertDBToLocal(s)),
+    [dbSuggestions]
+  )
 
   // Query para carregar KPIs da ideia selecionada
   const kpiQuery = api.kpi.getBySuggestionId.useQuery(
@@ -1599,12 +1598,87 @@ export default function AdminSuggestionsPage() {
     }
   }, [currentSuggestionKpis, selectedSuggestionId])
 
-
-
   // Buscar classificações do banco dinamicamente
   const { data: impactClassifications, refetch: refetchImpact } = api.classification.listByType.useQuery({ type: "IMPACT" })
   const { data: capacityClassifications, refetch: refetchCapacity } = api.classification.listByType.useQuery({ type: "CAPACITY" })
   const { data: effortClassifications, refetch: refetchEffort } = api.classification.listByType.useQuery({ type: "EFFORT" })
+
+  // Ordenação inteligente das Ideias com filtro
+  const sortedSuggestions = useMemo(() => {
+    const priorityOrder = {
+      "Ainda não avaliado": 1,
+      "Em avaliação": 2,
+      "Em orçamento": 3,
+      "Em execução": 4,
+      "Ajustes e incubar": 5,
+      "Não implantado": 6,
+      "Concluído": 7
+    }
+
+    let filteredSuggestions = suggestions
+
+    // Aplicar filtro de status se não for "all"
+    if (statusFilter !== "all") {
+      filteredSuggestions = suggestions.filter(s => {
+        if (statusFilter === "score-based") {
+          // Filtrar por recomendação baseada na pontuação
+          const scoreStatus = getStatusFromScore(s)
+          return scoreStatus === "Ajustar" || scoreStatus === "Aprovar"
+        }
+        return (STATUS_MAPPING[s.status] ?? s.status) === statusFilter
+      })
+    }
+
+    // Aplicar filtro de responsável se houver seleção
+    if (analystFilter) {
+      filteredSuggestions = filteredSuggestions.filter(s => s.analystId === analystFilter)
+    }
+
+    // Aplicar filtro de autor se houver seleção
+    if (authorFilter) {
+      filteredSuggestions = filteredSuggestions.filter(s => s.userId === authorFilter)
+    }
+
+    // Aplicar filtro de "Minhas pendências" se estiver marcado
+    if (showMyTasks && currentUser) {
+      filteredSuggestions = filteredSuggestions.filter(s => s.analystId === currentUser.id)
+    }
+
+    return [...filteredSuggestions].sort((a, b) => {
+      // Primeiro por prioridade de status
+      const statusA = STATUS_MAPPING[a.status] ?? a.status
+      const statusB = STATUS_MAPPING[b.status] ?? b.status
+      const priorityA = priorityOrder[statusA as keyof typeof priorityOrder] ?? 999
+      const priorityB = priorityOrder[statusB as keyof typeof priorityOrder] ?? 999
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB
+      }
+
+      // Depois por numeração de ideias (conforme sortOrder)
+      if (sortOrder === "asc") {
+        return (a.ideaNumber ?? 0) - (b.ideaNumber ?? 0)
+      } else {
+        return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
+      }
+    })
+  }, [suggestions, statusFilter, analystFilter, authorFilter, showMyTasks, currentUser, sortOrder])
+
+  const kanbanColumns = useMemo(() => {
+    const map: Record<string, SuggestionLocal[]> = {}
+    STATUS.forEach((s) => (map[s] = []))
+    for (const s of sortedSuggestions) {
+      const statusLabel = STATUS_MAPPING[s.status] ?? s.status
+      ;(map[statusLabel] ?? (map[statusLabel] = [])).push(s)
+    }
+    return map
+  }, [sortedSuggestions])
+
+  // Verificar acesso ao módulo de sugestões APÓS todos os hooks
+  if (!isLoading && !hasAdminAccess("/admin/suggestions")) {
+    router.replace("/")
+    return null
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _unusedKpiLoading = isLoadingKpis // Silenciar warning do linter
@@ -1784,86 +1858,6 @@ export default function AdminSuggestionsPage() {
     return "Revisar"
   }
 
-  // Ordenação inteligente das Ideias com filtro
-  const sortedSuggestions = useMemo(() => {
-    const priorityOrder = {
-      "Ainda não avaliado": 1,
-      "Em avaliação": 2,
-      "Em orçamento": 3,
-      "Em execução": 4,
-      "Ajustes e incubar": 5,
-      "Não implantado": 6,
-      "Concluído": 7
-    }
-
-    let filteredSuggestions = suggestions
-
-    // Aplicar filtro de status se não for "all"
-    if (statusFilter !== "all") {
-      filteredSuggestions = suggestions.filter(s => {
-        if (statusFilter === "score-based") {
-          // Filtrar por recomendação baseada na pontuação
-          const scoreStatus = getStatusFromScore(s)
-          return scoreStatus === "Ajustar" || scoreStatus === "Aprovar"
-        }
-        return (STATUS_MAPPING[s.status] ?? s.status) === statusFilter
-      })
-    }
-
-    // Aplicar filtro de responsável se houver seleção
-    if (analystFilter) {
-      filteredSuggestions = filteredSuggestions.filter(s => s.analystId === analystFilter)
-    }
-
-    // Aplicar filtro de autor se houver seleção
-    if (authorFilter) {
-      filteredSuggestions = filteredSuggestions.filter(s => s.userId === authorFilter)
-    }
-
-    // Aplicar filtro de "Minhas pendências" se estiver marcado
-    if (showMyTasks && currentUser) {
-      filteredSuggestions = filteredSuggestions.filter(s => s.analystId === currentUser.id)
-    }
-
-    return [...filteredSuggestions].sort((a, b) => {
-      // Primeiro por prioridade de status
-      const statusA = STATUS_MAPPING[a.status] ?? a.status
-      const statusB = STATUS_MAPPING[b.status] ?? b.status
-      const priorityA = priorityOrder[statusA as keyof typeof priorityOrder] ?? 999
-      const priorityB = priorityOrder[statusB as keyof typeof priorityOrder] ?? 999
-
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB
-      }
-
-      // Depois por numeração de ideias (conforme sortOrder)
-      if (sortOrder === "asc") {
-        return (a.ideaNumber ?? 0) - (b.ideaNumber ?? 0)
-      } else {
-        return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
-      }
-    })
-  }, [suggestions, statusFilter, analystFilter, authorFilter, showMyTasks, currentUser, sortOrder])
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const listColumns = useMemo(() => {
-    const cols: [SuggestionLocal[], SuggestionLocal[], SuggestionLocal[]] = [[], [], []]
-    for (let i = 0; i < sortedSuggestions.length; i++) {
-      const bucket = (i % 3) as 0 | 1 | 2
-      cols[bucket].push(sortedSuggestions[i]!)
-    }
-    return cols
-  }, [sortedSuggestions])
-
-  const kanbanColumns = useMemo(() => {
-    const map: Record<string, SuggestionLocal[]> = {}
-    STATUS.forEach((s) => (map[s] = []))
-    for (const s of sortedSuggestions) {
-      const statusLabel = STATUS_MAPPING[s.status] ?? s.status
-      ;(map[statusLabel] ?? (map[statusLabel] = [])).push(s)
-    }
-    return map
-  }, [sortedSuggestions])
 
   return (
     <DashboardShell>

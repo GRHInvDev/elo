@@ -1,58 +1,23 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { LucideCake, LucideMapPin, LucideUtensils, Lightbulb, Users } from "lucide-react";
 import Link from "next/link";
-import { checkAdminAccess, hasAdminAccess } from "@/lib/access-control";
+import { checkAdminAccess } from "@/lib/access-control";
+import { ADMIN_ROUTES, hasAccessToAdminRoute } from "@/const/admin-routes";
 
 export default async function Page() {
     const db_user = await checkAdminAccess("/admin");
     
-    // Definir módulos admin disponíveis
-    const adminModules = [
-        {
-            href: '/admin/users',
-            route: '/users',
-            icon: Users,
-            title: 'Usuários',
-            description: 'Gerenciar usuários e permissões 👥'
-        },
-        {
-            href: '/admin/rooms',
-            route: '/rooms',
-            icon: LucideMapPin,
-            title: 'Salas',
-            description: 'Gerenciar salas de reunião 📑'
-        },
-        {
-            href: '/admin/birthday',
-            route: '/birthday',
-            icon: LucideCake,
-            title: 'Aniversários',
-            description: 'Gerencie os aniversários 🎉'
-        },
-        {
-            href: '/admin/food',
-            route: '/food',
-            icon: LucideUtensils,
-            title: 'Almoços',
-            description: 'Gerencie os pedidos de Almoço 🍔'
-        },
-        {
-            href: '/admin/suggestions',
-            route: '/ideas',
-            icon: Lightbulb,
-            title: 'Ideias',
-            description: 'Gerencie as Ideias 💡'
+    // Filtrar rotas admin baseado nas permissões do usuário
+    const availableRoutes = ADMIN_ROUTES.filter(route => {
+        // Sempre mostrar a página principal /admin
+        if (route.id === "/admin") return true;
+        
+        // Para usuários normais, verificar permissões
+        if (!db_user.role_config?.sudo) {
+            return hasAccessToAdminRoute(db_user.role_config?.admin_pages || [], route.id);
         }
-    ];
-
-    // Filtrar módulos baseado nas permissões
-    const availableModules = adminModules.filter(module => {
-        // Página de usuários só para sudo
-        if (module.route === '/users') {
-            return db_user.role_config?.sudo === true;
-        }
-        // Outras páginas usam a verificação padrão
-        return hasAdminAccess(db_user.role_config, module.route);
+        
+        // Sudo tem acesso a tudo
+        return true;
     });
 
     return (
@@ -62,24 +27,26 @@ export default async function Page() {
                     <CardTitle>Gerenciar</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {availableModules.map((module) => {
-                        const IconComponent = module.icon;
-                        return (
-                            <Link key={module.href} href={module.href}>
-                                <Card>
-                                    <CardHeader>
-                                        <IconComponent/>
-                                        <CardTitle>
-                                            {module.title}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardFooter>
-                                        <CardDescription>{module.description}</CardDescription>
-                                    </CardFooter>
-                                </Card>
-                            </Link>
-                        );
-                    })}
+                    {availableRoutes
+                        .filter(route => route.id !== "/admin") // Não mostrar a própria página
+                        .map((route) => {
+                            const IconComponent = route.icon;
+                            return (
+                                <Link key={route.path} href={route.path}>
+                                    <Card className="hover:shadow-md transition-shadow">
+                                        <CardHeader>
+                                            <IconComponent className="h-6 w-6" />
+                                            <CardTitle>
+                                                {route.title}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardFooter>
+                                            <CardDescription>{route.description}</CardDescription>
+                                        </CardFooter>
+                                    </Card>
+                                </Link>
+                            );
+                        })}
                 </CardContent>
             </Card>
         </div>

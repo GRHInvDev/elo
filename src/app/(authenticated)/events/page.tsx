@@ -6,6 +6,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { EventsList } from "@/components/events-list"
 import { CreateEventButton } from "@/components/create-event-button"
 import { api } from "@/trpc/server"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { canViewEvents, canCreateEvent } from "@/lib/access-control"
 
 export const metadata: Metadata = {

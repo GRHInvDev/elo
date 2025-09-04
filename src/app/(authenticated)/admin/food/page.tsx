@@ -30,7 +30,7 @@ export default function AdminFoodPage() {
   const { hasAdminAccess, isLoading } = useAccessControl()
   
   // Verificar acesso ao módulo de comida
-  if (!isLoading && !hasAdminAccess("/food")) {
+  if (!isLoading && !hasAdminAccess("/admin/food")) {
     router.replace("/")
     return null
   }

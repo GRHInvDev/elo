@@ -10,6 +10,10 @@ export type RolesConfig = {
   can_create_booking: boolean; // Pode fazer agendamentos de salas
   can_locate_cars: boolean;    // Pode fazer agendamentos de carros
   
+  // Controle de visibilidade de formulários
+  visible_forms?: string[];    // IDs dos formulários que o usuário pode ver (vazio = todos públicos)
+  hidden_forms?: string[];     // IDs dos formulários que o usuário NÃO pode ver
+  
   isTotem?: boolean; // Para usuários TOTEM (acesso limitado)
 }
 

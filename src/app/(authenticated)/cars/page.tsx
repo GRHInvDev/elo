@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { Car, Calendar, LucideFileVideo, User2Icon, MapPin, PlusCircle } from "lucide-react"
 import { api } from "@/trpc/server"
 import type { VehicleRent, Vehicle } from "@prisma/client"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { canViewCars, canLocateCars } from "@/lib/access-control"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { RolesConfig } from "@/types/role-config"

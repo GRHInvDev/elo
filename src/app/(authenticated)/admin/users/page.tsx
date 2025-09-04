@@ -26,13 +26,14 @@ import {
   Save
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
+import { ADMIN_ROUTES } from "@/const/admin-routes"
 
 // SISTEMA SIMPLIFICADO: Todos podem visualizar, apenas alguns podem criar
 // Removidas constantes não utilizadas
 
 // Lista de setores disponíveis
 const AVAILABLE_SETORES = [
-  { value: "", label: "Nenhum setor" },
+  { value: "none", label: "Nenhum setor" },
   { value: "ADMINISTRATIVO", label: "Administrativo" },
   { value: "COMERCIAL", label: "Comercial" },
   { value: "FINANCEIRO", label: "Financeiro" },
@@ -47,18 +48,14 @@ const AVAILABLE_SETORES = [
   { value: "JURIDICO", label: "Jurídico" },
 ]
 
-// Função auxiliar para obter o nome amigável do setor
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getSetorLabel = (setorValue: string | null | undefined): string => {
-  if (!setorValue) return "Não informado"
-  const setor = AVAILABLE_SETORES.find(s => s.value === setorValue)
-  return setor ? setor.label : setorValue
-}
 
 export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
 
-  const { isSudo } = useAccessControl()
+  const { isSudo, hasAdminAccess } = useAccessControl()
+
+  // Verificar se tem acesso à página de usuários
+  const hasAccess = isSudo || hasAdminAccess("/admin/users")
 
   const { data: users, isLoading, refetch } = api.user.listUsers.useQuery({
     search: searchTerm || undefined,
@@ -77,8 +74,8 @@ export default function UsersManagementPage() {
     )
   }, [users, searchTerm])
 
-  // Verificar se é sudo
-  if (!isSudo) {
+  // Verificar se tem acesso
+  if (!hasAccess) {
     return (
       <DashboardShell>
         <div className="flex items-center justify-center h-96">
@@ -191,9 +188,10 @@ interface UserManagementCardProps {
   onUserUpdate: () => void
 }
 
-function UserManagementCard({ user, allForms: _allForms, onUserUpdate }: UserManagementCardProps) {
+function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCardProps) {
   const [isEditingBasic, setIsEditingBasic] = useState(false)
   const [isEditingPermissions, setIsEditingPermissions] = useState(false)
+  const [isEditingAdminRoutes, setIsEditingAdminRoutes] = useState(false)
   
   // Função auxiliar para obter o nome do setor
   const getSetorLabel = (setorValue: string | null | undefined): string => {
@@ -205,7 +203,7 @@ function UserManagementCard({ user, allForms: _allForms, onUserUpdate }: UserMan
     firstName: user.firstName ?? "",
     lastName: user.lastName ?? "",
     email: user.email,
-    setor: user.setor ?? "",
+    setor: user.setor ?? "none",
   })
   const [permissionsData, setPermissionsData] = useState<RolesConfig>(
     user.role_config || {
@@ -218,6 +216,9 @@ function UserManagementCard({ user, allForms: _allForms, onUserUpdate }: UserMan
       can_locate_cars: false,
       isTotem: false,
     }
+  )
+  const [adminRoutesData, setAdminRoutesData] = useState<string[]>(
+    user.role_config?.admin_pages || []
   )
 
   const { toast } = useToast()
@@ -258,6 +259,23 @@ function UserManagementCard({ user, allForms: _allForms, onUserUpdate }: UserMan
     },
   })
 
+  const updateFormVisibility = api.form.updateFormVisibility.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Visibilidade atualizada",
+        description: "A visibilidade dos formulários foi atualizada com sucesso.",
+      })
+      onUserUpdate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
   const handleSaveBasicInfo = () => {
     updateBasicInfo.mutate({
       userId: user.id,
@@ -270,6 +288,42 @@ function UserManagementCard({ user, allForms: _allForms, onUserUpdate }: UserMan
       userId: user.id,
       roleConfig: permissionsData,
     })
+  }
+
+  const handleToggleFormVisibility = (formId: string, action: 'show' | 'hide') => {
+    updateFormVisibility.mutate({
+      userId: user.id,
+      formId,
+      action,
+    })
+  }
+
+  const handleSaveAdminRoutes = () => {
+    updateRoleConfig.mutate({
+      userId: user.id,
+      roleConfig: {
+        ...permissionsData,
+        admin_pages: adminRoutesData,
+      },
+    })
+  }
+
+  const handleToggleAdminRoute = (routeId: string) => {
+    if (adminRoutesData.includes(routeId)) {
+      // Se está removendo /admin, remover todas as outras rotas também
+      if (routeId === "/admin") {
+        setAdminRoutesData([])
+      } else {
+        setAdminRoutesData(prev => prev.filter(id => id !== routeId))
+      }
+    } else {
+      // Se está adicionando uma rota que não seja /admin, garantir que /admin esteja incluído
+      if (routeId !== "/admin" && !adminRoutesData.includes("/admin")) {
+        setAdminRoutesData(prev => ["/admin", ...prev, routeId])
+      } else {
+        setAdminRoutesData(prev => [...prev, routeId])
+      }
+    }
   }
 
   // SISTEMA SIMPLIFICADO: Funções de gerenciamento removidas
@@ -608,6 +662,226 @@ function UserManagementCard({ user, allForms: _allForms, onUserUpdate }: UserMan
             )}
           </CollapsibleContent>
         </Collapsible>
+
+        <Separator />
+
+        {/* Seção de Rotas Admin */}
+        {!permissionsData.isTotem && (
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Acesso a Rotas Admin
+                </div>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mt-4">
+              {isEditingAdminRoutes ? (
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <div className="mb-4">
+                    <Label className="text-sm font-medium">Configurar Acesso às Páginas Admin</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Selecione quais páginas administrativas o usuário pode acessar. 
+                      <strong> /admin é obrigatório para acessar qualquer outra página.</strong>
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {ADMIN_ROUTES.map((route) => {
+                      const hasAccess = adminRoutesData.includes(route.id)
+                      const isDisabled = route.requiresBasicAdmin && !adminRoutesData.includes("/admin")
+                      const IconComponent = route.icon
+
+                      return (
+                        <div 
+                          key={route.id} 
+                          className={`flex items-start space-x-3 p-3 border rounded-lg ${
+                            isDisabled ? 'opacity-50 bg-gray-50' : ''
+                          }`}
+                        >
+                          <Checkbox
+                            id={`route_${route.id}`}
+                            checked={hasAccess}
+                            disabled={isDisabled}
+                            onCheckedChange={() => handleToggleAdminRoute(route.id)}
+                          />
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <IconComponent className="h-4 w-4" />
+                              <Label 
+                                htmlFor={`route_${route.id}`} 
+                                className={`font-medium ${isDisabled ? 'text-gray-500' : ''}`}
+                              >
+                                {route.title}
+                              </Label>
+                              {route.id === "/admin" && (
+                                <Badge variant="outline" className="text-xs">
+                                  Obrigatório
+                                </Badge>
+                              )}
+                            </div>
+                            <p className={`text-xs ${isDisabled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+                              {route.description}
+                            </p>
+                            <p className={`text-xs font-mono ${isDisabled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+                              {route.path}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsEditingAdminRoutes(false)
+                        setAdminRoutesData(user.role_config?.admin_pages || [])
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleSaveAdminRoutes} 
+                      disabled={updateRoleConfig.isPending}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {updateRoleConfig.isPending ? "Salvando..." : "Salvar Rotas"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 border rounded-lg space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium">Rotas Admin Permitidas</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {adminRoutesData.length > 0 ? (
+                        adminRoutesData.map((routeId) => {
+                          const route = ADMIN_ROUTES.find(r => r.id === routeId)
+                          if (!route) return null
+                          const IconComponent = route.icon
+                          
+                          return (
+                            <Badge key={routeId} variant="secondary" className="flex items-center gap-1">
+                              <IconComponent className="h-3 w-3" />
+                              {route.title}
+                            </Badge>
+                          )
+                        })
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Nenhum acesso admin</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button onClick={() => setIsEditingAdminRoutes(true)} size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Editar Rotas Admin
+                  </Button>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        <Separator />
+
+        {/* Seção de Visibilidade de Formulários */}
+        {!permissionsData.sudo && !permissionsData.isTotem && (
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Visibilidade de Formulários
+                </div>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mt-4">
+              <div className="p-4 border rounded-lg">
+                <div className="mb-4">
+                  <Label className="text-sm font-medium">Controle de Formulários</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Por padrão, todos os usuários podem ver todos os formulários. Use as opções abaixo para restringir acesso.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {allForms.map((form) => {
+                    const isHidden = user.role_config?.hidden_forms?.includes(form.id) ?? false
+                    const isInVisibleList = user.role_config?.visible_forms?.includes(form.id) ?? false
+                    const hasRestrictiveList = (user.role_config?.visible_forms?.length ?? 0) > 0
+
+                    let status = "Visível"
+                    if (isHidden) {
+                      status = "Oculto"
+                    } else if (hasRestrictiveList && !isInVisibleList) {
+                      status = "Restrito"
+                    }
+
+                    return (
+                      <div key={form.id} className="flex items-center justify-between p-2 border rounded">
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{form.title}</div>
+                          <div className="text-xs text-muted-foreground">Status: {status}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {status !== "Visível" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleToggleFormVisibility(form.id, 'show')}
+                              disabled={updateFormVisibility.isPending}
+                            >
+                              Mostrar
+                            </Button>
+                          )}
+                          {status === "Visível" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleToggleFormVisibility(form.id, 'hide')}
+                              disabled={updateFormVisibility.isPending}
+                            >
+                              Ocultar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {(user.role_config?.hidden_forms?.length ?? 0) > 0 && (
+                  <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div className="text-sm font-medium text-red-800">
+                      Formulários Ocultos: {user.role_config?.hidden_forms?.length}
+                    </div>
+                    <div className="text-xs text-red-600">
+                      Este usuário não pode ver {user.role_config?.hidden_forms?.length} formulário(s)
+                    </div>
+                  </div>
+                )}
+
+                {(user.role_config?.visible_forms?.length ?? 0) > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm font-medium text-blue-800">
+                      Lista Restritiva Ativa: {user.role_config?.visible_forms?.length} formulário(s)
+                    </div>
+                    <div className="text-xs text-blue-600">
+                      Este usuário só pode ver formulários específicos da lista
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
       </CardContent>
     </Card>
   )
