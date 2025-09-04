@@ -7,10 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { Card, CardContent } from "@/components/ui/card"
 import OrdersTab from "./_components/orders-tab"
 import RestaurantsTab from "./_components/restaurants-tab"
 import MenuTab from "./_components/menu-tab"
 import MetricsTab from "./_components/metrics-tab"
+ 
 
 // Componente principal da página de administração de comida
 export default function AdminFoodPage() {
@@ -21,6 +23,7 @@ export default function AdminFoodPage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
   const [selectedStatus, setSelectedStatus] = useState<string>("")
   const [userName, setUserName] = useState<string>("")
+  const [stats, setStats] = useState({ total: 0, pending: 0, confirmed: 0, delivered: 0 })
   
   // Verificar acesso ao módulo de comida
   if (!isLoading && !hasAdminAccess("/admin/food")) {
@@ -44,6 +47,33 @@ export default function AdminFoodPage() {
           </span>
         </div>
       </div>
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">Total de Pedidos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground">Pendentes</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold text-blue-600">{stats.confirmed}</div>
+            <p className="text-xs text-muted-foreground">Confirmados</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold text-green-600">{stats.delivered}</div>
+            <p className="text-xs text-muted-foreground">Entregues</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Tabs defaultValue="orders" className="space-y-4">
         <TabsList>
@@ -63,6 +93,7 @@ export default function AdminFoodPage() {
             setSelectedStatus={setSelectedStatus}
             userName={userName}
             setUserName={setUserName}
+            onStatsChange={setStats}
           />
         </TabsContent>
 

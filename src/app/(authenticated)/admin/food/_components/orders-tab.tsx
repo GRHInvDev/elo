@@ -14,6 +14,7 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { DatePicker } from "@/components/ui/date-picker"
 import * as XLSX from "xlsx"
+import { useEffect } from "react"
 import { Select as UiSelect } from "@/components/ui/select"
 
 interface OrdersTabProps {
@@ -25,6 +26,7 @@ interface OrdersTabProps {
   setSelectedStatus: (status: string) => void
   userName: string
   setUserName: (name: string) => void
+  onStatsChange?: (s: { total: number; pending: number; confirmed: number; delivered: number }) => void
 }
 
 export default function OrdersTab({
@@ -35,7 +37,8 @@ export default function OrdersTab({
   selectedStatus,
   setSelectedStatus,
   userName,
-  setUserName
+  setUserName,
+  onStatsChange
 }: OrdersTabProps) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportMonth, setExportMonth] = useState<number>(new Date().getMonth() + 1)
@@ -67,6 +70,16 @@ export default function OrdersTab({
     enabled: true,
     refetchOnWindowFocus: false,
   })
+
+  // Reportar estatísticas para a página
+  useEffect(() => {
+    const data = filteredOrders.data ?? []
+    const total = data.length
+    const pending = data.filter(o => o.status === "PENDING").length
+    const confirmed = data.filter(o => o.status === "CONFIRMED").length
+    const delivered = data.filter(o => o.status === "DELIVERED").length
+    onStatsChange?.({ total, pending, confirmed, delivered })
+  }, [filteredOrders.data, onStatsChange])
 
   // Atualizar status do pedido
   const updateOrderStatus = api.foodOrder.updateStatus.useMutation({
