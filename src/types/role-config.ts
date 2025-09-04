@@ -1,23 +1,15 @@
 export type RolesConfig = {
   sudo: boolean; // Se true, dá acesso total ao sistema
-  admin_pages: string[] | undefined; // Páginas admin permitidas
-  accessible_routes?: string[]; // Rotas/páginas que o usuário pode acessar
-  forms: {
-    can_view_forms: boolean;     // Pode visualizar formulários
-    can_create_form: boolean;    // Pode criar formulários
-    unlocked_forms: string[];    // Formulários que devem ficar visíveis para o usuário
-    hidden_forms?: string[];     // Formulários que devem ficar invisíveis
-  } | undefined;
-  content?: {
-    can_view_events: boolean;     // Pode visualizar eventos
-    can_create_event: boolean;    // Pode criar eventos
-    can_view_flyers: boolean;     // Pode visualizar encartes
-    can_create_flyer: boolean;    // Pode criar encartes
-    can_view_rooms: boolean;      // Pode visualizar salas
-    can_create_booking: boolean;  // Pode fazer agendamentos de salas
-    can_view_cars: boolean;       // Pode visualizar carros
-    can_locate_cars: boolean;     // Pode fazer agendamentos de carros
-  } | undefined;
+  admin_pages: string[]; // Páginas admin permitidas (apenas para sudos)
+  
+  // SISTEMA SIMPLIFICADO: Apenas permissões de criação
+  // Todos podem VISUALIZAR tudo, apenas alguns podem CRIAR
+  can_create_form: boolean;    // Pode criar formulários
+  can_create_event: boolean;   // Pode criar eventos
+  can_create_flyer: boolean;   // Pode criar encartes
+  can_create_booking: boolean; // Pode fazer agendamentos de salas
+  can_locate_cars: boolean;    // Pode fazer agendamentos de carros
+  
   isTotem?: boolean; // Para usuários TOTEM (acesso limitado)
 }
 

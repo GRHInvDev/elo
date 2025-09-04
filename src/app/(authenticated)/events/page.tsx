@@ -20,11 +20,12 @@ export default async function EventsPage() {
     redirect("/sign-in?redirect_url=/events")
   }
 
-  // Buscar dados do usuário para verificar permissões
+  // Buscar dados do usuário para verificar permissões de criação
   const userData = await api.user.me()
 
-  // Verificar se o usuário tem permissão para visualizar a página de eventos
-  if (!canViewEvents(userData.role_config)) {
+  // SISTEMA SIMPLIFICADO: Todos podem visualizar, apenas verificar permissão de criação
+  // Bloquear apenas usuários TOTEM
+  if (userData.role_config?.isTotem) {
     redirect("/dashboard")
   }
 

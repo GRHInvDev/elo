@@ -52,9 +52,13 @@ export const userRouter = createTRPCRouter({
     // Garantir que role_config sempre tenha uma estrutura válida
     const defaultRoleConfig: RolesConfig = {
       sudo: false,
-      admin_pages: undefined,
-      forms: undefined,
-      content: undefined
+      admin_pages: [],
+      can_create_form: false,
+      can_create_event: false,
+      can_create_flyer: false,
+      can_create_booking: false,
+      can_locate_cars: false,
+      isTotem: false
     };
 
     // Se existe role_config customizado, usar; senão usar default
@@ -97,10 +101,10 @@ export const userRouter = createTRPCRouter({
     });
 
     // Filtrar apenas usuários com permissões admin
-          return users.filter(user => {
-        const roleConfig = user.role_config as RolesConfig | null;
-        return !!roleConfig?.sudo || roleConfig?.admin_pages?.length;
-      });
+    return users.filter(user => {
+      const roleConfig = user.role_config as RolesConfig | null;
+      return !!roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.length > 0);
+    });
   }),
 
   updateProfile: protectedProcedure
@@ -236,19 +240,12 @@ export const userRouter = createTRPCRouter({
       userId: z.string(),
       roleConfig: z.object({
         sudo: z.boolean(),
-        admin_pages: z.array(z.string()).optional(),
-        accessible_routes: z.array(z.string()).optional(),
-        forms: z.object({
-          can_create_form: z.boolean(),
-          unlocked_forms: z.array(z.string()),
-          hidden_forms: z.array(z.string()).optional(),
-        }).optional(),
-        content: z.object({
-          can_create_event: z.boolean(),
-          can_create_flyer: z.boolean(),
-          can_create_booking: z.boolean(),
-          can_locate_cars: z.boolean(),
-        }).optional(),
+        admin_pages: z.array(z.string()),
+        can_create_form: z.boolean(),
+        can_create_event: z.boolean(),
+        can_create_flyer: z.boolean(),
+        can_create_booking: z.boolean(),
+        can_locate_cars: z.boolean(),
         isTotem: z.boolean().optional(),
       })
     }))

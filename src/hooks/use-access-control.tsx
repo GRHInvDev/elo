@@ -18,13 +18,9 @@ export function useAccessControl() {
   };
 
   const canViewForms = (): boolean => {
+    // SISTEMA SIMPLIFICADO: Todos podem ver, exceto TOTEMs
     if (!db_user?.role_config) return false;
-
-    // Se é sudo, pode visualizar
-    if (db_user.role_config.sudo) return true;
-
-    // Verifica se pode visualizar formulários
-    return Boolean(db_user.role_config.forms?.can_view_forms);
+    return !db_user.role_config.isTotem;
   };
 
   const canCreateForm = (): boolean => {
@@ -33,78 +29,45 @@ export function useAccessControl() {
     // Se é sudo, pode criar formulários
     if (db_user.role_config.sudo) return true;
 
-    // Verifica se pode criar formulários
-    return db_user.role_config.forms?.can_create_form ?? false;
+    // Verifica permissão específica de criação
+    return db_user.role_config.can_create_form;
   };
 
   const canViewEvents = (): boolean => {
+    // SISTEMA SIMPLIFICADO: Todos podem ver, exceto TOTEMs
     if (!db_user?.role_config) return false;
-
-    // Se é sudo, pode visualizar
-    if (db_user.role_config.sudo) return true;
-
-    // Verifica se pode visualizar eventos
-    return Boolean(db_user.role_config.content?.can_view_events);
+    return !db_user.role_config.isTotem;
   };
 
   const canViewFlyers = (): boolean => {
+    // SISTEMA SIMPLIFICADO: Todos podem ver, exceto TOTEMs
     if (!db_user?.role_config) return false;
-
-    // Se é sudo, pode visualizar
-    if (db_user.role_config.sudo) return true;
-
-    // Verifica se pode visualizar encartes
-    return Boolean(db_user.role_config.content?.can_view_flyers);
+    return !db_user.role_config.isTotem;
   };
 
   const canViewRooms = (): boolean => {
+    // SISTEMA SIMPLIFICADO: Todos podem ver, exceto TOTEMs
     if (!db_user?.role_config) return false;
-
-    // Se é sudo, pode visualizar
-    if (db_user.role_config.sudo) return true;
-
-    // Verifica se pode visualizar salas
-    return Boolean(db_user.role_config.content?.can_view_rooms);
+    return !db_user.role_config.isTotem;
   };
 
   const canViewCars = (): boolean => {
+    // SISTEMA SIMPLIFICADO: Todos podem ver, exceto TOTEMs
     if (!db_user?.role_config) return false;
-
-    // Se é sudo, pode visualizar
-    if (db_user.role_config.sudo) return true;
-
-    // Verifica se pode visualizar carros
-    return Boolean(db_user.role_config.content?.can_view_cars);
+    return !db_user.role_config.isTotem;
   };
 
-  const canAccessForm = (formId: string): boolean => {
-    if (!db_user?.role_config) return false; // Se não tem config, não pode acessar
-    
-    // Se é sudo, pode acessar qualquer formulário
-    if (db_user.role_config.sudo) return true;
-    
-    // Primeiro verifica se tem permissão para visualizar formulários
-    if (!db_user.role_config.forms?.can_view_forms) return false;
-    
-    // Se tem permissão para ver, verifica se não está na lista de ocultos
-    const isHidden = db_user.role_config.forms?.hidden_forms?.includes(formId) ?? false;
-    return !isHidden;
+  const canAccessForm = (_formId: string): boolean => {
+    // SISTEMA SIMPLIFICADO: Todos podem acessar formulários, exceto TOTEMs
+    if (!db_user?.role_config) return false;
+    return !db_user.role_config.isTotem;
   };
 
   const getAccessibleForms = <T extends { id: string }>(forms: T[]): T[] => {
-    if (!db_user?.role_config) return []; // Se não tem config, não mostra nenhum
-    
-    // Se é sudo, retorna todos os formulários
-    if (db_user.role_config.sudo) return forms;
-    
-    // Se não tem permissão para ver formulários, retorna lista vazia
-    if (!db_user.role_config.forms?.can_view_forms) return [];
-    
-    // Se tem permissão, filtra apenas os não ocultos
-    return forms.filter(form => {
-      const isHidden = db_user.role_config.forms?.hidden_forms?.includes(form.id) ?? false;
-      return !isHidden;
-    });
+    // SISTEMA SIMPLIFICADO: Todos podem ver todos os formulários, exceto TOTEMs
+    if (!db_user?.role_config) return [];
+    if (db_user.role_config.isTotem) return [];
+    return forms;
   };
 
   const canCreateEvent = (): boolean => {
@@ -113,11 +76,8 @@ export function useAccessControl() {
     // Se é sudo, pode criar eventos
     if (db_user.role_config.sudo) return true;
 
-    // Primeiro verifica se pode visualizar eventos
-    if (!db_user.role_config.content?.can_view_events) return false;
-
-    // Se pode visualizar, verifica se pode criar
-    return db_user.role_config.content?.can_create_event ?? false;
+    // Verifica permissão específica de criação
+    return db_user.role_config.can_create_event;
   };
 
   const canCreateFlyer = (): boolean => {
@@ -126,11 +86,8 @@ export function useAccessControl() {
     // Se é sudo, pode criar encartes
     if (db_user.role_config.sudo) return true;
 
-    // Primeiro verifica se pode visualizar encartes
-    if (!db_user.role_config.content?.can_view_flyers) return false;
-
-    // Se pode visualizar, verifica se pode criar
-    return db_user.role_config.content?.can_create_flyer ?? false;
+    // Verifica permissão específica de criação
+    return db_user.role_config.can_create_flyer;
   };
 
   const canCreateBooking = (): boolean => {
@@ -139,11 +96,8 @@ export function useAccessControl() {
     // Se é sudo, pode fazer agendamentos
     if (db_user.role_config.sudo) return true;
 
-    // Primeiro verifica se pode visualizar salas
-    if (!db_user.role_config.content?.can_view_rooms) return false;
-
-    // Se pode visualizar, verifica se pode agendar
-    return db_user.role_config.content?.can_create_booking ?? false;
+    // Verifica permissão específica de criação
+    return db_user.role_config.can_create_booking;
   };
 
   const canLocateCars = (): boolean => {
@@ -152,11 +106,8 @@ export function useAccessControl() {
     // Se é sudo, pode fazer agendamentos de carros
     if (db_user.role_config.sudo) return true;
 
-    // Primeiro verifica se pode visualizar carros
-    if (!db_user.role_config.content?.can_view_cars) return false;
-
-    // Se pode visualizar, verifica se pode agendar
-    return db_user.role_config.content?.can_locate_cars ?? false;
+    // Verifica permissão específica de criação
+    return db_user.role_config.can_locate_cars;
   };
 
   return {

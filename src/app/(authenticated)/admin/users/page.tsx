@@ -20,39 +20,15 @@ import {
   Settings, 
   Shield, 
   Edit3, 
-  Route, 
   Key, 
   ChevronDown, 
   X,
-  Info,
-  FileText,
-
   Save
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
 
-// Definir todas as rotas disponíveis no sistema
-const AVAILABLE_ROUTES = [
-  { id: "dashboard", name: "Dashboard", description: "Página principal da intranet" },
-  { id: "food", name: "Almoços", description: "Página para fazer pedidos de comida" },
-  { id: "rooms", name: "Salas", description: "Página para reservar salas" },
-  { id: "cars", name: "Carros", description: "Página para reservar carros" },
-  { id: "events", name: "Eventos", description: "Página para visualizar e criar eventos" },
-  { id: "flyers", name: "Encartes", description: "Página para visualizar e criar encartes" },
-  { id: "shop", name: "Shop", description: "Página para comprar itens personalizados" },
-  { id: "my-suggestions", name: "Minhas Ideias", description: "Visualizar suas ideias enviadas" },
-  { id: "forms", name: "Formulários", description: "Página para processos internos" },
-  { id: "admin", name: "Admin", description: "Página de administração" },
-]
-
-// Mapear rotas para suas permissões relacionadas
-const ROUTE_PERMISSIONS_MAP: Record<string, string[]> = {
-  "events": ["can_view_events"],
-  "flyers": ["can_view_flyers"],
-  "rooms": ["can_view_rooms"],
-  "cars": ["can_view_cars"],
-  "forms": ["can_view_forms"],
-}
+// SISTEMA SIMPLIFICADO: Todos podem visualizar, apenas alguns podem criar
+// Removidas constantes não utilizadas
 
 // Lista de setores disponíveis
 const AVAILABLE_SETORES = [
@@ -215,7 +191,7 @@ interface UserManagementCardProps {
   onUserUpdate: () => void
 }
 
-function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCardProps) {
+function UserManagementCard({ user, allForms: _allForms, onUserUpdate }: UserManagementCardProps) {
   const [isEditingBasic, setIsEditingBasic] = useState(false)
   const [isEditingPermissions, setIsEditingPermissions] = useState(false)
   
@@ -234,24 +210,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const [permissionsData, setPermissionsData] = useState<RolesConfig>(
     user.role_config || {
       sudo: false,
-      admin_pages: undefined,
-      accessible_routes: undefined,
-      forms: {
-        can_view_forms: false,
-        can_create_form: false,
-        unlocked_forms: [],
-        hidden_forms: [],
-      },
-      content: {
-        can_view_events: false,
-        can_create_event: false,
-        can_view_flyers: false,
-        can_create_flyer: false,
-        can_view_rooms: false,
-        can_create_booking: false,
-        can_view_cars: false,
-        can_locate_cars: false,
-      },
+      admin_pages: [],
+      can_create_form: false,
+      can_create_event: false,
+      can_create_flyer: false,
+      can_create_booking: false,
+      can_locate_cars: false,
+      isTotem: false,
     }
   )
 
@@ -307,117 +272,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     })
   }
 
-  // Função auxiliar para encontrar rota relacionada a uma permissão
-  const getRouteForPermission = (permission: string): string | null => {
-    for (const [routeId, permissions] of Object.entries(ROUTE_PERMISSIONS_MAP)) {
-      if (permissions.includes(permission)) {
-        return routeId;
-      }
-    }
-    return null;
-  }
-
-  // Função para gerenciar permissão individual e sua rota relacionada
-  const handlePermissionToggle = (permission: string, checked: boolean, updateFn: () => void) => {
-    // Executar a atualização da permissão
-    updateFn();
-
-    // Se a permissão foi desmarcada, verificar se deve desmarcar a rota relacionada
-    if (!checked) {
-      const relatedRoute = getRouteForPermission(permission);
-      if (relatedRoute) {
-        // Usar setTimeout para aguardar a atualização do estado
-        setTimeout(() => {
-          setPermissionsData(prev => {
-            const currentRoutes = prev.accessible_routes ?? [];
-            const newRoutes = currentRoutes.filter(route => route !== relatedRoute);
-            
-            return {
-              ...prev,
-              accessible_routes: newRoutes,
-            };
-          });
-
-          // Mostrar notificação
-          toast({
-            title: "Rota relacionada desativada",
-            description: `A rota ${AVAILABLE_ROUTES.find(r => r.id === relatedRoute)?.name} foi desativada automaticamente.`,
-          });
-        }, 0);
-      }
-    }
-  }
-
-  const handleRouteToggle = (routeId: string, checked: boolean) => {
-    const currentRoutes = permissionsData.accessible_routes ?? []
-    const newRoutes = checked
-      ? [...currentRoutes, routeId]
-      : currentRoutes.filter(r => r !== routeId)
-
-    setPermissionsData({
-      ...permissionsData,
-      accessible_routes: newRoutes,
-    })
-
-    // Auto-gerenciar permissões relacionadas quando rota for ativada/desativada
-    if (ROUTE_PERMISSIONS_MAP[routeId]) {
-      const relatedPermissions = ROUTE_PERMISSIONS_MAP[routeId]
-      
-      // Atualizar permissões de conteúdo (events, flyers, rooms, cars)
-      const newContent = {
-        can_view_events: false,
-        can_create_event: false,
-        can_view_flyers: false,
-        can_create_flyer: false,
-        can_view_rooms: false,
-        can_create_booking: false,
-        can_view_cars: false,
-        can_locate_cars: false,
-        ...permissionsData.content
-      }
-      
-      // Atualizar permissões de formulários
-      let newForms = permissionsData.forms;
-      
-      relatedPermissions.forEach((permission: string) => {
-        if (permission in newContent) {
-          (newContent as Record<string, boolean>)[permission] = checked
-        } else if (permission === 'can_view_forms') {
-          newForms = {
-            ...permissionsData.forms,
-            can_view_forms: checked,
-            can_create_form: permissionsData.forms?.can_create_form ?? false,
-            unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
-            hidden_forms: permissionsData.forms?.hidden_forms ?? [],
-          }
-        }
-      })
-
-      setPermissionsData({
-        ...permissionsData,
-        accessible_routes: newRoutes,
-        content: newContent,
-        forms: newForms,
-      })
-
-      // Mostrar notificação
-      const action = checked ? "ativadas" : "desativadas"
-      toast({
-        title: `Permissões relacionadas ${action}`,
-        description: `As permissões de ação relacionadas à rota ${AVAILABLE_ROUTES.find(r => r.id === routeId)?.name} foram ${action} automaticamente.`,
-      })
-    }
-  }
-
-  const getAccessibleRoutesText = () => {
-    if (permissionsData.sudo) return "Super Admin (Acesso Total)"
-    if (!permissionsData.accessible_routes?.length) return "Nenhuma rota específica"
-    
-    return permissionsData.accessible_routes
-      .map(routeId => AVAILABLE_ROUTES.find(r => r.id === routeId)?.name)
-      .filter(Boolean)
-      .join(", ")
-  }
+  // SISTEMA SIMPLIFICADO: Funções de gerenciamento removidas
+  // Todos podem visualizar, apenas alguns podem criar
 
   return (
     <Card>
@@ -555,14 +411,14 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             {isEditingPermissions ? (
               <div className="space-y-6 p-4 border rounded-lg">
                 
-                {/* Seção de Rotas */}
+                {/* Seção de Admin */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Route className="h-4 w-4" />
-                    <Label className="text-base font-semibold">Controle de Rotas</Label>
+                    <Shield className="h-4 w-4" />
+                    <Label className="text-base font-semibold">Administração</Label>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Selecione quais páginas este usuário pode acessar. Permissões relacionadas serão ativadas automaticamente.
+                    Configure se o usuário é administrador do sistema.
                   </p>
                   
                   <div className="space-y-2">
@@ -571,23 +427,11 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         id="sudo"
                         checked={permissionsData.sudo}
                         onCheckedChange={(checked) => {
-                          if (checked === true) {
-                            // Quando sudo é marcado, limpar todas as outras permissões
-                            setPermissionsData({ 
-                              ...permissionsData, 
-                              sudo: true,
-                              admin_pages: undefined,
-                              accessible_routes: undefined,
-                              content: undefined,
-                              forms: undefined
-                            });
-                          } else {
-                            // Quando sudo é desmarcado, manter as permissões existentes
-                            setPermissionsData({ 
-                              ...permissionsData, 
-                              sudo: false 
-                            });
-                          }
+                          setPermissionsData({ 
+                            ...permissionsData, 
+                            sudo: checked === true,
+                            admin_pages: checked === true ? ["/admin", "/food", "/rooms", "/ideas", "/birthday"] : []
+                          });
                         }}
                       />
                       <Label htmlFor="sudo" className="font-medium text-red-700">
@@ -595,362 +439,106 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       </Label>
                     </div>
                     
-                    {!permissionsData.sudo && (
-                      <div className="grid grid-cols-2 gap-2 mt-4">
-                        {AVAILABLE_ROUTES.map(route => (
-                          <div key={route.id} className="flex items-start space-x-2 p-2 border rounded">
-                            <Checkbox
-                              id={`route_${route.id}`}
-                              checked={permissionsData.accessible_routes?.includes(route.id) ?? false}
-                              onCheckedChange={(checked) => handleRouteToggle(route.id, checked === true)}
-                            />
-                            <div className="flex-1">
-                              <Label htmlFor={`route_${route.id}`} className="font-medium">
-                                {route.name}
-                              </Label>
-                              <p className="text-xs text-muted-foreground">{route.description}</p>
-                              {ROUTE_PERMISSIONS_MAP[route.id] && (
-                                <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
-                                  <Info className="h-3 w-3" />
-                                  Auto-ativa: {ROUTE_PERMISSIONS_MAP[route.id]!.join(", ")}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-2 p-2 bg-yellow-50 rounded">
+                      <Checkbox
+                        id="isTotem"
+                        checked={permissionsData.isTotem ?? false}
+                        onCheckedChange={(checked) => {
+                          setPermissionsData({ 
+                            ...permissionsData, 
+                            isTotem: checked === true
+                          });
+                        }}
+                      />
+                      <Label htmlFor="isTotem" className="font-medium text-yellow-700">
+                        Usuário TOTEM (Acesso Limitado)
+                      </Label>
+                    </div>
                   </div>
                 </div>
 
                 <Separator />
 
-                {/* Seção de Permissões de Ação */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Shield className="h-4 w-4" />
-                    <Label className="text-base font-semibold">Permissões de Ação</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Configure as ações específicas que o usuário pode realizar em cada página.
-                  </p>
+                {/* Seção de Permissões de Criação */}
+                {!permissionsData.sudo && !permissionsData.isTotem && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Key className="h-4 w-4" />
+                      <Label className="text-base font-semibold">Permissões de Criação</Label>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      SISTEMA SIMPLIFICADO: Todos podem visualizar, apenas configure quem pode criar.
+                    </p>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="font-medium">Eventos</Label>
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
                           <Checkbox
-                            id="view_events"
-                            checked={Boolean(permissionsData.content?.can_view_events)}
+                            id="create_form"
+                            checked={permissionsData.can_create_form}
                             onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              handlePermissionToggle(
-                                'can_view_events',
-                                isChecked,
-                                () => setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: isChecked,
-                                    can_create_event: permissionsData.content?.can_create_event ?? false,
-                                    can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                    can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                    can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                  },
-                                })
-                              );
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_create_form: checked === true
+                              });
                             }}
                           />
-                          <Label htmlFor="view_events">Visualizar Eventos</Label>
+                          <Label htmlFor="create_form">Criar Formulários</Label>
                         </div>
+                        
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="create_event"
-                            checked={Boolean(permissionsData.content?.can_create_event)}
+                            checked={permissionsData.can_create_event}
                             onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              // Se está marcando "criar", automaticamente marcar "visualizar"
-                              if (isChecked) {
-                                setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: true,
-                                    can_create_event: true,
-                                    can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                    can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                    can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                  },
-                                });
-                              } else {
-                                handlePermissionToggle(
-                                  'can_create_event',
-                                  false,
-                                  () => setPermissionsData({
-                                    ...permissionsData,
-                                    content: {
-                                      ...permissionsData.content,
-                                      can_view_events: permissionsData.content?.can_view_events ?? false,
-                                      can_create_event: false,
-                                      can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                      can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                      can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                      can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                      can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                      can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                    },
-                                  })
-                                );
-                              }
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_create_event: checked === true
+                              });
                             }}
                           />
                           <Label htmlFor="create_event">Criar Eventos</Label>
                         </div>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label className="font-medium">Encartes</Label>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="view_flyers"
-                            checked={Boolean(permissionsData.content?.can_view_flyers)}
-                            onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              handlePermissionToggle(
-                                'can_view_flyers',
-                                isChecked,
-                                () => setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: permissionsData.content?.can_view_events ?? false,
-                                    can_create_event: permissionsData.content?.can_create_event ?? false,
-                                    can_view_flyers: isChecked,
-                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                    can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                    can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                  },
-                                })
-                              );
-                            }}
-                          />
-                          <Label htmlFor="view_flyers">Visualizar Encartes</Label>
-                        </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="create_flyer"
-                            checked={Boolean(permissionsData.content?.can_create_flyer)}
+                            checked={permissionsData.can_create_flyer}
                             onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              // Se está marcando "criar", automaticamente marcar "visualizar"
-                              if (isChecked) {
-                                setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: permissionsData.content?.can_view_events ?? false,
-                                    can_create_event: permissionsData.content?.can_create_event ?? false,
-                                    can_view_flyers: true,
-                                    can_create_flyer: true,
-                                    can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                    can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                  },
-                                });
-                              } else {
-                                handlePermissionToggle(
-                                  'can_create_flyer',
-                                  false,
-                                  () => setPermissionsData({
-                                    ...permissionsData,
-                                    content: {
-                                      ...permissionsData.content,
-                                      can_view_events: permissionsData.content?.can_view_events ?? false,
-                                      can_create_event: permissionsData.content?.can_create_event ?? false,
-                                      can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                      can_create_flyer: false,
-                                      can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                      can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                      can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                      can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                    },
-                                  })
-                                );
-                              }
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_create_flyer: checked === true
+                              });
                             }}
                           />
                           <Label htmlFor="create_flyer">Criar Encartes</Label>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="space-y-2">
-                      <Label className="font-medium">Salas</Label>
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
                           <Checkbox
-                            id="view_rooms"
-                            checked={Boolean(permissionsData.content?.can_view_rooms)}
-                            onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              handlePermissionToggle(
-                                'can_view_rooms',
-                                isChecked,
-                                () => setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: permissionsData.content?.can_view_events ?? false,
-                                    can_create_event: permissionsData.content?.can_create_event ?? false,
-                                    can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                    can_view_rooms: isChecked,
-                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                    can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                  },
-                                })
-                              );
-                            }}
-                          />
-                          <Label htmlFor="view_rooms">Visualizar Salas</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
                             id="create_booking"
-                            checked={Boolean(permissionsData.content?.can_create_booking)}
+                            checked={permissionsData.can_create_booking}
                             onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              // Se está marcando "criar", automaticamente marcar "visualizar"
-                              if (isChecked) {
-                                setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: permissionsData.content?.can_view_events ?? false,
-                                    can_create_event: permissionsData.content?.can_create_event ?? false,
-                                    can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                    can_view_rooms: true,
-                                    can_create_booking: true,
-                                    can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                  },
-                                });
-                              } else {
-                                handlePermissionToggle(
-                                  'can_create_booking',
-                                  false,
-                                  () => setPermissionsData({
-                                    ...permissionsData,
-                                    content: {
-                                      ...permissionsData.content,
-                                      can_view_events: permissionsData.content?.can_view_events ?? false,
-                                      can_create_event: permissionsData.content?.can_create_event ?? false,
-                                      can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                      can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                      can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                      can_create_booking: false,
-                                      can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                      can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                    },
-                                  })
-                                );
-                              }
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_create_booking: checked === true
+                              });
                             }}
                           />
                           <Label htmlFor="create_booking">Agendar Salas</Label>
                         </div>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label className="font-medium">Carros</Label>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="view_cars"
-                            checked={Boolean(permissionsData.content?.can_view_cars)}
-                            onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              handlePermissionToggle(
-                                'can_view_cars',
-                                isChecked,
-                                () => setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: permissionsData.content?.can_view_events ?? false,
-                                    can_create_event: permissionsData.content?.can_create_event ?? false,
-                                    can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                    can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                    can_view_cars: isChecked,
-                                    can_locate_cars: permissionsData.content?.can_locate_cars ?? false,
-                                  },
-                                })
-                              );
-                            }}
-                          />
-                          <Label htmlFor="view_cars">Visualizar Carros</Label>
-                        </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="locate_cars"
-                            checked={Boolean(permissionsData.content?.can_locate_cars)}
+                            checked={permissionsData.can_locate_cars}
                             onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              // Se está marcando "criar", automaticamente marcar "visualizar"
-                              if (isChecked) {
-                                setPermissionsData({
-                                  ...permissionsData,
-                                  content: {
-                                    ...permissionsData.content,
-                                    can_view_events: permissionsData.content?.can_view_events ?? false,
-                                    can_create_event: permissionsData.content?.can_create_event ?? false,
-                                    can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                    can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                    can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                    can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                    can_view_cars: true,
-                                    can_locate_cars: true,
-                                  },
-                                });
-                              } else {
-                                handlePermissionToggle(
-                                  'can_locate_cars',
-                                  false,
-                                  () => setPermissionsData({
-                                    ...permissionsData,
-                                    content: {
-                                      ...permissionsData.content,
-                                      can_view_events: permissionsData.content?.can_view_events ?? false,
-                                      can_create_event: permissionsData.content?.can_create_event ?? false,
-                                      can_view_flyers: permissionsData.content?.can_view_flyers ?? false,
-                                      can_create_flyer: permissionsData.content?.can_create_flyer ?? false,
-                                      can_view_rooms: permissionsData.content?.can_view_rooms ?? false,
-                                      can_create_booking: permissionsData.content?.can_create_booking ?? false,
-                                      can_view_cars: permissionsData.content?.can_view_cars ?? false,
-                                      can_locate_cars: false,
-                                    },
-                                  })
-                                );
-                              }
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_locate_cars: checked === true
+                              });
                             }}
                           />
                           <Label htmlFor="locate_cars">Agendar Carros</Label>
@@ -958,133 +546,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <Separator />
-
-                {/* Seção de Formulários */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="h-4 w-4" />
-                    <Label className="text-base font-semibold">Formulários</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Configure as permissões para visualizar e criar formulários.
-                  </p>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="view_forms"
-                        checked={Boolean(permissionsData.forms?.can_view_forms)}
-                        onCheckedChange={(checked) => {
-                          const isChecked = checked === true;
-                          handlePermissionToggle(
-                            'can_view_forms', 
-                            isChecked,
-                            () => setPermissionsData({
-                              ...permissionsData,
-                              forms: {
-                                ...permissionsData.forms,
-                                can_view_forms: isChecked,
-                                can_create_form: permissionsData.forms?.can_create_form ?? false,
-                                unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
-                                hidden_forms: permissionsData.forms?.hidden_forms ?? [],
-                              },
-                            })
-                          );
-                        }}
-                      />
-                      <Label htmlFor="view_forms">Visualizar Formulários</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="create_form"
-                        checked={permissionsData.forms?.can_create_form ?? false}
-                        onCheckedChange={(checked) => {
-                          const isChecked = checked === true;
-                          // Se está marcando "criar", automaticamente marcar "visualizar"
-                          if (isChecked) {
-                            setPermissionsData({
-                              ...permissionsData,
-                              forms: {
-                                ...permissionsData.forms,
-                                can_view_forms: true,
-                                can_create_form: true,
-                                unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
-                                hidden_forms: permissionsData.forms?.hidden_forms ?? [],
-                              },
-                            });
-                          } else {
-                            handlePermissionToggle(
-                              'can_create_form', 
-                              false,
-                              () => setPermissionsData({
-                                ...permissionsData,
-                                forms: {
-                                  ...permissionsData.forms,
-                                  can_view_forms: Boolean(permissionsData.forms?.can_view_forms),
-                                  can_create_form: false,
-                                  unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
-                                  hidden_forms: permissionsData.forms?.hidden_forms ?? [],
-                                },
-                              })
-                            );
-                          }
-                        }}
-                      />
-                      <Label htmlFor="create_form">Criar Formulários</Label>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Seção de Visibilidade de Formulários */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="h-4 w-4" />
-                    <Label className="text-base font-semibold">Formulários Visíveis</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Por padrão, todos os formulários estão marcados como visíveis. Desmarque os formulários que devem ficar ocultos para este usuário.
-                  </p>
-                  
-                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-3">
-                    {allForms.map((form) => (
-                      <div key={form.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`visible_${form.id}`}
-                          checked={!(permissionsData.forms?.hidden_forms?.includes(form.id) ?? false)}
-                          onCheckedChange={(checked) => {
-                            const isChecked = checked === true;
-                            const currentHidden = permissionsData.forms?.hidden_forms ?? [];
-                            const newHidden = isChecked
-                              ? currentHidden.filter(id => id !== form.id) // Remove da lista de ocultos
-                              : [...currentHidden, form.id]; // Adiciona à lista de ocultos
-
-                            setPermissionsData({
-                              ...permissionsData,
-                              forms: {
-                                ...permissionsData.forms,
-                                can_view_forms: Boolean(permissionsData.forms?.can_view_forms),
-                                can_create_form: Boolean(permissionsData.forms?.can_create_form),
-                                unlocked_forms: permissionsData.forms?.unlocked_forms ?? [],
-                                hidden_forms: newHidden,
-                              },
-                            });
-                          }}
-                        />
-                        <Label htmlFor={`visible_${form.id}`} className="text-sm">
-                          {form.title}
-                        </Label>
-                      </div>
-                    ))}
-                    {allForms.length === 0 && (
-                      <p className="text-sm text-muted-foreground">Nenhum formulário disponível</p>
-                    )}
-                  </div>
-                </div>
+                )}
 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button variant="outline" onClick={() => setIsEditingPermissions(false)}>
@@ -1100,55 +562,41 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             ) : (
               <div className="p-4 border rounded-lg space-y-4">
                 <div>
-                  <Label className="text-sm font-medium">Rotas Acessíveis</Label>
-                  <p className="text-sm text-muted-foreground">{getAccessibleRoutesText()}</p>
+                  <Label className="text-sm font-medium">Tipo de Usuário</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {permissionsData.sudo ? "Super Admin (Acesso Total)" : 
+                     permissionsData.isTotem ? "Usuário TOTEM (Acesso Limitado)" :
+                     "Usuário Padrão (Pode visualizar tudo)"}
+                  </p>
                 </div>
                 
-                <div>
-                  <Label className="text-sm font-medium">Permissões de Ação</Label>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {permissionsData.content?.can_view_events && (
-                      <Badge variant="secondary">Visualizar Eventos</Badge>
-                    )}
-                    {permissionsData.content?.can_create_event && (
-                      <Badge variant="secondary">Criar Eventos</Badge>
-                    )}
-                    {permissionsData.content?.can_view_flyers && (
-                      <Badge variant="secondary">Visualizar Encartes</Badge>
-                    )}
-                    {permissionsData.content?.can_create_flyer && (
-                      <Badge variant="secondary">Criar Encartes</Badge>
-                    )}
-                    {permissionsData.content?.can_view_rooms && (
-                      <Badge variant="secondary">Visualizar Salas</Badge>
-                    )}
-                    {permissionsData.content?.can_create_booking && (
-                      <Badge variant="secondary">Agendar Salas</Badge>
-                    )}
-                    {permissionsData.content?.can_view_cars && (
-                      <Badge variant="secondary">Visualizar Carros</Badge>
-                    )}
-                    {permissionsData.content?.can_locate_cars && (
-                      <Badge variant="secondary">Agendar Carros</Badge>
-                    )}
-                    {permissionsData.forms?.can_view_forms && (
-                      <Badge variant="secondary">Visualizar Formulários</Badge>
-                    )}
-                    {permissionsData.forms?.can_create_form && (
-                      <Badge variant="secondary">Criar Formulários</Badge>
-                    )}
-                    {!permissionsData.content && !permissionsData.forms && (
-                      <span className="text-sm text-muted-foreground">Nenhuma permissão específica</span>
-                    )}
-                  </div>
-                </div>
-
-                {permissionsData.forms?.hidden_forms && permissionsData.forms.hidden_forms.length > 0 && (
+                {!permissionsData.sudo && !permissionsData.isTotem && (
                   <div>
-                    <Label className="text-sm font-medium">Formulários Ocultos</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {permissionsData.forms.hidden_forms.length} formulário(s) oculto(s)
-                    </p>
+                    <Label className="text-sm font-medium">Permissões de Criação</Label>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {permissionsData.can_create_form && (
+                        <Badge variant="secondary">Criar Formulários</Badge>
+                      )}
+                      {permissionsData.can_create_event && (
+                        <Badge variant="secondary">Criar Eventos</Badge>
+                      )}
+                      {permissionsData.can_create_flyer && (
+                        <Badge variant="secondary">Criar Encartes</Badge>
+                      )}
+                      {permissionsData.can_create_booking && (
+                        <Badge variant="secondary">Agendar Salas</Badge>
+                      )}
+                      {permissionsData.can_locate_cars && (
+                        <Badge variant="secondary">Agendar Carros</Badge>
+                      )}
+                      {!permissionsData.can_create_form && 
+                       !permissionsData.can_create_event && 
+                       !permissionsData.can_create_flyer && 
+                       !permissionsData.can_create_booking && 
+                       !permissionsData.can_locate_cars && (
+                        <span className="text-sm text-muted-foreground">Apenas visualização</span>
+                      )}
+                    </div>
                   </div>
                 )}
 

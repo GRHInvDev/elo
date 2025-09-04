@@ -59,25 +59,30 @@ export async function POST(req: Request) {
   // Handle the webhook
   switch (evt.type) {
     case "user.created":
-      // Determinar configuração inicial baseada nos metadados
+      // SISTEMA SIMPLIFICADO: Todos podem ver tudo, só alguns podem criar
       let initialConfig = {
         sudo: false,
+        // Permissões de criação - todas false por padrão
+        can_create_form: false,
+        can_create_event: false,
+        can_create_flyer: false,
+        can_create_booking: false,
+        can_locate_cars: false,
+        // Admin pages apenas para sudos
         admin_pages: [] as string[],
-        forms: {
-          can_create_form: false,
-          unlocked_forms: []
-        },
         isTotem: public_metadata?.isTotem ?? false
       };
 
       if (public_metadata?.admin) {
         initialConfig = {
           sudo: true,
+          // Admin pode criar tudo
+          can_create_form: true,
+          can_create_event: true,
+          can_create_flyer: true,
+          can_create_booking: true,
+          can_locate_cars: true,
           admin_pages: ["/admin", "/food", "/rooms", "/ideas", "/birthday"] as string[],
-          forms: {
-            can_create_form: true,
-            unlocked_forms: []
-          },
           isTotem: false
         };
       }

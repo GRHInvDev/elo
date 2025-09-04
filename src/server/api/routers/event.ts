@@ -64,8 +64,8 @@ export const eventRouter = createTRPCRouter({
         // Se é sudo, tem acesso a tudo
         if (roleConfig.sudo) return true;
 
-        // Verificar se pode criar eventos
-        return roleConfig.content?.can_create_event === true;
+        // Verificar se pode criar eventos (sistema simplificado)
+        return roleConfig.can_create_event === true;
       })
 
       if (usersToNotify.length > 0) {

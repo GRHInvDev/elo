@@ -20,19 +20,15 @@ export async function checkAdminAccess(route: string) {
   return db_user;
 }
 
-export async function checkFormAccess(formId: string) {
+export async function checkFormAccess(_formId: string) {
   const db_user = await api.user.me();
 
   if (!db_user?.role_config) {
     redirect("/dashboard");
   }
 
-  // Se é sudo, pode acessar qualquer formulário
-  if (db_user.role_config.sudo) return db_user;
-
-  // NOVA REGRA: Pode acessar qualquer formulário, exceto os hidden_forms
-  const isHidden = db_user.role_config.forms?.hidden_forms?.includes(formId) ?? false;
-  if (isHidden) {
+  // SISTEMA SIMPLIFICADO: Todos podem acessar formulários, exceto TOTEMs
+  if (db_user.role_config.isTotem) {
     redirect("/dashboard");
   }
 
@@ -50,7 +46,7 @@ export async function checkFormCreationAccess() {
   if (db_user.role_config.sudo) return db_user;
   
   // Verifica se pode criar formulários
-  if (!db_user.role_config.forms?.can_create_form) {
+  if (!db_user.role_config.can_create_form) {
     redirect("/dashboard");
   }
 
@@ -73,8 +69,8 @@ export function canCreateForm(roleConfig: RolesConfig | null): boolean {
   // Se é sudo, pode criar formulários
   if (roleConfig.sudo) return true;
   
-  // Verifica se pode criar formulários
-  return roleConfig.forms?.can_create_form ?? false;
+  // Verifica permissão específica de criação
+  return roleConfig.can_create_form;
 }
 
 export function canCreateEvent(roleConfig: RolesConfig | null): boolean {
@@ -83,11 +79,8 @@ export function canCreateEvent(roleConfig: RolesConfig | null): boolean {
   // Se é sudo, pode criar eventos
   if (roleConfig.sudo) return true;
 
-  // Primeiro verifica se pode visualizar eventos
-  if (!roleConfig.content?.can_view_events) return false;
-
-  // Se pode visualizar, verifica se pode criar
-  return roleConfig.content?.can_create_event ?? false;
+  // Verifica permissão específica de criação
+  return roleConfig.can_create_event;
 }
 
 export function canCreateFlyer(roleConfig: RolesConfig | null): boolean {
@@ -96,11 +89,8 @@ export function canCreateFlyer(roleConfig: RolesConfig | null): boolean {
   // Se é sudo, pode criar encartes
   if (roleConfig.sudo) return true;
 
-  // Primeiro verifica se pode visualizar encartes
-  if (!roleConfig.content?.can_view_flyers) return false;
-
-  // Se pode visualizar, verifica se pode criar
-  return roleConfig.content?.can_create_flyer ?? false;
+  // Verifica permissão específica de criação
+  return roleConfig.can_create_flyer;
 }
 
 export function canCreateBooking(roleConfig: RolesConfig | null): boolean {
@@ -109,11 +99,8 @@ export function canCreateBooking(roleConfig: RolesConfig | null): boolean {
   // Se é sudo, pode fazer agendamentos
   if (roleConfig.sudo) return true;
 
-  // Primeiro verifica se pode visualizar salas
-  if (!roleConfig.content?.can_view_rooms) return false;
-
-  // Se pode visualizar, verifica se pode agendar
-  return roleConfig.content?.can_create_booking ?? false;
+  // Verifica permissão específica de criação
+  return roleConfig.can_create_booking;
 }
 
 export function canLocateCars(roleConfig: RolesConfig | null): boolean {
@@ -122,98 +109,57 @@ export function canLocateCars(roleConfig: RolesConfig | null): boolean {
   // Se é sudo, pode fazer agendamentos de carros
   if (roleConfig.sudo) return true;
 
-  // Primeiro verifica se pode visualizar carros
-  if (!roleConfig.content?.can_view_cars) return false;
-
-  // Se pode visualizar, verifica se pode agendar
-  return roleConfig.content?.can_locate_cars ?? false;
+  // Verifica permissão específica de criação
+  return roleConfig.can_locate_cars;
 }
 
-// Funções de visualização (acesso às páginas)
+// SISTEMA SIMPLIFICADO: Todos podem visualizar tudo
 export function canViewShop(): boolean {
-  // Todos podem visualizar a página de shop
   return true;
 }
 
 export function canViewForms(roleConfig: RolesConfig | null): boolean {
+  // Todos podem visualizar formulários, exceto usuários TOTEM
   if (!roleConfig) return false;
-
-  // Se é sudo, pode visualizar
-  if (roleConfig.sudo) return true;
-
-  // Precisa ter a permissão específica para visualizar formulários
-  return roleConfig.forms?.can_view_forms ?? false;
+  return !roleConfig.isTotem;
 }
 
 export function canViewEvents(roleConfig: RolesConfig | null): boolean {
+  // Todos podem visualizar eventos, exceto usuários TOTEM
   if (!roleConfig) return false;
-
-  // Se é sudo, pode visualizar
-  if (roleConfig.sudo) return true;
-
-  // Precisa ter a permissão específica para visualizar eventos
-  return roleConfig.content?.can_view_events ?? false;
+  return !roleConfig.isTotem;
 }
 
 export function canViewFlyers(roleConfig: RolesConfig | null): boolean {
+  // Todos podem visualizar encartes, exceto usuários TOTEM
   if (!roleConfig) return false;
-
-  // Se é sudo, pode visualizar
-  if (roleConfig.sudo) return true;
-
-  // Precisa ter a permissão específica para visualizar encartes
-  return roleConfig.content?.can_view_flyers ?? false;
+  return !roleConfig.isTotem;
 }
 
 export function canViewRooms(roleConfig: RolesConfig | null): boolean {
+  // Todos podem visualizar salas, exceto usuários TOTEM
   if (!roleConfig) return false;
-
-  // Se é sudo, pode visualizar
-  if (roleConfig.sudo) return true;
-
-  // Precisa ter a permissão específica para visualizar salas
-  return roleConfig.content?.can_view_rooms ?? false;
+  return !roleConfig.isTotem;
 }
 
 export function canViewCars(roleConfig: RolesConfig | null): boolean {
+  // Todos podem visualizar carros, exceto usuários TOTEM
   if (!roleConfig) return false;
-
-  // Se é sudo, pode visualizar
-  if (roleConfig.sudo) return true;
-
-  // Precisa ter a permissão específica para visualizar carros
-  return roleConfig.content?.can_view_cars ?? false;
+  return !roleConfig.isTotem;
 }
 
-export function canAccessForm(roleConfig: RolesConfig | null, formId: string): boolean {
-  if (!roleConfig) return false; // Se não tem config, não pode acessar
-  
-  // Se é sudo, pode acessar qualquer formulário
-  if (roleConfig.sudo) return true;
-  
-  // Primeiro verifica se tem permissão para visualizar formulárioss
-  if (!roleConfig.forms?.can_view_forms) return false;
-  
-  // Se tem permissão para ver, verifica se não está na lista de ocultos
-  const isHidden = roleConfig.forms?.hidden_forms?.includes(formId) ?? false;
-  return !isHidden;
+export function canAccessForm(roleConfig: RolesConfig | null, _formId: string): boolean {
+  // SISTEMA SIMPLIFICADO: Todos podem acessar formulários, exceto TOTEMs
+  if (!roleConfig) return false;
+  return !roleConfig.isTotem;
 }
 
 export function getAccessibleForms<T extends { id: string }>(
   roleConfig: RolesConfig | null,
   forms: T[]
 ): T[] {
+  // SISTEMA SIMPLIFICADO: Todos podem ver todos os formulários, exceto TOTEMs
   if (!roleConfig) return [];
-
-  // Se é sudo, retorna todos os formulários
-  if (roleConfig.sudo) return forms;
-
-  // Se não tem permissão para ver formulários, retorna lista vazia
-  if (!roleConfig.forms?.can_view_forms) return [];
-
-  // Se tem permissão, filtra apenas os não ocultos
-  return forms.filter(form => {
-    const isHidden = roleConfig.forms?.hidden_forms?.includes(form.id) ?? false;
-    return !isHidden;
-  });
+  if (roleConfig.isTotem) return [];
+  return forms;
 }

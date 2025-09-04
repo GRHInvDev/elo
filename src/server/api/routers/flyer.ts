@@ -64,8 +64,8 @@ export const flyerRouter = createTRPCRouter({
         // Se é sudo, tem acesso a tudo
         if (roleConfig.sudo) return true;
 
-        // Verificar se pode criar encartes
-        return roleConfig.content?.can_create_flyer === true;
+        // Verificar se pode criar encartes (sistema simplificado)
+        return roleConfig.can_create_flyer === true;
       })
 
       if (usersToNotify.length > 0) {

@@ -112,13 +112,13 @@ export const formsRouter = createTRPCRouter({
                 return true;
             }
 
-            // Verificar se tem permissões especiais no role_config (hidden_forms)
+            // SISTEMA SIMPLIFICADO: Todos podem visualizar formulários, exceto TOTEMs
             const roleConfig = currentUser.role_config as RolesConfig;
-            if (roleConfig?.forms?.hidden_forms?.includes(form.id)) {
+            if (roleConfig?.isTotem) {
                 return false;
             }
 
-            return false;
+            return true;
         });
     }),
 
