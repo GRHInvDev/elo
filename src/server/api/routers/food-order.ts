@@ -262,6 +262,22 @@ export const foodOrderRouter = createTRPCRouter({
       }).optional(),
     )
     .query(async ({ ctx, input }) => {
+      console.log("🔍 BACKEND DEBUG - Input recebido:", {
+        startDate: input?.startDate,
+        endDate: input?.endDate,
+        startDateISO: input?.startDate?.toISOString(),
+        endDateISO: input?.endDate?.toISOString(),
+      })
+      
+      // Tentar uma abordagem alternativa usando comparação de data como string
+      const startDateStr = input?.startDate ? input.startDate.toISOString().split('T')[0] : null
+      const endDateStr = input?.endDate ? input.endDate.toISOString().split('T')[0] : null
+      
+      console.log("🔍 BACKEND DEBUG - Datas como string:", {
+        startDateStr,
+        endDateStr
+      })
+      
       const whereClause: Prisma.FoodOrderWhereInput = {
         ...(input?.startDate && input?.endDate && {
           orderDate: {
@@ -300,15 +316,55 @@ export const foodOrderRouter = createTRPCRouter({
         }
       }
 
-      return ctx.db.foodOrder.findMany({
-        where: whereClause,
-        include: {
-          user: true,
-          restaurant: true,
-          menuItem: true,
-        },
-        orderBy: { orderDate: "desc" },
+      // Tentar uma abordagem alternativa usando raw query se necessário
+      let orders
+      
+      if (input?.startDate && input?.endDate) {
+        // Usar as datas recebidas diretamente (já estão no formato correto)
+        console.log("🔍 BACKEND DEBUG - Usando datas recebidas diretamente:", {
+          startDate: input.startDate.toISOString(),
+          endDate: input.endDate.toISOString()
+        })
+        
+        orders = await ctx.db.foodOrder.findMany({
+          where: {
+            ...whereClause,
+            orderDate: {
+              gte: input.startDate,
+              lte: input.endDate,
+            }
+          },
+          include: {
+            user: true,
+            restaurant: true,
+            menuItem: true,
+          },
+          orderBy: { orderDate: "desc" },
+        })
+      } else {
+        orders = await ctx.db.foodOrder.findMany({
+          where: whereClause,
+          include: {
+            user: true,
+            restaurant: true,
+            menuItem: true,
+          },
+          orderBy: { orderDate: "desc" },
+        })
+      }
+      
+      console.log("🔍 BACKEND DEBUG - Pedidos encontrados:", orders.length)
+      orders.forEach((order, index) => {
+        console.log(`🔍 BACKEND DEBUG - Pedido ${index + 1}:`, {
+          id: order.id,
+          orderDate: order.orderDate,
+          orderDateISO: order.orderDate.toISOString(),
+          user: `${order.user.firstName} ${order.user.lastName}`,
+          restaurant: order.restaurant.name
+        })
       })
+      
+      return orders
     }),
 
     listToExcel: protectedProcedure
