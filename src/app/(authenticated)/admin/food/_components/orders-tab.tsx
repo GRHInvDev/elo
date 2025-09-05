@@ -483,7 +483,7 @@ export default function OrdersTab({
                         </div>
                         <p className="text-sm">{order.menuItem.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          Pedido feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })} - {format(new Date(order.orderTime), "dd/MM/yyyy", { locale: ptBR })}
+                          Pedido do dia {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })} - feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })}
                         </p>
                         {order.observations && (
                           <p className="text-xs text-muted-foreground">
