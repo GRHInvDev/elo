@@ -14,11 +14,14 @@ export const foodOrderRouter = createTRPCRouter({
       const orderTime = now // Removido ajuste duplo, cliente já envia com fuso correto
 
       // Verificar se já existe um pedido para este usuário nesta data
+      const inputDate = new Date(input.orderDate)
+      const orderDateNormalized = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate(), 0, 0, 0, 0)
+      
       const existingOrder = await ctx.db.foodOrder.findUnique({
         where: {
           userId_orderDate: {
             userId,
-            orderDate: new Date(input.orderDate.setHours(0, 0, 0, 0)),
+            orderDate: orderDateNormalized,
           },
         },
       })
@@ -64,7 +67,7 @@ export const foodOrderRouter = createTRPCRouter({
           userId,
           restaurantId: input.restaurantId,
           menuItemId: input.menuItemId,
-          orderDate: input.orderDate,
+          orderDate: orderDateNormalized,
           orderTime,
           observations: input.observations,
         },
@@ -262,22 +265,6 @@ export const foodOrderRouter = createTRPCRouter({
       }).optional(),
     )
     .query(async ({ ctx, input }) => {
-      console.log("🔍 BACKEND DEBUG - Input recebido:", {
-        startDate: input?.startDate,
-        endDate: input?.endDate,
-        startDateISO: input?.startDate?.toISOString(),
-        endDateISO: input?.endDate?.toISOString(),
-      })
-      
-      // Tentar uma abordagem alternativa usando comparação de data como string
-      const startDateStr = input?.startDate ? input.startDate.toISOString().split('T')[0] : null
-      const endDateStr = input?.endDate ? input.endDate.toISOString().split('T')[0] : null
-      
-      console.log("🔍 BACKEND DEBUG - Datas como string:", {
-        startDateStr,
-        endDateStr
-      })
-      
       const whereClause: Prisma.FoodOrderWhereInput = {
         ...(input?.startDate && input?.endDate && {
           orderDate: {
@@ -316,53 +303,17 @@ export const foodOrderRouter = createTRPCRouter({
         }
       }
 
-      // Tentar uma abordagem alternativa usando raw query se necessário
-      let orders
-      
-      if (input?.startDate && input?.endDate) {
-        // Usar as datas recebidas diretamente (já estão no formato correto)
-        console.log("🔍 BACKEND DEBUG - Usando datas recebidas diretamente:", {
-          startDate: input.startDate.toISOString(),
-          endDate: input.endDate.toISOString()
-        })
-        
-        orders = await ctx.db.foodOrder.findMany({
-          where: {
-            ...whereClause,
-            orderDate: {
-              gte: input.startDate,
-              lte: input.endDate,
-            }
-          },
-          include: {
-            user: true,
-            restaurant: true,
-            menuItem: true,
-          },
-          orderBy: { orderDate: "desc" },
-        })
-      } else {
-        orders = await ctx.db.foodOrder.findMany({
-          where: whereClause,
-          include: {
-            user: true,
-            restaurant: true,
-            menuItem: true,
-          },
-          orderBy: { orderDate: "desc" },
-        })
-      }
-      
-      console.log("🔍 BACKEND DEBUG - Pedidos encontrados:", orders.length)
-      orders.forEach((order, index) => {
-        console.log(`🔍 BACKEND DEBUG - Pedido ${index + 1}:`, {
-          id: order.id,
-          orderDate: order.orderDate,
-          orderDateISO: order.orderDate.toISOString(),
-          user: `${order.user.firstName} ${order.user.lastName}`,
-          restaurant: order.restaurant.name
-        })
+
+      const orders = await ctx.db.foodOrder.findMany({
+        where: whereClause,
+        include: {
+          user: true,
+          restaurant: true,
+          menuItem: true,
+        },
+        orderBy: { orderDate: "desc" },
       })
+      
       
       return orders
     }),
@@ -380,11 +331,21 @@ export const foodOrderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const whereClause: Prisma.FoodOrderWhereInput = {
-        ...(input?.startDate && { orderDate: { gte: input.startDate } }),
-        ...(input?.endDate && { orderDate: { lte: input.endDate } }),
         ...(input?.status && { status: input.status }),
         ...(input?.restaurantId && { restaurantId: input.restaurantId }),
         ...(input?.userId && { userId: input.userId }),
+      }
+
+      // Adicionar filtros de data usando as datas do cliente diretamente
+      if (input?.startDate && input?.endDate) {
+        whereClause.orderDate = {
+          gte: input.startDate,
+          lte: input.endDate
+        }
+      } else if (input?.startDate) {
+        whereClause.orderDate = { gte: input.startDate }
+      } else if (input?.endDate) {
+        whereClause.orderDate = { lte: input.endDate }
       }
 
       // Adicionar filtro por nome do usuário se fornecido
@@ -442,10 +403,13 @@ export const foodOrderRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const start = new Date(input.orderDate)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(input.orderDate)
-      end.setHours(23, 59, 59, 999)
+      const inputDate = new Date(input.orderDate)
+      const year = inputDate.getFullYear()
+      const month = inputDate.getMonth()
+      const day = inputDate.getDate()
+
+      const start = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+      const end = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
 
       return ctx.db.foodOrder.findMany({
         where: {
@@ -491,11 +455,14 @@ export const foodOrderRouter = createTRPCRouter({
   byDate: protectedProcedure
     .input(getOrdersByDateSchema)
     .query(async ({ ctx, input }) => {
-      // Corrigir busca para considerar o dia inteiro
-      const start = new Date(input.date)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(input.date)
-      end.setHours(23, 59, 59, 999)
+      // Usar orderDate para listagem - criar datas em UTC para evitar problemas de timezone
+      const inputDate = new Date(input.date)
+      const year = inputDate.getFullYear()
+      const month = inputDate.getMonth()
+      const day = inputDate.getDate()
+
+      const start = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+      const end = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
       return ctx.db.foodOrder.findMany({
         where: {
           orderDate: {
@@ -531,10 +498,13 @@ export const foodOrderRouter = createTRPCRouter({
         orderDate?: { gte: Date; lte: Date }
       } = { restaurantId: input.restaurantId }
       if (input.date) {
-        const start = new Date(input.date)
-        start.setHours(0, 0, 0, 0)
-        const end = new Date(input.date)
-        end.setHours(23, 59, 59, 999)
+        const inputDate = new Date(input.date)
+        const year = inputDate.getFullYear()
+        const month = inputDate.getMonth()
+        const day = inputDate.getDate()
+
+        const start = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+        const end = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
         where.orderDate = { gte: start, lte: end }
       }
       return ctx.db.foodOrder.findMany({
@@ -558,8 +528,8 @@ export const foodOrderRouter = createTRPCRouter({
   // Verificar se usuário já fez pedido para hoje
   checkTodayOrder: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.auth.userId
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const now = new Date()
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0))
 
     return ctx.db.foodOrder.findUnique({
       where: {
@@ -580,8 +550,8 @@ export const foodOrderRouter = createTRPCRouter({
     .input(z.object({ date: z.date() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.auth.userId
-      const date = new Date(input.date)
-      date.setHours(0, 0, 0, 0)
+      const inputDate = new Date(input.date)
+      const date = new Date(Date.UTC(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate(), 0, 0, 0, 0))
       return ctx.db.foodOrder.findUnique({
         where: {
           userId_orderDate: {
@@ -614,22 +584,24 @@ export const foodOrderRouter = createTRPCRouter({
       let endDate: Date
 
       if (period === "year") {
-        startDate = new Date(year, 0, 1) // 1 de janeiro
-        endDate = new Date(year, 11, 31, 23, 59, 59, 999) // 31 de dezembro
+        startDate = new Date(Date.UTC(year, 0, 1)) // 1 de janeiro
+        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999)) // 31 de dezembro
       } else if (period === "month" && month) {
         // Para período mensal específico
-        startDate = new Date(year, month - 1, 1)
-        endDate = new Date(year, month, 0, 23, 59, 59, 999)
+        startDate = new Date(Date.UTC(year, month - 1, 1))
+        endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999))
       } else if (period === "day" && date) {
-        // Para período de dia específico
-        startDate = new Date(date)
-        startDate.setHours(0, 0, 0, 0)
-        endDate = new Date(date)
-        endDate.setHours(23, 59, 59, 999)
+        // Para período de dia específico - usar UTC para evitar problemas de timezone
+        const dateInput = new Date(date)
+        const year = dateInput.getFullYear()
+        const month = dateInput.getMonth()
+        const day = dateInput.getDate()
+        startDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+        endDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
       } else {
         // Fallback: buscar dados de todos os meses do ano
-        startDate = new Date(year, 0, 1)
-        endDate = new Date(year, 11, 31, 23, 59, 59, 999)
+        startDate = new Date(Date.UTC(year, 0, 1))
+        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999))
       }
 
       // Buscar pedidos agrupados por restaurante
@@ -707,19 +679,22 @@ export const foodOrderRouter = createTRPCRouter({
       let endDate: Date
 
       if (period === "year") {
-        startDate = new Date(year, 0, 1)
-        endDate = new Date(year, 11, 31, 23, 59, 59, 999)
+        startDate = new Date(Date.UTC(year, 0, 1))
+        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999))
       } else if (period === "month" && month) {
-        startDate = new Date(year, month - 1, 1)
-        endDate = new Date(year, month, 0, 23, 59, 59, 999)
+        startDate = new Date(Date.UTC(year, month - 1, 1))
+        endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999))
       } else if (period === "day" && date) {
-        startDate = new Date(date)
-        startDate.setHours(0, 0, 0, 0)
-        endDate = new Date(date)
-        endDate.setHours(23, 59, 59, 999)
+        // Para período de dia específico - usar UTC para evitar problemas de timezone
+        const dateInput = new Date(date)
+        const year = dateInput.getFullYear()
+        const month = dateInput.getMonth()
+        const day = dateInput.getDate()
+        startDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+        endDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
       } else {
-        startDate = new Date(year, 0, 1)
-        endDate = new Date(year, 11, 31, 23, 59, 59, 999)
+        startDate = new Date(Date.UTC(year, 0, 1))
+        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999))
       }
 
       const orders = await ctx.db.foodOrder.findMany({
