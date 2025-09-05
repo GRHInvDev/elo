@@ -50,14 +50,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     path: "/admin/rooms",
     requiresBasicAdmin: true,
   },
-  {
-    id: "/admin/news",
-    title: "Gerenciar Notícias",
-    description: "Publicar e gerenciar notícias e comunicados",
-    icon: Newspaper,
-    path: "/admin/news",
-    requiresBasicAdmin: true,
-  },
+  // {
+  //   id: "/admin/news",
+  //   title: "Gerenciar Notícias",
+  //   description: "Publicar e gerenciar notícias e comunicados",   -----------> Vamos desenvolver isso depois
+  //   icon: Newspaper,
+  //   path: "/admin/news",
+  //   requiresBasicAdmin: true,
+  // },
   {
     id: "/admin/suggestions",
     title: "Gerenciar Ideias",

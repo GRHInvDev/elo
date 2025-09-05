@@ -1192,7 +1192,7 @@ function SuggestionDetailsModal({
 
         {/* Impacto */}
         <div className="space-y-3">
-          <Label className="text-base font-medium">Impacto</Label>
+          <Label className="text-base font-medium">Impacto: Qual o impacto potencial da ideia no negócio?</Label>
           <Textarea
             placeholder="Descreva o impacto desta ideia (máximo 2000 caracteres)"
             value={impactText}
@@ -1202,7 +1202,7 @@ function SuggestionDetailsModal({
             disabled={suggestion.status !== "NEW"}
           />
           <div className="flex items-center gap-4">
-            <Label className="text-sm">Pontuação:</Label>
+            <Label className="text-sm">Pontuação: A empresa tem recursos, pessoas e know-how para implementar?</Label>
             <Select
               value={impactScore.toString()}
               onValueChange={(value) => setImpactScore(Number(value))}
@@ -1227,7 +1227,7 @@ function SuggestionDetailsModal({
 
         {/* Capacidade */}
         <div className="space-y-3">
-          <Label className="text-base font-medium">Capacidade</Label>
+          <Label className="text-base font-medium">Capacidade: Quanto tempo/custo/dificuldade está envolvido? (0-10, mas invertido: mais esforço, nota menor)</Label>
           <Textarea
             placeholder="Descreva a capacidade de implementação desta ideia (máximo 2000 caracteres)"
             value={capacityText}
