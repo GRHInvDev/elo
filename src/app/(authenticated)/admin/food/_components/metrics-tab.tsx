@@ -22,19 +22,14 @@ type ChartItem = {
 
 interface MetricsTabProps {
   selectedYear: number
+  selectedDate: Date
+  setSelectedDate: (date: Date) => void
 }
 
-export default function MetricsTab({ selectedYear }: MetricsTabProps) {
+export default function MetricsTab({ selectedYear, selectedDate, setSelectedDate }: MetricsTabProps) {
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'month' | 'year'>('month')
 
-  // Sincronizar selectedDate com selectedYear quando este mudar
-  useEffect(() => {
-    setSelectedDate(prevDate => {
-      return new Date(selectedYear, prevDate.getMonth(), prevDate.getDate())
-    })
-  }, [selectedYear])
 
   // Buscar métricas de pedidos por restaurante
   const metricsQuery = api.foodOrder.getMetricsByRestaurant.useQuery(
@@ -117,15 +112,22 @@ export default function MetricsTab({ selectedYear }: MetricsTabProps) {
                 <Label>Data</Label>
                 <DatePicker
                   date={selectedDate}
-                  onDateChange={(date: Date) => {
-                    setSelectedDate(date)
+                  onDateChange={(date: Date | undefined) => {
+                    if (date) {
+                      setSelectedDate(date)
+                    }
                   }}
                 />
               </div>
             )}
             <div className="space-y-2">
               <Label>Ano</Label>
-              <Select value={String(selectedYear)} onValueChange={(value) => console.log('Ano selecionado:', value)}>
+              <Select value={String(selectedYear)} onValueChange={(value) => {
+                const newYear = parseInt(value)
+                const newDate = new Date(selectedDate)
+                newDate.setFullYear(newYear)
+                setSelectedDate(newDate)
+              }}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>

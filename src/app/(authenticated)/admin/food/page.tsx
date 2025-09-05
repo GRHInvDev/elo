@@ -106,7 +106,11 @@ export default function AdminFoodPage() {
           </TabsContent>
 
           <TabsContent value="metrics" className="space-y-4">
-          <MetricsTab selectedYear={new Date().getFullYear()} />
+          <MetricsTab 
+            selectedYear={selectedDate.getFullYear()} 
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+          />
           </TabsContent>
       </Tabs>
     </div>
