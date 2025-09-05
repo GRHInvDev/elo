@@ -53,11 +53,21 @@ export default function OrdersTab({
   // Buscar pedidos com filtros - período da data selecionada
   const queryParams = {
     startDate: (() => {
-      const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0)
+      // Manter no timezone local para corresponder aos dados do banco
+      const start = new Date(selectedDate)
+      start.setHours(0, 0, 0, 0)
+      console.log("🔍 DEBUG - Data selecionada:", selectedDate)
+      console.log("🔍 DEBUG - Start date calculada (LOCAL):", start)
+      console.log("🔍 DEBUG - Start date ISO:", start.toISOString())
+      console.log("🔍 DEBUG - Timezone offset:", start.getTimezoneOffset())
       return start
     })(),
     endDate: (() => {
-      const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999)
+      // Manter no timezone local para corresponder aos dados do banco
+      const end = new Date(selectedDate)
+      end.setHours(23, 59, 59, 999)
+      console.log("🔍 DEBUG - End date calculada (LOCAL):", end)
+      console.log("🔍 DEBUG - End date ISO:", end.toISOString())
       return end
     })(),
     restaurantId: selectedRestaurant || undefined,
