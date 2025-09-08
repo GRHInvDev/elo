@@ -8,12 +8,15 @@ import { routeItems } from "@/const/routes"
 import Link from "next/link"
 import { api } from "@/trpc/server"
 
+// Forçar renderização dinâmica para layouts autenticados
+export const dynamic = 'force-dynamic'
+
 export default async function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Usar a API simplificada
+  // Com dynamic = 'force-dynamic', a API deveria funcionar normalmente
   const user = await api.user.me()
 
   return (
