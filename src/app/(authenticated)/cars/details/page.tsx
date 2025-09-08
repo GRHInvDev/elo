@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import type { Enterprise, Vehicle } from "@prisma/client"
 import { addDays, format } from "date-fns"
@@ -28,7 +28,7 @@ const toLocalISO = (date: Date) => {
 // Nossa API retorna como 'number'. Este tipo reflete a estrutura de dados da API.
 type VehicleWithNumberKm = Omit<Vehicle, "kilometers"> & { kilometers: number }
 
-export default function VehiclesPage() {
+function VehiclesPageContent() {
   const searchParams = useSearchParams()
   const enterprise = searchParams.get("enterprise") as Enterprise | null
 
@@ -126,6 +126,26 @@ export default function VehiclesPage() {
         ))}
       </div>
     </div>
+  )
+}
+
+export default function VehiclesPage() {
+  return (
+    <Suspense fallback={
+      <div className="container py-8 place-self-center">
+        <div className="mb-8 flex flex-col gap-2">
+          <h1 className="text-3xl font-bold">Veículos Disponíveis</h1>
+          <p className="text-muted-foreground">Carregando veículos...</p>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <VehicleCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    }>
+      <VehiclesPageContent />
+    </Suspense>
   )
 }
 

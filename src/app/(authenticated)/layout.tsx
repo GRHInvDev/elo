@@ -8,42 +8,16 @@ import { routeItems } from "@/const/routes"
 import Link from "next/link"
 import { api } from "@/trpc/server"
 
+// Forçar renderização dinâmica para layouts autenticados
+export const dynamic = 'force-dynamic'
+
 export default async function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Usar a API simplificada com tratamento de erro para usuários Totem
-  let user;
-  
-  try {
-    user = await api.user.me();
-  } catch (error) {
-    console.error('[AuthenticatedLayout] Erro ao obter usuário:', error);
-    
-    // Em caso de erro, retornar um usuário padrão com configuração Totem
-    // Isso evita crashes e permite que o layout seja renderizado
-    user = {
-      id: 'fallback-user',
-      email: 'fallback@totem.local',
-      firstName: null,
-      lastName: null,
-      imageUrl: null,
-      enterprise: null,
-      setor: null,
-      birthDay: null,
-      role_config: {
-        sudo: false,
-        admin_pages: [],
-        can_create_form: false,
-        can_create_event: false,
-        can_create_flyer: false,
-        can_create_booking: false,
-        can_locate_cars: false,
-        isTotem: true
-      }
-    };
-  }
+  // Com dynamic = 'force-dynamic', a API deveria funcionar normalmente
+  const user = await api.user.me()
 
   return (
     <div className="flex min-h-screen flex-col">
