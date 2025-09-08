@@ -27,7 +27,25 @@ import type { RolesConfig } from "@/types/role-config";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const user = await currentUser()
+  let user = null;
+  
+  try {
+    user = await currentUser();
+  } catch (error) {
+    console.error('[TRPC Context] Erro ao obter usuário atual:', error);
+    
+    // Verificar se o erro está relacionado a configurações específicas
+    if (error instanceof Error) {
+      console.error('[TRPC Context] Detalhes do erro:', {
+        message: error.message,
+        stack: error.stack,
+        headers: Object.fromEntries(opts.headers.entries())
+      });
+    }
+    
+    // Em caso de erro, continuamos com user = null
+    // Isso permitirá que procedures públicas funcionem
+  }
 
   return {
     db,
@@ -116,6 +134,27 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.auth.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
+
+  // Verificação adicional para usuários potencialmente problemáticos
+  try {
+    // Testar se conseguimos acessar o usuário no banco
+    const userExists = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { id: true, role_config: true }
+    });
+
+    if (!userExists) {
+      console.warn(`[Protected Procedure] Usuário ${ctx.auth.userId} não encontrado no banco`);
+    }
+
+  } catch (error) {
+    console.error('[Protected Procedure] Erro ao verificar usuário:', {
+      userId: ctx.auth.userId,
+      error: error
+    });
+    // Não vamos bloquear o acesso aqui - deixa o procedure específico tratar
+  }
+
   return next({
     ctx: {
       ...ctx,

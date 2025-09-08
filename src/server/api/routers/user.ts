@@ -34,42 +34,84 @@ const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
 export const userRouter = createTRPCRouter({
   me: protectedProcedure.query(async ({ ctx }) => {
-    const user = await ctx.db.user.findUnique({
-      where: { id: ctx.auth.userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        imageUrl: true,
-        role_config: true,
-        enterprise: true,
-        setor: true,
-        birthDay: true
+    try {
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          imageUrl: true,
+          role_config: true,
+          enterprise: true,
+          setor: true,
+          birthDay: true
+        }
+      });
+
+      // Garantir que role_config sempre tenha uma estrutura válida
+      const defaultRoleConfig: RolesConfig = {
+        sudo: false,
+        admin_pages: [],
+        can_create_form: false,
+        can_create_event: false,
+        can_create_flyer: false,
+        can_create_booking: false,
+        can_locate_cars: false,
+        isTotem: false
+      };
+
+      // Se existe role_config customizado, usar; senão usar default
+      const roleConfigData = user?.role_config 
+        ? user.role_config as RolesConfig
+        : defaultRoleConfig;
+
+      const userData = {
+        ...user,
+        role_config: roleConfigData
+      };
+
+      // Log adicional para usuários Totem para debug
+      if (roleConfigData.isTotem) {
+        console.log('[USER.ME] Usuário Totem acessando:', {
+          userId: ctx.auth.userId,
+          email: user?.email,
+          isTotem: roleConfigData.isTotem
+        });
       }
-    });
 
-    // Garantir que role_config sempre tenha uma estrutura válida
-    const defaultRoleConfig: RolesConfig = {
-      sudo: false,
-      admin_pages: [],
-      can_create_form: false,
-      can_create_event: false,
-      can_create_flyer: false,
-      can_create_booking: false,
-      can_locate_cars: false,
-      isTotem: false
-    };
+      return userData;
+    } catch (error) {
+      console.error('[USER.ME] Erro ao buscar dados do usuário:', {
+        userId: ctx.auth.userId,
+        error: error
+      });
+      
+      // Em caso de erro, retornar um usuário básico para evitar crash
+      const fallbackRoleConfig: RolesConfig = {
+        sudo: false,
+        admin_pages: [],
+        can_create_form: false,
+        can_create_event: false,
+        can_create_flyer: false,
+        can_create_booking: false,
+        can_locate_cars: false,
+        isTotem: true // Modo seguro - assumir que é Totem
+      };
 
-    // Se existe role_config customizado, usar; senão usar default
-    const roleConfigData = user?.role_config 
-      ? user.role_config as RolesConfig
-      : defaultRoleConfig;
-
-    return {
-      ...user,
-      role_config: roleConfigData
-    };
+      return {
+        id: ctx.auth.userId,
+        email: `${ctx.auth.userId}@fallback.local`,
+        firstName: null,
+        lastName: null,
+        imageUrl: null,
+        role_config: fallbackRoleConfig,
+        enterprise: null,
+        setor: null,
+        birthDay: null
+      };
+    }
   }),
 
   listAll: adminProcedure.query(async ({ ctx }) => {
