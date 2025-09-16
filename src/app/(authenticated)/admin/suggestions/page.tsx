@@ -1192,21 +1192,19 @@ function SuggestionDetailsModal({
 
         {/* Impacto */}
         <div className="space-y-3">
-          <Label className="text-base font-medium">Impacto: Qual o impacto potencial da ideia no negócio?</Label>
+          <Label className="text-base font-medium">Impacto: <h2 className="text-sm font-normal text-muted-foreground">Qual o impacto potencial da ideia no negócio?</h2></Label>
           <Textarea
             placeholder="Descreva o impacto desta ideia (máximo 2000 caracteres)"
             value={impactText}
             onChange={(e) => setImpactText(e.target.value)}
             maxLength={2000}
             className="min-h-[100px]"
-            disabled={suggestion.status !== "NEW"}
           />
           <div className="flex items-center gap-4">
-            <Label className="text-sm">Pontuação: A empresa tem recursos, pessoas e know-how para implementar?</Label>
+            <Label className="text-sm">Pontuação:</Label>
             <Select
               value={impactScore.toString()}
               onValueChange={(value) => setImpactScore(Number(value))}
-              disabled={suggestion.status !== "NEW"}
             >
               <SelectTrigger className="w-20">
                 <SelectValue placeholder="0" />
@@ -1227,21 +1225,19 @@ function SuggestionDetailsModal({
 
         {/* Capacidade */}
         <div className="space-y-3">
-          <Label className="text-base font-medium">Capacidade: Quanto tempo/custo/dificuldade está envolvido? (0-10, mas invertido: mais esforço, nota menor)</Label>
+          <Label className="text-base font-medium">Capacidade: <h2 className="text-sm font-normal text-muted-foreground">A empresa tem recursos, pessoas e know-how para implementar</h2></Label>
           <Textarea
             placeholder="Descreva a capacidade de implementação desta ideia (máximo 2000 caracteres)"
             value={capacityText}
             onChange={(e) => setCapacityText(e.target.value)}
             maxLength={2000}
             className="min-h-[100px]"
-            disabled={suggestion.status !== "NEW"}
           />
           <div className="flex items-center gap-4">
             <Label className="text-sm">Pontuação:</Label>
             <Select
               value={capacityScore.toString()}
               onValueChange={(value) => setCapacityScore(Number(value))}
-              disabled={suggestion.status !== "NEW"}
             >
               <SelectTrigger className="w-20">
                 <SelectValue placeholder="0" />
@@ -1262,21 +1258,19 @@ function SuggestionDetailsModal({
 
         {/* Esforço */}
         <div className="space-y-3">
-          <Label className="text-base font-medium">Esforço</Label>
+          <Label className="text-base font-medium">Esforço: <h2 className="text-sm font-normal text-muted-foreground">Quanto tempo/custo/dificuldade está envolvido?</h2></Label>
           <Textarea
             placeholder="Descreva o esforço necessário para implementar esta ideia (máximo 2000 caracteres)"
             value={effortText}
             onChange={(e) => setEffortText(e.target.value)}
             maxLength={2000}
             className="min-h-[100px]"
-            disabled={suggestion.status !== "NEW"}
           />
           <div className="flex items-center gap-4">
             <Label className="text-sm">Pontuação:</Label>
             <Select
               value={effortScore.toString()}
               onValueChange={(value) => setEffortScore(Number(value))}
-              disabled={suggestion.status !== "NEW"}
             >
               <SelectTrigger className="w-20">
                 <SelectValue placeholder="0" />
