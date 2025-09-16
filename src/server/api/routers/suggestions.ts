@@ -530,7 +530,7 @@ export const suggestionRouter = createTRPCRouter({
             const statusMapping = {
               "NEW": "Nova",
               "IN_REVIEW": "Em avaliação",
-              "APPROVED": "Aprovada",
+              "APPROVED": "Em orçamento",
               "IN_PROGRESS": "Em execução",
               "DONE": "Concluída",
               "NOT_IMPLEMENTED": "Não implementada"

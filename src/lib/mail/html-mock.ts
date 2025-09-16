@@ -495,7 +495,7 @@ export type GroupedEmailOrder = {
 
 export const mockEmailNotificacaoSugestao = (
   nomeUsuario: string,
-  nomeResponsavel: string,
+  analyst: string,
   ideaNumber: number,
   status: string,
   motivo?: string
@@ -595,7 +595,7 @@ export const mockEmailNotificacaoSugestao = (
                       <p><strong>Olá, ${nomeUsuario}!</strong></p>
                       <p>Sua ideia <strong>#${ideaNumber}</strong> teve o status atualizado.</p>
                       <p><strong>Status:</strong> ${status}</p>
-                      <p><strong>Responsável pela avaliação:</strong> ${nomeResponsavel}</p>
+                      <p><strong>Responsável pela devolutiva:</strong> ${analyst}</p>
                   </div>
 
                   ${motivo ? `
