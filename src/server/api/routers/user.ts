@@ -1,36 +1,9 @@
 import type { Prisma, Enterprise } from "@prisma/client";
-import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
 import { z } from "zod"
 import { type RolesConfig } from "@/types/role-config"
 import { TRPCError } from "@trpc/server"
 
-// Novo procedure para verificar permissões admin
-const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const user = await ctx.db.user.findUnique({
-    where: { id: ctx.auth.userId },
-    select: { role_config: true }
-  });
-
-  const roleConfig = user?.role_config as RolesConfig | null;
-  
-  // Verificar se tem permissão admin
-  const hasAdminAccess = !!roleConfig?.sudo ||
-                        (Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin"));
-
-  if (!hasAdminAccess) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Acesso negado. Permissões administrativas necessárias.",
-    });
-  }
-
-  return next({
-    ctx: {
-      ...ctx,
-      roleConfig
-    }
-  });
-});
 
 export const userRouter = createTRPCRouter({
   me: protectedProcedure.query(async ({ ctx }) => {
@@ -145,7 +118,7 @@ export const userRouter = createTRPCRouter({
     // Filtrar apenas usuários com permissões admin
     return users.filter(user => {
       const roleConfig = user.role_config as RolesConfig | null;
-      return !!roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.length > 0);
+      return !!roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && (roleConfig?.admin_pages?.length ?? 0) > 0);
     });
   }),
 

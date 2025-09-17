@@ -136,11 +136,12 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   }
 
   // Verificação adicional para usuários potencialmente problemáticos
+  // REMOVIDO: Query desnecessária que estava causando headers muito grandes
+  // O role_config completo não é necessário aqui - apenas verificamos se o usuário existe
   try {
-    // Testar se conseguimos acessar o usuário no banco
     const userExists = await ctx.db.user.findUnique({
       where: { id: ctx.auth.userId },
-      select: { id: true, role_config: true }
+      select: { id: true } // Apenas verificar se existe, sem buscar role_config
     });
 
     if (!userExists) {
@@ -164,11 +165,13 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 })
 
 export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  // Buscar apenas os campos necessários para verificação de admin
+  // Evitar buscar arrays grandes como unlocked_forms, hidden_forms, etc.
   const user = await ctx.db.user.findUnique({
     where: { id: ctx.auth.userId },
     select: {
       id: true,
-      role_config: true,
+      role_config: true, // Mantém para compatibilidade, mas pode ser otimizado futuramente
     }
   })
 
