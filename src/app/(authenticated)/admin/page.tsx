@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { checkAdminAccess } from "@/lib/access-control";
+import { checkAdminAccess } from "@/lib/access-control-server";
 import { ADMIN_ROUTES, hasAccessToAdminRoute } from "@/const/admin-routes";
 
 export default async function Page() {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { BirthdayAdmin } from "@/components/birthday-admin"
-import { checkAdminAccess } from "@/lib/access-control"
+import { checkAdminAccess } from "@/lib/access-control-server"
 
 export const metadata: Metadata = {
   title: "Administração de Aniversários | Intranet",

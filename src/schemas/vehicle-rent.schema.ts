@@ -21,6 +21,15 @@ export const updateVehicleRentSchema = z.object({
     .optional(),
 })
 
+export const editVehicleRentSchema = z.object({
+  id: z.string().cuid("ID inválido"),
+  startDate: z.date().optional(),
+  possibleEnd: z.date(),
+  driver: z.string(),
+  passangers: z.string().optional(),
+  destiny: z.string(),
+})
+
 export const finishRentSchema = z.object({
   id: z.string().cuid("ID inválido"),
   finalKm: z.number(),
@@ -41,6 +50,7 @@ export const vehicleRentIdSchema = z.object({
 
 export type CreateVehicleRentInput = z.infer<typeof createVehicleRentSchema>
 export type UpdateVehicleRentInput = z.infer<typeof updateVehicleRentSchema>
+export type EditVehicleRentInput = z.infer<typeof editVehicleRentSchema>
 export type FinishRentInput = z.infer<typeof finishRentSchema>
 export type VehicleRentIdInput = z.infer<typeof vehicleRentIdSchema>
 

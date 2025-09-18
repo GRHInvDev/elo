@@ -1,4 +1,4 @@
-import { Shield, Users, Cake, Utensils, MapPin, Lightbulb } from "lucide-react"
+import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car } from "lucide-react"
 
 export interface AdminRoute {
   id: string
@@ -64,6 +64,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     description: "Analisar e gerenciar sugestões dos usuários",
     icon: Lightbulb,
     path: "/admin/suggestions",
+    requiresBasicAdmin: true,
+  },
+  {
+    id: "/admin/vehicles",
+    title: "Gerenciar Veículos",
+    description: "Gerenciar frota de veículos, reservas e métricas de uso",
+    icon: Car,
+    path: "/admin/vehicles",
     requiresBasicAdmin: true,
   },
 ]

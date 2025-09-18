@@ -3,7 +3,7 @@ import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { FormBuilderWithSave } from "@/components/forms/form-builder-with-save"
 import { DashboardShell } from "@/components/dashboard-shell"
-import { checkFormCreationAccess } from "@/lib/access-control"
+import { checkFormCreationAccess } from "@/lib/access-control-server"
 
 export const metadata = {
   title: "Novo Formulário",
