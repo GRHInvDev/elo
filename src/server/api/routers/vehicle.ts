@@ -1,3 +1,4 @@
+import "server-only";
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
@@ -81,13 +82,16 @@ export const vehicleRouter = createTRPCRouter({
         cursor: z.string().nullish(),
         enterprise: z.enum(["NA", "Box", "RHenz", "Cristallux"]).optional(),
         availble: z.boolean().optional(),
+        checkDate: z.string().optional(),
+        checkTime: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const limit = input.limit ?? 50
-      const { cursor, enterprise, availble } = input
+      const { cursor, enterprise, availble, checkDate, checkTime } = input
 
-      const vehicles = await ctx.db.vehicle.findMany({
+      // Buscar veículos baseados nos filtros básicos
+      let vehicles = await ctx.db.vehicle.findMany({
         take: limit + 1,
         where: {
           enterprise: enterprise,
@@ -97,7 +101,48 @@ export const vehicleRouter = createTRPCRouter({
         orderBy: {
           model: "asc",
         },
+        include: {
+          rents: {
+            where: {
+              finished: false,
+            },
+            select: {
+              id: true,
+              startDate: true,
+              possibleEnd: true,
+            },
+          },
+        },
       })
+
+      // Se foi solicitado verificar disponibilidade por data/hora
+      if (checkDate && checkTime && checkTime.trim() !== '') {
+        // Criar data com timezone local
+        const requestedStart = new Date(`${checkDate}T${checkTime}:00`)
+        const requestedEnd = new Date(requestedStart.getTime() + 60 * 60 * 1000) // +1 hora
+
+        // Verificar se as datas foram criadas corretamente
+        if (isNaN(requestedStart.getTime()) || isNaN(requestedEnd.getTime())) {
+          console.error('Erro ao criar datas:', { checkDate, checkTime, requestedStart, requestedEnd })
+          return { items: [], nextCursor: undefined }
+        }
+
+        vehicles = vehicles.filter(vehicle => {
+          // Verificar se há reservas conflitantes
+          const hasConflict = vehicle.rents.some(rent => {
+            const rentStart = new Date(rent.startDate)
+            const rentEnd = rent.possibleEnd ? new Date(rent.possibleEnd) : new Date(Date.now() + 24 * 60 * 60 * 1000) // +1 dia como fallback
+
+            // Verifica se há sobreposição entre o período solicitado e a reserva existente
+            const hasOverlap = !(requestedEnd <= rentStart || requestedStart >= rentEnd)
+
+            return hasOverlap
+          })
+
+          return !hasConflict
+        })
+
+      }
 
       let nextCursor: typeof cursor | undefined = undefined
       if (vehicles.length > limit) {
@@ -108,7 +153,7 @@ export const vehicleRouter = createTRPCRouter({
       return {
         items: vehicles.map((v)=>({
           ...v,
-          kilometers: parseInt(v.kilometers.toString())
+          // Manter tipos originais do Prisma para compatibilidade
         })),
         nextCursor,
       }

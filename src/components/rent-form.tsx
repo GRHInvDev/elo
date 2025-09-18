@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Car, Calendar, AlertCircle, Clock } from "lucide-react"
@@ -14,15 +14,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
-import { type Vehicle } from "@prisma/client"
+import { type Vehicle, type VehicleRent } from "@prisma/client"
 import { Input } from "./ui/input"
 
 interface RentFormProps {
   vehicle: Vehicle
   isModal?: boolean
+  editMode?: boolean
+  existingRent?: VehicleRent & { vehicle: Vehicle }
+  onCloseModal?: () => void
 }
 
-export function RentForm({ vehicle, isModal = false }: RentFormProps) {
+export function RentForm({ vehicle, isModal = false, editMode = false, existingRent, onCloseModal }: RentFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -33,6 +36,7 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
   const [endDate, setEndDate] = useState<Date>()
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined)
 
+  // Hook para criação
   const createRent = api.vehicleRent.create.useMutation({
     onSuccess: () => {
       toast({
@@ -42,9 +46,13 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
           : "Você pode visualizar suas reservas ativas no seu perfil.",
       })
 
-      // Redirecionar para a página de perfil ou dashboard
-      router.push("/cars")
-      router.refresh()
+      // Se estiver em modal, fechar o modal; senão, redirecionar
+      if (isModal && onCloseModal) {
+        onCloseModal()
+      } else {
+        router.push("/cars")
+        router.refresh()
+      }
     },
     onError: (error) => {
       toast({
@@ -55,6 +63,50 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
       setIsSubmitting(false)
     },
   })
+
+  // Hook para edição
+  const editRent = api.vehicleRent.edit.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Reserva atualizada com sucesso!",
+        description: "As alterações foram salvas.",
+      })
+
+      // Se estiver em modal, fechar o modal; senão, redirecionar
+      if (isModal && onCloseModal) {
+        onCloseModal()
+      } else {
+        router.push("/cars")
+        router.refresh()
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao atualizar reserva",
+        description: error.message,
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+    },
+  })
+
+  // Carregar dados da reserva existente quando estiver no modo de edição
+  useEffect(() => {
+    if (editMode && existingRent) {
+      // Verificar se a reserva tem data de início futura (agendada)
+      const isFutureStart = existingRent.startDate > new Date()
+      setIsScheduled(isFutureStart)
+
+      if (isFutureStart) {
+        setScheduledDate(existingRent.startDate)
+      }
+
+      setEndDate(existingRent.possibleEnd ?? undefined)
+      setDriver(existingRent.driver)
+      setPassangers(existingRent.passangers ?? "")
+      setDestiny(existingRent.destiny)
+    }
+  }, [editMode, existingRent])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,14 +164,27 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
       return
     }
 
-    createRent.mutate({
-      vehicleId: vehicle.id,
-      destiny: destiny,
-      driver: driver,
-      possibleEnd: endDate,
-      passangers: passangers,
-      startDate: isScheduled ? scheduledDate : undefined,
-    })
+    if (editMode && existingRent) {
+      // Modo de edição
+      editRent.mutate({
+        id: existingRent.id,
+        destiny: destiny,
+        driver: driver,
+        possibleEnd: endDate,
+        passangers: passangers,
+        startDate: isScheduled ? scheduledDate : undefined,
+      })
+    } else {
+      // Modo de criação
+      createRent.mutate({
+        vehicleId: vehicle.id,
+        destiny: destiny,
+        driver: driver,
+        possibleEnd: endDate,
+        passangers: passangers,
+        startDate: isScheduled ? scheduledDate : undefined,
+      })
+    }
   }
 
   const handleCancel = () => {
@@ -223,7 +288,11 @@ export function RentForm({ vehicle, isModal = false }: RentFormProps) {
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Processando..." : isScheduled ? "Agendar Reserva" : "Confirmar Reserva"}
+          {isSubmitting ? "Processando..." :
+            editMode ?
+              "Atualizar Reserva" :
+              (isScheduled ? "Agendar Reserva" : "Confirmar Reserva")
+          }
         </Button>
       </div>
     </form>

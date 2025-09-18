@@ -1,10 +1,10 @@
 import { z } from "zod"
 
-export const EnterpriseEnum = z.enum(["NA", "Box", "RHenz", "Cristallux"])
+export const EnterpriseEnum = z.enum(["NA", "Box", "RHenz", "Cristallux", "Box_Filial"])
 
 export const createVehicleSchema = z.object({
   model: z.string().min(1, "Modelo é obrigatório"),
-  plate: z.string().min(1, "Placa é obrigatória"),
+  plate: z.string().min(1, "Placa é obrigatória").max(7, "Placa deve ter no máximo 7 caracteres"),
   imageUrl: z.string().url("URL da imagem inválida"),
   enterprise: EnterpriseEnum,
   kilometers: z.number().or(z.string().regex(/^\d+$/).transform(Number)),

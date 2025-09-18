@@ -1,8 +1,9 @@
+import "server-only";
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
-import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema } from "@/schemas/vehicle-rent.schema"
+import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema, editVehicleRentSchema } from "@/schemas/vehicle-rent.schema"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailReservaCarro } from "@/lib/mail/html-mock"
 import { canLocateCars } from "@/lib/access-control"
@@ -367,5 +368,145 @@ export const vehicleRentRouter = createTRPCRouter({
       return { success: true }
     })
   }),
+
+  edit: protectedProcedure.input(editVehicleRentSchema).mutation(async ({ ctx, input }) => {
+    const userId = ctx.auth.userId
+
+    // Verificar se a reserva existe
+    const rent = await ctx.db.vehicleRent.findUnique({
+      where: { id: input.id },
+      include: {
+        vehicle: true,
+      },
+    })
+
+    if (!rent) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Reserva não encontrada",
+      })
+    }
+
+    // Após verificação, rent não é mais null
+    const safeRent = rent
+
+    // Verificar se o usuário tem permissão para editar (apenas o proprietário da reserva)
+    if (safeRent.userId !== userId) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para editar esta reserva",
+      })
+    }
+
+    // Verificar se a reserva já foi finalizada
+    if (safeRent.finished) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Não é possível editar uma reserva já finalizada",
+      })
+    }
+
+    // Validar a data de término
+    if (!input.possibleEnd || input.possibleEnd <= new Date()) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "A data de término deve ser posterior à data atual",
+      })
+    }
+
+    // Validar campos obrigatórios
+    if (!input.driver || input.driver.trim().length <= 2) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Nome do motorista é obrigatório e deve ter pelo menos 3 caracteres",
+      })
+    }
+
+    if (!input.destiny || input.destiny.trim().length <= 2) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Destino é obrigatório e deve ter pelo menos 3 caracteres",
+      })
+    }
+
+    // Se há uma data de início fornecida, validar se é futura
+    if (input.startDate && input.startDate <= new Date()) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "A data de início deve ser posterior à data atual",
+      })
+    }
+
+    // Verificar se há conflito de datas apenas se a data foi alterada
+    if (input.startDate || input.possibleEnd.getTime() !== safeRent.possibleEnd?.getTime()) {
+      const startDateToCheck = input.startDate ?? safeRent.startDate
+      const endDateToCheck = input.possibleEnd
+
+      if (startDateToCheck >= endDateToCheck) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A data de início deve ser anterior à data de término",
+        })
+      }
+
+      // Verificar conflito com outras reservas
+      const conflictingRent = await ctx.db.vehicleRent.findFirst({
+        where: {
+          vehicleId: safeRent.vehicleId,
+          finished: false,
+          AND: [
+            {
+              startDate: {
+                lt: endDateToCheck,
+              },
+            },
+            {
+              possibleEnd: {
+                gt: startDateToCheck,
+              },
+            },
+          ],
+          id: {
+            not: input.id, // Excluir a própria reserva
+          },
+        },
+      })
+
+      if (conflictingRent) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Este veículo não está disponível no período solicitado",
+        })
+      }
+    }
+
+    // Preparar dados para atualização
+    const updateData = {
+      startDate: input.startDate ?? safeRent.startDate,
+      possibleEnd: input.possibleEnd,
+      driver: input.driver,
+      destiny: input.destiny,
+      passangers: input.passangers ?? null,
+    }
+
+    // Atualizar a reserva
+    const updatedRent = await ctx.db.vehicleRent.update({
+      where: { id: input.id },
+      data: updateData,
+      include: {
+        vehicle: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    })
+
+    return updatedRent
+  })
 })
 

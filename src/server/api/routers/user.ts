@@ -1,3 +1,4 @@
+import "server-only";
 import type { Prisma, Enterprise } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
 import { z } from "zod"
