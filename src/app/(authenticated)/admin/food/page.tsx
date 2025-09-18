@@ -12,6 +12,7 @@ import OrdersTab from "./_components/orders-tab"
 import RestaurantsTab from "./_components/restaurants-tab"
 import MenuTab from "./_components/menu-tab"
 import MetricsTab from "./_components/metrics-tab"
+import DREReport from "./_components/dre-report"
  
 
 // Componente principal da página de administração de comida
@@ -81,6 +82,7 @@ export default function AdminFoodPage() {
           <TabsTrigger value="restaurants">Restaurantes</TabsTrigger>
           <TabsTrigger value="menu">Cardápios</TabsTrigger>
           <TabsTrigger value="metrics">Métricas</TabsTrigger>
+          <TabsTrigger value="dre">Relatório DRE</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders" className="space-y-4">
@@ -106,8 +108,15 @@ export default function AdminFoodPage() {
           </TabsContent>
 
           <TabsContent value="metrics" className="space-y-4">
-          <MetricsTab 
-            selectedYear={selectedDate.getFullYear()} 
+          <MetricsTab
+            selectedYear={selectedDate.getFullYear()}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+          />
+          </TabsContent>
+
+          <TabsContent value="dre" className="space-y-4">
+          <DREReport
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
           />

@@ -1,0 +1,324 @@
+"use client"
+
+import React, { useState } from "react"
+import { api } from "@/trpc/react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { DatePicker } from "@/components/ui/date-picker"
+import { toast } from "sonner"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { Calculator, Download, FileText } from "lucide-react"
+import * as XLSX from "xlsx"
+
+interface DREData {
+  enterprise: string
+  sector: string | null
+  totalOrders: number
+  totalValue: number
+  representativeness: number
+  costCenterRateio?: number
+}
+
+interface DREApiItem {
+  enterprise: string
+  sector: string | null
+  totalOrders: number
+  totalValue: number
+}
+
+interface DREReportProps {
+  selectedDate: Date
+  setSelectedDate: (date: Date) => void
+}
+
+export default function DREReport({ selectedDate, setSelectedDate }: DREReportProps) {
+  const [invoiceValue, setInvoiceValue] = useState<string>("")
+  const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month')
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [dreData, setDreData] = useState<DREData[]>([])
+
+  // Buscar dados DRE por empresa/setor
+  const dreQuery = api.foodOrder.getDREData.useQuery(
+    {
+      year: selectedYear,
+      period: selectedPeriod,
+      date: selectedPeriod === 'month' ? selectedDate : undefined,
+    },
+    {
+      enabled: true,
+    }
+  )
+
+  // Calcular representatividade e rateio quando os dados mudam
+  const processedData: DREData[] = React.useMemo(() => {
+    if (!dreQuery.data) return []
+
+    return dreQuery.data.map((item: DREApiItem) => {
+      // Agrupar por empresa para calcular valor total da empresa
+      const enterpriseTotal = dreQuery.data
+        ?.filter((d: DREApiItem) => d.enterprise === item.enterprise)
+        .reduce((sum: number, d: DREApiItem) => sum + d.totalValue, 0) ?? 0
+
+      const representativeness = enterpriseTotal > 0
+        ? (item.totalValue / enterpriseTotal) * 100
+        : 0
+
+      const invoiceNumber = parseFloat(invoiceValue) || 0
+      const costCenterRateio = (invoiceNumber * representativeness) / 100
+
+      return {
+        ...item,
+        representativeness,
+        costCenterRateio,
+      }
+    })
+  }, [dreQuery.data, invoiceValue])
+
+  const handleGenerateReport = () => {
+    if (!dreQuery.data || dreQuery.data.length === 0) {
+      toast.error("Nenhum dado encontrado para o período selecionado")
+      return
+    }
+
+    setDreData(processedData)
+    toast.success("Relatório DRE gerado com sucesso!")
+  }
+
+  const handleExportToExcel = () => {
+    if (dreData.length === 0) {
+      toast.error("Gere o relatório primeiro antes de exportar")
+      return
+    }
+
+    try {
+      const exportData = dreData.map(item => ({
+        "Empresa": item.enterprise,
+        "Setor": item.sector ?? "Não informado",
+        "Total de Pedidos": item.totalOrders,
+        "Valor Total (R$)": item.totalValue.toFixed(2),
+        "Representatividade (%)": item.representativeness.toFixed(2),
+        "Valor da Nota (R$)": invoiceValue ?? "0",
+        "Rateio Centro de Custo (R$)": item.costCenterRateio?.toFixed(2) ?? "0",
+      }))
+
+      const ws = XLSX.utils.json_to_sheet(exportData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "DRE_Report")
+
+      const fileName = `dre_report_${selectedYear}_${selectedPeriod}_${format(new Date(), "yyyy-MM-dd")}.xlsx`
+      XLSX.writeFile(wb, fileName)
+
+      toast.success("Relatório DRE exportado com sucesso!")
+    } catch (error) {
+      console.error("Erro ao exportar:", error)
+      toast.error("Erro ao exportar relatório")
+    }
+  }
+
+  const totalValue = React.useMemo(() =>
+    processedData.reduce((sum: number, item: DREData) => sum + item.totalValue, 0),
+    [processedData]
+  )
+  const totalOrders = React.useMemo(() =>
+    processedData.reduce((sum: number, item: DREData) => sum + item.totalOrders, 0),
+    [processedData]
+  )
+  const totalRateio = React.useMemo(() =>
+    processedData.reduce((sum: number, item: DREData) => sum + (item.costCenterRateio ?? 0), 0),
+    [processedData]
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Filtros */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Relatório DRE - Demonstrativo de Resultados do Exercício
+          </CardTitle>
+          <CardDescription>
+            Análise de pedidos de almoço por empresa e setor com cálculo de representatividade
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Período</Label>
+              <Select
+                value={selectedPeriod}
+                onValueChange={(value: 'month' | 'quarter' | 'year') => setSelectedPeriod(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">Mensal</SelectItem>
+                  <SelectItem value="quarter">Trimestral</SelectItem>
+                  <SelectItem value="year">Anual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ano</Label>
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(value) => setSelectedYear(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const year = new Date().getFullYear() - 2 + i
+                    return (
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedPeriod === 'month' && (
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <DatePicker
+                  date={selectedDate}
+                  onDateChange={(date: Date | undefined) => {
+                    if (date) setSelectedDate(date)
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Valor da Nota Fiscal (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={invoiceValue}
+                onChange={(e) => setInvoiceValue(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <Button onClick={handleGenerateReport} disabled={dreQuery.isLoading}>
+              {dreQuery.isLoading ? "Carregando..." : "Gerar Relatório"}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleExportToExcel}
+              disabled={dreData.length === 0}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Exportar Excel
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Resumo */}
+      {dreData.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{totalOrders}</div>
+              <p className="text-xs text-muted-foreground">Total de Pedidos</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">R$ {totalValue.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Valor Total</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">R$ {totalRateio.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Rateio Total</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Tabela de Resultados */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Resultado DRE por Empresa e Setor</CardTitle>
+          <CardDescription>
+            {selectedPeriod === 'month' && `Dados do mês ${format(selectedDate, "MM/yyyy", { locale: ptBR })}`}
+            {selectedPeriod === 'quarter' && `Dados do trimestre ${Math.ceil((selectedDate.getMonth() + 1) / 3)}/${selectedYear}`}
+            {selectedPeriod === 'year' && `Dados do ano ${selectedYear}`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dreQuery.isLoading ? (
+            <p className="text-center text-muted-foreground py-8">Carregando dados DRE...</p>
+          ) : dreData.length > 0 ? (
+            <div className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Setor</TableHead>
+                    <TableHead className="text-right">Pedidos</TableHead>
+                    <TableHead className="text-right">Valor (R$)</TableHead>
+                    <TableHead className="text-right">Representatividade (%)</TableHead>
+                    <TableHead className="text-right">Rateio Centro Custo (R$)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dreData.map((item, index) => (
+                    <TableRow key={`${item.enterprise}-${item.sector}-${index}`}>
+                      <TableCell>
+                        <Badge variant="outline">{item.enterprise}</Badge>
+                      </TableCell>
+                      <TableCell>{item.sector ?? "Não informado"}</TableCell>
+                      <TableCell className="text-right">{item.totalOrders}</TableCell>
+                      <TableCell className="text-right">R$ {item.totalValue.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{item.representativeness.toFixed(2)}%</TableCell>
+                      <TableCell className="text-right">
+                        R$ {item.costCenterRateio?.toFixed(2) ?? "0.00"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Totais */}
+              <div className="border-t pt-4">
+                <div className="flex justify-end space-x-6 text-sm font-medium">
+                  <span>Total Geral:</span>
+                  <span>{totalOrders} pedidos</span>
+                  <span>R$ {totalValue.toFixed(2)}</span>
+                  <span>100.00%</span>
+                  <span>R$ {totalRateio.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Clique em &quot;Gerar Relatório&quot; para visualizar os dados DRE
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
