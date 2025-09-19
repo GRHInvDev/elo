@@ -64,6 +64,7 @@ export const formsRouter = createTRPCRouter({
                     can_create_flyer: false,
                     can_create_booking: false,
                     can_locate_cars: false,
+                    can_view_dre_report: false,
                 };
 
                 // Adicionar formulário à lista de ocultos

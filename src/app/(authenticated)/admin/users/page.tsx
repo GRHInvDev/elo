@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,11 @@ import {
   Save
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
+
+// Extensão temporária do tipo RolesConfig para incluir a nova propriedade
+type ExtendedRolesConfig = RolesConfig & {
+  can_view_dre_report: boolean
+}
 import { ADMIN_ROUTES } from "@/const/admin-routes"
 
 // SISTEMA SIMPLIFICADO: Todos podem visualizar, apenas alguns podem criar
@@ -205,7 +210,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     email: user.email,
     setor: user.setor ?? "none",
   })
-  const [permissionsData, setPermissionsData] = useState<RolesConfig>(
+  const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
     {
       sudo: user.role_config?.sudo ?? false,
       admin_pages: user.role_config?.admin_pages ?? [],
@@ -214,6 +219,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       can_create_flyer: user.role_config?.can_create_flyer ?? false,
       can_create_booking: user.role_config?.can_create_booking ?? false,
       can_locate_cars: user.role_config?.can_locate_cars ?? false,
+      can_view_dre_report: user.role_config?.can_view_dre_report ?? false,
       isTotem: user.role_config?.isTotem ?? false,
       visible_forms: user.role_config?.visible_forms,
       hidden_forms: user.role_config?.hidden_forms,
@@ -222,6 +228,14 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const [adminRoutesData, setAdminRoutesData] = useState<string[]>(
     user.role_config?.admin_pages || []
   )
+
+  // Sincronizar adminRoutesData com permissionsData.admin_pages
+  useEffect(() => {
+    const newAdminPages = permissionsData.admin_pages || []
+    if (JSON.stringify(adminRoutesData) !== JSON.stringify(newAdminPages)) {
+      setAdminRoutesData(newAdminPages)
+    }
+  }, [permissionsData.admin_pages])
 
   const { toast } = useToast()
   
@@ -296,10 +310,11 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_create_flyer: permissionsData.can_create_flyer ?? false,
         can_create_booking: permissionsData.can_create_booking ?? false,
         can_locate_cars: permissionsData.can_locate_cars ?? false,
+        can_view_dre_report: permissionsData.can_view_dre_report ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
-      },
+      } as RolesConfig,
     })
   }
 
@@ -322,27 +337,50 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_create_flyer: permissionsData.can_create_flyer ?? false,
         can_create_booking: permissionsData.can_create_booking ?? false,
         can_locate_cars: permissionsData.can_locate_cars ?? false,
+        can_view_dre_report: permissionsData.can_view_dre_report ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
-      },
+      } as RolesConfig,
     })
   }
 
   const handleToggleAdminRoute = (routeId: string) => {
+    console.log("🔄 Toggle admin route:", {
+      routeId,
+      currentAdminRoutes: adminRoutesData,
+      includes: adminRoutesData.includes(routeId)
+    })
+
     if (adminRoutesData.includes(routeId)) {
       // Se está removendo /admin, remover todas as outras rotas também
       if (routeId === "/admin") {
+        console.log("🔄 Removing /admin, clearing all routes")
         setAdminRoutesData([])
       } else {
-        setAdminRoutesData(prev => prev.filter(id => id !== routeId))
+        console.log("🔄 Removing route:", routeId)
+        setAdminRoutesData(prev => {
+          const newRoutes = prev.filter(id => id !== routeId)
+          console.log("🔄 New routes after removal:", newRoutes)
+          return newRoutes
+        })
       }
     } else {
       // Se está adicionando uma rota que não seja /admin, garantir que /admin esteja incluído
       if (routeId !== "/admin" && !adminRoutesData.includes("/admin")) {
-        setAdminRoutesData(prev => ["/admin", ...prev, routeId])
+        console.log("🔄 Adding route with /admin:", routeId)
+        setAdminRoutesData(prev => {
+          const newRoutes = ["/admin", ...prev, routeId]
+          console.log("🔄 New routes after adding with /admin:", newRoutes)
+          return newRoutes
+        })
       } else {
-        setAdminRoutesData(prev => [...prev, routeId])
+        console.log("🔄 Adding route:", routeId)
+        setAdminRoutesData(prev => {
+          const newRoutes = [...prev, routeId]
+          console.log("🔄 New routes after adding:", newRoutes)
+          return newRoutes
+        })
       }
     }
   }
@@ -618,6 +656,30 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           />
                           <Label htmlFor="locate_cars">Agendar Carros</Label>
                         </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="view_dre_report"
+                            checked={permissionsData.can_view_dre_report}
+                            onCheckedChange={(checked) => {
+                              const isChecked = checked === true;
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_view_dre_report: isChecked,
+                                // Quando habilita DRE, automaticamente concede acesso ao painel admin
+                                // Ao desabilitar DRE, mantém o acesso às rotas (apenas oculta funcionalidade específica)
+                                admin_pages: isChecked
+                                  ? [...(permissionsData.admin_pages || []), "/admin", "/admin/food"]
+                                    .filter((page, index, arr) => arr.indexOf(page) === index) // Remove duplicatas
+                                  : permissionsData.admin_pages || [] // Não remove nenhuma rota ao desmarcar DRE
+                              });
+                            }}
+                          />
+                          <Label htmlFor="view_dre_report">Visualizar Relatório DRE</Label>
+                          <span className="text-xs text-muted-foreground">
+                            (concede acesso automático ao painel admin e alimentos)
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -628,9 +690,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     <X className="h-4 w-4 mr-2" />
                     Cancelar
                   </Button>
-                  <Button onClick={handleSavePermissions} disabled={updateRoleConfig.isPending}>
+                  <Button onClick={handleSavePermissions}>
                     <Save className="h-4 w-4 mr-2" />
-                    {updateRoleConfig.isPending ? "Salvando..." : "Salvar Permissões"}
+                    Salvar Permissões
                   </Button>
                 </div>
               </div>
@@ -664,11 +726,15 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       {permissionsData.can_locate_cars && (
                         <Badge variant="secondary">Agendar Carros</Badge>
                       )}
-                      {!permissionsData.can_create_form && 
-                       !permissionsData.can_create_event && 
-                       !permissionsData.can_create_flyer && 
-                       !permissionsData.can_create_booking && 
-                       !permissionsData.can_locate_cars && (
+                      {permissionsData.can_view_dre_report && (
+                        <Badge variant="secondary">Visualizar DRE</Badge>
+                      )}
+                      {!permissionsData.can_create_form &&
+                       !permissionsData.can_create_event &&
+                       !permissionsData.can_create_flyer &&
+                       !permissionsData.can_create_booking &&
+                       !permissionsData.can_locate_cars &&
+                       !permissionsData.can_view_dre_report && (
                         <span className="text-sm text-muted-foreground">Apenas visualização</span>
                       )}
                     </div>
@@ -712,8 +778,15 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   <div className="space-y-3">
                     {ADMIN_ROUTES.map((route) => {
                       const hasAccess = adminRoutesData.includes(route.id)
-                      const isDisabled = route.requiresBasicAdmin && !adminRoutesData.includes("/admin")
+                      const isDisabled = route.id !== "/admin" && route.requiresBasicAdmin && !adminRoutesData.includes("/admin")
                       const IconComponent = route.icon
+
+                      console.log(`🔄 Route ${route.id}:`, {
+                        hasAccess,
+                        isDisabled,
+                        adminRoutesData,
+                        requiresBasicAdmin: route.requiresBasicAdmin
+                      })
 
                       return (
                         <div 
@@ -766,12 +839,11 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       <X className="h-4 w-4 mr-2" />
                       Cancelar
                     </Button>
-                    <Button 
-                      onClick={handleSaveAdminRoutes} 
-                      disabled={updateRoleConfig.isPending}
+                    <Button
+                      onClick={handleSaveAdminRoutes}
                     >
                       <Save className="h-4 w-4 mr-2" />
-                      {updateRoleConfig.isPending ? "Salvando..." : "Salvar Rotas"}
+                      Salvar Rotas
                     </Button>
                   </div>
                 </div>
@@ -799,7 +871,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     </div>
                   </div>
 
-                  <Button onClick={() => setIsEditingAdminRoutes(true)} size="sm">
+                  <Button
+                    onClick={() => {
+                      console.log("🔄 Edit admin routes button clicked")
+                      setIsEditingAdminRoutes(true)
+                    }}
+                    size="sm"
+                  >
                     <Settings className="h-4 w-4 mr-2" />
                     Editar Rotas Admin
                   </Button>
