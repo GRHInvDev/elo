@@ -70,18 +70,21 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Seção Principal - Banners e Aniversários */}
-      <div className={cn("grid grid-cols-1 gap-4 md:gap-6", (birthdays?.length==0 || posts.length==0 ) && "md:grid-cols-1")}>
+      <div className={cn("grid grid-cols-1 md:grid-cols-3", (birthdays?.length==0 ) && "md:grid-cols-1")}>
         {
           posts.length > 0 &&
-          <MainCarousel className={cn("w-full", (birthdays?.length==0) && "md:col-span-1")} itens={posts}/>
+          <MainCarousel className={cn("w-full md:col-span-2", (birthdays?.length==0) && "md:col-span-1")} itens={posts}/>
         }
         {
           birthdays && birthdays.length > 0 &&
-          <BirthdaysCarousel className="w-full" itens={birthdays.map((b)=>({
+          <BirthdaysCarousel className="w-full md:col-span-1" itens={birthdays.map((b)=>({
             imageRef: b.imageUrl ?? "",
             title: b.name
           }))}/>
         }
+    </div>
+      <div className={cn("grid grid-cols-1 gap-4 md:gap-6", (birthdays?.length==0
+       ) && "md:grid-cols-1")}>
 
         {/* Seção de Conteúdo - Vídeos, Links e ideias */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">

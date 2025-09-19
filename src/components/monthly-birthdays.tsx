@@ -8,6 +8,7 @@ import { api } from "@/trpc/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 interface MonthlyBirthdaysProps {
   className?: string
@@ -36,7 +37,7 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
   }
 
   return (
-    <Card className={className}>
+    <Card className={cn("w-full", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-medium">
@@ -63,32 +64,38 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {birthdays.map((birthday) => (
               <div
                 key={birthday.id}
-                className={`flex items-center space-x-4 rounded-md p-2 transition-colors ${
+                className={`flex items-center space-x-3 rounded-md p-2 transition-colors ${
                   isBirthdayToday(birthday.data)
                     ? "bg-primary/10 dark:bg-primary/20"
                     : "hover:bg-muted/50"
                 }`}
               >
-                <Avatar>
+                <Avatar className="h-10 w-10 flex-shrink-0">
                   {birthday.user?.imageUrl ? (
-                    <AvatarImage src={birthday.user.imageUrl} alt={birthday.name} />
+                    <AvatarImage
+                      src={birthday.user.imageUrl}
+                      alt={birthday.name}
+                      className="object-contain bg-white"
+                    />
                   ) : null}
-                  <AvatarFallback>{getInitials(birthday.name)}</AvatarFallback>
+                  <AvatarFallback className="text-xs">
+                    {getInitials(birthday.name)}
+                  </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium leading-none">
+                <div className="flex-1 space-y-1 min-w-0">
+                  <p className="text-sm font-medium leading-tight truncate">
                     {birthday.name}
                     {isBirthdayToday(birthday.data) && (
-                      <Badge className="ml-2 bg-primary text-primary-foreground">
+                      <Badge className="ml-2 bg-primary text-primary-foreground text-xs">
                         Hoje!
                       </Badge>
                     )}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {format(birthday.data, "dd 'de' MMMM", { locale: ptBR })}
                   </p>
                 </div>
