@@ -7,6 +7,7 @@ const createBirthdaySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   data: z.date(),
   userId: z.string().optional(),
+  imageUrl: z.string().optional(),
 })
 
 export const birthdayRouter = createTRPCRouter({
@@ -34,6 +35,7 @@ export const birthdayRouter = createTRPCRouter({
         name: input.name,
         data: input.data,
         userId,
+        imageUrl: input.imageUrl,
       },
     })
   }),
@@ -46,6 +48,7 @@ export const birthdayRouter = createTRPCRouter({
         name: z.string().min(1, "Nome é obrigatório").optional(),
         data: z.date().optional(),
         userId: z.string().optional(),
+        imageUrl: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -54,7 +57,8 @@ export const birthdayRouter = createTRPCRouter({
         data: {
           name: input.name,
           data: input.data,
-          userId: input.userId
+          userId: input.userId,
+          imageUrl: input.imageUrl
         },
       })
     }),
@@ -148,6 +152,7 @@ export const birthdayRouter = createTRPCRouter({
           name: z.string(),
           data: z.date(),
           userId: z.string().optional(),
+          imageUrl: z.string().optional(),
         }),
       ),
     )
@@ -160,6 +165,7 @@ export const birthdayRouter = createTRPCRouter({
               name: birthday.name,
               data: birthday.data,
               userId: birthday.userId,
+              imageUrl: birthday.imageUrl,
             },
           }),
         ),
