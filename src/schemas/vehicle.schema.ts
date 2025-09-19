@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const EnterpriseEnum = z.enum(["NA", "Box", "RHenz", "Cristallux", "Box_Filial"])
+export const EnterpriseEnum = z.enum(["NA", "Box", "RHenz", "Cristallux", "Box_Filial", "Cristallux_Filial"])
 
 export const createVehicleSchema = z.object({
   model: z.string().min(1, "Modelo é obrigatório"),

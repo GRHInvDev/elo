@@ -25,6 +25,7 @@ const enterprises = [
   { value: "Box", label: "Box" },
   { value: "Box_Filial", label: "Box Filial" },
   { value: "Cristallux", label: "Cristallux" },
+  { value: "Cristallux_Filial", label: "Cristallux Filial" },
 ]
 
 const setores = [

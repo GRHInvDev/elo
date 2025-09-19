@@ -21,6 +21,7 @@ const enterpriseOptions = [
   { value: "RHenz", label: "RHenz" },
   { value: "Cristallux", label: "Cristallux" },
   { value: "Box_Filial", label: "Box Filial" },
+  { value: "Cristallux_Filial", label: "Cristallux Filial" },
 ]
 
 interface VehicleFormProps {

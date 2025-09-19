@@ -398,7 +398,8 @@ enum Enterprise {
   Box
   RHenz
   Cristallux
-  Box_Filial                
+  Box_Filial
+  Cristallux_Filial
 }
 
 enum ResponseStatus {

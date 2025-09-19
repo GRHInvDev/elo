@@ -10,6 +10,7 @@ const enterprises = [
   { value: "Box", label: "Box" },
   { value: "RHenz", label: "RHenz" },
   { value: "Cristallux", label: "Cristallux" },
+  { value: "Cristallux_Filial", label: "Cristallux Filial" },
 ]
 
 export function EnterpriseFilter({
