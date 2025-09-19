@@ -90,7 +90,10 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
   // Função para lidar com a URL da imagem gerada pelo upload
   const handleImageUrlGenerated = (url: string) => {
     setUploadedImageUrl(url)
-    toast.success("Imagem enviada com sucesso!")
+    toast({
+      title: "Imagem enviada com sucesso!",
+      description: "A imagem foi enviada com sucesso.",
+    })
   }
 
   // Filtrar usuários baseado no termo de busca
@@ -99,10 +102,10 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     const term = nameInputValue.toLowerCase()
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase()
     return fullName.includes(term) || user.email.toLowerCase().includes(term)
-  }) || []
+  }) ?? []
 
   // Função para selecionar um usuário da lista
-  const handleUserSelect = (user: typeof users[0]) => {
+  const handleUserSelect = (user: NonNullable<typeof users>[0]) => {
     const fullName = `${user.firstName} ${user.lastName}`
     setValue("name", fullName)
     setValue("userId", user.id)
@@ -295,10 +298,17 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
             onImageUrlGenerated={handleImageUrlGenerated}
             onUploadError={(error) => {
               console.error("Erro no upload:", error)
-              toast.error("Erro ao fazer upload da imagem")
+              toast({
+                title: "Erro ao fazer upload da imagem",
+                description: "Ocorreu um erro ao fazer upload da imagem.",
+                variant: "destructive",
+              })
             }}
             onUploadBegin={(filename) => {
-              toast.loading(`Enviando ${filename}...`)
+              toast({
+                title: `Enviando ${filename}...`,
+                description: "A imagem está sendo enviada...",
+              })
             }}
           />
         </div>
