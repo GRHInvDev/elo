@@ -821,13 +821,13 @@ export const foodOrderRouter = createTRPCRouter({
       orders.forEach((order) => {
         const enterprise = order.user.enterprise
         const sector = order.user.setor
-        const key = `${enterprise}-${sector || 'sem-setor'}`
+        const key = `${enterprise}-${sector ?? 'sem-setor'}`
         const price = order.menuItem.price
 
         if (!dreDataMap.has(key)) {
           dreDataMap.set(key, {
             enterprise,
-            sector: sector || null,
+            sector: sector ?? null,
             totalOrders: 0,
             totalValue: 0,
           })
@@ -846,8 +846,8 @@ export const foodOrderRouter = createTRPCRouter({
             return a.enterprise.localeCompare(b.enterprise)
           }
           // Depois por setor
-          const sectorA = a.sector || ''
-          const sectorB = b.sector || ''
+          const sectorA = a.sector ?? ''
+          const sectorB = b.sector ?? ''
           return sectorA.localeCompare(sectorB)
         })
 
