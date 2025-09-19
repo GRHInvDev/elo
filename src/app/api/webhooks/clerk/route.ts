@@ -68,6 +68,8 @@ export async function POST(req: Request) {
         can_create_flyer: false,
         can_create_booking: false,
         can_locate_cars: false,
+        can_view_dre_report: false,
+        // Se tem permissão DRE, automaticamente ganha acesso ao painel admin
         // Admin pages apenas para sudos
         admin_pages: [] as string[],
         isTotem: public_metadata?.isTotem ?? false
@@ -82,7 +84,8 @@ export async function POST(req: Request) {
           can_create_flyer: true,
           can_create_booking: true,
           can_locate_cars: true,
-          admin_pages: ["/admin", "/food", "/rooms", "/ideas", "/birthday"] as string[],
+          can_view_dre_report: true,
+          admin_pages: ["/admin", "/food", "/rooms", "/ideas", "/birthday",  "/vehicles", "/users"] as string[],
           isTotem: false
         };
       }

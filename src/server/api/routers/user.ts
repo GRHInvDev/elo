@@ -33,6 +33,7 @@ export const userRouter = createTRPCRouter({
         can_create_flyer: false,
         can_create_booking: false,
         can_locate_cars: false,
+        can_view_dre_report: false,
         isTotem: false
       };
 
@@ -71,6 +72,7 @@ export const userRouter = createTRPCRouter({
         can_create_flyer: false,
         can_create_booking: false,
         can_locate_cars: false,
+        can_view_dre_report: false,
         isTotem: true // Modo seguro - assumir que é Totem
       };
 
@@ -262,6 +264,7 @@ export const userRouter = createTRPCRouter({
         can_create_flyer: z.boolean(),
         can_create_booking: z.boolean(),
         can_locate_cars: z.boolean(),
+        can_view_dre_report: z.boolean(),
         isTotem: z.boolean().optional(),
         visible_forms: z.array(z.string()).optional(),
         hidden_forms: z.array(z.string()).optional(),

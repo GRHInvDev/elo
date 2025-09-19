@@ -10,10 +10,18 @@ export function useAccessControl() {
 
   const hasAdminAccess = (route: string): boolean => {
     if (!db_user?.role_config) return false;
-    
+
     // Se é sudo, tem acesso a tudo
     if (db_user.role_config.sudo) return true;
-    
+
+    // Se tem permissão DRE, automaticamente ganha acesso aos painéis necessários
+    if (db_user.role_config.can_view_dre_report) {
+      // Garante acesso ao painel admin e food
+      if (route === "/admin" || route === "/admin/food" || route === "/admin/food/dre") {
+        return true;
+      }
+    }
+
     // Usa a função centralizada para verificar acesso
     return hasAccessToAdminRoute(db_user.role_config.admin_pages || [], route);
   };
@@ -111,6 +119,16 @@ export function useAccessControl() {
     return db_user.role_config.can_locate_cars;
   };
 
+  const canViewDREReport = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, pode visualizar relatório DRE
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica para relatório DRE
+    return db_user.role_config.can_view_dre_report;
+  };
+
   return {
     db_user,
     hasAdminAccess,
@@ -126,6 +144,7 @@ export function useAccessControl() {
     canCreateBooking,
     canViewCars,
     canLocateCars,
+    canViewDREReport,
     isLoading: !db_user,
     isSudo: db_user?.role_config?.sudo ?? false,
   };

@@ -742,4 +742,115 @@ export const foodOrderRouter = createTRPCRouter({
         .sort((a, b) => b.orders - a.orders)
         .slice(0, 10) // Limitar aos top 10 restaurantes
     }),
+
+  // Buscar dados DRE agrupados por empresa e setor
+  getDREData: protectedProcedure
+    .input(
+      z.object({
+        year: z.number(),
+        period: z.enum(["month", "quarter", "year"]),
+        date: z.date().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }): Promise<{
+      enterprise: string
+      sector: string | null
+      totalOrders: number
+      totalValue: number
+    }[]> => {
+      const { year, period, date } = input
+
+      // Definir o período de busca baseado no tipo selecionado
+      let startDate: Date
+      let endDate: Date
+
+      if (period === "year") {
+        startDate = new Date(Date.UTC(year, 0, 1)) // 1 de janeiro
+        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999)) // 31 de dezembro
+      } else if (period === "quarter" && date) {
+        // Para trimestre: calcular trimestre baseado na data
+        const quarter = Math.floor(date.getMonth() / 3)
+        const quarterStartMonth = quarter * 3
+        startDate = new Date(Date.UTC(year, quarterStartMonth, 1))
+        endDate = new Date(Date.UTC(year, quarterStartMonth + 3, 0, 23, 59, 59, 999))
+      } else if (period === "month" && date) {
+        // Para período mensal específico
+        const month = date.getMonth()
+        startDate = new Date(Date.UTC(year, month, 1))
+        endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999))
+      } else {
+        // Fallback: buscar dados de todos os meses do ano
+        startDate = new Date(Date.UTC(year, 0, 1))
+        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999))
+      }
+
+      // Buscar pedidos com dados de usuário (empresa e setor)
+      const orders = await ctx.db.foodOrder.findMany({
+        where: {
+          orderDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+          status: {
+            not: "CANCELLED", // Excluir pedidos cancelados
+          },
+        },
+        include: {
+          user: {
+            select: {
+              enterprise: true,
+              setor: true,
+            },
+          },
+          menuItem: {
+            select: {
+              price: true,
+            },
+          },
+        },
+      })
+
+      // Agrupar por empresa e setor
+      const dreDataMap = new Map<string, {
+        enterprise: string
+        sector: string | null
+        totalOrders: number
+        totalValue: number
+      }>()
+
+      orders.forEach((order) => {
+        const enterprise = order.user.enterprise
+        const sector = order.user.setor
+        const key = `${enterprise}-${sector ?? 'sem-setor'}`
+        const price = order.menuItem.price
+
+        if (!dreDataMap.has(key)) {
+          dreDataMap.set(key, {
+            enterprise,
+            sector: sector ?? null,
+            totalOrders: 0,
+            totalValue: 0,
+          })
+        }
+
+        const data = dreDataMap.get(key)!
+        data.totalOrders += 1
+        data.totalValue += price
+      })
+
+      // Converter para array e ordenar
+      const dreData = Array.from(dreDataMap.values())
+        .sort((a, b) => {
+          // Primeiro ordenar por empresa
+          if (a.enterprise !== b.enterprise) {
+            return a.enterprise.localeCompare(b.enterprise)
+          }
+          // Depois por setor
+          const sectorA = a.sector ?? ''
+          const sectorB = b.sector ?? ''
+          return sectorA.localeCompare(sectorB)
+        })
+
+      return dreData
+    }),
 }) 

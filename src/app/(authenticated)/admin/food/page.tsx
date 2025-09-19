@@ -12,13 +12,14 @@ import OrdersTab from "./_components/orders-tab"
 import RestaurantsTab from "./_components/restaurants-tab"
 import MenuTab from "./_components/menu-tab"
 import MetricsTab from "./_components/metrics-tab"
+import DREReport from "./_components/dre-report"
  
 
 // Componente principal da página de administração de comida
 export default function AdminFoodPage() {
   // Hooks devem ser chamados no topo, antes de qualquer lógica condicional
   const router = useRouter()
-  const { hasAdminAccess, isLoading } = useAccessControl()
+  const { hasAdminAccess, isLoading, canViewDREReport } = useAccessControl()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
   const [selectedStatus, setSelectedStatus] = useState<string>("")
@@ -30,6 +31,9 @@ export default function AdminFoodPage() {
     router.replace("/")
     return null
   }
+
+  // Determinar se deve mostrar a aba DRE
+  const showDRETab = !isLoading && canViewDREReport()
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -81,6 +85,9 @@ export default function AdminFoodPage() {
           <TabsTrigger value="restaurants">Restaurantes</TabsTrigger>
           <TabsTrigger value="menu">Cardápios</TabsTrigger>
           <TabsTrigger value="metrics">Métricas</TabsTrigger>
+          {showDRETab && (
+            <TabsTrigger value="dre">Relatório DRE</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="orders" className="space-y-4">
@@ -106,12 +113,21 @@ export default function AdminFoodPage() {
           </TabsContent>
 
           <TabsContent value="metrics" className="space-y-4">
-          <MetricsTab 
-            selectedYear={selectedDate.getFullYear()} 
+          <MetricsTab
+            selectedYear={selectedDate.getFullYear()}
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
           />
           </TabsContent>
+
+          {showDRETab && (
+            <TabsContent value="dre" className="space-y-4">
+              <DREReport
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+              />
+            </TabsContent>
+          )}
       </Tabs>
     </div>
   )
