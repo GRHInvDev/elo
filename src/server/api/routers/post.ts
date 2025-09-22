@@ -115,8 +115,26 @@ export const postRouter = createTRPCRouter({
     })
   }),
 
-  list: protectedProcedure.query(({ ctx }) => {
+  list: protectedProcedure.query(async ({ ctx }) => {
+    // Verificar se o usuário tem permissões de admin para ver todos os posts
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true }
+    })
+
+    const roleConfig = user?.role_config as RolesConfig | null
+    const isSudo = roleConfig?.sudo ?? false
+    const hasAdminAccess = Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin")
+
+    // Se for admin ou sudo, vê todos os posts (incluindo rascunhos); senão, apenas os publicados
+    // NOTA: Por compatibilidade com posts existentes, usuários normais vêem todos os posts
+    // exceto aqueles explicitamente marcados como rascunhos (published: false)
+    const whereClause = (isSudo || hasAdminAccess)
+      ? {} // Admins vêem todos os posts (incluindo rascunhos)
+      : { NOT: { published: false } } // Usuários normais não vêem apenas rascunhos explícitos
+
     return ctx.db.post.findMany({
+      where: whereClause,
       include: {
         author: {
           select: {
