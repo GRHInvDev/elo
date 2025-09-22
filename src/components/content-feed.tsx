@@ -63,8 +63,6 @@ import {
   Smile,
   Send,
 } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import dynamic from "next/dynamic"
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
@@ -216,7 +214,7 @@ export function ContentFeed({ className }: { className?: string }) {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 md:p-6">
           <Tabs defaultValue="posts">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="posts">Posts</TabsTrigger>
@@ -630,17 +628,17 @@ function PostItem({ post }: PostItemProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 pb-2">
-        <h3 className="font-semibold">{post.title}</h3>
+      <CardContent className="space-y-4 pb-2 p-0 md:px-6">
+        <h3 className="font-semibold px-6">{post.title}</h3>
         {showMore ? (
-          <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+          <div className="text-sm prose prose-sm dark:prose-invert max-w-none px-6 md:px-0">
             <div className="whitespace-pre-line">{post.content}</div>
             <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(false)}>
               Ler menos...
             </button>
           </div>
         ) : (
-          <div>
+          <div className="px-6 md:px-0">
             <p className="line-clamp-3 text-sm whitespace-pre-line">{post.content}</p>
             {post.content.length > 250 && (
               <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(true)}>
