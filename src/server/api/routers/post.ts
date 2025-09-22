@@ -2,6 +2,7 @@ import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { utapi } from "@/server/uploadthing"
+import type { RolesConfig } from "@/types/role-config"
 
 const createPostSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -38,13 +39,31 @@ export const postRouter = createTRPCRouter({
   }),
 
   update: protectedProcedure
-    .input(createPostSchema.partial().extend({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+  .input(createPostSchema.partial().extend({ id: z.string() }))
+  .mutation(async ({ ctx, input }) => {
       const post = await ctx.db.post.findUnique({
         where: { id: input.id },
       })
 
-      if (!post || post.authorId !== ctx.auth.userId) {
+      if (!post) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Post não encontrado",
+        })
+      }
+
+      // Verificar se o usuário tem permissões de admin ou é o autor
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true }
+      })
+
+      const roleConfig = user?.role_config as RolesConfig | null
+      const isSudo = roleConfig?.sudo ?? false
+      const hasAdminAccess = Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin")
+      const isAuthor = post.authorId === ctx.auth.userId
+
+      if (!isAuthor && !isSudo && !hasAdminAccess) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para editar este post",
@@ -62,7 +81,25 @@ export const postRouter = createTRPCRouter({
       where: { id: input.id },
     })
 
-    if (!post || post.authorId !== ctx.auth.userId) {
+    if (!post) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Post não encontrado",
+      })
+    }
+
+    // Verificar se o usuário tem permissões de admin ou é o autor
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true }
+    })
+
+    const roleConfig = user?.role_config as RolesConfig | null
+    const isSudo = roleConfig?.sudo ?? false
+    const hasAdminAccess = Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin")
+    const isAuthor = post.authorId === ctx.auth.userId
+
+    if (!isAuthor && !isSudo && !hasAdminAccess) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Você não tem permissão para deletar este post",
@@ -97,5 +134,57 @@ export const postRouter = createTRPCRouter({
       orderBy: { createdAt: "desc" },
     })
   }),
+
+  // Lista todos os posts (para admins)
+  listAll: protectedProcedure.query(async ({ ctx }) => {
+    // Verificar se o usuário tem permissões de admin
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true }
+    })
+
+    const roleConfig = user?.role_config as RolesConfig | null
+    const isSudo = roleConfig?.sudo ?? false
+    const hasAdminAccess = Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin")
+
+    if (!isSudo && !hasAdminAccess) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para acessar esta funcionalidade",
+      })
+    }
+
+    return ctx.db.post.findMany({
+      include: {
+        author: {
+          select: {
+            firstName: true,
+            lastName: true,
+            imageUrl: true,
+            role_config: true,
+            enterprise: true,
+            email: true,
+          },
+        },
+        reactions: {
+          distinct: ["emoji"]
+        }
+      },
+      orderBy: { createdAt: "desc" },
+    })
+  }),
+
+  // Incrementa contador de visualizações
+  incrementView: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.post.update({
+        where: { id: input.id },
+        data: {
+          viewCount: { increment: 1 },
+          lastViewedAt: new Date(),
+        },
+      })
+    }),
 })
 

@@ -47,7 +47,7 @@ interface FlyerWithAuthor {
   author: AuthorWithRoleConfig
 }
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -145,7 +145,7 @@ export function ContentFeed({ className }: { className?: string }) {
 
     createPost.mutate({
       title: formData.get("title") as string,
-      content: formData.get("content") as string,
+      content: normalizeLineBreaks(formData.get("content") as string),
       published: true,
       imageUrl: fileUrl,
     })
@@ -197,7 +197,12 @@ export function ContentFeed({ className }: { className?: string }) {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="content">Conteúdo</Label>
-                      <Textarea id="content" name="content" placeholder="Digite o conteúdo do post" required />
+                      <Textarea
+                        id="content"
+                        name="content"
+                        placeholder="Digite o conteúdo do post. Pressione Enter para criar quebras de linha."
+                        required
+                      />
                     </div>
                   </div>
                   <DialogFooter>
@@ -373,6 +378,42 @@ interface PostItemProps {
   }
 }
 
+// Função utilitária para normalizar quebras de linha (CRLF -> LF)
+function normalizeLineBreaks(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
+// Hook para detectar quando um elemento fica visível
+function useIntersectionObserver(
+  ref: React.RefObject<Element>,
+  options: IntersectionObserverInit = {}
+) {
+  const [isIntersecting, setIsIntersecting] = useState(false)
+
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsIntersecting(entry?.isIntersecting ?? false)
+      },
+      {
+        threshold: 0.5, // 50% do elemento precisa estar visível
+        ...options,
+      }
+    )
+
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [ref, options])
+
+  return { isIntersecting }
+}
+
 function PostItem({ post }: PostItemProps) {
   const auth = useAuth()
   const utils = api.useUtils()
@@ -383,6 +424,32 @@ function PostItem({ post }: PostItemProps) {
   const [newComment, setNewComment] = useState("")
   const { theme } = useTheme()
   const { data: userMe } = api.user.me.useQuery()
+  const postRef = useRef<HTMLDivElement>(null)
+  const viewIncrementedRef = useRef(false)
+  const currentPostIdRef = useRef(post.id)
+
+  // Resetar o contador quando o post muda
+  useEffect(() => {
+    if (currentPostIdRef.current !== post.id) {
+      viewIncrementedRef.current = false
+      currentPostIdRef.current = post.id
+    }
+  }, [post.id])
+
+  // Hook para detectar visualização
+  const { isIntersecting } = useIntersectionObserver(postRef, {
+    threshold: 0.5,
+    rootMargin: '0px 0px -100px 0px' // Trigger quando 100px do elemento estiverem visíveis
+  })
+
+  // Incrementar visualização quando o post é visto pela primeira vez
+  const incrementView = api.post.incrementView.useMutation()
+  useEffect(() => {
+    if (isIntersecting && post.id && !viewIncrementedRef.current) {
+      viewIncrementedRef.current = true
+      incrementView.mutate({ id: post.id })
+    }
+  }, [isIntersecting, post.id, incrementView])
 
   // Get reactions for this post
   const { data: reactions } = api.reaction.listByPost.useQuery({ postId: post.id })
@@ -514,7 +581,7 @@ function PostItem({ post }: PostItemProps) {
   const totalReactions = reactionCounts ? Object.values(reactionCounts).reduce((sum, count) => sum + count, 0) : 0
 
   return (
-    <Card className="w-full" id={post.id}>
+    <Card ref={postRef} className="w-full" id={post.id}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -567,14 +634,14 @@ function PostItem({ post }: PostItemProps) {
         <h3 className="font-semibold">{post.title}</h3>
         {showMore ? (
           <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+            <div className="whitespace-pre-line">{post.content}</div>
             <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(false)}>
               Ler menos...
             </button>
           </div>
         ) : (
           <div>
-            <p className="line-clamp-3 text-sm">{post.content}</p>
+            <p className="line-clamp-3 text-sm whitespace-pre-line">{post.content}</p>
             {post.content.length > 250 && (
               <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(true)}>
                 Ler mais...
@@ -587,11 +654,10 @@ function PostItem({ post }: PostItemProps) {
             <Image
               alt={post.title}
               src={post.imageUrl}
-              width={0}
-              height={0}
-              sizes="100vw"
-              className="h-auto w-full"
-              style={{ maxHeight: "80vh" }}
+              width={800}
+              height={600}
+              className="object-cover w-full h-auto max-h-[80vh]"
+              style={{ aspectRatio: 'auto' }}
             />
           </div>
         )}
@@ -863,7 +929,7 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
     updatePost.mutate({
       id: post.id,
       title: formData.get("title") as string,
-      content: formData.get("content") as string,
+      content: normalizeLineBreaks(formData.get("content") as string),
       published: true,
     })
   }
@@ -893,7 +959,7 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
                 id="content"
                 name="content"
                 defaultValue={post.content}
-                placeholder="Digite o conteúdo do post"
+                placeholder="Digite o conteúdo do post. Pressione Enter para criar quebras de linha."
                 required
               />
             </div>

@@ -87,6 +87,8 @@ model Post {
   updatedAt     DateTime   @updatedAt
   commentsCount Int        @default(0)
   reactionCount Int        @default(0)
+  viewCount     Int        @default(0)
+  lastViewedAt  DateTime?
   imageUrl      String?
   comments      Coment[]
   reactions     Reaction[]
@@ -398,7 +400,8 @@ enum Enterprise {
   Box
   RHenz
   Cristallux
-  Box_Filial                
+  Box_Filial
+  Cristallux_Filial                
 }
 
 enum ResponseStatus {
