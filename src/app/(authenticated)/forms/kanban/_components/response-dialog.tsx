@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { ResponseDetails } from "@/components/forms/response-details"
+import { EditResponseButton } from "@/components/forms/edit-response-button"
 import { type Field } from "@/lib/form-types"
 
 interface ResponseDialogProps {
@@ -99,7 +100,15 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px] max-h-dvh overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>{response.form.title}</DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <DialogTitle>{response.form.title}</DialogTitle>
+                        <EditResponseButton
+                            responseId={responseId}
+                            formId={response.formId}
+                            isOwner={true} // Na página kanban, o usuário é dono dos formulários
+                            isAuthor={false}
+                        />
+                    </div>
                     <DialogDescription className="flex items-center gap-2">
                         {getStatusBadge(response.status)}
                         <span className="text-sm text-gray-500">

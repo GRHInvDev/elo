@@ -8,6 +8,7 @@ import type { ResponseStatus } from "@/types/form-responses"
 import { KanbanColumn } from "./_components/kanban-column"
 import { ResponseDialog } from "./_components/response-dialog"
 import type { FormResponse } from "@/types/form-responses"
+import { DashboardShell } from "@/components/dashboard-shell"
 
 export default function KanbanPage() {
     const [selectedResponse, setSelectedResponse] = useState<string | null>(null)
@@ -77,15 +78,45 @@ export default function KanbanPage() {
 
     if (isLoading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <DashboardShell>
+                <div className="flex h-64 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            </DashboardShell>
+        )
+    }
+
+    if (!responses || responses.length === 0) {
+        return (
+            <DashboardShell>
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Visualize e organize as respostas recebidas nos seus formulários.
+                    </p>
+                </div>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="text-6xl mb-4">📋</div>
+                    <h3 className="text-lg font-medium">Nenhuma solicitação encontrada</h3>
+                    <p className="text-muted-foreground mt-1 mb-4">
+                        Você ainda não recebeu nenhuma resposta em seus formulários.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                        As respostas aparecerão aqui quando alguém responder aos seus formulários.
+                    </p>
+                </div>
+            </DashboardShell>
         )
     }
 
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="mb-6 text-3xl font-bold">Kanban de Solicitações</h1>
+        <DashboardShell>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
+                <p className="text-muted-foreground mt-2">
+                    Visualize e organize as respostas recebidas nos seus formulários.
+                </p>
+            </div>
 
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -115,6 +146,6 @@ export default function KanbanPage() {
             {selectedResponse && (
                 <ResponseDialog responseId={selectedResponse} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
             )}
-        </div>
+        </DashboardShell>
     )
 }

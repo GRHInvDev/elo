@@ -26,9 +26,20 @@ import remarkGfm from "remark-gfm"
 interface FormResponseComponentProps {
   formId: string
   fields: Field[]
+  existingResponse?: Record<string, unknown>
+  isEditing?: boolean
+  onSubmit?: (data: Record<string, unknown>) => void
+  isSubmitting?: boolean
 }
 
-export function FormResponseComponent({ formId, fields }: FormResponseComponentProps) {
+export function FormResponseComponent({
+  formId,
+  fields,
+  existingResponse,
+  isEditing = false,
+  onSubmit: customOnSubmit,
+  isSubmitting: customIsSubmitting
+}: FormResponseComponentProps) {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const router = useRouter()
   const {data: form} = api.form.getById.useQuery({id: formId})
@@ -101,7 +112,7 @@ export function FormResponseComponent({ formId, fields }: FormResponseComponentP
     formState: { errors, isSubmitting },
   } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {},
+    defaultValues: existingResponse ?? {},
   })
 
   const submitResponse = api.formResponse.create.useMutation({
@@ -134,12 +145,14 @@ export function FormResponseComponent({ formId, fields }: FormResponseComponentP
       }),
     )
 
-    submitResponse.mutate({
-      formId,
-      responses: [processedData],
-    })
-
-
+    if (isEditing && customOnSubmit) {
+      customOnSubmit(processedData)
+    } else {
+      submitResponse.mutate({
+        formId,
+        responses: [processedData],
+      })
+    }
   }
 
   // Função para renderizar mensagens de erro
@@ -148,7 +161,7 @@ export function FormResponseComponent({ formId, fields }: FormResponseComponentP
     return error ? <p className="text-sm font-medium text-destructive mt-1">{JSON.stringify(error.message)}</p> : null
   }
 
-  if (isSubmitted) {
+  if (isSubmitted && !isEditing) {
     return (
       <div className="space-y-6">
         <Alert className="bg-success/10 border-success">
@@ -285,8 +298,15 @@ export function FormResponseComponent({ formId, fields }: FormResponseComponentP
         </div>
       ))}
 
-      <Button type="submit" className="mt-6" disabled={isSubmitting}>
-        {isSubmitting ? "Enviando..." : "Enviar Resposta"}
+      <Button
+        type="submit"
+        className="mt-6"
+        disabled={customIsSubmitting ?? isSubmitting}
+      >
+        {customIsSubmitting !== undefined
+          ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
+          : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar Resposta"))
+        }
       </Button>
     </form>
   )

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusUpdateButton } from "@/components/forms/status-update-button"
 import { ResponseDetails } from "@/components/forms/response-details"
+import { EditResponseButton } from "@/components/forms/edit-response-button"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { canAccessForm } from "@/lib/access-control"
@@ -47,6 +48,7 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
   }
 
   const isOwner = response.form.userId === userData?.id
+  const isAuthor = response.userId === userData?.id
 
   function getStatusBadge(status: string) {
     switch (status) {
@@ -135,7 +137,13 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <EditResponseButton
+            responseId={response.id}
+            formId={id}
+            isOwner={isOwner}
+            isAuthor={isAuthor}
+          />
           {isOwner && (
             <StatusUpdateButton
               responseId={response.id}
