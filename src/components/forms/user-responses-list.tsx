@@ -27,12 +27,13 @@ export function UserResponsesList() {
 
   // Fetch responses for both views
   const { data: responses, isLoading } = api.formResponse.listUserResponses.useQuery()
-  const { data: kanbanResponses, isLoading: isKanbanLoading, refetch } = api.formResponse.listKanBan.useQuery()
+  // Para o kanban, usamos a mesma query das respostas do usuário
+  const { data: kanbanResponses, isLoading: isKanbanLoading, refetch } = api.formResponse.listUserResponses.useQuery()
 
   // Update local state when server data changes
   React.useEffect(() => {
     if (kanbanResponses) {
-      setLocalResponses(kanbanResponses)
+      setLocalResponses(kanbanResponses as FormResponse[])
     }
   }, [kanbanResponses])
 

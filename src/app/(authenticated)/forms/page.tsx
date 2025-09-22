@@ -62,12 +62,12 @@ export default async function FormsPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Link href="/forms/kanban">
+            {/* <Link href="/forms/kanban">
               <Button className="w-full" variant='outline'>
-                <LucideKanbanSquare className="mr-2 h-4 w-4" />
+                <LucideKanbanSquare className="mr-2 h-4 w-4" />  -> Lógica adaptada em "Minhas respostas"
                 Kanban
               </Button>
-            </Link>
+            </Link> */}
           </div>
         </div>
         <div className="flex gap-3 flex-col md:flex-row w-full md:w-auto">

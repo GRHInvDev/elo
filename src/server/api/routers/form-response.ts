@@ -224,6 +224,15 @@ export const formResponseRouter = createTRPCRouter({
             description: true,
           },
         },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            imageUrl: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -336,5 +345,58 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       return response
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+        responses: z.array(z.record(z.string(), z.any())),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verificar se a resposta existe
+      const existingResponse = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+        include: {
+          form: { select: { userId: true } },
+          user: { select: { id: true } },
+        },
+      })
+
+      if (!existingResponse) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Resposta não encontrada",
+        })
+      }
+
+      // Verificar se o usuário é o dono do formulário ou o autor da resposta
+      if (existingResponse.form.userId !== ctx.auth.userId && existingResponse.userId !== ctx.auth.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para editar esta resposta",
+        })
+      }
+
+      return await ctx.db.formResponse.update({
+        where: { id: input.responseId },
+        data: {
+          responses: input.responses as unknown as InputJsonValue[],
+          updatedAt: new Date(),
+        },
+        include: {
+          form: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+        },
+      })
     }),
 })
