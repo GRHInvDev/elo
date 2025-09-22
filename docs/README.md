@@ -276,5 +276,5 @@ npm run dev
 
 ---
 
-**📅 Última atualização**: Abril 2025
+**📅 Última atualização**: Setembro 2025
 **👥 Mantido por**: Equipe de Desenvolvimento
