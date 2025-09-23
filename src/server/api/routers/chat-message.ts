@@ -216,7 +216,7 @@ export const chatMessageRouter = createTRPCRouter({
       const conversations: Array<{
         roomId: string
         roomName: string
-        roomType: 'global' | 'group'
+        roomType: 'global' | 'group' | 'private'
         lastMessage: {
           content: string | null
           createdAt: Date
@@ -295,6 +295,86 @@ export const chatMessageRouter = createTRPCRouter({
           } : null,
           memberCount: group._count.members,
         })
+      }
+
+      // Buscar chats privados com mensagens recentes
+      // Buscar todas as mensagens privadas distintas por roomId
+      const privateRoomIds = await ctx.db.chat_message.findMany({
+        where: {
+          roomId: {
+            startsWith: 'private_',
+          },
+          OR: [
+            { userId }, // Mensagens enviadas pelo usuário atual
+            {
+              roomId: {
+                contains: `user_${userId}`, // RoomIds que contenham o ID do usuário atual
+              }
+            }
+          ]
+        },
+        select: {
+          roomId: true,
+        },
+        distinct: ['roomId'],
+      })
+
+      // Para cada roomId único, buscar a última mensagem
+      const uniquePrivateRoomIds = [...new Set(privateRoomIds.map(msg => msg.roomId))]
+
+      for (const roomId of uniquePrivateRoomIds) {
+        const lastMessage = await ctx.db.chat_message.findFirst({
+          where: { roomId },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                id: true,
+              },
+            },
+          },
+        })
+
+        if (lastMessage) {
+          // Extrair o ID do outro usuário do roomId
+          const idPattern = /user_[^_]+/g
+          const matches = roomId.match(idPattern) ?? []
+          const otherUserId = matches.find(id => id !== `user_${userId}`)?.replace('user_', '')
+
+          if (otherUserId) {
+            // Buscar informações do outro usuário
+            const otherUser = await ctx.db.user.findUnique({
+              where: { id: otherUserId },
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            })
+
+            if (otherUser) {
+              const otherUserName = [otherUser.firstName, otherUser.lastName]
+                .filter(Boolean)
+                .join(' ') || otherUser.email
+
+              conversations.push({
+                roomId,
+                roomName: otherUserName,
+                roomType: 'private' as const,
+                lastMessage: {
+                  content: lastMessage.content,
+                  createdAt: lastMessage.createdAt,
+                  user: {
+                    firstName: lastMessage.user.firstName,
+                    lastName: lastMessage.user.lastName,
+                  },
+                },
+              })
+            }
+          }
+        }
       }
 
       // Filtrar apenas conversas que têm mensagens e ordenar por data da última mensagem
