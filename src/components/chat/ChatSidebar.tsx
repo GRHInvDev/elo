@@ -30,6 +30,7 @@ interface Group {
   }>
 }
 
+
 interface ChatSidebarProps {
   currentRoomId: string
   onRoomChange: (roomId: string) => void
@@ -40,13 +41,13 @@ export function ChatSidebar({ currentRoomId, onRoomChange, className }: ChatSide
   const { user: clerkUser } = useUser()
 
   // Buscar grupos do usuário
-  const userGroupsQuery = api.chatMessage.getUserGroups.useQuery(
+  const { data: userGroupsData, isLoading: isLoadingGroups } = api.chatMessage.getUserGroups.useQuery(
     undefined,
     { enabled: !!clerkUser?.id }
   )
 
   // Buscar conversas ativas
-  const activeConversationsQuery = api.chatMessage.getActiveConversations.useQuery(
+  const { data: activeConversationsData, isLoading: isLoadingConversations } = api.chatMessage.getActiveConversations.useQuery(
     undefined,
     { enabled: !!clerkUser?.id }
   )
@@ -62,8 +63,8 @@ export function ChatSidebar({ currentRoomId, onRoomChange, className }: ChatSide
   // Combinar chat global com grupos do usuário
   const allRooms: Room[] = [globalRoom]
 
-  if (userGroupsQuery.data) {
-    const groupRooms: Room[] = userGroupsQuery.data.map((group: Group) => ({
+  if (userGroupsData) {
+    const groupRooms: Room[] = userGroupsData.map((group: Group) => ({
       id: `group_${group.id}`,
       name: group.name,
       description: group.description ?? 'Grupo de chat privado',
@@ -73,8 +74,21 @@ export function ChatSidebar({ currentRoomId, onRoomChange, className }: ChatSide
     allRooms.push(...groupRooms)
   }
 
-  const activeConversations = activeConversationsQuery.data ?? []
-  const isLoading = userGroupsQuery.isLoading || activeConversationsQuery.isLoading
+  const activeConversations = (activeConversationsData ?? []) as Array<{
+    roomId: string
+    roomName: string
+    roomType: 'global' | 'group'
+    lastMessage: {
+      content: string | null
+      createdAt: Date
+      user: {
+        firstName: string | null
+        lastName: string | null
+      }
+    } | null
+    memberCount?: number
+  }>
+  const isLoading = isLoadingGroups ?? isLoadingConversations
 
   return (
     <div className={cn("w-64 border-r bg-muted/30 flex flex-col", className)}>
@@ -127,15 +141,17 @@ export function ChatSidebar({ currentRoomId, onRoomChange, className }: ChatSide
                       {conversation.lastMessage && (
                         <div className="space-y-0.5">
                           <p className="text-xs text-muted-foreground truncate">
-                            {conversation.lastMessage.user.firstName || conversation.lastMessage.user.lastName
-                              ? `${conversation.lastMessage.user.firstName || ''} ${conversation.lastMessage.user.lastName || ''}`.trim()
-                              : 'Usuário'
-                            }: {conversation.lastMessage.content || 'Mensagem sem texto'}
+                            {(() => {
+                              const user = conversation.lastMessage.user
+                              const userName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Usuário'
+                              const content = conversation.lastMessage.content ?? 'Mensagem sem texto'
+                              return `${userName}: ${content}`
+                            })()}
                           </p>
                           <p className="text-xs text-muted-foreground/70">
                             {(() => {
                               const now = new Date()
-                              const messageTime = new Date(conversation.lastMessage.createdAt)
+                              const messageTime = conversation.lastMessage?.createdAt ?? new Date()
                               const diffMs = now.getTime() - messageTime.getTime()
                               const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
                               const diffDays = Math.floor(diffHours / 24)
