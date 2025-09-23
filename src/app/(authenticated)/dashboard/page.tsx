@@ -166,43 +166,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      
-      {/* Seção de Notícias - Design Assertivo e Responsivo */}
-      {/*<div className="w-full max-w-7xl mx-auto mt-6 md:mt-12 px-4 sm:px-6 lg:px-8">
-        {/* Header da Seção com Design Melhorado */}
-        {/*<div className="mb-8 md:mb-12 text-center lg:text-left">
-          <div className="inline-flex items-center justify-center lg:justify-start gap-x-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-full">
-              <LucideNewspaper className="w-6 h-6 md:w-8 md:h-8 text-primary"/>
-            </div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground tracking-tight">
-              News
-            </h1>
-          </div>
-          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-            Fique por dentro das últimas novidades, atualizações e acontecimentos importantes
-          </p>
-
-          {/* Linha decorativa */}
-          {/*<div className="mt-6 flex justify-center lg:justify-start">
-            <div className="w-24 h-1 bg-gradient-to-r from-primary to-primary/50 rounded-full"></div>
-          </div>
-
-        {/* Container de Notícias com Design Aprimorado */}
-        {/*<div className="bg-card/50 backdrop-blur-sm rounded-xl md:rounded-2xl border border-border/50 shadow-lg md:shadow-xl overflow-hidden">
-          {/* Padding interno responsivo */}
-          {/*<div className="p-4 sm:p-6 lg:p-8">
-            <NewsDisplay/>
-          </div>
-
-          {/* Gradiente sutil na parte inferior */}
-          {/*<div className="h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
-        </div>
-
-        {/* Espaçamento adicional para mobile */}
-        {/*<div className="h-8 md:h-12"></div>
-      </div>
-
+   
       {/* Footer com Redes Sociais */}
       <div className="mt-8 lg:mt-12 bg-muted/50 border-t">
         <div className="max-w-6xl mx-auto px-4 py-8">
