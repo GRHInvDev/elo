@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Send, MessageCircle } from "lucide-react"
 import { api } from "@/trpc/react"
 import { useUser } from "@clerk/nextjs"
+import { useNotifications } from "@/hooks/use-notifications"
 import { cn } from "@/lib/utils"
 import { ImageUpload } from "./ImageUpload"
 import { ImageMessage } from "./ImageMessage"
@@ -48,6 +49,9 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+
+  // Sistema de notificações
+  const { unreadCount } = useNotifications()
 
   // Determinar o tipo de sala
   const isGroup = roomId.startsWith('group_')
@@ -194,6 +198,8 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
     // Validação: deve ter pelo menos texto ou imagem
     if ((!inputMessage.trim() && !selectedImageUrl) || !clerkUser?.id) return
 
+    console.log('📤 [ChatRoom] Enviando mensagem para roomId:', roomId, 'userId:', clerkUser.id)
+
     try {
       const response = await fetch('/api/chat/send', {
         method: 'POST',
@@ -209,7 +215,7 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
       })
 
       if (response.ok) {
-        console.log('✅ [FRONTEND] Mensagem enviada com sucesso')
+        console.log('✅ [ChatRoom] Mensagem enviada com sucesso para roomId:', roomId)
         setInputMessage("")
         setSelectedImageUrl(null)
 

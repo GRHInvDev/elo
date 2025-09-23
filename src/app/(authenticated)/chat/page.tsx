@@ -67,10 +67,17 @@ export default function ChatPage() {
             }}
             onUserDoubleClick={(userId) => {
               // Criar ou navegar para chat privado com o usuário
-              if (!!currentUser?.id) {
-                const privateChatId = `private_${[currentUser?.id, userId].sort().join('_')}`
+              console.log('👆 [ChatPage] Double click em usuário:', userId)
+              console.log('👤 [ChatPage] Usuário atual (clerk):', clerkUser?.id)
+              console.log('👤 [ChatPage] Usuário atual (banco):', currentUser?.id)
+
+              if (clerkUser?.id) {
+                const privateChatId = `private_${[clerkUser.id, userId].sort().join('_')}`
+                console.log('🏠 [ChatPage] RoomId gerado:', privateChatId)
                 setCurrentRoomId(privateChatId)
                 setShowSidebar(false) // Fechar sidebar em mobile após seleção
+              } else {
+                console.log('❌ [ChatPage] Não foi possível gerar roomId - clerkUser.id não encontrado')
               }
             }}
             className="w-full h-full"

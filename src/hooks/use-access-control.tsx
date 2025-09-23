@@ -1,8 +1,6 @@
 "use client";
 
 import { api } from "@/trpc/react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { type RolesConfig } from "@/types/role-config";
 import { hasAccessToAdminRoute } from "@/const/admin-routes";
 
 export function useAccessControl() {

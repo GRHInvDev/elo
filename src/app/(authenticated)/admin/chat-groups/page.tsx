@@ -6,16 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
-import { MessageSquare, Users, Plus, Settings, Trash2 } from "lucide-react"
-import { ChatGroupsList } from "./_components/chat-groups-list"
-import { CreateGroupDialog } from "./_components/create-group-dialog"
+import { MessageSquare, Users, Plus, Settings } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertTriangle } from "lucide-react"
+import { ChatGroupsList } from "./_components/chat-groups-list"
+import { CreateGroupDialog } from "./_components/create-group-dialog"
 
 export default function ChatGroupsAdminPage() {
-  const { hasAdminAccess, isLoading } = useAccessControl()
+  const { hasAdminAccess, isLoading, isSudo } = useAccessControl()
   const { toast } = useToast()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
@@ -33,7 +32,9 @@ export default function ChatGroupsAdminPage() {
     )
   }
 
-  if (!hasAdminAccess("/admin")) {
+  const hasChatGroupsManagementAccess = isSudo || hasAdminAccess("/admin/chat-groups")
+
+  if (!hasChatGroupsManagementAccess) {
     return (
       <DashboardShell>
         <div className="max-w-2xl mx-auto">
@@ -41,7 +42,7 @@ export default function ChatGroupsAdminPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Acesso Negado</AlertTitle>
             <AlertDescription>
-              Você não tem permissão para acessar a administração de grupos de chat.
+              Você não tem permissão para acessar o gerenciamento de grupos de chat.
             </AlertDescription>
           </Alert>
         </div>
@@ -55,7 +56,7 @@ export default function ChatGroupsAdminPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Gerenciar Chat</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Gerenciar Grupos de Chat</h1>
             <p className="text-muted-foreground">
               Gerencie grupos de chat e controle quem pode participar de cada conversa.
             </p>
