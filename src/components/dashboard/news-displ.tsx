@@ -37,24 +37,32 @@ export default function NewsDisplay() {
         displayPosts.map((p, i)=>(
           <article key={i} className="group relative">
             {/* Card Container com Design Aprimorado */}
-            <div className="bg-background/60 backdrop-blur-sm border border-border/40 rounded-lg md:rounded-xl p-4 md:p-6 lg:p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:border-border">
+            <div className="bg-background border border-border/40 rounded-lg md:rounded-xl p-4 md:p-6 lg:p-8 shadow-sm hover:shadow-md transition-all duration-300 hover:border-border">
               <div className="flex flex-col md:flex-row gap-4 md:gap-6 lg:gap-8">
                 {/* Imagem - Mobile: acima, Desktop: à esquerda */}
                 <div className="w-full md:w-80 lg:w-96 md:flex-shrink-0">
-                  <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-muted/50 aspect-video group-hover:scale-[1.02] transition-transform duration-300">
+                  <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-muted/50 md:group-hover:scale-[1.02] md:transition-transform md:duration-300">
                     {
                     p.imageUrl ?
                     <Image
                       src={p.imageUrl}
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      fill
                       alt={p.title}
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 320px, 384px"
+                      width={800}
+                      height={600}
+                      className="object-cover w-full h-auto max-h-[80vh] md:transition-transform md:duration-500 md:group-hover:scale-105"
+                      style={{ aspectRatio: 'auto' }}
                     />
                     :
                     p.author.imageUrl ?
                     <div className="w-full h-full relative">
-                        <Image src={p.author.imageUrl} className="object-cover" fill alt={p.title} />
+                        <Image
+                          src={p.author.imageUrl}
+                          alt={p.title}
+                          width={800}
+                          height={600}
+                          className="object-cover w-full h-full"
+                          style={{ aspectRatio: 'auto' }}
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-lg md:rounded-xl">
                           <div className="absolute bottom-0 left-0 right-0 p-4">
                             <p className="text-white font-semibold text-sm md:text-base line-clamp-2 drop-shadow-lg">
@@ -121,7 +129,7 @@ export default function NewsDisplay() {
                         className="group/btn hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200"
                       >
                         <span className="mr-2">Ler notícia completa</span>
-                        <LucideArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                        <LucideArrowRight className="w-4 h-4 md:group-hover/btn:translate-x-1 md:transition-transform" />
                       </Button>
                     </Link>
                   </div>
@@ -138,7 +146,7 @@ export default function NewsDisplay() {
           <Link href="/news">
             <Button
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-200 md:hover:scale-105"
             >
               <span className="mr-2">Ver todas as notícias</span>
               <LucideArrowRight className="w-5 h-5" />
