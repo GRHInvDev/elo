@@ -21,6 +21,9 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
+      <head>
+        <title>Elo | Intranet</title>
+      </head>
       <header className="border-b">
         <div className="fixed flex md flex-col h-12 md:h-32 pt-2 md:pt-4 items-center px-4 w-full z-50 bg-background/70 backdrop-blur-md">
           <div className="flex w-full justify-around">

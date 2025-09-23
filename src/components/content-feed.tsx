@@ -2,6 +2,49 @@
 
 import type React from "react"
 import type { RolesConfig } from "@/types/role-config"
+import { useEffect, useRef, useState } from "react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import {
+  Calendar,
+  Loader2,
+  LucideEllipsis,
+  LucideLink,
+  LucidePencil,
+  LucideTrash2,
+  LucideVerified,
+  MessageSquarePlus,
+  MessageSquare,
+  Smile,
+  Send,
+} from "lucide-react"
+import dynamic from "next/dynamic"
+import { api } from "@/trpc/react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { useAuth } from "@clerk/nextjs"
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import Image from "next/image"
+import type { Theme, EmojiClickData } from "emoji-picker-react"
+import { useTheme } from "next-themes"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
+import { UPLTButton } from "./ui/uplt-button"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -46,50 +89,6 @@ interface FlyerWithAuthor {
   createdAt: Date
   author: AuthorWithRoleConfig
 }
-
-import { useEffect, useRef, useState } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import {
-  Calendar,
-  Loader2,
-  LucideEllipsis,
-  LucideLink,
-  LucidePencil,
-  LucideTrash2,
-  LucideVerified,
-  MessageSquarePlus,
-  MessageSquare,
-  Smile,
-  Send,
-} from "lucide-react"
-import dynamic from "next/dynamic"
-import { api } from "@/trpc/react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
-import { useAuth } from "@clerk/nextjs"
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
-import Image from "next/image"
-import type { Theme, EmojiClickData } from "emoji-picker-react"
-import { useTheme } from "next-themes"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
-import { UPLTButton } from "./ui/uplt-button"
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })
