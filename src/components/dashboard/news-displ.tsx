@@ -43,16 +43,16 @@ export default function NewsDisplay() {
                 <div className="w-full md:w-80 lg:w-96 md:flex-shrink-0">
                   <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-muted/50 md:group-hover:scale-[1.02] md:transition-transform md:duration-300">
                     {
-                    p.imageUrl ?
-                    <Image
-                      src={p.imageUrl}
-                      alt={p.title}
-                      width={800}
-                      height={600}
-                      className="object-cover w-full h-auto max-h-[80vh] md:transition-transform md:duration-500 md:group-hover:scale-105"
-                      style={{ aspectRatio: 'auto' }}
-                    />
-                    :
+                    // p.imageUrl ?
+                    // <Image
+                    //   src={p.imageUrl}
+                    //   alt={p.title}
+                    //   width={800}
+                    //   height={600}
+                    //   className="object-cover w-full h-auto max-h-[80vh] md:transition-transform md:duration-500 md:group-hover:scale-105"
+                    //   style={{ aspectRatio: 'auto' }}
+                    // />
+                    // :
                     p.author.imageUrl ?
                     <div className="w-full h-full relative">
                         <Image
