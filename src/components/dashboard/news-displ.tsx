@@ -45,7 +45,7 @@ export default function NewsDisplay() {
                     {
                     // p.imageUrl ?
                     // <Image
-                    //   src={p.imageUrl}
+                    //   src={p.imageUrl} 
                     //   alt={p.title}
                     //   width={800}
                     //   height={600}
