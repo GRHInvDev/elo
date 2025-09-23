@@ -103,14 +103,14 @@ export default function DashboardPage() {
               </h1>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {
-                  routeItems(user?.role_config).map((m,i)=> m.title !== "Dashboard" && (
-                    <div key={i} className="col-span-1">
-                      <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-3 rounded-lg gap-x-2 text-sm">
-                        <m.icon className="size-4"/>
-                        <span className="text-center leading-tight">{m.title}</span>
-                      </Link>
-                    </div>
-                  ))
+                  // routeItems(user?.role_config).map((m,i)=> m.title !== "Dashboard" && (
+                  //   <div key={i} className="col-span-1">
+                  //     <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-3 rounded-lg gap-x-2 text-sm">
+                  //       <m.icon className="size-4"/>
+                  //       <span className="text-center leading-tight">{m.title}</span>
+                  //     </Link>
+                  //   </div>
+                  // ))
                 }
               </div>
             </div>
