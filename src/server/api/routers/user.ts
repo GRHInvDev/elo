@@ -277,6 +277,51 @@ export const userRouter = createTRPCRouter({
       })
     }),
 
+  // Listar usuários para chat - acessível para todos os usuários autenticados
+  listForChat: protectedProcedure
+    .input(z.object({
+      search: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.UserWhereInput = {
+        // Excluir usuários Totem
+        role_config: {
+          path: ['isTotem'],
+          equals: false,
+        },
+        // Excluir usuários do setor "Sistema"
+        setor: {
+          not: 'Sistema'
+        }
+      }
+
+      // Filtro de busca
+      if (input.search) {
+        where.OR = [
+          { firstName: { contains: input.search, mode: 'insensitive' as const } },
+          { lastName: { contains: input.search, mode: 'insensitive' as const } },
+          { email: { contains: input.search, mode: 'insensitive' as const } },
+        ]
+      }
+
+      return ctx.db.user.findMany({
+        where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          imageUrl: true,
+          enterprise: true,
+          setor: true,
+        },
+        orderBy: [
+          { firstName: 'asc' },
+          { lastName: 'asc' },
+        ]
+      })
+    }),
+
   updateRoleConfig: protectedProcedure
     .input(z.object({
       userId: z.string(),
