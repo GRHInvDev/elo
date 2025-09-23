@@ -70,12 +70,18 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
   // Buscar todos os colaboradores
   const {
     data: usersData,
-    isLoading: isLoadingUsers
+    isLoading: isLoadingUsers,
+    error: usersError
   } = api.user.listForChat.useQuery({
-    search: searchTerm || undefined,
+    search: searchTerm.trim() || undefined,
   }, {
     enabled: activeTab === "colaboradores"
   })
+
+  // Log de erro se houver
+  if (usersError) {
+    console.error('Erro ao buscar usuários:', usersError)
+  }
 
   // Buscar status de presença online
   const { data: presenceData } = useQuery({
@@ -116,19 +122,32 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
   }, {} as Record<string, User[]>)
 
   // Filtrar colaboradores por busca
-  const filteredCollaborators = searchTerm.trim()
-    ? allColaborators.filter((user: User) =>
-        formatUserName(user).toLowerCase().includes(searchTerm.toLowerCase()) ??
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ??
-        user.setor?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-        user.enterprise.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : allColaborators
+  const filteredCollaborators = (() => {
+    try {
+      const trimmedSearch = searchTerm.trim().toLowerCase()
+      if (!trimmedSearch) return allColaborators
+
+      return allColaborators.filter((user: User) => {
+        const userName = formatUserName(user).toLowerCase()
+        const email = user.email.toLowerCase()
+        const setor = user.setor?.toLowerCase() ?? ''
+        const enterprise = user.enterprise.toLowerCase()
+
+        return userName.includes(trimmedSearch) ||
+               email.includes(trimmedSearch) ||
+               setor.includes(trimmedSearch) ||
+               enterprise.includes(trimmedSearch)
+      })
+    } catch (error) {
+      console.error('Erro ao filtrar colaboradores:', error)
+      return allColaborators
+    }
+  })()
 
   const activeConversations = (activeConversationsData ?? []) as Array<{
     roomId: string
     roomName: string
-    roomType: 'global' | 'group'
+    roomType: 'global' | 'group' | 'private'
     lastMessage: {
       content: string | null
       createdAt: Date
@@ -268,6 +287,8 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
                     <div className="flex-shrink-0">
                       {conversation.roomType === 'global' ? (
                         <Hash className="h-4 w-4 text-muted-foreground" />
+                      ) : conversation.roomType === 'private' ? (
+                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
                       ) : (
                         <Users className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -394,8 +415,18 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
                   <Input
                     placeholder="Buscar colaborador..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      try {
+                        // Limitar tamanho e remover caracteres potencialmente problemáticos
+                        const value = e.target.value.slice(0, 100).replace(/[<>]/g, '')
+                        setSearchTerm(value)
+                      } catch (error) {
+                        console.error('Erro ao atualizar busca:', error)
+                        setSearchTerm('')
+                      }
+                    }}
                     className="pl-9 h-9"
+                    maxLength={100}
                   />
                 </div>
               </div>
@@ -411,6 +442,14 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : usersError ? (
+                <div className="text-center py-8 px-4">
+                  <div className="text-destructive mb-3">⚠️</div>
+                  <h4 className="text-sm font-medium mb-2">Erro ao carregar colaboradores</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Não foi possível carregar a lista de colaboradores.
+                  </p>
                 </div>
               ) : filteredCollaborators.length === 0 ? (
                 <div className="text-center py-8 px-4">
