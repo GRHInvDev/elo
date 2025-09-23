@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -47,22 +47,38 @@ export function UserSelection({
     return availableUsers.filter(user => selectedUsers.includes(user.id))
   }, [availableUsers, selectedUsers])
 
-  const handleUserToggle = (userId: string) => {
+  const handleUserToggle = useCallback((userId: string) => {
     const isSelected = selectedUsers.includes(userId)
     if (isSelected) {
       onSelectionChange(selectedUsers.filter(id => id !== userId))
     } else {
       onSelectionChange([...selectedUsers, userId])
     }
-  }
+  }, [selectedUsers, onSelectionChange])
 
-  const handleRemoveUser = (userId: string) => {
+  const handleRemoveUser = useCallback((userId: string) => {
     onSelectionChange(selectedUsers.filter(id => id !== userId))
+  }, [selectedUsers, onSelectionChange])
+
+  const handleSelectAllToggle = () => {
+    if (!availableUsers || availableUsers.length === 0) return
+
+    const visibleUserIds = availableUsers.map(user => user.id)
+    const currentlySelectedCount = visibleUserIds.filter(id => selectedUsers.includes(id)).length
+    const shouldSelectAll = currentlySelectedCount < visibleUserIds.length
+
+    if (shouldSelectAll) {
+      // Selecionar todos
+      onSelectionChange([...new Set([...selectedUsers, ...visibleUserIds])])
+    } else {
+      // Desselecionar todos os visíveis
+      onSelectionChange(selectedUsers.filter(id => !visibleUserIds.includes(id)))
+    }
   }
 
   const formatUserName = (user: User) => {
     if (user.firstName || user.lastName) {
-      return `${!!!user.firstName || ''} ${!!!user.lastName || ''}`.trim()
+      return `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
     }
     return user.email
   }
@@ -81,7 +97,7 @@ export function UserSelection({
                 <Avatar className="h-4 w-4">
                   <AvatarImage src={user.imageUrl ?? undefined} />
                   <AvatarFallback className="text-xs">
-                    {!!!user.firstName?.charAt(0) || user.email.charAt(0)}
+                    {user.firstName?.charAt(0) ?? user.email.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-xs">{formatUserName(user)}</span>
@@ -118,9 +134,23 @@ export function UserSelection({
 
       {/* Lista de usuários disponíveis */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">
-          Usuários Disponíveis
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium">
+            Usuários Disponíveis
+          </Label>
+          {availableUsers && availableUsers.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="select-all"
+                checked={availableUsers.every(user => selectedUsers.includes(user.id))}
+                onCheckedChange={handleSelectAllToggle}
+              />
+              <Label htmlFor="select-all" className="text-sm font-normal cursor-pointer">
+                Selecionar todos ({availableUsers.length})
+              </Label>
+            </div>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -154,7 +184,7 @@ export function UserSelection({
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.imageUrl ?? undefined} />
                       <AvatarFallback>
-                        {!!!user.firstName?.charAt(0) || user.email.charAt(0)}
+                        {user.firstName?.charAt(0) ?? user.email.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
 
@@ -188,7 +218,7 @@ export function UserSelection({
   )
 }
 
-// Componente auxiliar para Label (se não estiver importado)
+// Componente auxiliar para Label
 function Label({ children, className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label className={cn("text-sm font-medium leading-none", className)} {...props}>

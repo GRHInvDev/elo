@@ -13,7 +13,8 @@ export function GlobalNotificationManager() {
     limit: 20,
     autoRefresh: true,
     refreshInterval: 30000, // 30 segundos
-    enableSound: true
+    enableSound: true,
+    enableBrowserNotifications: true
   })
 
   // Efeito para garantir que as notificações sejam sempre atualizadas

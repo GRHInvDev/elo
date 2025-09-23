@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { TRPCError } from "@trpc/server"
 
 const getMessagesSchema = z.object({
   roomId: z.string().default("global"),
@@ -207,7 +208,25 @@ export const chatMessageRouter = createTRPCRouter({
   // Buscar conversas ativas (salas com mensagens recentes)
   getActiveConversations: protectedProcedure
     .query(async ({ ctx }) => {
-      const userId = ctx.auth.userId
+      const clerkUserId = ctx.auth.userId
+      console.log('🔍 [getActiveConversations] Iniciando busca para usuário:', clerkUserId)
+
+      // Buscar o ID do banco correspondente ao ID do Clerk
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: clerkUserId },
+        select: { id: true }
+      })
+
+      if (!currentUser) {
+        console.log('❌ [getActiveConversations] Usuário não encontrado:', clerkUserId)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado"
+        })
+      }
+
+      const userId = currentUser.id // ID do banco
+      console.log('✅ [getActiveConversations] Usuário encontrado. Clerk ID:', clerkUserId, 'Banco ID:', userId)
 
       // Buscar últimas mensagens de todas as salas que o usuário tem acesso
       // 1. Chat global (sempre disponível)
@@ -253,76 +272,56 @@ export const chatMessageRouter = createTRPCRouter({
         } : null,
       })
 
-      // Buscar grupos com mensagens recentes
-      const userGroups = await ctx.db.chat_group.findMany({
-        where: {
-          isActive: true,
-          members: {
-            some: { userId },
-          },
-        },
-        include: {
-          members: true,
-          _count: {
-            select: { members: true },
-          },
-        },
-      })
-
-      // Para cada grupo, buscar a última mensagem
-      for (const group of userGroups) {
-        const lastMessage = await ctx.db.chat_message.findFirst({
-          where: { roomId: `group_${group.id}` },
-          orderBy: { createdAt: 'desc' },
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-              },
-            },
-          },
-        })
-
-        conversations.push({
-          roomId: `group_${group.id}`,
-          roomName: group.name,
-          roomType: 'group',
-          lastMessage: lastMessage ? {
-            content: lastMessage.content,
-            createdAt: lastMessage.createdAt,
-            user: lastMessage.user,
-          } : null,
-          memberCount: group._count.members,
-        })
-      }
+      // Grupos são exibidos apenas na aba "Grupos", não em "Conversas"
 
       // Buscar chats privados com mensagens recentes
-      // Buscar todas as mensagens privadas distintas por roomId
-      const privateRoomIds = await ctx.db.chat_message.findMany({
+      // Buscar todas as mensagens privadas e filtrar no código
+      const allPrivateMessages = await ctx.db.chat_message.findMany({
         where: {
           roomId: {
             startsWith: 'private_',
           },
-          OR: [
-            { userId }, // Mensagens enviadas pelo usuário atual
-            {
-              roomId: {
-                contains: `user_${userId}`, // RoomIds que contenham o ID do usuário atual
-              }
-            }
-          ]
         },
         select: {
           roomId: true,
+          userId: true,
         },
         distinct: ['roomId'],
       })
 
-      // Para cada roomId único, buscar a última mensagem
-      const uniquePrivateRoomIds = [...new Set(privateRoomIds.map(msg => msg.roomId))]
+      console.log('📝 [getActiveConversations] Mensagens privadas encontradas:', allPrivateMessages.length)
+      console.log('📝 [getActiveConversations] RoomIds únicos:', allPrivateMessages.map(m => m.roomId))
 
-      for (const roomId of uniquePrivateRoomIds) {
+      // Filtrar apenas roomIds onde o usuário atual participou
+      const userPrivateRoomIds = allPrivateMessages
+        .filter(msg => {
+          // Verificar se o usuário enviou mensagens nesta sala
+          if (msg.userId === userId) {
+            console.log('✅ [getActiveConversations] Usuário enviou mensagem nesta sala:', msg.roomId, 'userId:', msg.userId)
+            return true
+          }
+
+          // Verificar se o roomId contém o ID do Clerk do usuário (como destinatário)
+          const idPattern = /user_[^_]+/g
+          const matches = msg.roomId.match(idPattern) ?? []
+          const isRecipient = matches.some((match: string) => match === `user_${clerkUserId}`)
+
+          if (isRecipient) {
+            console.log('✅ [getActiveConversations] Usuário é destinatário nesta sala:', msg.roomId, 'matches:', matches, 'clerkUserId:', clerkUserId)
+          } else {
+            console.log('❌ [getActiveConversations] Usuário NÃO é destinatário nesta sala:', msg.roomId, 'matches:', matches, 'clerkUserId:', clerkUserId)
+          }
+
+          return isRecipient
+        })
+        .map(msg => msg.roomId)
+
+      console.log('🎯 [getActiveConversations] RoomIds filtrados para o usuário:', userPrivateRoomIds)
+
+      const privateRoomIds = [...new Set(userPrivateRoomIds)]
+
+      // Para cada roomId único, buscar a última mensagem
+      for (const roomId of privateRoomIds) {
         const lastMessage = await ctx.db.chat_message.findFirst({
           where: { roomId },
           orderBy: { createdAt: 'desc' },
@@ -338,15 +337,20 @@ export const chatMessageRouter = createTRPCRouter({
         })
 
         if (lastMessage) {
-          // Extrair o ID do outro usuário do roomId
+          console.log('💬 [getActiveConversations] Processando roomId:', roomId, 'com última mensagem')
+
+          // Extrair o ID do Clerk do outro usuário do roomId
           const idPattern = /user_[^_]+/g
           const matches = roomId.match(idPattern) ?? []
-          const otherUserId = matches.find(id => id !== `user_${userId}`)?.replace('user_', '')
+          console.log('🔍 [getActiveConversations] Matches encontrados no roomId:', matches)
 
-          if (otherUserId) {
-            // Buscar informações do outro usuário
+          const otherClerkId = matches.find((id: string) => id !== clerkUserId)
+          console.log('👤 [getActiveConversations] Other clerk ID extraído:', otherClerkId, 'de matches:', matches, 'vs clerkUserId:', clerkUserId)
+
+          if (otherClerkId) {
+            // Buscar informações do outro usuário usando ID do Clerk
             const otherUser = await ctx.db.user.findUnique({
-              where: { id: otherUserId },
+              where: { id: otherClerkId },
               select: {
                 firstName: true,
                 lastName: true,
@@ -354,10 +358,18 @@ export const chatMessageRouter = createTRPCRouter({
               },
             })
 
+            console.log('👥 [getActiveConversations] Outro usuário encontrado:', otherUser ? 'SIM' : 'NÃO', 'para ID:', otherClerkId)
+
             if (otherUser) {
               const otherUserName = [otherUser.firstName, otherUser.lastName]
                 .filter(Boolean)
                 .join(' ') || otherUser.email
+
+              console.log('✅ [getActiveConversations] Adicionando conversa privada:', {
+                roomId,
+                roomName: otherUserName,
+                roomType: 'private'
+              })
 
               conversations.push({
                 roomId,
@@ -372,13 +384,17 @@ export const chatMessageRouter = createTRPCRouter({
                   },
                 },
               })
+            } else {
+              console.log('❌ [getActiveConversations] Outro usuário não encontrado no banco para ID:', otherClerkId)
             }
+          } else {
+            console.log('❌ [getActiveConversations] Não foi possível extrair otherClerkId do roomId:', roomId)
           }
         }
       }
 
       // Filtrar apenas conversas que têm mensagens e ordenar por data da última mensagem
-      return conversations
+      const filteredConversations = conversations
         .filter(conv => conv.lastMessage !== null)
         .sort((a, b) => {
           const dateA = a.lastMessage?.createdAt ?? new Date(0)
@@ -386,5 +402,65 @@ export const chatMessageRouter = createTRPCRouter({
           return dateB.getTime() - dateA.getTime() // Mais recentes primeiro
         })
         .slice(0, 10) // Limitar a 10 conversas ativas
+
+      console.log('🎉 [getActiveConversations] Resultado final - Conversas encontradas:', filteredConversations.length)
+      console.log('📋 [getActiveConversations] Detalhes das conversas:', filteredConversations.map(c => ({
+        roomId: c.roomId,
+        roomName: c.roomName,
+        roomType: c.roomType,
+        hasLastMessage: !!c.lastMessage
+      })))
+
+      return filteredConversations
+    }),
+
+  // Buscar estatísticas globais do chat (para admin)
+  getGlobalStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Verificar se usuário tem acesso admin
+      if (!ctx.auth.userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Usuário não autorizado"
+        })
+      }
+
+      // Contar mensagens totais
+      const totalMessages = await ctx.db.chat_message.count()
+
+      // Contar usuários únicos que enviaram mensagens
+      const activeUsers = await ctx.db.chat_message.findMany({
+        select: {
+          userId: true,
+        },
+        distinct: ['userId'],
+      })
+      const activeUsersCount = activeUsers.length
+
+      // Contar grupos ativos
+      const activeGroupsCount = await ctx.db.chat_group.count({
+        where: { isActive: true }
+      })
+
+      // Buscar última mensagem global
+      const lastMessage = await ctx.db.chat_message.findFirst({
+        where: { roomId: 'global' },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      })
+
+      return {
+        totalMessages,
+        activeUsersCount,
+        activeGroupsCount,
+        lastMessage,
+      }
     }),
 })

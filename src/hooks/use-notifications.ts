@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { api } from "@/trpc/react"
+import { useBrowserNotifications } from "./use-browser-notifications"
 import type { UseNotificationsReturn } from "@/types/notification-types"
 
 interface UseNotificationsProps {
@@ -15,10 +16,14 @@ export const useNotifications = ({
   unreadOnly = false,
   autoRefresh = true,
   refreshInterval = 30000, // 30 segundos
-  enableSound = true
-}: UseNotificationsProps = {}): UseNotificationsReturn => {
+  enableSound = true,
+  enableBrowserNotifications = true
+}: UseNotificationsProps & { enableBrowserNotifications?: boolean } = {}): UseNotificationsReturn => {
   const [offset, setOffset] = useState(0)
   const [lastUnreadCount, setLastUnreadCount] = useState(0)
+
+  // Hook para notificações do browser
+  const { showChatNotification, shouldShowNotification } = useBrowserNotifications()
 
   // Query para buscar notificações
   const notificationsQuery = api.notification.list.useQuery({
@@ -143,7 +148,7 @@ export const useNotifications = ({
     }
   }
 
-  // Verificar se há novas notificações para tocar som e mostrar popup
+  // Verificar se há novas notificações para tocar som, mostrar popup e notificações do browser
   useEffect(() => {
     const currentUnreadCount = notificationsData?.unreadCount ?? 0
 
@@ -169,10 +174,47 @@ export const useNotifications = ({
           }
         }
       }
+
+      // Mostrar notificação do browser para mensagens de chat
+      if (enableBrowserNotifications) {
+        const latestNotification = notificationsData?.notifications?.[0]
+        if (latestNotification && latestNotification.entityType === 'chat_message') {
+          const data = latestNotification.data as {
+            roomId?: string
+            messageId?: string
+            senderId?: string
+            senderName?: string
+            content?: string
+            hasImage?: boolean
+          }
+
+          if (data?.roomId && shouldShowNotification(data.roomId)) {
+            showChatNotification({
+              senderName: data.senderName ?? 'Usuário',
+              message: data.hasImage ? '[Imagem]' : (data.content ?? 'Nova mensagem'),
+              roomId: data.roomId,
+              roomName: latestNotification.title?.includes('global')
+                ? 'Chat Global'
+                : latestNotification.title?.includes('privada')
+                  ? 'Chat Privado'
+                  : 'Grupo',
+            })
+          }
+        }
+      }
     }
 
     setLastUnreadCount(currentUnreadCount)
-  }, [notificationsData?.unreadCount, lastUnreadCount, enableSound, notificationsData?.notifications, playNotificationSound])
+  }, [
+    notificationsData?.unreadCount,
+    lastUnreadCount,
+    enableSound,
+    enableBrowserNotifications,
+    notificationsData?.notifications,
+    playNotificationSound,
+    showChatNotification,
+    shouldShowNotification
+  ])
 
   const loadMore = (): void => {
     if (notificationsData && notificationsData.notifications.length === limit) {

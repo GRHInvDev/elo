@@ -1,9 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { api } from "@/trpc/react"
 import {
   Dialog,
   DialogContent,
@@ -12,95 +10,118 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
+import { api } from "@/trpc/react"
 import { UserSelection } from "./user-selection"
 
-interface AddMembersDialogProps {
-  groupId: string
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess?: () => void
+interface Group {
+  id: string
+  name: string
+  members: Array<{
+    user: {
+      id: string
+      firstName: string | null
+      lastName: string | null
+      email: string
+    }
+  }>
 }
 
-export function AddMembersDialog({ groupId, open, onOpenChange, onSuccess }: AddMembersDialogProps) {
+interface AddMembersDialogProps {
+  group: Group
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
+}
+
+export function AddMembersDialog({ group, open, onOpenChange, onSuccess }: AddMembersDialogProps) {
   const { toast } = useToast()
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 
-  // Buscar informações do grupo
-  const groupQuery = api.adminChatGroups.getGroup.useQuery(
-    { id: groupId },
-    { enabled: open }
-  )
-
+  // Mutation para adicionar membros
   const addMembersMutation = api.adminChatGroups.addMembers.useMutation({
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast({
         title: "Membros adicionados",
-        description: `${result.added} membro(s) foram adicionados ao grupo.`,
+        description: `${selectedUsers.length} membro(s) foram adicionados ao grupo com sucesso.`,
       })
       handleClose()
-      onSuccess?.()
+      onSuccess()
     },
     onError: (error) => {
       toast({
-        title: "Erro",
+        title: "Erro ao adicionar membros",
         description: error.message,
         variant: "destructive",
       })
     },
   })
 
+  const handleClose = () => {
+    setSelectedUsers([])
+    onOpenChange(false)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (selectedUsers.length === 0) {
       toast({
-        title: "Erro",
-        description: "Selecione pelo menos um usuário para adicionar.",
+        title: "Nenhum membro selecionado",
+        description: "Por favor, selecione pelo menos um usuário para adicionar.",
         variant: "destructive",
       })
       return
     }
 
     addMembersMutation.mutate({
-      groupId,
+      groupId: group.id,
       memberIds: selectedUsers,
     })
   }
-
-  const handleClose = () => {
-    setSelectedUsers([])
-    onOpenChange(false)
-  }
-
-  const groupName = groupQuery.data ? (groupQuery.data as { name: string }).name : 'Carregando...'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            Adicionar Membros - {groupName}
-          </DialogTitle>
+          <DialogTitle>Adicionar Membros - {group.name}</DialogTitle>
           <DialogDescription>
-            Selecione os usuários que deseja adicionar ao grupo de chat.
+            Selecione os usuários que deseja adicionar ao grupo. Usuários já membros não aparecerão na lista.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Seleção de usuários */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Selecionar Usuários para Adicionar
-            </label>
-            <UserSelection
-              selectedUsers={selectedUsers}
-              onSelectionChange={setSelectedUsers}
-              excludeGroupId={groupId} // Excluir usuários que já são membros
-            />
+          {/* Informações do grupo atual */}
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <h4 className="font-medium mb-2">Membros Atuais</h4>
+            <div className="flex flex-wrap gap-2">
+              {group.members.map((member) => (
+                <span key={member.user.id} className="text-sm bg-background px-2 py-1 rounded">
+                  {member.user.firstName || member.user.lastName
+                    ? `${member.user.firstName ?? ''} ${member.user.lastName ?? ''}`.trim()
+                    : member.user.email}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {group.members.length} membro{group.members.length !== 1 ? 's' : ''} atualmente
+            </p>
           </div>
 
+          {/* Seleção de usuários */}
+          <UserSelection
+            selectedUsers={selectedUsers}
+            onSelectionChange={setSelectedUsers}
+            excludeGroupId={group.id}
+          />
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={addMembersMutation.isPending}
+            >
               Cancelar
             </Button>
             <Button
@@ -109,7 +130,7 @@ export function AddMembersDialog({ groupId, open, onOpenChange, onSuccess }: Add
             >
               {addMembersMutation.isPending
                 ? "Adicionando..."
-                : `Adicionar ${selectedUsers.length} Membro(s)`
+                : `Adicionar ${selectedUsers.length} Membro${selectedUsers.length !== 1 ? 's' : ''}`
               }
             </Button>
           </DialogFooter>

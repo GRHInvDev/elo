@@ -3,10 +3,8 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
-import { api } from "@/trpc/react"
+import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -15,45 +13,53 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
+import { api } from "@/trpc/react"
 import { UserSelection } from "./user-selection"
 
 interface CreateGroupDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess?: () => void
 }
 
-export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroupDialogProps) {
+export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps) {
   const { toast } = useToast()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 
+  // Mutation para criar grupo
   const createGroupMutation = api.adminChatGroups.createGroup.useMutation({
     onSuccess: () => {
       toast({
         title: "Grupo criado",
-        description: "O grupo de chat foi criado com sucesso.",
+        description: "O grupo foi criado com sucesso.",
       })
       handleClose()
-      onSuccess?.()
     },
     onError: (error) => {
       toast({
-        title: "Erro",
+        title: "Erro ao criar grupo",
         description: error.message,
         variant: "destructive",
       })
     },
   })
 
+  const handleClose = () => {
+    setName("")
+    setDescription("")
+    setSelectedUsers([])
+    onOpenChange(false)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!name.trim()) {
       toast({
-        title: "Erro",
-        description: "Nome do grupo é obrigatório.",
+        title: "Nome obrigatório",
+        description: "Por favor, digite um nome para o grupo.",
         variant: "destructive",
       })
       return
@@ -61,8 +67,8 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
 
     if (selectedUsers.length === 0) {
       toast({
-        title: "Erro",
-        description: "Selecione pelo menos um membro para o grupo.",
+        title: "Membros obrigatórios",
+        description: "Por favor, selecione pelo menos um membro para o grupo.",
         variant: "destructive",
       })
       return
@@ -75,29 +81,22 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
     })
   }
 
-  const handleClose = () => {
-    setName("")
-    setDescription("")
-    setSelectedUsers([])
-    onOpenChange(false)
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Criar Novo Grupo de Chat</DialogTitle>
+          <DialogTitle>Criar Novo Grupo</DialogTitle>
           <DialogDescription>
-            Crie um grupo de chat e selecione os membros que poderão participar da conversa.
+            Crie um novo grupo de chat e convide membros para participar.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Nome do grupo */}
           <div className="space-y-2">
-            <Label htmlFor="group-name">Nome do Grupo *</Label>
+            <Label htmlFor="name">Nome do Grupo *</Label>
             <Input
-              id="group-name"
+              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Digite o nome do grupo"
@@ -108,34 +107,35 @@ export function CreateGroupDialog({ open, onOpenChange, onSuccess }: CreateGroup
 
           {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="group-description">Descrição (opcional)</Label>
+            <Label htmlFor="description">Descrição (opcional)</Label>
             <Textarea
-              id="group-description"
+              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva o propósito deste grupo"
+              placeholder="Descreva o propósito do grupo"
               maxLength={500}
               rows={3}
             />
           </div>
 
           {/* Seleção de usuários */}
-          <div className="space-y-2">
-            <Label>Membros do Grupo *</Label>
-            <UserSelection
-              selectedUsers={selectedUsers}
-              onSelectionChange={setSelectedUsers}
-              excludeGroupId={undefined} // Novo grupo, não excluir ninguém
-            />
-          </div>
+          <UserSelection
+            selectedUsers={selectedUsers}
+            onSelectionChange={setSelectedUsers}
+          />
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={createGroupMutation.isPending}
+            >
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={createGroupMutation.isPending}
+              disabled={createGroupMutation.isPending || !name.trim() || selectedUsers.length === 0}
             >
               {createGroupMutation.isPending ? "Criando..." : "Criar Grupo"}
             </Button>

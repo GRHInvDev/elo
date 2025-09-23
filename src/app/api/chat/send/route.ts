@@ -36,7 +36,7 @@ interface SenderUser {
 }
 
 // Função auxiliar para criar notificações de mensagem
-async function createMessageNotifications(message: PrismaMessage, senderUser: SenderUser) {
+async function createMessageNotifications(message: PrismaMessage, senderUser: SenderUser, senderClerkId: string) {
   const { roomId, id: messageId } = message
   const senderId = senderUser.id
 
@@ -49,21 +49,36 @@ async function createMessageNotifications(message: PrismaMessage, senderUser: Se
       where: { groupId },
       select: { userId: true }
     })
-    recipientUserIds = members.map(m => m.userId).filter(id => id !== senderId)
+    recipientUserIds = members.map(m => m.userId).filter(id => id !== senderClerkId)
   } else if (roomId.startsWith('private_')) {
     // Para chats privados: notificar apenas o outro usuário
     const idPattern = /user_[^_]+/g
-    const ids = roomId.match(idPattern) ?? []
-    recipientUserIds = ids.filter(id => id !== senderId).map(id => id.replace('user_', ''))
+    const matches = roomId.match(idPattern) ?? []
+    // Filtrar o ID do remetente (que é o ID do Clerk) e converter para ID do banco
+    const otherClerkIds = matches
+      .filter(id => id !== `user_${senderClerkId}`)
+      .map(id => id.replace('user_', ''))
+
+    // Buscar os IDs do banco correspondentes aos IDs do Clerk
+    if (otherClerkIds.length > 0) {
+      const otherUsers = await prisma.user.findMany({
+        where: {
+          id: { in: otherClerkIds }
+        },
+        select: { id: true }
+      })
+      recipientUserIds = otherUsers.map(u => u.id)
+    }
   } else if (roomId === 'global') {
     // Para chat global: notificar todos os usuários exceto o remetente
     const allUsers = await prisma.user.findMany({
       where: {
-        enterprise: { not: 'NA' }
+        enterprise: { not: 'NA' },
+        id: { not: senderClerkId } // Excluir o remetente usando ID do Clerk
       },
       select: { id: true }
     })
-    recipientUserIds = allUsers.map(u => u.id).filter(id => id !== senderId)
+    recipientUserIds = allUsers.map(u => u.id)
   }
 
   // Buscar email do remetente para criar notificações
@@ -107,7 +122,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as SendMessageBody
     const { content, userId, roomId, imageUrl } = body
 
+    console.log('📨 [SEND API] Recebendo mensagem - userId:', userId, 'roomId:', roomId, 'content:', content?.substring(0, 50))
+
     if (!userId || !roomId) {
+      console.log('❌ [SEND API] userId ou roomId faltando')
       return new Response(JSON.stringify({ error: 'userId e roomId são obrigatórios' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -151,6 +169,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar a mensagem
+    console.log('💾 [SEND API] Criando mensagem no banco - userId:', userId, 'roomId:', roomId)
+
     const newMessage = await prisma.chat_message.create({
       data: {
         content,
@@ -170,10 +190,10 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log(`📨 [SEND] Mensagem enviada por ${userId} na sala ${roomId}`)
+    console.log(`✅ [SEND API] Mensagem criada com sucesso - ID: ${newMessage.id}, userId: ${userId}, roomId: ${roomId}`)
 
     // Criar notificações para outros usuários (não bloquear o envio)
-    createMessageNotifications(newMessage, newMessage.user).catch(error => {
+    createMessageNotifications(newMessage, newMessage.user, userId).catch(error => {
       console.error('Erro ao criar notificações:', error)
     })
 

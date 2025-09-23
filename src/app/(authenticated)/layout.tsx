@@ -4,6 +4,7 @@ import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import { BrowserNotificationPermission } from "@/components/notifications/browser-notification-permission"
 import { routeItems } from "@/const/routes"
 import Link from "next/link"
 import { api } from "@/trpc/server"
@@ -48,6 +49,7 @@ export default async function AuthenticatedLayout({
       </header>
       <main className="flex-1 md:mt-32 mt-16">{children}      </main>
       <FloatingChatButton/>
+      <BrowserNotificationPermission />
     </div>
   )
 }

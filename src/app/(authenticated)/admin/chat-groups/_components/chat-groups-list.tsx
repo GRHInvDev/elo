@@ -1,37 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
-import {
-  MessageSquare,
-  Users,
-  Trash2,
-  MoreHorizontal,
-  Edit,
-  UserPlus
-} from "lucide-react"
+import { Users, Edit, Trash2, UserPlus, MoreVertical } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { EditGroupDialog } from "./edit-group-dialog"
 import { AddMembersDialog } from "./add-members-dialog"
 
@@ -39,8 +22,8 @@ interface Group {
   id: string
   name: string
   description: string | null
-  isActive: boolean
   createdAt: Date
+  isActive: boolean
   members: Array<{
     user: {
       id: string
@@ -51,49 +34,56 @@ interface Group {
     }
   }>
   createdBy: {
-    id: string
     firstName: string | null
     lastName: string | null
-  }
-  _count: {
-    members: number
-    messages: number
   }
 }
 
 export function ChatGroupsList() {
   const { toast } = useToast()
-  const [groupToDelete, setGroupToDelete] = useState<string | null>(null)
-  const [groupToEdit, setGroupToEdit] = useState<string | null>(null)
-  const [groupToAddMembers, setGroupToAddMembers] = useState<string | null>(null)
+  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null)
+  const [groupToEdit, setGroupToEdit] = useState<Group | null>(null)
+  const [groupToAddMembers, setGroupToAddMembers] = useState<Group | null>(null)
 
   // Buscar grupos
-  const groupsQuery = api.adminChatGroups.getGroups.useQuery()
+  const { data: groups, isLoading, refetch } = api.adminChatGroups.getGroups.useQuery()
 
-  // Deletar grupo
+  // Mutations
   const deleteGroupMutation = api.adminChatGroups.deleteGroup.useMutation({
     onSuccess: () => {
       toast({
         title: "Grupo deletado",
-        description: "O grupo de chat foi removido com sucesso.",
+        description: "O grupo foi removido com sucesso.",
       })
-      void groupsQuery.refetch()
+      void refetch()
       setGroupToDelete(null)
     },
     onError: (error) => {
       toast({
-        title: "Erro",
+        title: "Erro ao deletar grupo",
         description: error.message,
         variant: "destructive",
       })
     },
   })
 
-  const handleDeleteGroup = (groupId: string) => {
-    deleteGroupMutation.mutate({ id: groupId })
+  // Vamos remover a funcionalidade de toggle active por enquanto já que não está implementada no backend
+
+  const handleDelete = () => {
+    if (groupToDelete) {
+      deleteGroupMutation.mutate({ id: groupToDelete.id })
+    }
   }
 
-  if (groupsQuery.isLoading) {
+
+  const formatUserName = (user: { firstName: string | null; lastName: string | null; email: string }) => {
+    if (user.firstName || user.lastName) {
+      return `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
+    }
+    return user.email
+  }
+
+  if (isLoading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
@@ -111,13 +101,13 @@ export function ChatGroupsList() {
     )
   }
 
-  if (!groupsQuery.data || !Array.isArray(groupsQuery.data) || groupsQuery.data.length === 0) {
+  if (!groups || groups.length === 0) {
     return (
       <div className="text-center py-12">
-        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">Nenhum grupo criado</h3>
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">Nenhum grupo encontrado</h3>
         <p className="text-muted-foreground mb-4">
-          Crie seu primeiro grupo de chat para começar a organizar conversas privadas.
+          Crie o primeiro grupo de chat para começar.
         </p>
       </div>
     )
@@ -126,44 +116,42 @@ export function ChatGroupsList() {
   return (
     <>
       <div className="space-y-4">
-        {groupsQuery.data.map((group: Group) => (
-          <Card key={group.id}>
+        {groups.map((group) => (
+            <Card key={group.id}>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
                     <CardTitle className="text-lg">{group.name}</CardTitle>
-                    <CardDescription>
-                      {group.description ?? "Sem descrição"}
-                    </CardDescription>
                   </div>
+                  {group.description && (
+                    <CardDescription className="mt-1">
+                      {group.description}
+                    </CardDescription>
+                  )}
                 </div>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setGroupToEdit(group.id)}>
+                    <DropdownMenuItem onClick={() => setGroupToEdit(group)}>
                       <Edit className="h-4 w-4 mr-2" />
                       Editar Grupo
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setGroupToAddMembers(group.id)}>
+                    <DropdownMenuItem onClick={() => setGroupToAddMembers(group)}>
                       <UserPlus className="h-4 w-4 mr-2" />
                       Adicionar Membros
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => setGroupToDelete(group.id)}
+                      onClick={() => setGroupToDelete(group)}
                       className="text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Deletar Grupo
+                      Deletar
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -173,69 +161,77 @@ export function ChatGroupsList() {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  {/* Estatísticas */}
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{group._count.members} membros</span>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {group.members.length} membro{group.members.length !== 1 ? 's' : ''}
+                    </span>
                   </div>
-
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>{group._count.messages} mensagens</span>
-                  </div>
-
-                  {/* Status */}
-                  <Badge variant={group.isActive ? "default" : "secondary"}>
-                    {group.isActive ? "Ativo" : "Inativo"}
-                  </Badge>
                 </div>
 
-                {/* Avatares dos membros */}
-                <div className="flex -space-x-2">
-                  {group.members.slice(0, 5).map((member) => (
-                    <Avatar key={member.user.id} className="h-8 w-8 border-2 border-background">
-                      <AvatarImage src={member.user.imageUrl ?? undefined} />
-                      <AvatarFallback className="text-xs">
-                        {member.user.firstName?.charAt(0) ?? member.user.email.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {group._count.members > 5 && (
-                    <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                      <span className="text-xs text-muted-foreground">
-                        +{group._count.members - 5}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Criado por */}
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  Criado por {group.createdBy.firstName ?? ''} {group.createdBy.lastName ?? ''} em{" "}
-                  {group.createdAt.toLocaleDateString('pt-BR')}
-                </p>
+                {group.members.length > 0 && (
+                  <div className="flex -space-x-2">
+                    {group.members.slice(0, 5).map((member) => (
+                      <Avatar key={member.user.id} className="h-8 w-8 border-2 border-background">
+                        <AvatarImage src={member.user.imageUrl ?? undefined} />
+                        <AvatarFallback className="text-xs">
+                          {member.user.firstName?.charAt(0) ?? member.user.email.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {group.members.length > 5 && (
+                      <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                        <span className="text-xs font-medium">+{group.members.length - 5}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Dialog de confirmação de delete */}
+      {/* Dialog para editar grupo */}
+      {groupToEdit && (
+        <EditGroupDialog
+          group={groupToEdit}
+          open={!!groupToEdit}
+          onOpenChange={(open) => !open && setGroupToEdit(null)}
+          onSuccess={() => {
+            void refetch()
+            setGroupToEdit(null)
+          }}
+        />
+      )}
+
+      {/* Dialog para adicionar membros */}
+      {groupToAddMembers && (
+        <AddMembersDialog
+          group={groupToAddMembers}
+          open={!!groupToAddMembers}
+          onOpenChange={(open) => !open && setGroupToAddMembers(null)}
+          onSuccess={() => {
+            void refetch()
+            setGroupToAddMembers(null)
+          }}
+        />
+      )}
+
+      {/* Dialog de confirmação para deletar */}
       <AlertDialog open={!!groupToDelete} onOpenChange={() => setGroupToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Deletar Grupo</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja deletar este grupo? Esta ação não pode ser desfeita.
-              Todas as mensagens e configurações serão perdidas permanentemente.
+              Tem certeza que deseja deletar o grupo &quot;{groupToDelete?.name}&quot;?
+              Esta ação não pode ser desfeita e todas as mensagens do grupo serão perdidas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => groupToDelete && handleDeleteGroup(groupToDelete)}
+              onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Deletar Grupo
@@ -243,32 +239,6 @@ export function ChatGroupsList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Dialog de editar grupo */}
-      {groupToEdit && (
-        <EditGroupDialog
-          groupId={groupToEdit}
-          open={!!groupToEdit}
-          onOpenChange={() => setGroupToEdit(null)}
-          onSuccess={() => {
-            void groupsQuery.refetch()
-            setGroupToEdit(null)
-          }}
-        />
-      )}
-
-      {/* Dialog de adicionar membros */}
-      {groupToAddMembers && (
-        <AddMembersDialog
-          groupId={groupToAddMembers}
-          open={!!groupToAddMembers}
-          onOpenChange={() => setGroupToAddMembers(null)}
-          onSuccess={() => {
-            void groupsQuery.refetch()
-            setGroupToAddMembers(null)
-          }}
-        />
-      )}
     </>
   )
 }

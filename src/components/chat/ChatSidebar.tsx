@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -62,10 +62,30 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
   )
 
   // Buscar conversas ativas
-  const { data: activeConversationsData, isLoading: isLoadingConversations } = api.chatMessage.getActiveConversations.useQuery(
+  const { data: activeConversationsData, isLoading: isLoadingConversations, error: conversationsError } = api.chatMessage.getActiveConversations.useQuery(
     undefined,
     { enabled: !!clerkUser?.id }
   )
+
+  // Log das conversas recebidas
+  useEffect(() => {
+    if (activeConversationsData) {
+      console.log('🎯 [ChatSidebar] Conversas ativas recebidas:', activeConversationsData?.length ?? 0)
+      console.log('📝 [ChatSidebar] Detalhes das conversas:', activeConversationsData?.map(c => ({
+        roomId: c.roomId,
+        roomName: c.roomName,
+        roomType: c.roomType,
+        hasLastMessage: !!c.lastMessage
+      })))
+    }
+  }, [activeConversationsData])
+
+  // Log de erros
+  useEffect(() => {
+    if (conversationsError) {
+      console.error('❌ [ChatSidebar] Erro ao buscar conversas ativas:', conversationsError)
+    }
+  }, [conversationsError])
 
   // Buscar todos os colaboradores
   const {

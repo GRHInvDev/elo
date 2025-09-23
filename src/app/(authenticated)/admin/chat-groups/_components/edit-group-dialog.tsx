@@ -1,12 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
-import { api } from "@/trpc/react"
+import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -15,14 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
+import { api } from "@/trpc/react"
 import { UserSelection } from "./user-selection"
 
 interface Group {
   id: string
   name: string
   description: string | null
-  isActive: boolean
-  createdAt: Date
   members: Array<{
     user: {
       id: string
@@ -32,70 +30,59 @@ interface Group {
       imageUrl: string | null
     }
   }>
-  createdBy: {
-    id: string
-    firstName: string | null
-    lastName: string | null
-  }
-  _count: {
-    members: number
-    messages: number
-  }
 }
 
 interface EditGroupDialogProps {
-  groupId: string
+  group: Group
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess?: () => void
+  onSuccess: () => void
 }
 
-export function EditGroupDialog({ groupId, open, onOpenChange, onSuccess }: EditGroupDialogProps) {
+export function EditGroupDialog({ group, open, onOpenChange, onSuccess }: EditGroupDialogProps) {
   const { toast } = useToast()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 
-  // Buscar dados do grupo
-  const groupQuery = api.adminChatGroups.getGroup.useQuery(
-    { id: groupId },
-    { enabled: open && !!groupId }
-  )
-
-  // Preencher campos quando o grupo for carregado
+  // Preencher campos quando o grupo muda
   useEffect(() => {
-    if (groupQuery.data) {
-      const group = groupQuery.data as unknown as Group
+    if (group) {
       setName(group.name)
       setDescription(group.description ?? "")
-      setSelectedUsers(group.members.map(m => m.user.id))
+      setSelectedUsers(group.members.map(member => member.user.id))
     }
-  }, [groupQuery.data])
+  }, [group])
 
+  // Mutation para atualizar grupo
   const updateGroupMutation = api.adminChatGroups.updateGroup.useMutation({
     onSuccess: () => {
       toast({
         title: "Grupo atualizado",
-        description: "O grupo de chat foi atualizado com sucesso.",
+        description: "O grupo foi atualizado com sucesso.",
       })
-      onSuccess?.()
+      onSuccess()
     },
     onError: (error) => {
       toast({
-        title: "Erro",
+        title: "Erro ao atualizar grupo",
         description: error.message,
         variant: "destructive",
       })
     },
   })
 
+  const handleClose = () => {
+    onOpenChange(false)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!name.trim()) {
       toast({
-        title: "Erro",
-        description: "Nome do grupo é obrigatório.",
+        title: "Nome obrigatório",
+        description: "Por favor, digite um nome para o grupo.",
         variant: "destructive",
       })
       return
@@ -103,45 +90,26 @@ export function EditGroupDialog({ groupId, open, onOpenChange, onSuccess }: Edit
 
     if (selectedUsers.length === 0) {
       toast({
-        title: "Erro",
-        description: "Selecione pelo menos um membro para o grupo.",
+        title: "Membros obrigatórios",
+        description: "Por favor, selecione pelo menos um membro para o grupo.",
         variant: "destructive",
       })
       return
     }
 
     updateGroupMutation.mutate({
-      id: groupId,
+      id: group.id,
       name: name.trim(),
       description: description.trim() || undefined,
       memberIds: selectedUsers,
     })
   }
 
-  const handleClose = () => {
-    setName("")
-    setDescription("")
-    setSelectedUsers([])
-    onOpenChange(false)
-  }
-
-  if (groupQuery.isLoading) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Grupo de Chat</DialogTitle>
+          <DialogTitle>Editar Grupo</DialogTitle>
           <DialogDescription>
             Atualize as informações do grupo e gerencie seus membros.
           </DialogDescription>
@@ -150,9 +118,9 @@ export function EditGroupDialog({ groupId, open, onOpenChange, onSuccess }: Edit
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Nome do grupo */}
           <div className="space-y-2">
-            <Label htmlFor="group-name">Nome do Grupo *</Label>
+            <Label htmlFor="name">Nome do Grupo *</Label>
             <Input
-              id="group-name"
+              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Digite o nome do grupo"
@@ -163,34 +131,36 @@ export function EditGroupDialog({ groupId, open, onOpenChange, onSuccess }: Edit
 
           {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor="group-description">Descrição (opcional)</Label>
+            <Label htmlFor="description">Descrição (opcional)</Label>
             <Textarea
-              id="group-description"
+              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva o propósito deste grupo"
+              placeholder="Descreva o propósito do grupo"
               maxLength={500}
               rows={3}
             />
           </div>
 
           {/* Seleção de usuários */}
-          <div className="space-y-2">
-            <Label>Membros do Grupo *</Label>
-            <UserSelection
-              selectedUsers={selectedUsers}
-              onSelectionChange={setSelectedUsers}
-              excludeGroupId={undefined} // Para edição, permitir qualquer usuário
-            />
-          </div>
+          <UserSelection
+            selectedUsers={selectedUsers}
+            onSelectionChange={setSelectedUsers}
+            excludeGroupId={group.id}
+          />
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={updateGroupMutation.isPending}
+            >
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={updateGroupMutation.isPending}
+              disabled={updateGroupMutation.isPending || !name.trim() || selectedUsers.length === 0}
             >
               {updateGroupMutation.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
