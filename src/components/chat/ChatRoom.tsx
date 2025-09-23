@@ -283,8 +283,7 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
       {/* Área de Mensagens */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 p-3 overflow-y-auto"
-        style={{ maxHeight: '60vh', minHeight: '200px' }}
+        className="flex-1 p-3 overflow-y-auto min-h-0"
         onScroll={handleScroll}
       >
         {/* Indicador de carregamento no topo */}
@@ -369,43 +368,46 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
         </div>
       </div>
 
-      {/* Formulário de Envio - Fixo na parte inferior */}
-      <div className="border-t bg-background flex-shrink-0">
-        <form onSubmit={sendMessage} className="p-3">
+      {/* Formulário de Envio - Sempre na parte inferior */}
+      <div className="border-t bg-background/95 backdrop-blur-sm flex-shrink-0 mt-auto">
+        <form onSubmit={sendMessage} className="p-4 space-y-3">
           {/* Preview da imagem selecionada */}
           {selectedImageUrl && (
-            <div className="mb-3">
+            <div className="flex justify-center">
               <ImageUpload
                 onImageUploaded={() => undefined} // Já foi feito no onImageUploaded
                 onRemove={() => setSelectedImageUrl(null)}
-                className="mb-2"
+                className="max-w-xs"
               />
             </div>
           )}
 
-          <div className="flex gap-2">
-            <Input
-              value={inputMessage}
-              onChange={(e) => {
-                setInputMessage(e.target.value)
-                handleTyping()
-              }}
-              placeholder="Digite sua mensagem..."
-              className="flex-1"
-              maxLength={2000}
-              disabled={!isConnected}
-            />
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <Input
+                value={inputMessage}
+                onChange={(e) => {
+                  setInputMessage(e.target.value)
+                  handleTyping()
+                }}
+                placeholder="Digite sua mensagem..."
+                className="min-h-[44px] resize-none"
+                maxLength={2000}
+                disabled={!isConnected}
+              />
+            </div>
 
             <ImageUpload
               onImageUploaded={setSelectedImageUrl}
               disabled={!isConnected}
-              className="flex-shrink-0"
+              className="flex-shrink-0 mb-1"
             />
 
             <Button
               type="submit"
-              size="sm"
+              size="default"
               disabled={(!inputMessage.trim() && !selectedImageUrl) || !isConnected}
+              className="h-[44px] px-4"
             >
               <Send className="h-4 w-4" />
             </Button>

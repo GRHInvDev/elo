@@ -203,4 +203,108 @@ export const chatMessageRouter = createTRPCRouter({
         orderBy: { createdAt: 'desc' },
       })
     }),
+
+  // Buscar conversas ativas (salas com mensagens recentes)
+  getActiveConversations: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = ctx.auth.userId
+
+      // Buscar últimas mensagens de todas as salas que o usuário tem acesso
+      // 1. Chat global (sempre disponível)
+      // 2. Grupos onde o usuário é membro
+
+      const conversations: Array<{
+        roomId: string
+        roomName: string
+        roomType: 'global' | 'group'
+        lastMessage: {
+          content: string | null
+          createdAt: Date
+          user: {
+            firstName: string | null
+            lastName: string | null
+          }
+        } | null
+        memberCount?: number
+      }> = []
+
+      // Adicionar chat global
+      const globalLastMessage = await ctx.db.chat_message.findFirst({
+        where: { roomId: 'global' },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      })
+
+      conversations.push({
+        roomId: 'global',
+        roomName: 'Chat Global',
+        roomType: 'global',
+        lastMessage: globalLastMessage ? {
+          content: globalLastMessage.content,
+          createdAt: globalLastMessage.createdAt,
+          user: globalLastMessage.user,
+        } : null,
+      })
+
+      // Buscar grupos com mensagens recentes
+      const userGroups = await ctx.db.chat_group.findMany({
+        where: {
+          isActive: true,
+          members: {
+            some: { userId },
+          },
+        },
+        include: {
+          members: true,
+          _count: {
+            select: { members: true },
+          },
+        },
+      })
+
+      // Para cada grupo, buscar a última mensagem
+      for (const group of userGroups) {
+        const lastMessage = await ctx.db.chat_message.findFirst({
+          where: { roomId: `group_${group.id}` },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        })
+
+        conversations.push({
+          roomId: `group_${group.id}`,
+          roomName: group.name,
+          roomType: 'group',
+          lastMessage: lastMessage ? {
+            content: lastMessage.content,
+            createdAt: lastMessage.createdAt,
+            user: lastMessage.user,
+          } : null,
+          memberCount: group._count.members,
+        })
+      }
+
+      // Filtrar apenas conversas que têm mensagens e ordenar por data da última mensagem
+      return conversations
+        .filter(conv => conv.lastMessage !== null)
+        .sort((a, b) => {
+          const dateA = a.lastMessage?.createdAt ?? new Date(0)
+          const dateB = b.lastMessage?.createdAt ?? new Date(0)
+          return dateB.getTime() - dateA.getTime() // Mais recentes primeiro
+        })
+        .slice(0, 10) // Limitar a 10 conversas ativas
+    }),
 })

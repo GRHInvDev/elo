@@ -155,7 +155,11 @@ export function UsersList({ onUserDoubleClick, className }: UsersListProps) {
   // Estados computados
   const onlineUserIds = new Set(presenceData?.onlineUserIds ?? [])
   const allUsers = usersData ?? []
-  const allColaborators = allUsers.filter((user: User) => user.setor !== 'Sistema')
+  const allColaborators = allUsers.filter((user: User) =>
+    user.setor !== 'Sistema' &&
+    user.setor !== 'Sem setor' &&
+    user.setor !== 'TESTE'
+  )
 
   const usersBySector = allColaborators.reduce((acc: Record<string, User[]>, user: User) => {
     const sector = user.setor ?? 'Sem Setor'
