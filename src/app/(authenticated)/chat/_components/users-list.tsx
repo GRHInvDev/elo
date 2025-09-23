@@ -57,15 +57,13 @@ export function UsersList({ onUserDoubleClick, className }: UsersListProps) {
   const onlineUserIds = new Set(presenceData?.onlineUserIds)
   const allUsers = onlineData ?? []
 
-  // Filtrar apenas usuários online e excluir setor "Sistema"
-  const onlineUsers = allUsers.filter(user =>
-    onlineUserIds.has(user.id) && user.setor !== 'Sistema'
-  )
+  // Filtrar apenas usuários que não são do setor "Sistema"
+  const allColaborators = allUsers.filter(user => user.setor !== 'Sistema')
 
   const isLoading = !onlineData
 
   // Agrupar usuários por setor
-  const usersBySector = onlineUsers.reduce((acc, user) => {
+  const usersBySector = allColaborators.reduce((acc, user) => {
     const sector = user.setor ?? 'Sem Setor'
     const sectorUsers = acc[sector] ?? []
     sectorUsers.push(user)
@@ -107,7 +105,7 @@ export function UsersList({ onUserDoubleClick, className }: UsersListProps) {
             <h3 className="font-semibold">Colaboradores</h3>
           </div>
           <Badge variant="secondary" className="text-xs">
-            {presenceData?.totalOnline ?? onlineUsers.length} online
+            {allColaborators.length} total • {presenceData?.totalOnline ?? 0} online
           </Badge>
         </div>
 
@@ -152,12 +150,12 @@ export function UsersList({ onUserDoubleClick, className }: UsersListProps) {
             ) : searchTerm ? (
               // Modo de busca: lista plana sem setores
               <div className="space-y-1">
-                {onlineUsers
-                  .filter(user =>
+                {allColaborators
+                  .filter((user: User) =>
                     formatUserName(user).toLowerCase().includes(searchTerm.toLowerCase()) ||
                     user.email.toLowerCase().includes(searchTerm.toLowerCase())
                   )
-                  .map((user) => (
+                  .map((user: User) => (
                     <div
                       key={user.id}
                       className={cn(
@@ -177,7 +175,9 @@ export function UsersList({ onUserDoubleClick, className }: UsersListProps) {
                           </AvatarFallback>
                         </Avatar>
                         {/* Indicador online */}
-                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-background rounded-full"></div>
+                        {onlineUserIds.has(user.id) && (
+                          <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-background rounded-full"></div>
+                        )}
                       </div>
 
                       {/* Informações do usuário */}
@@ -254,7 +254,9 @@ export function UsersList({ onUserDoubleClick, className }: UsersListProps) {
                                 </AvatarFallback>
                               </Avatar>
                               {/* Indicador online */}
-                              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-background rounded-full"></div>
+                              {onlineUserIds.has(user.id) && (
+                                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 border-2 border-background rounded-full"></div>
+                              )}
                             </div>
 
                             {/* Informações do usuário */}
