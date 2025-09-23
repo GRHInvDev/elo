@@ -43,35 +43,35 @@ export default function NewsDisplay() {
                 <div className="w-full md:w-80 lg:w-96 md:flex-shrink-0">
                   <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-muted/50 md:group-hover:scale-[1.02] md:transition-transform md:duration-300">
                     {
-                    // p.imageUrl ?
-                    // <Image
-                    //   src={p.imageUrl} 
-                    //   alt={p.title}
-                    //   width={800}
-                    //   height={600}
-                    //   className="object-cover w-full h-auto max-h-[80vh] md:transition-transform md:duration-500 md:group-hover:scale-105"
-                    //   style={{ aspectRatio: 'auto' }}
-                    // />
-                    // :
-                    // p.author.imageUrl ?
-                    // <div className="w-full h-full relative">
-                    //     <Image
-                    //       src={p.author.imageUrl}
-                    //       alt={p.title}
-                    //       width={800}
-                    //       height={600}
-                    //       className="object-cover w-full h-full"
-                    //       style={{ aspectRatio: 'auto' }}
-                    //     />
-                    //     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-lg md:rounded-xl">
-                    //       <div className="absolute bottom-0 left-0 right-0 p-4">
-                    //         <p className="text-white font-semibold text-sm md:text-base line-clamp-2 drop-shadow-lg">
-                    //           {p.title}
-                    //         </p>
-                    //       </div>
-                    //     </div>
-                    // </div>
-                    // :
+                    p.imageUrl ?
+                    <Image
+                      src={p.imageUrl}
+                      alt={p.title}
+                      width={800}
+                      height={600}
+                      className="object-cover w-full h-auto max-h-[80vh] md:transition-transform md:duration-500 md:group-hover:scale-105"
+                      style={{ aspectRatio: 'auto' }}
+                    />
+                    :
+                    p.author.imageUrl ?
+                    <div className="w-full h-full relative">
+                        <Image
+                          src={p.author.imageUrl}
+                          alt={p.title}
+                          width={800}
+                          height={600}
+                          className="object-cover w-full h-full"
+                          style={{ aspectRatio: 'auto' }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-lg md:rounded-xl">
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <p className="text-white font-semibold text-sm md:text-base line-clamp-2 drop-shadow-lg">
+                              {p.title}
+                            </p>
+                          </div>
+                        </div>
+                    </div>
+                    :
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
                       <div className="w-20 h-20 md:w-24 md:h-24 bg-primary/10 rounded-full flex items-center justify-center border-2 border-primary/20">
                         <p className="text-primary font-bold text-2xl md:text-3xl">
