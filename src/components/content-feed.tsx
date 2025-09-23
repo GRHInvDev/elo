@@ -2,51 +2,6 @@
 
 import type React from "react"
 import type { RolesConfig } from "@/types/role-config"
-
-// Define interfaces específicas para os tipos de dados
-interface AuthorWithRoleConfig {
-  firstName: string | null
-  lastName: string | null
-  imageUrl: string | null
-  role_config: RolesConfig
-  enterprise?: string
-}
-
-interface PostWithAuthor {
-  id: string
-  title: string
-  content: string
-  authorId: string
-  imageUrl: string | null
-  createdAt: Date
-  author: AuthorWithRoleConfig
-}
-
-interface EventWithAuthor {
-  id: string
-  title: string
-  description: string
-  location: string
-  startDate: Date
-  endDate: Date
-  authorId: string
-  published: boolean
-  createdAt: Date
-  author: AuthorWithRoleConfig
-}
-
-interface FlyerWithAuthor {
-  id: string
-  title: string
-  description: string
-  imageUrl: string
-  iframe: string | null
-  authorId: string
-  published: boolean
-  createdAt: Date
-  author: AuthorWithRoleConfig
-}
-
 import { useEffect, useRef, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -92,6 +47,50 @@ import type { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "next-themes"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { UPLTButton } from "./ui/uplt-button"
+
+// Define interfaces específicas para os tipos de dados
+interface AuthorWithRoleConfig {
+  firstName: string | null
+  lastName: string | null
+  imageUrl: string | null
+  role_config: RolesConfig
+  enterprise?: string
+}
+
+interface PostWithAuthor {
+  id: string
+  title: string
+  content: string
+  authorId: string
+  imageUrl: string | null
+  createdAt: Date
+  author: AuthorWithRoleConfig
+}
+
+interface EventWithAuthor {
+  id: string
+  title: string
+  description: string
+  location: string
+  startDate: Date
+  endDate: Date
+  authorId: string
+  published: boolean
+  createdAt: Date
+  author: AuthorWithRoleConfig
+}
+
+interface FlyerWithAuthor {
+  id: string
+  title: string
+  description: string
+  imageUrl: string
+  iframe: string | null
+  authorId: string
+  published: boolean
+  createdAt: Date
+  author: AuthorWithRoleConfig
+}
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })
