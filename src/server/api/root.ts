@@ -24,6 +24,8 @@ import { suggestionRouter } from "./routers/suggestions";
 import { classificationRouter } from "./routers/classification";
 import { kpiRouter } from "./routers/kpi";
 import { notificationRouter } from "./routers/notification";
+import { chatMessageRouter } from "./routers/chat-message";
+import { adminChatGroupsRouter } from "./routers/admin-chat-groups";
 
 /**
  * This is the primary router for your server.
@@ -55,6 +57,8 @@ export const appRouter = createTRPCRouter({
   classification: classificationRouter,
   kpi: kpiRouter,
   notification: notificationRouter,
+  chatMessage: chatMessageRouter,
+  adminChatGroups: adminChatGroupsRouter,
 });
 
 // export type definition of API

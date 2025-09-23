@@ -1,4 +1,4 @@
-import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb } from "lucide-react"
+import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideMessageSquare, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
 export const routeItems = (roleConfig?: RolesConfig | null): {
@@ -37,6 +37,12 @@ export const routeItems = (roleConfig?: RolesConfig | null): {
       describe: "Página principal da intranet",
       href: "/dashboard",
     },
+    // {
+    //   title: "Chat",
+    //   icon: LucideMessageSquare,
+    //   describe: "Chat interno para comunicação entre colaboradores",
+    //   href: "/chat",
+    // },
     {
       title: "Almoços",
       icon: LucideUtensils,

@@ -90,6 +90,30 @@ export const userRouter = createTRPCRouter({
     }
   }),
 
+  getById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          imageUrl: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado",
+        });
+      }
+
+      return user;
+    }),
+
   listAll: adminProcedure.query(async ({ ctx }) => {
     return await ctx.db.user.findMany({
       select: {

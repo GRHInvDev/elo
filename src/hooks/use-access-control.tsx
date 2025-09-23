@@ -48,6 +48,12 @@ export function useAccessControl() {
     return !db_user.role_config.isTotem;
   };
 
+  const canAccessChat = (): boolean => {
+    // SISTEMA SIMPLIFICADO: Todos podem acessar o chat, exceto TOTEMs
+    if (!db_user?.role_config) return false;
+    return !db_user.role_config.isTotem;
+  };
+
   const canViewFlyers = (): boolean => {
     // SISTEMA SIMPLIFICADO: Todos podem ver, exceto TOTEMs
     if (!db_user?.role_config) return false;
@@ -145,6 +151,7 @@ export function useAccessControl() {
     canViewCars,
     canLocateCars,
     canViewDREReport,
+    canAccessChat,
     isLoading: !db_user,
     isSudo: db_user?.role_config?.sudo ?? false,
   };
