@@ -39,6 +39,12 @@ model User {
   notifications Notification[]
   notificationPreferences NotificationPreference?
 
+  // Chat
+  chatMessages        chat_message[]     @relation("ChatMessageUser")
+  createdChatGroups   chat_group[]       @relation("ChatGroupCreator")
+  chatGroupMemberships chat_group_member[] @relation("ChatGroupMembers")
+  addedGroupMembers   chat_group_member[] @relation("ChatGroupMemberAdder")
+
   @@map("users")
 }
 
@@ -541,6 +547,7 @@ enum NotificationType {
   CLASSIFICATION_UPDATED
   COMMENT_ADDED
   SYSTEM_MAINTENANCE
+  CHAT_MESSAGE
 }
 
 enum NotificationChannel {
@@ -598,4 +605,61 @@ model NotificationPreference {
 
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+}
+
+model chat_group {
+    id          String   @id @default(cuid())
+    name        String
+    description String?
+    createdById String
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    isActive    Boolean  @default(true)
+
+    // Relacionamentos
+    createdBy   User            @relation("ChatGroupCreator", fields: [createdById], references: [id])
+    members     chat_group_member[]
+    messages    chat_message[]
+
+    @@index([createdById])
+    @@index([isActive])
+    @@map("chat_groups")
+}
+
+model chat_group_member {
+    id        String   @id @default(cuid())
+    groupId   String
+    userId    String
+    joinedAt  DateTime @default(now())
+    addedById String   // Quem adicionou o usuário ao grupo
+
+    // Relacionamentos
+    group     chat_group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    user      User      @relation("ChatGroupMembers", fields: [userId], references: [id], onDelete: Cascade)
+    addedBy   User      @relation("ChatGroupMemberAdder", fields: [addedById], references: [id])
+
+    @@unique([groupId, userId])
+    @@index([groupId])
+    @@index([userId])
+    @@map("chat_group_members")
+}
+
+model chat_message {
+    id        String   @id @default(cuid())
+    content   String?  // Agora opcional, pois mensagens podem ter apenas imagens
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    userId    String
+    roomId    String   @default("global") // Mantém compatibilidade com chat global
+    groupId   String?  // Referência ao grupo (null para chat global)
+    imageUrl  String?  // URL da imagem anexada à mensagem
+
+    // Relacionamentos
+    user      User         @relation("ChatMessageUser", fields: [userId], references: [id], onDelete: Cascade)
+    group     chat_group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+    @@index([roomId, createdAt])
+    @@index([groupId, createdAt])
+    @@index([userId, createdAt])
+    @@map("chat_messages")
 }

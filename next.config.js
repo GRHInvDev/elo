@@ -14,6 +14,37 @@ const config = {
           },
         ],
       },
+    // Configurações para WebSocket
+    async headers() {
+        return [
+            {
+                // Aplicar headers a todas as rotas da API
+                source: '/api/:path*',
+                headers: [
+                    {
+                        key: 'Access-Control-Allow-Origin',
+                        value: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+                    },
+                    {
+                        key: 'Access-Control-Allow-Methods',
+                        value: 'GET, POST, PUT, DELETE, OPTIONS',
+                    },
+                    {
+                        key: 'Access-Control-Allow-Headers',
+                        value: 'Content-Type, Authorization',
+                    },
+                    {
+                        key: 'Access-Control-Allow-Credentials',
+                        value: 'true',
+                    },
+                ],
+            },
+        ]
+    },
+    // Configuração experimental para WebSocket
+    experimental: {
+        serverComponentsExternalPackages: ['socket.io', 'socket.io-client'],
+    },
 };
 
 export default config;

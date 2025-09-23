@@ -15,6 +15,22 @@ import { currentUser } from "@clerk/nextjs/server"
 import { db } from "@/server/db";
 import type { RolesConfig } from "@/types/role-config";
 
+// Type definitions for tRPC context
+export interface TRPCContext {
+  db: typeof db;
+  auth: {
+    userId: string | undefined;
+  };
+  headers: Headers;
+}
+
+export interface TRPCContextWithUser extends TRPCContext {
+  user: {
+    id: string;
+    role_config: RolesConfig | null;
+  };
+}
+
 /**
  * 1. CONTEXT
  *
@@ -27,7 +43,7 @@ import type { RolesConfig } from "@/types/role-config";
  *
  * @see https://trpc.io/docs/server/context
  */
-export const createTRPCContext = async (opts: { headers: Headers }) => {
+export const createTRPCContext = async (opts: { headers: Headers }): Promise<TRPCContext> => {
   let user = null;
   
   try {
@@ -64,7 +80,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
  * ZodErrors so that you get typesafety on the frontend if your procedure fails due to validation
  * errors on the backend.
  */
-const t = initTRPC.context<typeof createTRPCContext>().create({
+const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
     return {
