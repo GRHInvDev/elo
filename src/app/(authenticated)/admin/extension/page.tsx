@@ -7,17 +7,31 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
-import { Phone, Users, Edit3, Save, X, Shield } from "lucide-react"
+import { Phone, Users, Edit3, Save, X, Shield, Plus, Trash2, Edit, UserPlus } from "lucide-react"
 
 export default function ExtensionManagementPage() {
   const [editingUser, setEditingUser] = useState<string | null>(null)
   const [editingExtension, setEditingExtension] = useState("")
 
+  // Estados para ramais personalizados
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [editingCustomExtension, setEditingCustomExtension] = useState<any>(null)
+  const [customExtensionForm, setCustomExtensionForm] = useState({
+    name: "",
+    email: "",
+    extension: "",
+    description: "",
+  })
+
   const { data: extensionsBySector, isLoading, refetch } = api.user.listExtensions.useQuery()
+  const { data: customExtensions, refetch: refetchCustom } = api.user.listCustomExtensions.useQuery()
   const { toast } = useToast()
   const { isSudo } = useAccessControl()
 
@@ -59,6 +73,62 @@ export default function ExtensionManagementPage() {
     },
   })
 
+  // Mutações para ramais personalizados
+  const createCustomExtension = api.user.createCustomExtension.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Ramal personalizado criado",
+        description: "O ramal personalizado foi criado com sucesso.",
+      })
+      setIsCreateDialogOpen(false)
+      setCustomExtensionForm({ name: "", email: "", extension: "", description: "" })
+      void refetchCustom()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+  const updateCustomExtension = api.user.updateCustomExtension.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Ramal personalizado atualizado",
+        description: "O ramal personalizado foi atualizado com sucesso.",
+      })
+      setEditingCustomExtension(null)
+      setCustomExtensionForm({ name: "", email: "", extension: "", description: "" })
+      void refetchCustom()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+  const deleteCustomExtension = api.user.deleteCustomExtension.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Ramal personalizado removido",
+        description: "O ramal personalizado foi removido com sucesso.",
+      })
+      void refetchCustom()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
   const handleEditExtension = (userId: string, currentExtension: number) => {
     setEditingUser(userId)
     setEditingExtension(currentExtension?.toString() || "")
@@ -84,6 +154,63 @@ export default function ExtensionManagementPage() {
   const handleCancelEdit = () => {
     setEditingUser(null)
     setEditingExtension("")
+  }
+
+  // Funções para ramais personalizados
+  const handleCreateCustomExtension = () => {
+    const extension = parseInt(customExtensionForm.extension)
+    if (isNaN(extension) || extension < 1) {
+      toast({
+        title: "Erro",
+        description: "Ramal deve ser um número positivo.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    createCustomExtension.mutate({
+      name: customExtensionForm.name,
+      email: customExtensionForm.email || "",
+      extension,
+      description: customExtensionForm.description || "",
+    })
+  }
+
+  const handleEditCustomExtension = (customExtension: any) => {
+    setEditingCustomExtension(customExtension)
+    setCustomExtensionForm({
+      name: customExtension.name,
+      email: customExtension.email || "",
+      extension: customExtension.extension.toString(),
+      description: customExtension.description || "",
+    })
+  }
+
+  const handleUpdateCustomExtension = () => {
+    if (!editingCustomExtension) return
+
+    const extension = parseInt(customExtensionForm.extension)
+    if (isNaN(extension) || extension < 1) {
+      toast({
+        title: "Erro",
+        description: "Ramal deve ser um número positivo.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    updateCustomExtension.mutate({
+      id: editingCustomExtension.id,
+      name: customExtensionForm.name,
+      email: customExtensionForm.email || "",
+      extension,
+      description: customExtensionForm.description || "",
+    })
+  }
+
+  const handleCancelCustomEdit = () => {
+    setEditingCustomExtension(null)
+    setCustomExtensionForm({ name: "", email: "", extension: "", description: "" })
   }
 
   // Verificar acesso
@@ -306,6 +433,254 @@ export default function ExtensionManagementPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Ramais Personalizados */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Ramais Personalizados
+                </CardTitle>
+                <CardDescription>
+                  Ramais personalizados criados manualmente para contatos externos
+                </CardDescription>
+              </div>
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Ramal
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Ramal Personalizado</DialogTitle>
+                    <DialogDescription>
+                      Adicione um novo ramal personalizado para contatos externos.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="custom-name">Nome *</Label>
+                      <Input
+                        id="custom-name"
+                        value={customExtensionForm.name}
+                        onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, name: e.target.value })}
+                        placeholder="Nome do contato"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="custom-email">Email (opcional)</Label>
+                      <Input
+                        id="custom-email"
+                        type="email"
+                        value={customExtensionForm.email}
+                        onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="custom-extension">Ramal *</Label>
+                      <Input
+                        id="custom-extension"
+                        type="number"
+                        min="1"
+                        max="99999"
+                        value={customExtensionForm.extension}
+                        onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, extension: e.target.value })}
+                        placeholder="1234"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="custom-description">Descrição (opcional)</Label>
+                      <Textarea
+                        id="custom-description"
+                        value={customExtensionForm.description}
+                        onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, description: e.target.value })}
+                        placeholder="Descrição ou observações"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCreateCustomExtension}
+                      disabled={createCustomExtension.isPending}
+                    >
+                      {createCustomExtension.isPending ? "Criando..." : "Criar Ramal"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {customExtensions && customExtensions.length > 0 ? (
+              <div className="space-y-3">
+                {customExtensions.map((customExtension: any) => (
+                  <div
+                    key={customExtension.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>
+                          {customExtension.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{customExtension.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {customExtension.email || "Sem email"}
+                        </div>
+                        {customExtension.description && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {customExtension.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <Badge variant="default" className="font-mono">
+                            {customExtension.extension}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Criado por {customExtension.createdBy.firstName} {customExtension.createdBy.lastName}
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Dialog
+                          open={editingCustomExtension?.id === customExtension.id}
+                          onOpenChange={(open) => {
+                            if (!open) handleCancelCustomEdit()
+                          }}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditCustomExtension(customExtension)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Editar Ramal Personalizado</DialogTitle>
+                              <DialogDescription>
+                                Edite as informações do ramal personalizado.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="edit-custom-name">Nome *</Label>
+                                <Input
+                                  id="edit-custom-name"
+                                  value={customExtensionForm.name}
+                                  onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, name: e.target.value })}
+                                  placeholder="Nome do contato"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="edit-custom-email">Email (opcional)</Label>
+                                <Input
+                                  id="edit-custom-email"
+                                  type="email"
+                                  value={customExtensionForm.email}
+                                  onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, email: e.target.value })}
+                                  placeholder="email@exemplo.com"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="edit-custom-extension">Ramal *</Label>
+                                <Input
+                                  id="edit-custom-extension"
+                                  type="number"
+                                  min="1"
+                                  max="99999"
+                                  value={customExtensionForm.extension}
+                                  onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, extension: e.target.value })}
+                                  placeholder="1234"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="edit-custom-description">Descrição (opcional)</Label>
+                                <Textarea
+                                  id="edit-custom-description"
+                                  value={customExtensionForm.description}
+                                  onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, description: e.target.value })}
+                                  placeholder="Descrição ou observações"
+                                  rows={3}
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={handleCancelCustomEdit}>
+                                Cancelar
+                              </Button>
+                              <Button
+                                onClick={handleUpdateCustomExtension}
+                                disabled={updateCustomExtension.isPending}
+                              >
+                                {updateCustomExtension.isPending ? "Salvando..." : "Salvar"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remover Ramal Personalizado</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja remover o ramal personalizado "{customExtension.name}"?
+                                Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteCustomExtension.mutate({ id: customExtension.id })}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Remover
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum ramal personalizado criado ainda.</p>
+                <p className="text-sm mt-1">Clique em "Novo Ramal" para adicionar o primeiro.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardShell>
   )

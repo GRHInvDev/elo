@@ -46,6 +46,9 @@ model User {
   chatGroupMemberships chat_group_member[] @relation("ChatGroupMembers")
   addedGroupMembers   chat_group_member[] @relation("ChatGroupMemberAdder")
 
+  // Ramais personalizados
+  customExtensions    CustomExtension[]
+
   @@map("users")
 }
 
@@ -667,4 +670,22 @@ model chat_message {
     @@index([groupId, createdAt])
     @@index([userId, createdAt])
     @@map("chat_messages")
+}
+
+// Ramais personalizados criados manualmente
+model CustomExtension {
+  id          String   @id @default(cuid())
+  name        String   // Nome do contato/ramal personalizado
+  email       String?  // Email opcional
+  extension   Int      @unique // Número do ramal (único)
+  description String?  // Descrição opcional
+  createdById String   // ID do usuário que criou
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+  @@map("custom_extensions")
 }

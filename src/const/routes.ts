@@ -1,4 +1,4 @@
-import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideMessageSquare, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb } from "lucide-react"
+import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideMessageSquare, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb, LucidePhone } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
 export const routeItems = (roleConfig?: RolesConfig | null): {
@@ -90,6 +90,12 @@ export const routeItems = (roleConfig?: RolesConfig | null): {
       icon: LucideFormInput,
       describe: "Página para requisitar processos internos para os setores, como marketing, TI, inovação e compras",
       href: "/forms",
+    },
+    {
+      title: "Lista de ramais",
+      icon: LucidePhone,
+      describe: "Lista de ramais telefônicos organizados por setor",
+      href: "/extension",
     }
   ]
   
