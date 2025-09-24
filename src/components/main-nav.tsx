@@ -14,6 +14,59 @@ import { routeItems } from "@/const/routes"
 import { DialogTitle } from "./ui/dialog"
 import { useAccessControl } from "@/hooks/use-access-control"
 
+interface SidebarProps {
+  className?: string
+  collapsed?: boolean
+}
+
+export function Sidebar({ className, collapsed = false }: SidebarProps) {
+  const pathname = usePathname()
+  const { db_user } = useAccessControl()
+
+  return (
+    <div className={cn("flex flex-col h-full bg-background border-r", className)}>
+
+      {/* Logo */}
+      <div className="flex items-center justify-center p-6">
+        <div className="flex items-center gap-2">
+          <LucideLink className="size-6 -rotate-45" />
+          {!collapsed && <h1 className="text-2xl font-bold">elo</h1>}
+        </div>
+      </div>
+
+      {/* Navigation Items */}
+      <nav className="flex-1 flex flex-col space-y-1 p-4">
+        {[...routeItems(db_user?.role_config)].map((item) => {
+          if (item) return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted hover:text-primary",
+                pathname === item.href
+                  ? "text-primary bg-muted"
+                  : "text-muted-foreground",
+                collapsed && "justify-center px-2"
+              )}
+              title={collapsed ? item.describe : undefined}
+            >
+              <item.icon className="size-5 shrink-0" />
+              {!collapsed && <span className="truncate">{item.title}</span>}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <Separator />
+
+      {/* Settings Menu */}
+      <div className="p-4">
+        <SettingsMenu />
+      </div>
+    </div>
+  )
+}
+
 export function MainNav() {
   const pathname = usePathname()
   const { db_user } = useAccessControl()
@@ -21,43 +74,24 @@ export function MainNav() {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        {/* Mobile navigation */}
-        <Sheet open={isOpen} onOpenChange={setIsOpen} >
-          <DialogTitle className="hidden"/>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 p-0 md:hidden">
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[240px] sm:w-[300px] flex flex-col justify-between">
-            <div className="flex flex-1 flex-col space-y-4 mt-8">
-              {[...routeItems(db_user?.role_config)].map((item) => {if (item) return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "text-base font-medium flex items-center transition-colors hover:text-primary p-2 rounded-md",
-                    pathname === item.href ? "text-primary bg-muted" : "text-muted-foreground",
-                  )}
-                >
-                  <item.icon className="mr-2 size-4"/>
-                  {item.title}
-                </Link>
-              )})}
-            </div>
-            <Separator />
-            <SettingsMenu />
-          </SheetContent>
-        </Sheet>
+      {/* Mobile navigation */}
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTitle className="hidden"/>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 p-0 md:hidden">
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-[240px] sm:w-[300px] p-0">
+          <Sidebar />
+        </SheetContent>
+      </Sheet>
 
-        {/* Logo - visible on all screen sizes */}
-        <div className="flex items-center">
-          <LucideLink className="size-5 -rotate-45" />
-          <h1 className="text-3xl font-bold hidden md:block">elo</h1>
-        </div>
+      {/* Logo - visible only on mobile */}
+      <div className="flex items-center md:hidden">
+        <LucideLink className="size-5 -rotate-45" />
+        <h1 className="text-3xl font-bold ml-2">elo</h1>
       </div>
     </>
   )
