@@ -45,11 +45,10 @@ interface User {
 interface ChatSidebarProps {
   currentRoomId: string
   onRoomChange: (roomId: string) => void
-  onUserDoubleClick: (userId: string) => void
   className?: string
 }
 
-export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, className }: ChatSidebarProps) {
+export function ChatSidebar({ currentRoomId, onRoomChange, className }: ChatSidebarProps) {
   const { user: clerkUser } = useUser()
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("conversas")
@@ -267,32 +266,6 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
             </div>
               ) : (
             <div className="space-y-1">
-                  {/* Chat Global sempre aparece primeiro */}
-                  <Button
-                    key="global"
-                    variant={currentRoomId === "global" ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start h-auto p-3",
-                      currentRoomId === "global" && "bg-primary/10"
-                    )}
-                    onClick={() => onRoomChange("global")}
-                  >
-                    <div className="flex items-center gap-3 w-full">
-                      <div className="flex-shrink-0">
-                        <Hash className="h-4 w-4 text-muted-foreground" />
-                      </div>
-
-                      <div className="flex-1 text-left min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm truncate">Chat Global</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          Sala de chat geral da empresa
-                        </p>
-                      </div>
-                    </div>
-                  </Button>
-
               {activeConversations.map((conversation) => (
                 <Button
                   key={conversation.roomId}
@@ -495,14 +468,13 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
                         "hover:bg-muted/50 active:bg-muted/70",
                         user.id === clerkUser?.id && "bg-primary/5"
                       )}
-                      onDoubleClick={() => onUserDoubleClick(user.id)}
                       role="button"
                       tabIndex={0}
                       aria-label={`Conversar com ${formatUserName(user)}${onlineUserIds.has(user.id) ? ' (online)' : ''}`}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          onUserDoubleClick(user.id)
+                      onClick={() => {
+                        if (clerkUser?.id && user.id !== clerkUser.id) {
+                          const privateChatId = `private_${[clerkUser.id, user.id].sort().join('_')}`
+                          onRoomChange(privateChatId)
                         }
                       }}
                     >
@@ -587,14 +559,13 @@ export function ChatSidebar({ currentRoomId, onRoomChange, onUserDoubleClick, cl
                                 "hover:bg-muted/50 active:bg-muted/70",
                                 user.id === clerkUser?.id && "bg-primary/5"
                               )}
-                              onDoubleClick={() => onUserDoubleClick(user.id)}
                               role="button"
                               tabIndex={0}
                               aria-label={`Conversar com ${formatUserName(user)}${onlineUserIds.has(user.id) ? ' (online)' : ''}`}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  onUserDoubleClick(user.id)
+                              onClick={() => {
+                                if (clerkUser?.id && user.id !== clerkUser.id) {
+                                  const privateChatId = `private_${[clerkUser.id, user.id].sort().join('_')}`
+                                  onRoomChange(privateChatId)
                                 }
                               }}
                             >

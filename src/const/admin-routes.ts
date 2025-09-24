@@ -82,14 +82,6 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     path: "/admin/chat",
     requiresBasicAdmin: true,
   },
-  {
-    id: "/admin/chat-groups",
-    title: "Gerenciar Grupos Chat",
-    description: "Gerenciar grupos de chat e controle de membros",
-    icon: MessageSquare,
-    path: "/admin/chat-groups",
-    requiresBasicAdmin: true,
-  },
 ]
 
 export function getAdminRouteById(id: string): AdminRoute | undefined {

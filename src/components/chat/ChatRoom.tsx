@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Send, MessageCircle } from "lucide-react"
 import { api } from "@/trpc/react"
 import { useUser } from "@clerk/nextjs"
-import { useNotifications } from "@/hooks/use-notifications"
 import { cn } from "@/lib/utils"
 import { ImageUpload } from "./ImageUpload"
 import { ImageMessage } from "./ImageMessage"
+import { FileUpload } from "./FileUpload"
+import { FileMessage } from "./FileMessage"
 
 interface Message {
   id: string
@@ -21,6 +22,10 @@ interface Message {
   roomId: string
   groupId: string | null
   imageUrl: string | null
+  fileUrl: string | null
+  fileName: string | null
+  fileSize: number | null
+  fileType: string | null
   user: {
     id: string
     firstName: string | null
@@ -46,12 +51,18 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(true)
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<{
+    url: string
+    name: string
+    size: number
+    type: string
+  } | null>(null)
+  const [isTyping, setIsTyping] = useState(false)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
-  // Sistema de notificações
-  const { unreadCount } = useNotifications()
 
   // Determinar o tipo de sala
   const isGroup = roomId.startsWith('group_')
@@ -81,6 +92,7 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
     limit: 20,
   })
 
+
   // Query para carregar mais mensagens
   const loadMoreMessages = api.chatMessage.getMessages.useQuery(
     {
@@ -92,6 +104,9 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
       enabled: false, // Só executar quando chamado manualmente
     }
   )
+
+  // Contexto tRPC para invalidação de queries
+  const trpcContext = api.useContext()
 
   // Polling para buscar novas mensagens
   useEffect(() => {
@@ -119,6 +134,9 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
               const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
               return [...prev, ...uniqueNewMessages]
             })
+
+            // Invalidar query de conversas ativas quando mensagens são recebidas
+            void trpcContext.chatMessage.getActiveConversations.invalidate()
           }
         }
         } catch (error) {
@@ -133,14 +151,19 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
         clearInterval(pollIntervalRef.current)
         pollIntervalRef.current = null
       }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = null
+      }
       setIsConnected(false)
+      setIsTyping(false)
     }
-  }, [clerkUser?.id, roomId])
+  }, [clerkUser?.id, roomId, messages, trpcContext.chatMessage.getActiveConversations])
 
   // Carregar mensagens iniciais
   useEffect(() => {
     if (recentMessages) {
-      setMessages(recentMessages as Message[])
+      setMessages(recentMessages as unknown as Message[])
       setHasMoreMessages(recentMessages.length === 20) // Se recebeu 20 mensagens, provavelmente há mais
     }
   }, [recentMessages])
@@ -191,58 +214,63 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
     }
   }, [messages.length, isLoadingMore])
 
+  // Mutation para enviar mensagem
+  const sendMessageMutation = api.chatMessage.sendMessage.useMutation()
+
   // Enviar mensagem
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validação: deve ter pelo menos texto ou imagem
-    if ((!inputMessage.trim() && !selectedImageUrl) || !clerkUser?.id) return
+    // Validação: deve ter pelo menos texto, imagem ou arquivo
+    if ((!inputMessage.trim() && !selectedImageUrl && !selectedFile) || !clerkUser?.id) return
 
     console.log('📤 [ChatRoom] Enviando mensagem para roomId:', roomId, 'userId:', clerkUser.id)
 
     try {
-      const response = await fetch('/api/chat/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: inputMessage.trim() || null,
-          userId: clerkUser.id,
-          roomId,
-          imageUrl: selectedImageUrl,
-        }),
+      const content = inputMessage.trim() || ""
+      await sendMessageMutation.mutateAsync({
+        content,
+        roomId,
+        fileUrl: selectedFile?.url,
+        fileName: selectedFile?.name,
+        fileSize: selectedFile?.size,
+        fileType: selectedFile?.type,
       })
 
-      if (response.ok) {
-        console.log('✅ [ChatRoom] Mensagem enviada com sucesso para roomId:', roomId)
-        setInputMessage("")
-        setSelectedImageUrl(null)
+      console.log('✅ [ChatRoom] Mensagem enviada com sucesso para roomId:', roomId)
+      setInputMessage("")
+      setSelectedImageUrl(null)
+      setSelectedFile(null)
+      setIsTyping(false) // Parar de mostrar indicador de digitação
 
-        // Recarregar mensagens imediatamente após enviar
-        const messagesResponse = await fetch(`/api/chat/poll?roomId=${roomId}&lastMessageId=${messages.length > 0 ? messages[messages.length - 1]?.id ?? '' : ''}`)
-        if (messagesResponse.ok) {
-          const newMessages = await messagesResponse.json() as Message[]
-          if (newMessages.length > 0) {
-            setMessages(prev => {
-              // Filtrar mensagens que já existem para evitar duplicatas
-              const existingIds = new Set(prev.map(m => m.id))
-              const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
-              return [...prev, ...uniqueNewMessages]
-            })
-          }
-        }
-      } else {
-        console.error('❌ [FRONTEND] Erro ao enviar mensagem')
+      // Limpar timeout de digitação
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = null
       }
+
+      // Invalidar query de conversas ativas para atualização imediata na sidebar
+      await trpcContext.chatMessage.getActiveConversations.invalidate()
     } catch (error) {
-      console.error('❌ [FRONTEND] Erro na requisição:', error)
+      console.error('❌ [ChatRoom] Erro ao enviar mensagem:', error)
     }
   }
 
-  // Indicador de digitação (removido para versão polling)
+  // Indicador de digitação
   const handleTyping = () => {
-    // Não implementado na versão polling
+    if (!isTyping) {
+      setIsTyping(true)
+    }
+
+    // Limpar timeout anterior
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    // Definir novo timeout para parar de mostrar "digitando" após 3 segundos
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false)
+    }, 3000)
   }
 
   // Formatar nome do usuário
@@ -358,8 +386,20 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
                     </div>
                   )}
 
-                  {/* Placeholder se não há conteúdo nem imagem */}
-                  {!message.content && !message.imageUrl && (
+                  {/* Arquivo anexado */}
+                  {message.fileUrl && (
+                    <div className="mt-2">
+                      <FileMessage
+                        fileUrl={message.fileUrl}
+                        fileName={message.fileName ?? 'Arquivo'}
+                        fileSize={message.fileSize ?? 0}
+                        fileType={message.fileType ?? 'application/octet-stream'}
+                      />
+                    </div>
+                  )}
+
+                  {/* Placeholder se não há conteúdo nem anexos */}
+                  {!message.content && !message.imageUrl && !message.fileUrl && (
                     <div className="text-muted-foreground italic">
                       [Mensagem vazia]
                     </div>
@@ -374,6 +414,20 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
         </div>
       </div>
 
+      {/* Indicador de Digitação */}
+      {isTyping && (
+        <div className="px-4 py-2 border-t bg-muted/30 flex-shrink-0">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex gap-1">
+              <div className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-1 h-1 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+            <span>Você está digitando...</span>
+          </div>
+        </div>
+      )}
+
       {/* Formulário de Envio - Sempre na parte inferior */}
       <div className="border-t bg-background/95 backdrop-blur-sm flex-shrink-0 mt-auto">
         <form onSubmit={sendMessage} className="p-4 space-y-3">
@@ -383,6 +437,17 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
               <ImageUpload
                 onImageUploaded={() => undefined} // Já foi feito no onImageUploaded
                 onRemove={() => setSelectedImageUrl(null)}
+                className="max-w-xs"
+              />
+            </div>
+          )}
+
+          {/* Preview do arquivo selecionado */}
+          {selectedFile && (
+            <div className="flex justify-center">
+              <FileUpload
+                onFileUploaded={() => undefined} // Já foi feito no onFileUploaded
+                onRemove={() => setSelectedFile(null)}
                 className="max-w-xs"
               />
             </div>
@@ -409,10 +474,16 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
               className="flex-shrink-0 mb-1"
             />
 
+            <FileUpload
+              onFileUploaded={setSelectedFile}
+              disabled={!isConnected}
+              className="flex-shrink-0 mb-1"
+            />
+
             <Button
               type="submit"
               size="default"
-              disabled={(!inputMessage.trim() && !selectedImageUrl) || !isConnected}
+              disabled={(!inputMessage.trim() && !selectedImageUrl && !selectedFile) || !isConnected}
               className="h-[44px] px-4"
             >
               <Send className="h-4 w-4" />
