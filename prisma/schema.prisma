@@ -34,6 +34,7 @@ model User {
   vehicleRents     VehicleRent[]
   authoredSuggestions Suggestion[] @relation("SuggestionAuthor")
   analyzedSuggestions Suggestion[] @relation("SuggestionAnalyst")
+  extension       Int                 @default(0) // ramal do usuario
 
   // Notificações
   notifications Notification[]

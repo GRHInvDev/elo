@@ -133,6 +133,16 @@ export function useAccessControl() {
     return db_user.role_config.can_view_dre_report;
   };
 
+  const canManageExtensions = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, pode gerenciar ramais
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica para gerenciar ramais
+    return db_user.role_config.can_manage_extensions;
+  };
+
   return {
     db_user,
     hasAdminAccess,
@@ -149,6 +159,7 @@ export function useAccessControl() {
     canViewCars,
     canLocateCars,
     canViewDREReport,
+    canManageExtensions,
     canAccessChat,
     isLoading: !db_user,
     isSudo: db_user?.role_config?.sudo ?? false,

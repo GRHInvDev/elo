@@ -27,9 +27,10 @@ import {
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
 
-// Extensão temporária do tipo RolesConfig para incluir a nova propriedade
+// Extensão temporária do tipo RolesConfig para incluir as novas propriedades
 type ExtendedRolesConfig = RolesConfig & {
   can_view_dre_report: boolean
+  can_manage_extensions: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
 
@@ -187,6 +188,7 @@ interface UserManagementCardProps {
     firstName: string | null
     lastName: string | null
     setor: string | null
+    extension: number | null
     role_config: RolesConfig
   }
   allForms: { id: string; title: string }[]
@@ -209,24 +211,26 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     lastName: user.lastName ?? "",
     email: user.email,
     setor: user.setor ?? "none",
+    extension: user.extension ?? 0,
   })
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
     {
-      sudo: user.role_config?.sudo ?? false,
-      admin_pages: user.role_config?.admin_pages ?? [],
-      can_create_form: user.role_config?.can_create_form ?? false,
-      can_create_event: user.role_config?.can_create_event ?? false,
-      can_create_flyer: user.role_config?.can_create_flyer ?? false,
-      can_create_booking: user.role_config?.can_create_booking ?? false,
-      can_locate_cars: user.role_config?.can_locate_cars ?? false,
-      can_view_dre_report: user.role_config?.can_view_dre_report ?? false,
-      isTotem: user.role_config?.isTotem ?? false,
-      visible_forms: user.role_config?.visible_forms,
-      hidden_forms: user.role_config?.hidden_forms,
+      sudo: (user.role_config as ExtendedRolesConfig)?.sudo ?? false,
+      admin_pages: (user.role_config as ExtendedRolesConfig)?.admin_pages ?? [],
+      can_create_form: (user.role_config as ExtendedRolesConfig)?.can_create_form ?? false,
+      can_create_event: (user.role_config as ExtendedRolesConfig)?.can_create_event ?? false,
+      can_create_flyer: (user.role_config as ExtendedRolesConfig)?.can_create_flyer ?? false,
+      can_create_booking: (user.role_config as ExtendedRolesConfig)?.can_create_booking ?? false,
+      can_locate_cars: (user.role_config as ExtendedRolesConfig)?.can_locate_cars ?? false,
+      can_view_dre_report: (user.role_config as ExtendedRolesConfig)?.can_view_dre_report ?? false,
+      can_manage_extensions: (user.role_config as ExtendedRolesConfig)?.can_manage_extensions ?? false,
+      isTotem: (user.role_config as ExtendedRolesConfig)?.isTotem ?? false,
+      visible_forms: (user.role_config as ExtendedRolesConfig)?.visible_forms,
+      hidden_forms: (user.role_config as ExtendedRolesConfig)?.hidden_forms,
     }
   )
   const [adminRoutesData, setAdminRoutesData] = useState<string[]>(
-    user.role_config?.admin_pages || []
+    (user.role_config as ExtendedRolesConfig)?.admin_pages || []
   )
 
   // Sincronizar adminRoutesData com permissionsData.admin_pages
@@ -311,6 +315,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_create_booking: permissionsData.can_create_booking ?? false,
         can_locate_cars: permissionsData.can_locate_cars ?? false,
         can_view_dre_report: permissionsData.can_view_dre_report ?? false,
+        can_manage_extensions: permissionsData.can_manage_extensions ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
@@ -470,6 +475,18 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>
+                    <Label htmlFor="extension">Ramal</Label>
+                    <Input
+                      id="extension"
+                      type="number"
+                      min="0"
+                      max="99999"
+                      value={basicData.extension}
+                      onChange={(e) => setBasicData({ ...basicData, extension: parseInt(e.target.value) || 0 })}
+                      placeholder="Digite o ramal"
+                    />
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsEditingBasic(false)}>
@@ -496,6 +513,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   <div>
                     <Label className="text-sm font-medium">Setor</Label>
                     <p className="text-sm text-muted-foreground">{getSetorLabel(user.setor)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Ramal</Label>
+                    <p className="text-sm text-muted-foreground">{user.extension && user.extension > 0 ? user.extension : 'Não definido'}</p>
                   </div>
                 </div>
                 <Button onClick={() => setIsEditingBasic(true)} size="sm">
@@ -680,6 +701,23 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                             (concede acesso automático ao painel admin e alimentos)
                           </span>
                         </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="manage_extensions"
+                            checked={permissionsData.can_manage_extensions}
+                            onCheckedChange={(checked) => {
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_manage_extensions: checked === true
+                              });
+                            }}
+                          />
+                          <Label htmlFor="manage_extensions">Alterar ramal de usuários</Label>
+                          <span className="text-xs text-muted-foreground">
+                            (permite editar ramais de outros usuários)
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -729,12 +767,16 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       {permissionsData.can_view_dre_report && (
                         <Badge variant="secondary">Visualizar DRE</Badge>
                       )}
+                      {permissionsData.can_manage_extensions && (
+                        <Badge variant="secondary">Alterar Ramais</Badge>
+                      )}
                       {!permissionsData.can_create_form &&
                        !permissionsData.can_create_event &&
                        !permissionsData.can_create_flyer &&
                        !permissionsData.can_create_booking &&
                        !permissionsData.can_locate_cars &&
-                       !permissionsData.can_view_dre_report && (
+                       !permissionsData.can_view_dre_report &&
+                       !permissionsData.can_manage_extensions && (
                         <span className="text-sm text-muted-foreground">Apenas visualização</span>
                       )}
                     </div>
@@ -833,7 +875,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       variant="outline" 
                       onClick={() => {
                         setIsEditingAdminRoutes(false)
-                        setAdminRoutesData(user.role_config?.admin_pages || [])
+                        setAdminRoutesData((user.role_config as ExtendedRolesConfig)?.admin_pages || [])
                       }}
                     >
                       <X className="h-4 w-4 mr-2" />
@@ -912,9 +954,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
 
                 <div className="space-y-3">
                   {allForms.map((form) => {
-                    const isHidden = user.role_config?.hidden_forms?.includes(form.id) ?? false
-                    const isInVisibleList = user.role_config?.visible_forms?.includes(form.id) ?? false
-                    const hasRestrictiveList = (user.role_config?.visible_forms?.length ?? 0) > 0
+                    const isHidden = (user.role_config as ExtendedRolesConfig)?.hidden_forms?.includes(form.id) ?? false
+                    const isInVisibleList = (user.role_config as ExtendedRolesConfig)?.visible_forms?.includes(form.id) ?? false
+                    const hasRestrictiveList = ((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0
 
                     let status = "Visível"
                     if (isHidden) {
@@ -956,21 +998,21 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   })}
                 </div>
 
-                {(user.role_config?.hidden_forms?.length ?? 0) > 0 && (
+                {((user.role_config as ExtendedRolesConfig)?.hidden_forms?.length ?? 0) > 0 && (
                   <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
                     <div className="text-sm font-medium text-red-800">
-                      Formulários Ocultos: {user.role_config?.hidden_forms?.length}
+                      Formulários Ocultos: {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length}
                     </div>
                     <div className="text-xs text-red-600">
-                      Este usuário não pode ver {user.role_config?.hidden_forms?.length} formulário(s)
+                      Este usuário não pode ver {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length} formulário(s)
                     </div>
                   </div>
                 )}
 
-                {(user.role_config?.visible_forms?.length ?? 0) > 0 && (
+                {((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="text-sm font-medium text-blue-800">
-                      Lista Restritiva Ativa: {user.role_config?.visible_forms?.length} formulário(s)
+                      Lista Restritiva Ativa: {(user.role_config as ExtendedRolesConfig)?.visible_forms?.length} formulário(s)
                     </div>
                     <div className="text-xs text-blue-600">
                       Este usuário só pode ver formulários específicos da lista

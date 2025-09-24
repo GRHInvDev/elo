@@ -16,6 +16,7 @@ export type RolesConfig = {
 
   // Permissões específicas de administração
   can_view_dre_report: boolean; // Pode visualizar relatório DRE (Demonstrativo de Resultados do Exercício)
+  can_manage_extensions: boolean; // Pode alterar ramais de usuários
 
   isTotem?: boolean; // Para usuários TOTEM (acesso limitado)
 }
