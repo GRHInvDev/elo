@@ -653,6 +653,10 @@ model chat_message {
     roomId    String   @default("global") // Mantém compatibilidade com chat global
     groupId   String?  // Referência ao grupo (null para chat global)
     imageUrl  String?  // URL da imagem anexada à mensagem
+    fileUrl   String?  // URL do arquivo anexado à mensagem
+    fileName  String?  // Nome original do arquivo
+    fileSize  Int?     // Tamanho do arquivo em bytes
+    fileType  String?  // Tipo MIME do arquivo
 
     // Relacionamentos
     user      User         @relation("ChatMessageUser", fields: [userId], references: [id], onDelete: Cascade)

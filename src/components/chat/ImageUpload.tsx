@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useUploadThing } from "@/components/uploadthing"
 import { type ClientUploadedFileData } from "uploadthing/types"
-import { ImageIcon, Loader2, X } from "lucide-react"
+import { ImageIcon, Loader2, X, FileIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ImageUploadProps {

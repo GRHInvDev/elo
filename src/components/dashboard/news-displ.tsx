@@ -68,7 +68,7 @@ export function NewsDisplay({ className }: { className?: string }) {
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum post publicado ainda.</p>
               ) : (
                 <div className="space-y-4">
-                  {postsWithRoleConfig?.map((post) => (
+                  {postsWithRoleConfig?.slice(0, 3).map((post) => (
                     <PostItem key={post.id} post={post} />
                   ))}
                 </div>

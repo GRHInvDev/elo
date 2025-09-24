@@ -9,9 +9,14 @@ const getMessagesSchema = z.object({
 })
 
 const sendMessageSchema = z.object({
-  content: z.string().min(1, "Mensagem não pode estar vazia").max(2000, "Mensagem muito longa"),
+  content: z.string().max(2000, "Mensagem muito longa"),
   roomId: z.string().default("global"),
+  fileUrl: z.string().optional(),
+  fileName: z.string().optional(),
+  fileSize: z.number().optional(),
+  fileType: z.string().optional(),
 })
+
 
 export const chatMessageRouter = createTRPCRouter({
   // Buscar mensagens de uma sala com paginação
@@ -81,7 +86,7 @@ export const chatMessageRouter = createTRPCRouter({
   sendMessage: protectedProcedure
     .input(sendMessageSchema)
     .mutation(async ({ ctx, input }) => {
-      const { content, roomId } = input
+      const { content, roomId, fileUrl, fileName, fileSize, fileType } = input
       const userId = ctx.auth.userId
 
       const message = await ctx.db.chat_message.create({
@@ -89,6 +94,10 @@ export const chatMessageRouter = createTRPCRouter({
           content,
           userId,
           roomId,
+          fileUrl,
+          fileName,
+          fileSize,
+          fileType,
         },
         include: {
           user: {
@@ -463,4 +472,5 @@ export const chatMessageRouter = createTRPCRouter({
         lastMessage,
       }
     }),
+
 })

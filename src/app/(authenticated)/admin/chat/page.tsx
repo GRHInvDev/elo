@@ -21,6 +21,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 export default function ChatManagementPage() {
   const { hasAdminAccess, isLoading, isSudo } = useAccessControl()
 
+  const hasChatManagementAccess = isSudo || hasAdminAccess("/admin/chat")
+
+  // Buscar estatísticas do chat (sempre chamado para manter ordem dos hooks)
+  const { data: chatStats } = api.chatMessage.getGlobalStats.useQuery(undefined, {
+    enabled: hasChatManagementAccess && !isLoading
+  })
+
   // Verificar acesso à página
   if (isLoading) {
     return (
@@ -34,13 +41,6 @@ export default function ChatManagementPage() {
       </DashboardShell>
     )
   }
-
-  const hasChatManagementAccess = isSudo || hasAdminAccess("/admin/chat")
-
-  // Buscar estatísticas do chat
-  const { data: chatStats } = api.chatMessage.getGlobalStats.useQuery(undefined, {
-    enabled: hasChatManagementAccess
-  })
 
   if (!hasChatManagementAccess) {
     return (
