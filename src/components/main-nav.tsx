@@ -61,7 +61,7 @@ export function Sidebar({ className, collapsed = false }: SidebarProps) {
 
       {/* Settings Menu */}
       <div className="p-4">
-        <SettingsMenu />
+        <SettingsMenu size={collapsed ? "small" : undefined} />
       </div>
     </div>
   )
