@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { Phone, Users, Edit3, Save, X, Shield } from "lucide-react"
+import { RolesConfig } from "@/types/role-config"
 
 export default function ExtensionManagementPage() {
   const [editingUser, setEditingUser] = useState<string | null>(null)
@@ -23,7 +24,7 @@ export default function ExtensionManagementPage() {
 
   // Verificar permissão - só sudo ou quem tem permissão específica pode gerenciar ramais
   const currentUser = api.user.me.useQuery().data
-  const canManageExtensions = isSudo || (currentUser?.role_config as any)?.can_manage_extensions
+  const canManageExtensions = isSudo || ((currentUser?.role_config as { can_manage_extensions?: boolean })?.can_manage_extensions ?? false)
 
   // Transformar dados agrupados em array para renderização
   const sectorsList = useMemo(() => {
@@ -48,7 +49,7 @@ export default function ExtensionManagementPage() {
       })
       setEditingUser(null)
       setEditingExtension("")
-      refetch()
+      void refetch()
     },
     onError: (error) => {
       toast({
@@ -61,7 +62,7 @@ export default function ExtensionManagementPage() {
 
   const handleEditExtension = (userId: string, currentExtension: number) => {
     setEditingUser(userId)
-    setEditingExtension(currentExtension?.toString() || "")
+    setEditingExtension(currentExtension?.toString() ?? "")
   }
 
   const handleSaveExtension = (userId: string) => {
@@ -160,7 +161,7 @@ export default function ExtensionManagementPage() {
         {/* Lista de setores */}
         {isLoading ? (
           <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
+            {Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <CardHeader>
                   <div className="h-6 bg-muted rounded w-1/4"></div>
@@ -168,7 +169,7 @@ export default function ExtensionManagementPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {[...Array(4)].map((_, j) => (
+                    {Array.from({ length: 4 }).map((_, j) => (
                       <div key={j} className="flex items-center space-x-3">
                         <div className="h-10 w-10 bg-muted rounded-full"></div>
                         <div className="space-y-1 flex-1">
@@ -214,8 +215,8 @@ export default function ExtensionManagementPage() {
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={undefined} alt={`${user.firstName} ${user.lastName}`} />
                             <AvatarFallback>
-                              {user.firstName?.charAt(0) || ''}
-                              {user.lastName?.charAt(0) || ''}
+                              {user.firstName?.charAt(0) ?? ''}
+                              {user.lastName?.charAt(0) ?? ''}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -280,7 +281,7 @@ export default function ExtensionManagementPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleEditExtension(user.id, user.extension || 0)}
+                                onClick={() => handleEditExtension(user.id, user.extension as number)}
                                 className="h-8 w-8 p-0"
                               >
                                 <Edit3 className="h-4 w-4" />

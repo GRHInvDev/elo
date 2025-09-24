@@ -32,7 +32,7 @@ export default function ExtensionManagementPage() {
     return Object.entries(extensionsBySector).map(([sector, users]) => ({
       sector,
       users: (users as Array<{ id: string; email: string; firstName: string | null; lastName: string | null; setor: string | null; extension: number | null }>) ?? [],
-      totalUsers: users?.length ?? 0,
+      totalUsers: users?.length,
     }))
   }, [extensionsBySector])
 
