@@ -34,6 +34,7 @@ export const userRouter = createTRPCRouter({
         can_create_booking: false,
         can_locate_cars: false,
         can_view_dre_report: false,
+        can_manage_extensions: false,
         isTotem: false
       };
 
@@ -73,6 +74,7 @@ export const userRouter = createTRPCRouter({
         can_create_booking: false,
         can_locate_cars: false,
         can_view_dre_report: false,
+        can_manage_extensions: false,
         isTotem: true // Modo seguro - assumir que é Totem
       };
 
@@ -286,6 +288,7 @@ export const userRouter = createTRPCRouter({
           imageUrl: true,
           enterprise: true,
           setor: true,
+          extension: true,
           role_config: true,
         },
         orderBy: {
@@ -351,6 +354,7 @@ export const userRouter = createTRPCRouter({
         can_create_booking: z.boolean(),
         can_locate_cars: z.boolean(),
         can_view_dre_report: z.boolean(),
+        can_manage_extensions: z.boolean(),
         isTotem: z.boolean().optional(),
         visible_forms: z.array(z.string()).optional(),
         hidden_forms: z.array(z.string()).optional(),
@@ -386,6 +390,7 @@ export const userRouter = createTRPCRouter({
       lastName: z.string().optional(),
       email: z.string().email().optional(),
       setor: z.string().optional(),
+      extension: z.number().min(0).max(99999).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário é sudo
@@ -407,6 +412,92 @@ export const userRouter = createTRPCRouter({
       return ctx.db.user.update({
         where: { id: userId },
         data: updateData,
+      })
+    }),
+
+  // Listar usuários por setor com ramais para visualização pública
+  listExtensions: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Buscar usuários excluindo TOTEMs e ordenados por setor, nome
+      const users = await ctx.db.user.findMany({
+        where: {
+          role_config: {
+            path: ['isTotem'],
+            equals: false,
+          },
+          // Excluir usuários do setor "Sistema"
+          setor: {
+            not: 'Sistema'
+          }
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          setor: true,
+          extension: true,
+        },
+        orderBy: [
+          { setor: 'asc' },
+          { firstName: 'asc' },
+          { lastName: 'asc' },
+        ],
+      })
+
+      // Agrupar por setor
+      const groupedBySector = users.reduce((acc, user) => {
+        const sector = user.setor ?? 'Não informado'
+        acc[sector] ??= []
+        acc[sector]?.push(user)
+        return acc
+      }, {} as Record<string, typeof users>)
+
+      return groupedBySector
+    }),
+
+  // Atualizar ramal de usuário (requer permissão específica)
+  updateExtension: protectedProcedure
+    .input(z.object({
+      userId: z.string(),
+      extension: z.number().min(0).max(99999), // Ramal deve ser positivo e razoável
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verificar se o usuário atual tem permissão para gerenciar ramais
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = currentUser?.role_config as RolesConfig | null
+
+      // Só sudo ou quem tem permissão específica pode alterar ramais
+      if (!roleConfig?.sudo && !roleConfig?.can_manage_extensions) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para alterar ramais de usuários",
+        })
+      }
+
+      // Não permitir alterar o próprio ramal (para evitar conflitos)
+      if (input.userId === ctx.auth.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não pode alterar seu próprio ramal",
+        })
+      }
+
+      return ctx.db.user.update({
+        where: { id: input.userId },
+        data: { extension: input.extension },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          extension: true,
+          setor: true,
+        },
       })
     }),
 })

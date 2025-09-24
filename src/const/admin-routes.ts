@@ -1,4 +1,4 @@
-import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, MessageSquare } from "lucide-react"
+import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, MessageSquare, Phone } from "lucide-react"
 
 export interface AdminRoute {
   id: string
