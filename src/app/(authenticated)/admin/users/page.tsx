@@ -485,7 +485,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       id="extension"
                       type="number"
                       min="0"
-                      max="99999"
+                      max="99999999999"
                       value={basicData.extension}
                       onChange={(e) => setBasicData({ ...basicData, extension: parseInt(e.target.value) || 0 })}
                       placeholder="Digite o ramal"

@@ -678,7 +678,7 @@ model CustomExtension {
   id          String   @id @default(cuid())
   name        String   // Nome do contato/ramal personalizado
   email       String?  // Email opcional
-  extension   Int      @unique // Número do ramal (único)
+  extension   Int      // Número do ramal/telefone
   description String?  // Descrição opcional
   setor       String?  // Setor do contato (opcional)
   createdById String   // ID do usuário que criou

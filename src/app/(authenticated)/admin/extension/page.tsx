@@ -381,7 +381,7 @@ export default function ExtensionManagementPage() {
                                   id={`extension-${user.id}`}
                                   type="number"
                                   min="0"
-                                  max="99999"
+                                  max="99999999999"
                                   value={editingExtension}
                                   onChange={(e) => setEditingExtension(e.target.value)}
                                   className="w-20 h-8 text-sm"
@@ -623,7 +623,7 @@ export default function ExtensionManagementPage() {
                                   id="edit-custom-extension"
                                   type="number"
                                   min="1"
-                                  max="99999"
+                                  max="99999999999"
                                   value={customExtensionForm.extension}
                                   onChange={(e) => setCustomExtensionForm({ ...customExtensionForm, extension: e.target.value })}
                                   placeholder="1234"
