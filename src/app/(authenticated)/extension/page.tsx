@@ -7,17 +7,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { useToast } from "@/hooks/use-toast"
-import { Phone, Users, Search, ChevronDown, ChevronRight, Plus, UserPlus, ArrowUp, ArrowDown, X, Filter, Edit, Trash2 } from "lucide-react"
+import { Plus, ArrowUp, ArrowDown, X, Filter, Edit, Trash2, Users } from "lucide-react"
 import type { CustomExtension } from "@prisma/client"
 
 type CustomExtensionWithCreator = CustomExtension & {
@@ -28,8 +25,8 @@ type CustomExtensionWithCreator = CustomExtension & {
 }
 
 export default function ExtensionListPage() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [searchTerm, setSearchTerm] = useState("")
-  const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set())
 
   // Estados para filtros da tabela
   const [tableFilters, setTableFilters] = useState({
@@ -96,6 +93,7 @@ interface ListaSetores {
     totalUsers: number;
 }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: extensionsBySector, isLoading } = api.user.listExtensions.useQuery()
   const { data: customExtensions, refetch: refetchCustomExtensions } = api.user.listCustomExtensions.useQuery()
   const { toast } = useToast()
@@ -238,34 +236,6 @@ interface ListaSetores {
     return Array.from(sectors).sort()
   }, [sectorsList, customExtensions])
 
-  // Filtrar setores baseado na pesquisa
-  const filteredSectorsList = useMemo(() => {
-    if (!searchTerm.trim()) return sectorsList
-
-    const term = searchTerm.toLowerCase().trim()
-    return sectorsList
-      .map(sector => ({
-        ...sector,
-        users: sector.users.filter(user =>
-          user.firstName?.toLowerCase().includes(term) ??
-          user.lastName?.toLowerCase().includes(term) ??
-          user.email?.toLowerCase().includes(term) ??
-          user.emailExtension?.toLowerCase().includes(term) ??
-          sector.sector.toLowerCase().includes(term) ??
-          user.extension?.toString().includes(term)
-        )
-      }))
-      .filter(sector => sector.users.length > 0)
-  }, [sectorsList, searchTerm])
-
-  const totalUsers = useMemo(() => {
-    return sectorsList.reduce((total, sector) => total + sector.totalUsers, 0)
-  }, [sectorsList])
-
-  const filteredTotalUsers = useMemo(() => {
-    return filteredSectorsList.reduce((total, sector) => total + sector.totalUsers, 0)
-  }, [filteredSectorsList])
-
   // Dados combinados para a tabela (usuários + contatos manuais)
   const allContacts = useMemo(() => {
     const users: Array<{
@@ -308,7 +278,7 @@ interface ListaSetores {
           name: contact.name,
           email: contact.email,
           extension: contact.extension,
-          setor: contact.setor!, // conheço o erro, mas não afeta o push NÃO REMOVER, ALTERAR OU MEXER.
+          setor: contact.setor ?? 'Sem setor',
           type: 'Manual' as const,
         })
       })
@@ -330,7 +300,7 @@ interface ListaSetores {
         contact.extension.toString().includes(tableFilters.extensionFilter)
 
       const matchesSetor = tableFilters.setorFilter === '' ||
-        contact.setor.toLowerCase().includes(tableFilters.setorFilter.toLowerCase())
+        contact.setor?.toLowerCase().includes(tableFilters.setorFilter.toLowerCase())
 
       return matchesName && matchesEmail && matchesExtension && matchesSetor
     })
@@ -354,8 +324,8 @@ interface ListaSetores {
           bValue = b.extension.toString()
           break
         case 'setor':
-          aValue = a.setor.toLowerCase()
-          bValue = b.setor.toLowerCase()
+          aValue = (a.setor || '').toLowerCase()
+          bValue = (b.setor || '').toLowerCase()
           break
         default:
           return 0
@@ -368,27 +338,6 @@ interface ListaSetores {
 
     return filtered
   }, [allContacts, tableFilters])
-
-  // Funções para controlar expansão/colapso
-  const toggleSector = (sectorName: string) => {
-    setExpandedSectors(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(sectorName)) {
-        newSet.delete(sectorName)
-      } else {
-        newSet.add(sectorName)
-      }
-      return newSet
-    })
-  }
-
-  const expandAll = () => {
-    setExpandedSectors(new Set(filteredSectorsList.map(s => s.sector)))
-  }
-
-  const collapseAll = () => {
-    setExpandedSectors(new Set())
-  }
 
   // Função para adicionar contato
   const handleAddContact = () => {
@@ -765,283 +714,8 @@ interface ListaSetores {
           )}
         </div>
 
-        {/* Abas para visualização */}
-        <Tabs defaultValue="cards" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="cards">Visualização por Setor</TabsTrigger>
-            <TabsTrigger value="table">Tabela Completa</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="cards" className="space-y-6">
-            {/* Campo de busca e controles */}
-            <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Buscar Ramais
-            </CardTitle>
-            <CardDescription>
-              Digite o nome, email, setor ou ramal para filtrar colaboradores
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search">Busca</Label>
-                <Input
-                  id="search"
-                  placeholder="Digite para buscar..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={expandAll} size="sm">
-                  Expandir Todos
-                </Button>
-                <Button variant="outline" onClick={collapseAll} size="sm">
-                  Recolher Todos
-                </Button>
-              </div>
-            </div>
-            {searchTerm && (
-              <div className="mt-3 text-sm text-muted-foreground">
-                {filteredTotalUsers === totalUsers
-                  ? `${totalUsers} colaborador(es) encontrado(s)`
-                  : `${filteredTotalUsers} de ${totalUsers} colaborador(es) encontrado(s)`
-                }
-              </div>
-            )}
-            </CardContent>
-          </Card>
-
-          {/* Lista de setores */}
-        {isLoading ? (
-          <div className="space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-6 bg-muted rounded w-1/4"></div>
-                  <div className="h-4 bg-muted rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Array.from({ length: 4 }).map((_, j) => (
-                      <div key={j} className="flex items-center space-x-3">
-                        <div className="h-10 w-10 bg-muted rounded-full"></div>
-                        <div className="space-y-1 flex-1">
-                          <div className="h-4 bg-muted rounded w-1/3"></div>
-                          <div className="h-3 bg-muted rounded w-1/2"></div>
-                        </div>
-                        <div className="h-6 bg-muted rounded w-16"></div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredSectorsList.length > 0 ? (
-          <div className="space-y-4">
-            {filteredSectorsList.map(({ sector, users, totalUsers: sectorTotal }) => {
-              const isExpanded = expandedSectors.has(sector)
-              return (
-                <Collapsible key={sector} open={isExpanded} onOpenChange={() => toggleSector(sector)}>
-                  <Card>
-                    <CollapsibleTrigger asChild>
-                      <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {isExpanded ? (
-                              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                            )}
-                            <div>
-                              <CardTitle className="flex items-center gap-2 text-left">
-                                <Users className="h-5 w-5" />
-                                {sector}
-                              </CardTitle>
-                              <CardDescription>
-                                {sectorTotal} colaborador{sectorTotal !== 1 ? 'es' : ''}
-                              </CardDescription>
-                            </div>
-                          </div>
-                          <Badge variant="secondary" className="text-sm">
-                            {sectorTotal}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <CardContent>
-                        <div className="grid gap-3">
-                          {users.map((user) => (
-                            <div
-                              key={user.id}
-                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage src={undefined} alt={`${user.firstName} ${user.lastName}`} />
-                                  <AvatarFallback>
-                                    {user.firstName?.charAt(0) ?? ''}
-                                    {user.lastName?.charAt(0) ?? ''}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="font-medium">
-                                    {user.firstName} {user.lastName}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {user.emailExtension ?? user.email}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="flex items-center gap-2">
-                                  {canManageExtensions() && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleEditUser(user)}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                  <Phone className="h-4 w-4 text-muted-foreground" />
-                                  <Badge variant={user.extension && user.extension > 0n ? "default" : "secondary"} className="font-mono">
-                                    {user.extension && user.extension > 0n ? user.extension : 'Não definido'}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </CollapsibleContent>
-                  </Card>
-                </Collapsible>
-              )
-            })}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Search className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                {searchTerm ? "Nenhum resultado encontrado" : "Nenhum ramal encontrado"}
-              </h3>
-              <p className="text-muted-foreground text-center">
-                {searchTerm
-                  ? "Tente ajustar os termos da busca ou limpe o filtro para ver todos os ramais."
-                  : "Ainda não há ramais configurados no sistema."
-                }
-              </p>
-              {searchTerm && (
-                <Button
-                  variant="outline"
-                  onClick={() => setSearchTerm("")}
-                  className="mt-4"
-                >
-                  Limpar busca
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-          {/* Contatos Adicionados Manualmente */}
-          <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Contatos Adicionados Manualmente
-            </CardTitle>
-            <CardDescription>
-              Contatos personalizados adicionados à lista de ramais
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {customExtensions && customExtensions.length > 0 ? (
-              <div className="grid gap-4">
-                {customExtensions
-                  .filter(customExtension =>
-                    searchTerm === "" ||
-                    customExtension.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (customExtension.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-                    customExtension.extension.toString().includes(searchTerm.toLowerCase()) ||
-                    (customExtension.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
-                  )
-                  .map((customExtension: CustomExtensionWithCreator) => (
-                    <div
-                      key={customExtension.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback>
-                            {customExtension.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{customExtension.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {customExtension.email ?? "Sem email"}
-                          </div>
-                          {customExtension.description && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {customExtension.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-2">
-                          {canManageExtensions() && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditContact(customExtension)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteContact(customExtension)}
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <Badge variant="secondary" className="font-mono">
-                            {customExtension.extension}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhum contato manual adicionado ainda.</p>
-                <p className="text-sm mt-1">Use o botão &quot;Adicionar Contato&quot; para incluir novos contatos.</p>
-              </div>
-            )}
-            </CardContent>
-          </Card>
-          </TabsContent>
-
-          {/* Aba da Tabela Completa */}
-          <TabsContent value="table" className="space-y-6">
+        {/* Visualização da Tabela Completa */}
+        <div className="space-y-6">
             {/* Controles de Filtro */}
             <Card>
               <CardHeader>
@@ -1316,8 +990,7 @@ interface ListaSetores {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </DashboardShell>
   )
