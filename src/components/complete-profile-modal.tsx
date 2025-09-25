@@ -30,6 +30,7 @@ const enterprises = [
 const setores = [
   { value: "ADMINISTRATIVO", label: "Administrativo" },
   { value: "COMERCIAL", label: "Comercial" },
+  { value: "COMERCIAL", label: "Comercial" },
   { value: "FINANCEIRO", label: "Financeiro" },
   { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
   { value: "TI", label: "Tecnologia da Informação" },

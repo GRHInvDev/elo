@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { useToast } from "@/hooks/use-toast"
-import { Phone, Users, Search, ChevronDown, ChevronRight, Plus, UserPlus, ArrowUp, ArrowDown, X, Filter } from "lucide-react"
+import { Phone, Users, Search, ChevronDown, ChevronRight, Plus, UserPlus, ArrowUp, ArrowDown, X, Filter, Edit, Trash2 } from "lucide-react"
 import type { CustomExtension } from "@prisma/client"
 
 type CustomExtensionWithCreator = CustomExtension & {
@@ -51,6 +51,21 @@ export default function ExtensionListPage() {
     setor: "",
   })
 
+  // Estados para editar contato
+  const [isEditContactOpen, setIsEditContactOpen] = useState(false)
+  const [editingContact, setEditingContact] = useState<CustomExtensionWithCreator | null>(null)
+  const [editContactForm, setEditContactForm] = useState({
+    name: "",
+    email: "",
+    extension: "",
+    description: "",
+    setor: "",
+  })
+
+  // Estados para excluir contato
+  const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false)
+  const [deletingContact, setDeletingContact] = useState<CustomExtensionWithCreator | null>(null)
+
   // Verificar permissões
   const { canManageExtensions } = useAccessControl()
 
@@ -72,7 +87,7 @@ interface ListaSetores {
   const { data: customExtensions, refetch: refetchCustomExtensions } = api.user.listCustomExtensions.useQuery()
   const { toast } = useToast()
 
-  // Mutation para criar contato personalizado
+  // Mutations para gerenciar ramais
   const createCustomExtension = api.user.createCustomExtension.useMutation({
     onSuccess: (data) => {
       setIsAddContactOpen(false)
@@ -107,6 +122,52 @@ interface ListaSetores {
       })
     },
   })
+
+  const updateCustomExtension = api.user.updateCustomExtension.useMutation({
+    onSuccess: (data) => {
+      setIsEditContactOpen(false)
+      setEditingContact(null)
+      setEditContactForm({ name: "", email: "", extension: "", description: "", setor: "" })
+      void refetchCustomExtensions()
+
+      toast({
+        title: "✅ Contato atualizado com sucesso!",
+        description: `O contato "${data.name}" foi atualizado.`,
+      })
+    },
+    onError: (error) => {
+      console.error("Erro ao atualizar contato:", error)
+
+      toast({
+        title: "❌ Erro ao atualizar contato",
+        description: "Ocorreu um erro ao atualizar o contato.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const deleteCustomExtension = api.user.deleteCustomExtension.useMutation({
+    onSuccess: () => {
+      setIsDeleteContactOpen(false)
+      setDeletingContact(null)
+      void refetchCustomExtensions()
+
+      toast({
+        title: "✅ Contato removido com sucesso!",
+        description: "O contato foi removido da lista de ramais.",
+      })
+    },
+    onError: (error) => {
+      console.error("Erro ao excluir contato:", error)
+
+      toast({
+        title: "❌ Erro ao remover contato",
+        description: "Ocorreu um erro ao remover o contato.",
+        variant: "destructive",
+      })
+    },
+  })
+
 
   // Transformar dados agrupados em array para renderização
   const sectorsList: ListaSetores[] = useMemo(() => {
@@ -316,6 +377,57 @@ interface ListaSetores {
     })
   }
 
+  // Funções para editar contato
+  const handleEditContact = (contact: CustomExtensionWithCreator) => {
+    setEditingContact(contact)
+    setEditContactForm({
+      name: contact.name,
+      email: contact.email ?? "",
+      extension: contact.extension.toString(),
+      description: contact.description ?? "",
+      setor: contact.setor ?? "",
+    })
+    setIsEditContactOpen(true)
+  }
+
+  const handleSaveEditContact = () => {
+    if (!editingContact) return
+
+    let extension: bigint
+    try {
+      extension = BigInt(editContactForm.extension)
+      if (extension < 1n) {
+        console.error("Ramal deve ser um número positivo")
+        return
+      }
+    } catch {
+      console.error("Ramal deve ser um número válido")
+      return
+    }
+
+    updateCustomExtension.mutate({
+      id: editingContact.id,
+      name: editContactForm.name,
+      email: editContactForm.email || undefined,
+      extension: extension.toString(),
+      description: editContactForm.description || undefined,
+    })
+  }
+
+  // Funções para excluir contato
+  const handleDeleteContact = (contact: CustomExtensionWithCreator) => {
+    setDeletingContact(contact)
+    setIsDeleteContactOpen(true)
+  }
+
+  const handleConfirmDeleteContact = () => {
+    if (!deletingContact) return
+
+    deleteCustomExtension.mutate({
+      id: deletingContact.id,
+    })
+  }
+
   return (
     <DashboardShell>
       <div className="space-y-6">
@@ -416,6 +528,117 @@ interface ListaSetores {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
+
+          {/* Modal para editar contato */}
+          {canManageExtensions() && (
+            <Dialog open={isEditContactOpen} onOpenChange={setIsEditContactOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Editar Contato</DialogTitle>
+                  <DialogDescription>
+                    Edite as informações do contato de ramal.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-contact-name">Nome *</Label>
+                    <Input
+                      id="edit-contact-name"
+                      value={editContactForm.name}
+                      onChange={(e) => setEditContactForm({ ...editContactForm, name: e.target.value })}
+                      placeholder="Nome do contato"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-contact-email">Email (opcional)</Label>
+                    <Input
+                      id="edit-contact-email"
+                      type="email"
+                      value={editContactForm.email}
+                      onChange={(e) => setEditContactForm({ ...editContactForm, email: e.target.value })}
+                      placeholder="email@exemplo.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-contact-extension">Ramal/Telefone *</Label>
+                    <Input
+                      id="edit-contact-extension"
+                      type="number"
+                      min="1"
+                      max="99999999999"
+                      value={editContactForm.extension}
+                      onChange={(e) => setEditContactForm({ ...editContactForm, extension: e.target.value })}
+                      placeholder="1234 ou 11987654321"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-contact-description">Descrição (opcional)</Label>
+                    <Textarea
+                      id="edit-contact-description"
+                      value={editContactForm.description}
+                      onChange={(e) => setEditContactForm({ ...editContactForm, description: e.target.value })}
+                      placeholder="Descrição ou observações"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsEditContactOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSaveEditContact}
+                    disabled={updateCustomExtension.isPending || !editContactForm.name.trim() || !editContactForm.extension.trim()}
+                  >
+                    {updateCustomExtension.isPending ? "Salvando..." : "Salvar Alterações"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Modal para confirmar exclusão */}
+          {canManageExtensions() && (
+            <Dialog open={isDeleteContactOpen} onOpenChange={setIsDeleteContactOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirmar Exclusão</DialogTitle>
+                  <DialogDescription>
+                    Tem certeza que deseja remover este contato da lista de ramais? Esta ação não pode ser desfeita.
+                  </DialogDescription>
+                </DialogHeader>
+                {deletingContact && (
+                  <div className="py-4">
+                    <div className="flex items-center space-x-3 p-3 border rounded-lg bg-muted/50">
+                      <div className="flex-1">
+                        <div className="font-medium">{deletingContact.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Ramal: {deletingContact.extension}
+                        </div>
+                        {deletingContact.email && (
+                          <div className="text-sm text-muted-foreground">
+                            Email: {deletingContact.email}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDeleteContactOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleConfirmDeleteContact}
+                    disabled={deleteCustomExtension.isPending}
+                  >
+                    {deleteCustomExtension.isPending ? "Removendo..." : "Confirmar Exclusão"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
 
@@ -644,6 +867,26 @@ interface ListaSetores {
                       </div>
                       <div className="text-right">
                         <div className="flex items-center gap-2">
+                          {canManageExtensions() && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditContact(customExtension)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteContact(customExtension)}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           <Badge variant="secondary" className="font-mono">
                             {customExtension.extension}
