@@ -54,12 +54,25 @@ export default function ExtensionListPage() {
   // Estados para editar contato
   const [isEditContactOpen, setIsEditContactOpen] = useState(false)
   const [editingContact, setEditingContact] = useState<CustomExtensionWithCreator | null>(null)
+  const [editingUser, setEditingUser] = useState<{
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    extension: bigint | null;
+    emailExtension: string | null;
+    setor: string;
+  } | null>(null)
   const [editContactForm, setEditContactForm] = useState({
     name: "",
     email: "",
     extension: "",
     description: "",
     setor: "",
+  })
+  const [editUserForm, setEditUserForm] = useState({
+    extension: "",
+    emailExtension: "",
   })
 
   // Estados para excluir contato
@@ -141,6 +154,29 @@ interface ListaSetores {
       toast({
         title: "❌ Erro ao atualizar contato",
         description: "Ocorreu um erro ao atualizar o contato.",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const updateExtension = api.user.updateExtension.useMutation({
+    onSuccess: (data) => {
+      setIsEditContactOpen(false)
+      setEditingUser(null)
+      setEditUserForm({ extension: "", emailExtension: "" })
+      void refetchCustomExtensions()
+
+      toast({
+        title: "✅ Ramal atualizado com sucesso!",
+        description: `O ramal de ${data.firstName} ${data.lastName} foi atualizado.`,
+      })
+    },
+    onError: (error) => {
+      console.error("Erro ao atualizar ramal:", error)
+
+      toast({
+        title: "❌ Erro ao atualizar ramal",
+        description: "Ocorreu um erro ao atualizar o ramal.",
         variant: "destructive",
       })
     },
@@ -377,9 +413,10 @@ interface ListaSetores {
     })
   }
 
-  // Funções para editar contato
+  // Funções para editar contato/usuário
   const handleEditContact = (contact: CustomExtensionWithCreator) => {
     setEditingContact(contact)
+    setEditingUser(null)
     setEditContactForm({
       name: contact.name,
       email: contact.email ?? "",
@@ -390,28 +427,67 @@ interface ListaSetores {
     setIsEditContactOpen(true)
   }
 
-  const handleSaveEditContact = () => {
-    if (!editingContact) return
+  const handleEditUser = (user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    extension: bigint | null;
+    emailExtension: string | null;
+    setor: string;
+  }) => {
+    setEditingUser(user)
+    setEditingContact(null)
+    setEditUserForm({
+      extension: user.extension?.toString() ?? "",
+      emailExtension: user.emailExtension ?? "",
+    })
+    setIsEditContactOpen(true)
+  }
 
-    let extension: bigint
-    try {
-      extension = BigInt(editContactForm.extension)
-      if (extension < 1n) {
-        console.error("Ramal deve ser um número positivo")
+  const handleSaveEditContact = () => {
+    if (editingContact) {
+      // Editando contato manual
+      let extension: bigint
+      try {
+        extension = BigInt(editContactForm.extension)
+        if (extension < 1n) {
+          console.error("Ramal deve ser um número positivo")
+          return
+        }
+      } catch {
+        console.error("Ramal deve ser um número válido")
         return
       }
-    } catch {
-      console.error("Ramal deve ser um número válido")
-      return
-    }
 
-    updateCustomExtension.mutate({
-      id: editingContact.id,
-      name: editContactForm.name,
-      email: editContactForm.email || undefined,
-      extension: extension.toString(),
-      description: editContactForm.description || undefined,
-    })
+      updateCustomExtension.mutate({
+        id: editingContact.id,
+        name: editContactForm.name,
+        email: editContactForm.email || undefined,
+        extension: extension.toString(),
+        description: editContactForm.description || undefined,
+      })
+    } else if (editingUser) {
+      // Editando usuário
+      let extension: bigint | undefined
+      if (editUserForm.extension.trim()) {
+        try {
+          extension = BigInt(editUserForm.extension)
+          if (extension < 0n) {
+            console.error("Ramal deve ser um número positivo ou zero")
+            return
+          }
+        } catch {
+          console.error("Ramal deve ser um número válido")
+          return
+        }
+      }
+
+      updateExtension.mutate({
+        userId: editingUser.id,
+        extension: extension?.toString() ?? "0",
+      })
+    }
   }
 
   // Funções para excluir contato
@@ -535,53 +611,100 @@ interface ListaSetores {
             <Dialog open={isEditContactOpen} onOpenChange={setIsEditContactOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Editar Contato</DialogTitle>
+                  <DialogTitle>
+                    {editingContact ? "Editar Contato Manual" : "Editar Ramal do Usuário"}
+                  </DialogTitle>
                   <DialogDescription>
-                    Edite as informações do contato de ramal.
+                    {editingContact
+                      ? "Edite as informações do contato de ramal."
+                      : "Edite o ramal e email personalizado do usuário."
+                    }
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit-contact-name">Nome *</Label>
-                    <Input
-                      id="edit-contact-name"
-                      value={editContactForm.name}
-                      onChange={(e) => setEditContactForm({ ...editContactForm, name: e.target.value })}
-                      placeholder="Nome do contato"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-contact-email">Email (opcional)</Label>
-                    <Input
-                      id="edit-contact-email"
-                      type="email"
-                      value={editContactForm.email}
-                      onChange={(e) => setEditContactForm({ ...editContactForm, email: e.target.value })}
-                      placeholder="email@exemplo.com"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-contact-extension">Ramal/Telefone *</Label>
-                    <Input
-                      id="edit-contact-extension"
-                      type="number"
-                      min="1"
-                      max="99999999999"
-                      value={editContactForm.extension}
-                      onChange={(e) => setEditContactForm({ ...editContactForm, extension: e.target.value })}
-                      placeholder="1234 ou 11987654321"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-contact-description">Descrição (opcional)</Label>
-                    <Textarea
-                      id="edit-contact-description"
-                      value={editContactForm.description}
-                      onChange={(e) => setEditContactForm({ ...editContactForm, description: e.target.value })}
-                      placeholder="Descrição ou observações"
-                      rows={3}
-                    />
-                  </div>
+                  {editingContact ? (
+                    // Formulário para contato manual
+                    <>
+                      <div>
+                        <Label htmlFor="edit-contact-name">Nome *</Label>
+                        <Input
+                          id="edit-contact-name"
+                          value={editContactForm.name}
+                          onChange={(e) => setEditContactForm({ ...editContactForm, name: e.target.value })}
+                          placeholder="Nome do contato"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-contact-email">Email (opcional)</Label>
+                        <Input
+                          id="edit-contact-email"
+                          type="email"
+                          value={editContactForm.email}
+                          onChange={(e) => setEditContactForm({ ...editContactForm, email: e.target.value })}
+                          placeholder="email@exemplo.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-contact-extension">Ramal/Telefone *</Label>
+                        <Input
+                          id="edit-contact-extension"
+                          type="number"
+                          min="1"
+                          max="99999999999"
+                          value={editContactForm.extension}
+                          onChange={(e) => setEditContactForm({ ...editContactForm, extension: e.target.value })}
+                          placeholder="1234 ou 11987654321"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-contact-description">Descrição (opcional)</Label>
+                        <Textarea
+                          id="edit-contact-description"
+                          value={editContactForm.description}
+                          onChange={(e) => setEditContactForm({ ...editContactForm, description: e.target.value })}
+                          placeholder="Descrição ou observações"
+                          rows={3}
+                        />
+                      </div>
+                    </>
+                  ) : editingUser ? (
+                    // Formulário para usuário
+                    <>
+                      <div className="p-3 bg-muted rounded-lg">
+                        <div className="font-medium">
+                          {editingUser.firstName} {editingUser.lastName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {editingUser.email}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Setor: {editingUser.setor}
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-user-extension">Ramal/Telefone</Label>
+                        <Input
+                          id="edit-user-extension"
+                          type="number"
+                          min="0"
+                          max="99999999999"
+                          value={editUserForm.extension}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, extension: e.target.value })}
+                          placeholder="Digite o ramal (deixe vazio para remover)"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-user-email">Email personalizado para ramal (opcional)</Label>
+                        <Input
+                          id="edit-user-email"
+                          type="email"
+                          value={editUserForm.emailExtension}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, emailExtension: e.target.value })}
+                          placeholder="email@exemplo.com"
+                        />
+                      </div>
+                    </>
+                  ) : null}
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsEditContactOpen(false)}>
@@ -589,9 +712,9 @@ interface ListaSetores {
                   </Button>
                   <Button
                     onClick={handleSaveEditContact}
-                    disabled={updateCustomExtension.isPending || !editContactForm.name.trim() || !editContactForm.extension.trim()}
+                    disabled={updateCustomExtension.isPending || updateExtension.isPending}
                   >
-                    {updateCustomExtension.isPending ? "Salvando..." : "Salvar Alterações"}
+                    {(updateCustomExtension.isPending || false) || (updateExtension.isPending || false) ? "Salvando..." : "Salvar Alterações"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -778,6 +901,16 @@ interface ListaSetores {
                               </div>
                               <div className="text-right">
                                 <div className="flex items-center gap-2">
+                                  {canManageExtensions() && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleEditUser(user)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                   <Phone className="h-4 w-4 text-muted-foreground" />
                                   <Badge variant={user.extension && user.extension > 0n ? "default" : "secondary"} className="font-mono">
                                     {user.extension && user.extension > 0n ? user.extension : 'Não definido'}
@@ -1105,7 +1238,7 @@ interface ListaSetores {
                       <TableHead>Email</TableHead>
                       <TableHead>Ramal</TableHead>
                       <TableHead>Setor</TableHead>
-                      <TableHead>Tipo</TableHead>
+                      {canManageExtensions() && <TableHead className="w-20">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1125,16 +1258,56 @@ interface ListaSetores {
                             </Badge>
                           </TableCell>
                           <TableCell>{contact.setor}</TableCell>
-                          <TableCell>
-                            <Badge variant={contact.type === 'Colaborador' ? 'outline' : 'secondary'}>
-                              {contact.type}
-                            </Badge>
-                          </TableCell>
+                          {canManageExtensions() && (
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    if (contact.type === 'Colaborador') {
+                                      // Para usuários, preciso encontrar o usuário completo
+                                      const user = sectorsList
+                                        .flatMap(sector => sector.users)
+                                        .find(u => u.id === contact.id);
+                                      if (user) {
+                                        handleEditUser(user);
+                                      }
+                                    } else {
+                                      // Para contatos manuais
+                                      const customContact = customExtensions?.find(c => c.id === contact.id);
+                                      if (customContact) {
+                                        handleEditContact(customContact);
+                                      }
+                                    }
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                {contact.type === 'Manual' && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      const customContact = customExtensions?.find(c => c.id === contact.id);
+                                      if (customContact) {
+                                        handleDeleteContact(customContact);
+                                      }
+                                    }}
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={canManageExtensions() ? 5 : 4} className="text-center py-8 text-muted-foreground">
                           Nenhum contato encontrado com os filtros aplicados.
                         </TableCell>
                       </TableRow>
