@@ -285,7 +285,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     onSuccess: () => {
       toast({
         title: "Visibilidade atualizada",
-        description: "A visibilidade dos formulários foi atualizada com sucesso.",
+        description: "A visibilidade das solicitações foi atualizada com sucesso.",
       })
       onUserUpdate()
     },
@@ -641,7 +641,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                               });
                             }}
                           />
-                          <Label htmlFor="create_form">Criar Formulários</Label>
+                          <Label htmlFor="create_form">Criar Solicitações</Label>
                         </div>
                         
                         <div className="flex items-center space-x-2">
@@ -774,7 +774,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     <Label className="text-sm font-medium">Permissões de Criação</Label>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {permissionsData.can_create_form && (
-                        <Badge variant="secondary">Criar Formulários</Badge>
+                        <Badge variant="secondary">Criar Solicitações</Badge>
                       )}
                       {permissionsData.can_create_event && (
                         <Badge variant="secondary">Criar Eventos</Badge>
@@ -955,14 +955,14 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
 
         <Separator />
 
-        {/* Seção de Visibilidade de Formulários */}
+        {/* Seção de Visibilidade de Solicitações */}
         {!permissionsData.sudo && !permissionsData.isTotem && (
           <Collapsible>
             <CollapsibleTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
                 <div className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
-                  Visibilidade de Formulários
+                  Visibilidade de Solicitações
                 </div>
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -970,9 +970,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             <CollapsibleContent className="space-y-4 mt-4">
               <div className="p-4 border rounded-lg">
                 <div className="mb-4">
-                  <Label className="text-sm font-medium">Controle de Formulários</Label>
+                  <Label className="text-sm font-medium">Controle de Solicitações</Label>
                   <p className="text-xs text-muted-foreground">
-                    Por padrão, todos os usuários podem ver todos os formulários. Use as opções abaixo para restringir acesso.
+                    Por padrão, todos os usuários podem ver todos as solicitações. Use as opções abaixo para restringir acesso.
                   </p>
                 </div>
 
@@ -1025,7 +1025,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 {((user.role_config as ExtendedRolesConfig)?.hidden_forms?.length ?? 0) > 0 && (
                   <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
                     <div className="text-sm font-medium text-red-800">
-                      Formulários Ocultos: {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length}
+                      Solicitações Ocultas: {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length}
                     </div>
                     <div className="text-xs text-red-600">
                       Este usuário não pode ver {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length} formulário(s)
@@ -1036,10 +1036,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 {((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="text-sm font-medium text-blue-800">
-                      Lista Restritiva Ativa: {(user.role_config as ExtendedRolesConfig)?.visible_forms?.length} formulário(s)
+                      Lista Restritiva Ativa: {(user.role_config as ExtendedRolesConfig)?.visible_forms?.length} solicitação(ões)
                     </div>
                     <div className="text-xs text-blue-600">
-                      Este usuário só pode ver formulários específicos da lista
+                      Este usuário só pode ver solicitações específicas da lista
                     </div>
                   </div>
                 )}

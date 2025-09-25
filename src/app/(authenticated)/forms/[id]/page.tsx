@@ -45,7 +45,7 @@ export default async function FormPage({ params }: FormPageProps) {
         <Link href="/forms">
           <Button variant="ghost" className="pl-0">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Voltar para formulários
+            Voltar para solicitações
           </Button>
         </Link>
 

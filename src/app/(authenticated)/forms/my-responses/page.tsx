@@ -8,7 +8,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 
 export const metadata = {
   title: "Minhas Respostas",
-  description: "Visualize suas respostas a formulários",
+  description: "Visualize suas respostas a solicitações",
 }
 
 export default async function MyResponsesPage() {
@@ -18,14 +18,14 @@ export default async function MyResponsesPage() {
         <Link href="/forms">
           <Button variant="ghost" className="pl-0">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Voltar para formulários
+            Voltar para solicitações
           </Button>
         </Link>
 
         <div className="mt-4">
           <h1 className="text-3xl font-bold tracking-tight">Minhas Respostas</h1>
           <p className="text-muted-foreground mt-2">
-            Visualize e acompanhe o status de todas as suas respostas a formulários.
+            Visualize e acompanhe o status de todas as suas respostas a solicitações.
           </p>
         </div>
       </div>
