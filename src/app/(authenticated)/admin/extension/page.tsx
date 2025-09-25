@@ -15,6 +15,14 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { Phone, Users, Edit3, Save, X, Shield, Plus, Trash2, Edit, UserPlus } from "lucide-react"
+import type { CustomExtension } from "@prisma/client"
+
+type CustomExtensionWithCreator = CustomExtension & {
+  createdBy: {
+    firstName: string | null
+    lastName: string | null
+  }
+}
 
 export default function ExtensionManagementPage() {
   const [editingUser, setEditingUser] = useState<string | null>(null)
@@ -22,7 +30,7 @@ export default function ExtensionManagementPage() {
 
   // Estados para ramais personalizados
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [editingCustomExtension, setEditingCustomExtension] = useState<any>(null)
+  const [editingCustomExtension, setEditingCustomExtension] = useState<CustomExtensionWithCreator | null>(null)
   const [customExtensionForm, setCustomExtensionForm] = useState({
     name: "",
     email: "",
@@ -45,7 +53,15 @@ export default function ExtensionManagementPage() {
 
     return Object.entries(extensionsBySector).map(([sector, users]) => ({
       sector,
-      users: (users as Array<{ id: string; email: string; firstName: string | null; lastName: string | null; setor: string | null; extension: number | null }>) ?? [],
+      users: (users as Array<{ 
+        id: string; 
+        email: string; 
+        firstName: string | null; 
+        lastName: string | null; 
+        setor: string; 
+        extension: number | null; 
+        emailExtension: string | null 
+      }>) ?? [],
       totalUsers: users?.length,
     }))
   }, [extensionsBySector])
@@ -170,19 +186,19 @@ export default function ExtensionManagementPage() {
 
     createCustomExtension.mutate({
       name: customExtensionForm.name,
-      email: customExtensionForm.email || "",
+      email: customExtensionForm.email ?? "",
       extension,
-      description: customExtensionForm.description || "",
+      description: customExtensionForm.description ?? "",
     })
   }
 
-  const handleEditCustomExtension = (customExtension: any) => {
+  const handleEditCustomExtension = (customExtension: CustomExtensionWithCreator) => {
     setEditingCustomExtension(customExtension)
     setCustomExtensionForm({
       name: customExtension.name,
-      email: customExtension.email || "",
+      email: customExtension.email ?? "",
       extension: customExtension.extension.toString(),
-      description: customExtension.description || "",
+      description: customExtension.description ?? "",
     })
   }
 
@@ -202,9 +218,9 @@ export default function ExtensionManagementPage() {
     updateCustomExtension.mutate({
       id: editingCustomExtension.id,
       name: customExtensionForm.name,
-      email: customExtensionForm.email || "",
+      email: customExtensionForm.email ?? "",
       extension,
-      description: customExtensionForm.description || "",
+      description: customExtensionForm.description ?? "",
     })
   }
 
@@ -350,7 +366,7 @@ export default function ExtensionManagementPage() {
                               {user.firstName} {user.lastName}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {user.email}
+                              {user.emailExtension ?? user.email}
                             </div>
                           </div>
                         </div>
@@ -522,7 +538,7 @@ export default function ExtensionManagementPage() {
           <CardContent>
             {customExtensions && customExtensions.length > 0 ? (
               <div className="space-y-3">
-                {customExtensions.map((customExtension: any) => (
+                {customExtensions.map((customExtension: CustomExtensionWithCreator) => (
                   <div
                     key={customExtension.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -535,9 +551,9 @@ export default function ExtensionManagementPage() {
                       </Avatar>
                       <div>
                         <div className="font-medium">{customExtension.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {customExtension.email || "Sem email"}
-                        </div>
+                          <div className="text-sm text-muted-foreground">
+                            {customExtension.email ?? "Sem email"}
+                          </div>
                         {customExtension.description && (
                           <div className="text-xs text-muted-foreground mt-1">
                             {customExtension.description}
@@ -554,7 +570,7 @@ export default function ExtensionManagementPage() {
                           </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          Criado por {customExtension.createdBy.firstName} {customExtension.createdBy.lastName}
+                          Criado por {customExtension.createdBy.firstName ?? ''} {customExtension.createdBy.lastName ?? ''}
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -652,7 +668,7 @@ export default function ExtensionManagementPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Remover Ramal Personalizado</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Tem certeza que deseja remover o ramal personalizado "{customExtension.name}"?
+                                Tem certeza que deseja remover o ramal personalizado &quot;{customExtension.name}&quot;?
                                 Esta ação não pode ser desfeita.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
@@ -672,11 +688,12 @@ export default function ExtensionManagementPage() {
                   </div>
                 ))}
               </div>
+              
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Nenhum ramal personalizado criado ainda.</p>
-                <p className="text-sm mt-1">Clique em "Novo Ramal" para adicionar o primeiro.</p>
+                <p className="text-sm mt-1">Clique em &quot;Novo Ramal&quot; para adicionar o primeiro.</p>
               </div>
             )}
           </CardContent>

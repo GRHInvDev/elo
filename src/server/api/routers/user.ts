@@ -20,7 +20,9 @@ export const userRouter = createTRPCRouter({
           role_config: true,
           enterprise: true,
           setor: true,
-          birthDay: true
+          birthDay: true,
+          extension: true,
+          emailExtension: true
         }
       });
 
@@ -105,6 +107,8 @@ export const userRouter = createTRPCRouter({
           imageUrl: true,
           enterprise: true,
           setor: true,
+          extension: true,
+          emailExtension: true,
         }
       })
     }),
@@ -120,6 +124,8 @@ export const userRouter = createTRPCRouter({
           firstName: true,
           lastName: true,
           imageUrl: true,
+          extension: true,
+          emailExtension: true,
         },
       });
 
@@ -142,7 +148,9 @@ export const userRouter = createTRPCRouter({
         lastName: true,
         role_config: true,
         enterprise: true,
-        setor: true
+        setor: true,
+        extension: true,
+        emailExtension: true
       }
     });
   }),
@@ -157,7 +165,9 @@ export const userRouter = createTRPCRouter({
         lastName: true,
         role_config: true,
         setor: true,
-        enterprise: true
+        enterprise: true,
+        extension: true,
+        emailExtension: true
       }
     });
 
@@ -289,6 +299,7 @@ export const userRouter = createTRPCRouter({
           enterprise: true,
           setor: true,
           extension: true,
+          emailExtension: true,
           role_config: true,
         },
         orderBy: {
@@ -334,6 +345,8 @@ export const userRouter = createTRPCRouter({
           imageUrl: true,
           enterprise: true,
           setor: true,
+          extension: true,
+          emailExtension: true,
         },
         orderBy: [
           { firstName: 'asc' },
@@ -391,6 +404,7 @@ export const userRouter = createTRPCRouter({
       email: z.string().email().optional(),
       setor: z.string().optional(),
       extension: z.number().min(0).max(99999).optional(),
+      emailExtension: z.string().email().optional().or(z.literal("")),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário é sudo
@@ -428,7 +442,12 @@ export const userRouter = createTRPCRouter({
           // Excluir usuários do setor "Sistema"
           setor: {
             not: 'Sistema'
-          }
+          },
+          // Mostrar apenas usuários com ramal configurado ou email específico do ramal
+          OR: [
+            { extension: { gt: 0 } },
+            { emailExtension: { not: null } }
+          ]
         },
         select: {
           id: true,
@@ -437,6 +456,7 @@ export const userRouter = createTRPCRouter({
           lastName: true,
           setor: true,
           extension: true,
+          emailExtension: true,
         },
         orderBy: [
           { setor: 'asc' },
@@ -528,6 +548,7 @@ export const userRouter = createTRPCRouter({
       email: z.string().email().optional().or(z.literal("")),
       extension: z.number().min(1).max(99999),
       description: z.string().optional(),
+      setor: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário atual tem permissão para gerenciar ramais
@@ -576,6 +597,7 @@ export const userRouter = createTRPCRouter({
           email: input.email ?? null,
           extension: input.extension,
           description: input.description ?? null,
+          setor: input.setor ?? null,
           createdById: ctx.auth.userId,
         },
         include: {
