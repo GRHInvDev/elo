@@ -403,7 +403,7 @@ export const userRouter = createTRPCRouter({
       lastName: z.string().optional(),
       email: z.string().email().optional(),
       setor: z.string().optional(),
-      extension: z.number().min(0).max(99999999999).optional(),
+      extension: z.string().transform(val => BigInt(val)).optional(),
       emailExtension: z.string().email().optional().or(z.literal("")),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -480,7 +480,7 @@ export const userRouter = createTRPCRouter({
   updateExtension: protectedProcedure
     .input(z.object({
       userId: z.string(),
-      extension: z.number().min(0).max(99999999999), // Ramal/telefone deve ser positivo
+      extension: z.string().transform(val => BigInt(val)), // Ramal/telefone deve ser positivo
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário atual tem permissão para gerenciar ramais
@@ -546,7 +546,7 @@ export const userRouter = createTRPCRouter({
     .input(z.object({
       name: z.string().min(1, "Nome é obrigatório"),
       email: z.string().email().optional().or(z.literal("")),
-      extension: z.number().min(1).max(99999999999),
+      extension: z.string().transform(val => BigInt(val)),
       description: z.string().optional(),
       setor: z.string().optional(),
     }))
@@ -593,7 +593,7 @@ export const userRouter = createTRPCRouter({
       id: z.string(),
       name: z.string().min(1, "Nome é obrigatório"),
       email: z.string().email().optional().or(z.literal("")),
-      extension: z.number().min(1).max(99999999999),
+      extension: z.string().transform(val => BigInt(val)),
       description: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

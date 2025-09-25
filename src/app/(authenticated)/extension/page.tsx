@@ -62,7 +62,7 @@ interface ListaSetores {
         firstName: string | null;
         lastName: string | null;
         setor: string;
-        extension: number | null;
+        extension: bigint | null;
         emailExtension: string | null;
     }[];
     totalUsers: number;
@@ -120,7 +120,7 @@ interface ListaSetores {
         firstName: string | null; 
         lastName: string | null; 
         setor: string; 
-        extension: number | null; 
+        extension: bigint | null; 
         emailExtension: string | null 
     }>) ?? [],
       totalUsers: users?.length ?? 0,
@@ -175,7 +175,7 @@ interface ListaSetores {
       id: string
       name: string
       email: string | null
-      extension: number
+      extension: bigint
       setor: string
       type: 'Colaborador'
     }> = []
@@ -184,7 +184,7 @@ interface ListaSetores {
       id: string
       name: string
       email: string | null
-      extension: number
+      extension: bigint
       setor: string
       type: 'Manual'
     }> = []
@@ -196,7 +196,7 @@ interface ListaSetores {
           id: user.id,
           name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'Nome não informado',
           email: user.emailExtension ?? user.email,
-          extension: user.extension ?? 0,
+          extension: user.extension ?? 0n,
           setor: user.setor,
           type: 'Colaborador' as const,
         })
@@ -211,7 +211,7 @@ interface ListaSetores {
           name: contact.name,
           email: contact.email,
           extension: contact.extension,
-          setor: contact.setor!,
+          setor: contact.setor!, // conheço o erro, mas não afeta o push NÃO REMOVER, ALTERAR OU MEXER.
           type: 'Manual' as const,
         })
       })
@@ -253,8 +253,8 @@ interface ListaSetores {
           bValue = (b.email ?? '').toLowerCase()
           break
         case 'extension':
-          aValue = a.extension
-          bValue = b.extension
+          aValue = a.extension.toString()
+          bValue = b.extension.toString()
           break
         case 'setor':
           aValue = a.setor.toLowerCase()
@@ -295,16 +295,22 @@ interface ListaSetores {
 
   // Função para adicionar contato
   const handleAddContact = () => {
-    const extension = parseInt(contactForm.extension)
-    if (isNaN(extension) || extension < 1) {
-      console.error("Ramal deve ser um número positivo")
+    let extension: bigint
+    try {
+      extension = BigInt(contactForm.extension)
+      if (extension < 1n) {
+        console.error("Ramal deve ser um número positivo")
+        return
+      }
+    } catch {
+      console.error("Ramal deve ser um número válido")
       return
     }
 
     createCustomExtension.mutate({
       name: contactForm.name,
       email: contactForm.email || undefined,
-      extension,
+      extension: extension.toString(),
       description: contactForm.description || undefined,
       setor: contactForm.setor || undefined,
     })
@@ -550,8 +556,8 @@ interface ListaSetores {
                               <div className="text-right">
                                 <div className="flex items-center gap-2">
                                   <Phone className="h-4 w-4 text-muted-foreground" />
-                                  <Badge variant={user.extension && user.extension > 0 ? "default" : "secondary"} className="font-mono">
-                                    {user.extension && user.extension > 0 ? user.extension : 'Não definido'}
+                                  <Badge variant={user.extension && user.extension > 0n ? "default" : "secondary"} className="font-mono">
+                                    {user.extension && user.extension > 0n ? user.extension : 'Não definido'}
                                   </Badge>
                                 </div>
                               </div>
