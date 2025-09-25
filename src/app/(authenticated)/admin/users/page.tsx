@@ -190,6 +190,7 @@ interface UserManagementCardProps {
     setor: string | null
     extension: number | null
     role_config: RolesConfig
+    emailExtension: string | null
   }
   allForms: { id: string; title: string }[]
   onUserUpdate: () => void
@@ -212,6 +213,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     email: user.email,
     setor: user.setor ?? "none",
     extension: user.extension ?? 0,
+    emailExtension: user.emailExtension ?? "",
   })
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
     {
@@ -300,6 +302,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     updateBasicInfo.mutate({
       userId: user.id,
       ...basicData,
+      setor: basicData.setor === "none" ? "" : basicData.setor,
+      emailExtension: basicData.emailExtension || "",
     })
   }
 
@@ -487,6 +491,19 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       placeholder="Digite o ramal"
                     />
                   </div>
+                  <div>
+                    <Label htmlFor="emailExtension">Email para Ramal (opcional)</Label>
+                    <Input
+                      id="emailExtension"
+                      type="email"
+                      value={basicData.emailExtension}
+                      onChange={(e) => setBasicData({ ...basicData, emailExtension: e.target.value })}
+                      placeholder="email@exemplo.com"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Email personalizado exibido na lista de ramais (deixe vazio para usar o email padrão)
+                    </p>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsEditingBasic(false)}>
@@ -517,6 +534,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   <div>
                     <Label className="text-sm font-medium">Ramal</Label>
                     <p className="text-sm text-muted-foreground">{user.extension && user.extension > 0 ? user.extension : 'Não definido'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Email para Ramal</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {user.emailExtension ?? 'Usa email padrão'}
+                    </p>
                   </div>
                 </div>
                 <Button onClick={() => setIsEditingBasic(true)} size="sm">

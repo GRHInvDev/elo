@@ -20,7 +20,9 @@ export const userRouter = createTRPCRouter({
           role_config: true,
           enterprise: true,
           setor: true,
-          birthDay: true
+          birthDay: true,
+          extension: true,
+          emailExtension: true
         }
       });
 
@@ -105,6 +107,8 @@ export const userRouter = createTRPCRouter({
           imageUrl: true,
           enterprise: true,
           setor: true,
+          extension: true,
+          emailExtension: true,
         }
       })
     }),
@@ -120,6 +124,8 @@ export const userRouter = createTRPCRouter({
           firstName: true,
           lastName: true,
           imageUrl: true,
+          extension: true,
+          emailExtension: true,
         },
       });
 
@@ -142,7 +148,9 @@ export const userRouter = createTRPCRouter({
         lastName: true,
         role_config: true,
         enterprise: true,
-        setor: true
+        setor: true,
+        extension: true,
+        emailExtension: true
       }
     });
   }),
@@ -157,7 +165,9 @@ export const userRouter = createTRPCRouter({
         lastName: true,
         role_config: true,
         setor: true,
-        enterprise: true
+        enterprise: true,
+        extension: true,
+        emailExtension: true
       }
     });
 
@@ -289,6 +299,7 @@ export const userRouter = createTRPCRouter({
           enterprise: true,
           setor: true,
           extension: true,
+          emailExtension: true,
           role_config: true,
         },
         orderBy: {
@@ -334,6 +345,8 @@ export const userRouter = createTRPCRouter({
           imageUrl: true,
           enterprise: true,
           setor: true,
+          extension: true,
+          emailExtension: true,
         },
         orderBy: [
           { firstName: 'asc' },
@@ -391,6 +404,7 @@ export const userRouter = createTRPCRouter({
       email: z.string().email().optional(),
       setor: z.string().optional(),
       extension: z.number().min(0).max(99999).optional(),
+      emailExtension: z.string().email().optional().or(z.literal("")),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário é sudo
@@ -428,7 +442,12 @@ export const userRouter = createTRPCRouter({
           // Excluir usuários do setor "Sistema"
           setor: {
             not: 'Sistema'
-          }
+          },
+          // Mostrar apenas usuários com ramal configurado ou email específico do ramal
+          OR: [
+            { extension: { gt: 0 } },
+            { emailExtension: { not: null } }
+          ]
         },
         select: {
           id: true,
@@ -437,6 +456,7 @@ export const userRouter = createTRPCRouter({
           lastName: true,
           setor: true,
           extension: true,
+          emailExtension: true,
         },
         orderBy: [
           { setor: 'asc' },
@@ -498,6 +518,195 @@ export const userRouter = createTRPCRouter({
           extension: true,
           setor: true,
         },
+      })
+    }),
+
+  // === RAMAIS PERSONALIZADOS ===
+
+  // Listar ramais personalizados
+  listCustomExtensions: protectedProcedure
+    .query(async ({ ctx }) => {
+      return ctx.db.customExtension.findMany({
+        include: {
+          createdBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            }
+          }
+        },
+        orderBy: {
+          name: 'asc'
+        }
+      })
+    }),
+
+  // Criar ramal personalizado
+  createCustomExtension: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1, "Nome é obrigatório"),
+      email: z.string().email().optional().or(z.literal("")),
+      extension: z.number().min(1).max(99999),
+      description: z.string().optional(),
+      setor: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verificar se o usuário atual tem permissão para gerenciar ramais
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = currentUser?.role_config as RolesConfig | null
+
+      // Só sudo ou quem tem permissão específica pode criar ramais personalizados
+      if (!roleConfig?.sudo && !roleConfig?.can_manage_extensions) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para criar ramais personalizados",
+        })
+      }
+
+      // Verificar se o ramal já existe (nos usuários ou ramais personalizados)
+      const existingUser = await ctx.db.user.findFirst({
+        where: { extension: input.extension },
+        select: { id: true, firstName: true, lastName: true }
+      })
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Este ramal já está sendo usado por ${existingUser.firstName} ${existingUser.lastName}`,
+        })
+      }
+
+      const existingCustom = await ctx.db.customExtension.findUnique({
+        where: { extension: input.extension }
+      })
+
+      if (existingCustom) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Este ramal já está sendo usado por outro ramal personalizado",
+        })
+      }
+
+      return ctx.db.customExtension.create({
+        data: {
+          name: input.name,
+          email: input.email ?? null,
+          extension: input.extension,
+          description: input.description ?? null,
+          setor: input.setor ?? null,
+          createdById: ctx.auth.userId,
+        },
+        include: {
+          createdBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            }
+          }
+        }
+      })
+    }),
+
+  // Atualizar ramal personalizado
+  updateCustomExtension: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string().min(1, "Nome é obrigatório"),
+      email: z.string().email().optional().or(z.literal("")),
+      extension: z.number().min(1).max(99999),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verificar se o usuário atual tem permissão para gerenciar ramais
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = currentUser?.role_config as RolesConfig | null
+
+      // Só sudo ou quem tem permissão específica pode editar ramais personalizados
+      if (!roleConfig?.sudo && !roleConfig?.can_manage_extensions) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para editar ramais personalizados",
+        })
+      }
+
+      // Verificar se o ramal já existe (exceto para o próprio registro)
+      const existingUser = await ctx.db.user.findFirst({
+        where: { extension: input.extension },
+        select: { id: true, firstName: true, lastName: true }
+      })
+
+      if (existingUser) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Este ramal já está sendo usado por ${existingUser.firstName} ${existingUser.lastName}`,
+        })
+      }
+
+      const existingCustom = await ctx.db.customExtension.findFirst({
+        where: {
+          extension: input.extension,
+          id: { not: input.id }
+        }
+      })
+
+      if (existingCustom) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Este ramal já está sendo usado por outro ramal personalizado",
+        })
+      }
+
+      return ctx.db.customExtension.update({
+        where: { id: input.id },
+        data: {
+          name: input.name,
+          email: input.email ?? null,
+          extension: input.extension,
+          description: input.description ?? null,
+        },
+        include: {
+          createdBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            }
+          }
+        }
+      })
+    }),
+
+  // Deletar ramal personalizado
+  deleteCustomExtension: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verificar se o usuário atual tem permissão para gerenciar ramais
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = currentUser?.role_config as RolesConfig | null
+
+      // Só sudo ou quem tem permissão específica pode deletar ramais personalizados
+      if (!roleConfig?.sudo && !roleConfig?.can_manage_extensions) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para deletar ramais personalizados",
+        })
+      }
+
+      return ctx.db.customExtension.delete({
+        where: { id: input.id },
       })
     }),
 })
