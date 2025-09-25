@@ -188,7 +188,7 @@ interface UserManagementCardProps {
     firstName: string | null
     lastName: string | null
     setor: string | null
-    extension: number | null
+    extension: bigint | null
     role_config: RolesConfig
     emailExtension: string | null
   }
@@ -212,7 +212,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     lastName: user.lastName ?? "",
     email: user.email,
     setor: user.setor ?? "none",
-    extension: user.extension ?? 0,
+    extension: user.extension ?? 0n,
     emailExtension: user.emailExtension ?? "",
   })
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
@@ -302,6 +302,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     updateBasicInfo.mutate({
       userId: user.id,
       ...basicData,
+      extension: basicData.extension?.toString(),
       setor: basicData.setor === "none" ? "" : basicData.setor,
       emailExtension: basicData.emailExtension || "",
     })
@@ -486,8 +487,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       type="number"
                       min="0"
                       max="99999999999"
-                      value={basicData.extension}
-                      onChange={(e) => setBasicData({ ...basicData, extension: parseInt(e.target.value) || 0 })}
+                      value={basicData.extension?.toString() ?? ""}
+                      onChange={(e) => setBasicData({ ...basicData, extension: e.target.value ? BigInt(e.target.value) : 0n })}
                       placeholder="Digite o ramal"
                     />
                   </div>
@@ -533,7 +534,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Ramal</Label>
-                    <p className="text-sm text-muted-foreground">{user.extension && user.extension > 0 ? user.extension : 'Não definido'}</p>
+                    <p className="text-sm text-muted-foreground">{user.extension && user.extension > 0n ? user.extension : 'Não definido'}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Email para Ramal</Label>

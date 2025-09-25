@@ -34,7 +34,7 @@ model User {
   vehicleRents     VehicleRent[]
   authoredSuggestions Suggestion[] @relation("SuggestionAuthor")
   analyzedSuggestions Suggestion[] @relation("SuggestionAnalyst")
-  extension       Int                 @default(0) // ramal do usuario
+  extension       BigInt              @default(0) // ramal do usuario
   emailExtension   String?            // email personalizado para exibição no ramal
 
   // Notificações
@@ -678,7 +678,7 @@ model CustomExtension {
   id          String   @id @default(cuid())
   name        String   // Nome do contato/ramal personalizado
   email       String?  // Email opcional
-  extension   Int      // Número do ramal/telefone
+  extension   BigInt   // Número do ramal/telefone
   description String?  // Descrição opcional
   setor       String?  // Setor do contato (opcional)
   createdById String   // ID do usuário que criou

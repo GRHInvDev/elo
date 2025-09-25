@@ -59,7 +59,7 @@ export default function ExtensionManagementPage() {
         firstName: string | null; 
         lastName: string | null; 
         setor: string; 
-        extension: number | null; 
+        extension: bigint | null; 
         emailExtension: string | null 
       }>) ?? [],
       totalUsers: users?.length,
@@ -145,17 +145,27 @@ export default function ExtensionManagementPage() {
     },
   })
 
-  const handleEditExtension = (userId: string, currentExtension: number) => {
+  const handleEditExtension = (userId: string, currentExtension: bigint) => {
     setEditingUser(userId)
     setEditingExtension(currentExtension?.toString() || "")
   }
 
   const handleSaveExtension = (userId: string) => {
-    const extension = parseInt(editingExtension)
-    if (isNaN(extension) || extension < 0) {
+    let extension: bigint
+    try {
+      extension = BigInt(editingExtension)
+      if (extension < 0n) {
+        toast({
+          title: "Erro",
+          description: "Ramal deve ser um número positivo.",
+          variant: "destructive",
+        })
+        return
+      }
+    } catch {
       toast({
         title: "Erro",
-        description: "Ramal deve ser um número positivo.",
+        description: "Ramal deve ser um número válido.",
         variant: "destructive",
       })
       return
@@ -163,7 +173,7 @@ export default function ExtensionManagementPage() {
 
     updateExtension.mutate({
       userId,
-      extension,
+      extension: extension.toString(),
     })
   }
 
@@ -174,11 +184,21 @@ export default function ExtensionManagementPage() {
 
   // Funções para ramais personalizados
   const handleCreateCustomExtension = () => {
-    const extension = parseInt(customExtensionForm.extension)
-    if (isNaN(extension) || extension < 1) {
+    let extension: bigint
+    try {
+      extension = BigInt(customExtensionForm.extension)
+      if (extension < 1n) {
+        toast({
+          title: "Erro",
+          description: "Ramal deve ser um número positivo.",
+          variant: "destructive",
+        })
+        return
+      }
+    } catch {
       toast({
         title: "Erro",
-        description: "Ramal deve ser um número positivo.",
+        description: "Ramal deve ser um número válido.",
         variant: "destructive",
       })
       return
@@ -187,7 +207,7 @@ export default function ExtensionManagementPage() {
     createCustomExtension.mutate({
       name: customExtensionForm.name,
       email: customExtensionForm.email ?? "",
-      extension,
+      extension: extension.toString(),
       description: customExtensionForm.description ?? "",
     })
   }
@@ -205,11 +225,21 @@ export default function ExtensionManagementPage() {
   const handleUpdateCustomExtension = () => {
     if (!editingCustomExtension) return
 
-    const extension = parseInt(customExtensionForm.extension)
-    if (isNaN(extension) || extension < 1) {
+    let extension: bigint
+    try {
+      extension = BigInt(customExtensionForm.extension)
+      if (extension < 1n) {
+        toast({
+          title: "Erro",
+          description: "Ramal deve ser um número positivo.",
+          variant: "destructive",
+        })
+        return
+      }
+    } catch {
       toast({
         title: "Erro",
-        description: "Ramal deve ser um número positivo.",
+        description: "Ramal deve ser um número válido.",
         variant: "destructive",
       })
       return
@@ -219,7 +249,7 @@ export default function ExtensionManagementPage() {
       id: editingCustomExtension.id,
       name: customExtensionForm.name,
       email: customExtensionForm.email ?? "",
-      extension,
+      extension: extension.toString(),
       description: customExtensionForm.description ?? "",
     })
   }
@@ -413,17 +443,17 @@ export default function ExtensionManagementPage() {
                                 <div className="flex items-center gap-2">
                                   <Phone className="h-4 w-4 text-muted-foreground" />
                                   <Badge
-                                    variant={user.extension && user.extension > 0 ? "default" : "secondary"}
+                                    variant={user.extension && user.extension > 0n ? "default" : "secondary"}
                                     className="font-mono"
                                   >
-                                    {user.extension && user.extension > 0 ? user.extension : 'Não definido'}
+                                    {user.extension && user.extension > 0n ? user.extension : 'Não definido'}
                                   </Badge>
                                 </div>
                               </div>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleEditExtension(user.id, user.extension ?? 0)}
+                                onClick={() => handleEditExtension(user.id, user.extension ?? 0n)}
                                 className="h-8 w-8 p-0"
                               >
                                 <Edit3 className="h-4 w-4" />
