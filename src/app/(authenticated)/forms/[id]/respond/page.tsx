@@ -41,7 +41,7 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
         <Link href={`/forms/${id}`}>
           <Button variant="ghost" className="pl-0">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Voltar para o formulário
+            Voltar para a solicitação
           </Button>
         </Link>
         <h1 className="text-3xl font-bold tracking-tight mt-4">{form.title}</h1>

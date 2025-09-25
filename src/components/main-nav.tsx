@@ -1,16 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
-import { LucideLink, Menu } from "lucide-react"
+import { LucideLink, Menu, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { SettingsMenu } from "./settings-menu"
 import { Separator } from "./ui/separator"
-import { routeItems } from "@/const/routes"
+import { routeItems, type RouteItem } from "@/const/routes"
 import { DialogTitle } from "./ui/dialog"
 import { useAccessControl } from "@/hooks/use-access-control"
 
@@ -22,6 +22,124 @@ interface SidebarProps {
 export function Sidebar({ className, collapsed = false }: SidebarProps) {
   const pathname = usePathname()
   const { db_user } = useAccessControl()
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
+  const toggleGroup = (title: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(title)) {
+        newSet.delete(title)
+      } else {
+        newSet.add(title)
+      }
+      return newSet
+    })
+  }
+
+  const isGroupExpanded = (title: string) => expandedGroups.has(title)
+
+  // Auto-expand groups containing the current route
+  useEffect(() => {
+    const routes = routeItems(db_user?.role_config)
+    const groupsToExpand = new Set<string>()
+
+    const findActiveGroups = (items: RouteItem[]) => {
+      for (const item of items) {
+        if (item.children) {
+          // Check if any child or grandchild matches the current pathname
+          const hasActiveChild = item.children.some(child =>
+            child.href === pathname ||
+            child.children?.some(grandChild => grandChild.href === pathname)
+          )
+
+          if (hasActiveChild) {
+            groupsToExpand.add(item.title)
+          }
+
+          // Recursively check children for nested groups
+          findActiveGroups(item.children)
+        }
+      }
+    }
+
+    findActiveGroups(routes)
+    setExpandedGroups(prev => new Set([...prev, ...groupsToExpand]))
+  }, [pathname, db_user?.role_config])
+
+  const renderNavItem = (item: RouteItem, level = 0): JSX.Element | null => {
+    const hasChildren = item.children && item.children.length > 0
+    const isExpanded = isGroupExpanded(item.title)
+    const href = item.href
+    const isActive = href ? pathname === href : false
+    const hasActiveChild = hasChildren && item.children?.some(child =>
+      child.href === pathname || child.children?.some(grandChild => grandChild.href === pathname)
+    )
+
+    if (hasChildren) {
+      // Render group item
+      return (
+        <div key={item.title} className="space-y-1">
+          <button
+            onClick={() => toggleGroup(item.title)}
+            className={cn(
+              "flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted hover:text-primary",
+              hasActiveChild && "text-primary bg-muted",
+              collapsed && "justify-center px-2",
+              level > 0 && "ml-4"
+            )}
+            title={collapsed ? item.describe : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className="size-5 shrink-0" />
+              {!collapsed && <span className="truncate">{item.title}</span>}
+            </div>
+            {!collapsed && (
+              <div className="ml-auto transition-transform duration-200">
+                <ChevronRight className={cn(
+                  "size-4 transition-transform duration-200",
+                  isExpanded && "rotate-90"
+                )} />
+              </div>
+            )}
+          </button>
+
+          {/* Render children with smooth animation */}
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-300 ease-in-out ml-4",
+              isExpanded && !collapsed ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-1 py-1">
+              {item.children?.map(child => renderNavItem(child, level + 1))}
+            </div>
+          </div>
+        </div>
+      )
+    } else if (href) {
+      // Render regular link item
+      return (
+        <Link
+          key={href}
+          href={href}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted hover:text-primary",
+            isActive
+              ? "text-primary bg-muted"
+              : "text-muted-foreground",
+            collapsed && "justify-center px-2",
+            level > 0 && "ml-4"
+          )}
+          title={collapsed ? item.describe : undefined}
+        >
+          <item.icon className="size-5 shrink-0" />
+          {!collapsed && <span className="truncate">{item.title}</span>}
+        </Link>
+      )
+    }
+
+    return null
+  }
 
   return (
     <div className={cn("flex flex-col h-full bg-background border-r", className)}>
@@ -35,26 +153,8 @@ export function Sidebar({ className, collapsed = false }: SidebarProps) {
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 flex flex-col space-y-1 p-4">
-        {[...routeItems(db_user?.role_config)].map((item) => {
-          if (item) return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted hover:text-primary",
-                pathname === item.href
-                  ? "text-primary bg-muted"
-                  : "text-muted-foreground",
-                collapsed && "justify-center px-2"
-              )}
-              title={collapsed ? item.describe : undefined}
-            >
-              <item.icon className="size-5 shrink-0" />
-              {!collapsed && <span className="truncate">{item.title}</span>}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 flex flex-col space-y-1 p-4 overflow-y-auto">
+        {routeItems(db_user?.role_config).map((item) => renderNavItem(item))}
       </nav>
 
       <Separator />
@@ -68,8 +168,6 @@ export function Sidebar({ className, collapsed = false }: SidebarProps) {
 }
 
 export function MainNav() {
-  const pathname = usePathname()
-  const { db_user } = useAccessControl()
   const [isOpen, setIsOpen] = useState(false)
 
   return (

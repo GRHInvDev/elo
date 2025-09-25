@@ -1,12 +1,31 @@
-import { LucideCalendar, LucideCar, LucideFormInput, LucideLayoutDashboard, LucideMapPin, LucideMessageSquare, LucideNewspaper, LucideShoppingCart, LucideTerminalSquare, LucideUtensils, LucideLightbulb, LucidePhone } from "lucide-react"
+import { LucideCalendar, 
+  LucideCar, 
+  LucideFormInput, 
+  LucideLayoutDashboard, 
+  LucideMapPin, 
+  LucideMessageSquare, 
+  LucideNewspaper, 
+  LucideShoppingCart, 
+  LucideTerminalSquare, 
+  LucideUtensils, 
+  LucideLightbulb, 
+  LucidePhone, 
+  LucideMegaphone,
+  SearchCheck,
+  Book,
+  FileText,
+} from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
-export const routeItems = (roleConfig?: RolesConfig | null): {
+export interface RouteItem {
   title: string
   icon: React.ElementType
   describe: string
-  href: string
-}[] => {
+  href?: string
+  children?: RouteItem[]
+}
+
+export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
   // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes)
   if (roleConfig && 'isTotem' in roleConfig && roleConfig.isTotem) {
     return [
@@ -30,66 +49,88 @@ export const routeItems = (roleConfig?: RolesConfig | null): {
       },
     ]
   }
-  const items = [
+
+  const items: RouteItem[] = [
     {
       title: "Dashboard",
       icon: LucideLayoutDashboard,
       describe: "Página principal da intranet",
       href: "/dashboard",
     },
-    // {
-    //   title: "Chat",
-    //   icon: LucideMessageSquare,
-    //   describe: "Chat interno para comunicação entre colaboradores",
-    //   href: "/chat",
-    // },
     {
-      title: "Almoços",
-      icon: LucideUtensils,
-      describe: "Página para fazer pedidos de comida com restaurantes parceiros",
-      href: "/food",
+      title: "Reserva de Recursos",
+      icon: SearchCheck,
+      describe: "Reservas de almoços, salas e carros",
+      children: [
+        {
+          title: "Almoços",
+          icon: LucideUtensils,
+          describe: "Página para fazer pedidos de comida com restaurantes parceiros",
+          href: "/food",
+        },
+        {
+          title: "Salas",
+          icon: LucideMapPin,
+          describe: "Página para reservar salas na intranet",
+          href: "/rooms",
+        },
+        {
+          title: "Carros",
+          icon: LucideCar,
+          describe: "Página para reservar carros",
+          href: "/cars",
+        },
+      ],
     },
     {
-      title: "Salas",
-      icon: LucideMapPin,
-      describe: "Página para reservar salas na intranet",
-      href: "/rooms",
+      title: "Anúncios",
+      icon: LucideMegaphone,
+      describe: "Eventos, encartes e notícias",
+      children: [
+        {
+          title: "Eventos",
+          icon: LucideCalendar,
+          describe: "Página para visualizar e criar eventos",
+          href: "/events",
+        },
+        {
+          title: "Encartes",
+          icon: Book,
+          describe: "Página para visualizar e criar encartes",
+          href: "/flyers",
+        },
+        {
+          title: "Notícias",
+          icon: LucideNewspaper,
+          describe: "Página para visualizar notícias",
+          href: "/news",
+        },
+      ],
     },
     {
-      title: "Carros",
-      icon: LucideCar,
-      describe: "Página para reservar carros",
-      href: "/cars",
-    },
-    {
-      title: "Eventos",
-      icon: LucideCalendar,
-      describe: "Página para visualizar e criar eventos",
-      href: "/events",
-    },
-    {
-      title: "Encartes",
-      icon: LucideNewspaper,
-      describe: "Página para visualizar e criar encartes",
-      href: "/flyers",
+      title: "Formulários",
+      icon: FileText,
+      describe: "Minhas ideias e solicitações",
+      children: [
+        {
+          title: "Minhas Ideias",
+          icon: LucideLightbulb,
+          describe: "Visualizar e acompanhar o status das suas ideias enviadas",
+          href: "/my-suggestions",
+        },
+        {
+          title: "Solicitações",
+          icon: LucideFormInput,
+          describe: "Página para requisitar processos internos para os setores, como marketing, TI, inovação e compras",
+          href: "/forms",
+        },
+      ],
     },
     {
       title: "Shop",
       icon: LucideShoppingCart,
       describe: "Página para comprar itens personalizados com as logos da BOX e da Cristallux",
       href: "/shop",
-    },
-    {
-      title: "Minhas Ideias",
-      icon: LucideLightbulb,
-      describe: "Visualizar e acompanhar o status das suas ideias enviadas",
-      href: "/my-suggestions",
-    },
-    {
-      title: "Formulários",
-      icon: LucideFormInput,
-      describe: "Página para requisitar processos internos para os setores, como marketing, TI, inovação e compras",
-      href: "/forms",
     },
     {
       title: "Lista de ramais",

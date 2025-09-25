@@ -24,7 +24,7 @@ export default async function EditFormPage({ params }: EditFormPageProps) {
   const form = await api.form.getById(id)
   const userData = await api.user.me()
 
-  // Verificar se o usuário tem permissão para editar formulários
+  // Verificar se o usuário tem permissão para editar solicitações
   if (!canCreateForm(userData.role_config)) {
     redirect("/forms")
   }
@@ -39,11 +39,11 @@ export default async function EditFormPage({ params }: EditFormPageProps) {
         <Link href={`/forms/${id}`}>
           <Button variant="ghost" className="pl-0">
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Voltar para o formulário
+            Voltar para a solicitação
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight mt-4">Editar Formulário</h1>
-        <p className="text-muted-foreground mt-2">Edite os campos e configurações do formulário.</p>
+        <h1 className="text-3xl font-bold tracking-tight mt-4">Editar Solicitação</h1>
+        <p className="text-muted-foreground mt-2">Edite os campos e configurações da solicitação.</p>
       </div>
 
       <FormBuilderWithSave

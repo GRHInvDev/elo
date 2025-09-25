@@ -12,8 +12,8 @@ import { api } from "@/trpc/server"
 import { canViewForms, canCreateForm } from "@/lib/access-control"
 
 export const metadata = {
-  title: "Formulários",
-  description: "Gerencie e responda formulários",
+  title: "Solicitações",
+  description: "Gerencie e responda solicitações",
 }
 
 export default async function FormsPage() {
@@ -26,22 +26,22 @@ export default async function FormsPage() {
   // Buscar dados do usuário para verificar permissões
   const userData = await api.user.me()
 
-  // Verificar se o usuário tem permissão para visualizar a página de formulários
+  // Verificar se o usuário tem permissão para visualizar a página de solicitações
   if (!canViewForms(userData.role_config)) {
     redirect("/dashboard")
   }
 
-  // Verificar se o usuário tem permissão para criar formulários
+  // Verificar se o usuário tem permissão para criar solicitações
   const userCanCreateForm = canCreateForm(userData.role_config)
   return (
     <DashboardShell>
       <div className="flex items-center justify-between mb-8 gap-y-4 flex-col md:flex-row">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Formulários</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Solicitações</h1>
           <p className="text-muted-foreground mt-2 mb-4">
             {userCanCreateForm 
-              ? "Crie, gerencie e responda formulários personalizados." 
-              : "Responda aos formulários disponíveis para você."
+              ? "Crie, gerencie e responda solicitações personalizadas." 
+              : "Responda aos solicitações disponíveis para você."
             }
           </p>
           <div className="flex gap-2">
@@ -54,7 +54,7 @@ export default async function FormsPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>
-                    Tutorial: Formulários
+                    Tutorial: Solicitações
                   </DialogTitle>
                 </DialogHeader>
                 <DialogFooter>
@@ -81,7 +81,7 @@ export default async function FormsPage() {
             <Link href="/forms/new">
               <Button className="w-full">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Novo Formulário
+                Nova Solicitação
               </Button>
             </Link>
           )}
