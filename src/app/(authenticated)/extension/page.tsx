@@ -361,10 +361,10 @@ interface ListaSetores {
                     id="contact-extension"
                     type="number"
                     min="1"
-                    max="99999"
+                    max="99999999999"
                     value={contactForm.extension}
                     onChange={(e) => setContactForm({ ...contactForm, extension: e.target.value })}
-                    placeholder="1234"
+                    placeholder="1234 ou 11987654321"
                   />
                 </div>
                 <div>

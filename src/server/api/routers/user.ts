@@ -403,7 +403,7 @@ export const userRouter = createTRPCRouter({
       lastName: z.string().optional(),
       email: z.string().email().optional(),
       setor: z.string().optional(),
-      extension: z.number().min(0).max(99999).optional(),
+      extension: z.number().min(0).max(99999999999).optional(),
       emailExtension: z.string().email().optional().or(z.literal("")),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -480,7 +480,7 @@ export const userRouter = createTRPCRouter({
   updateExtension: protectedProcedure
     .input(z.object({
       userId: z.string(),
-      extension: z.number().min(0).max(99999), // Ramal deve ser positivo e razoável
+      extension: z.number().min(0).max(99999999999), // Ramal/telefone deve ser positivo
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário atual tem permissão para gerenciar ramais
@@ -546,7 +546,7 @@ export const userRouter = createTRPCRouter({
     .input(z.object({
       name: z.string().min(1, "Nome é obrigatório"),
       email: z.string().email().optional().or(z.literal("")),
-      extension: z.number().min(1).max(99999),
+      extension: z.number().min(1).max(99999999999),
       description: z.string().optional(),
       setor: z.string().optional(),
     }))
@@ -564,30 +564,6 @@ export const userRouter = createTRPCRouter({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para criar ramais personalizados",
-        })
-      }
-
-      // Verificar se o ramal já existe (nos usuários ou ramais personalizados)
-      const existingUser = await ctx.db.user.findFirst({
-        where: { extension: input.extension },
-        select: { id: true, firstName: true, lastName: true }
-      })
-
-      if (existingUser) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: `Este ramal já está sendo usado por ${existingUser.firstName} ${existingUser.lastName}`,
-        })
-      }
-
-      const existingCustom = await ctx.db.customExtension.findUnique({
-        where: { extension: input.extension }
-      })
-
-      if (existingCustom) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Este ramal já está sendo usado por outro ramal personalizado",
         })
       }
 
@@ -617,7 +593,7 @@ export const userRouter = createTRPCRouter({
       id: z.string(),
       name: z.string().min(1, "Nome é obrigatório"),
       email: z.string().email().optional().or(z.literal("")),
-      extension: z.number().min(1).max(99999),
+      extension: z.number().min(1).max(99999999999),
       description: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
