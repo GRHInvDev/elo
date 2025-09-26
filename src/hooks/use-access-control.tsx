@@ -140,7 +140,7 @@ export function useAccessControl() {
     if (db_user.role_config.sudo) return true;
 
     // Verifica permissão específica para gerenciar ramais
-    return db_user.role_config.can_manage_extensions;
+    return db_user.role_config.can_manage_extensions ?? false;
   };
 
   return {

@@ -30,7 +30,7 @@ import type { RolesConfig } from "@/types/role-config"
 // Extensão temporária do tipo RolesConfig para incluir as novas propriedades
 type ExtendedRolesConfig = RolesConfig & {
   can_view_dre_report: boolean
-  can_manage_extensions: boolean
+  can_manage_extensions?: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
 
