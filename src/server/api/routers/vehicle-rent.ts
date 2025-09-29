@@ -27,6 +27,17 @@ export const vehicleRentRouter = createTRPCRouter({
       const limit = input.limit ?? 50
       const { cursor, userId, vehicleId, finished, final_date, initial_date } = input
 
+      // DEBUG: Log dos parâmetros recebidos
+      console.log('🔍 [DEBUG] vehicleRent.getAll - Parâmetros recebidos:', {
+        userId,
+        vehicleId,
+        finished,
+        initial_date: initial_date?.toISOString(),
+        final_date: final_date?.toISOString(),
+        limit,
+        cursor
+      })
+
       const rents = await ctx.db.vehicleRent.findMany({
         take: limit + 1,
         where: {
@@ -57,6 +68,23 @@ export const vehicleRentRouter = createTRPCRouter({
           },
           vehicle: true,
         },
+      })
+
+      // DEBUG: Log dos resultados encontrados
+      console.log('📊 [DEBUG] vehicleRent.getAll - Resultados encontrados:', {
+        totalResults: rents.length,
+        firstResult: rents[0] ? {
+          id: rents[0].id,
+          startDate: rents[0].startDate.toISOString(),
+          possibleEnd: rents[0].possibleEnd?.toISOString(),
+          finished: rents[0].finished
+        } : null,
+        lastResult: rents[rents.length - 1] ? {
+          id: rents[rents.length - 1]?.id,
+          startDate: rents[rents.length - 1]?.startDate.toISOString(),
+          possibleEnd: rents[rents.length - 1]?.possibleEnd?.toISOString(),
+          finished: rents[rents.length - 1]?.finished
+        } : null
       })
 
       let nextCursor: typeof cursor | undefined = undefined
@@ -100,6 +128,9 @@ export const vehicleRentRouter = createTRPCRouter({
   getMyActiveRent: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.auth.userId
 
+    // DEBUG: Log da consulta de reservas ativas
+    console.log('🚗 [DEBUG] getMyActiveRent - Buscando reservas ativas para userId:', userId)
+
     const activeRent = await ctx.db.vehicleRent.findMany({
       where: {
         userId,
@@ -113,8 +144,181 @@ export const vehicleRentRouter = createTRPCRouter({
       },
     })
 
+    // DEBUG: Log dos resultados de reservas ativas
+    console.log('📋 [DEBUG] getMyActiveRent - Reservas ativas encontradas:', {
+      userId,
+      totalActiveRents: activeRent.length,
+      activeRents: activeRent.map(rent => ({
+        id: rent.id,
+        startDate: rent.startDate.toISOString(),
+        possibleEnd: rent.possibleEnd?.toISOString(),
+        vehicleModel: rent.vehicle.model,
+        finished: rent.finished
+      }))
+    })
+
     return activeRent
   }),
+
+  getMyAllRents: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        cursor: z.string().nullish(),
+        includeFinished: z.boolean().default(true),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.auth.userId
+      const { limit, cursor, includeFinished } = input
+
+      // DEBUG: Log da consulta de todas as reservas
+      console.log('📚 [DEBUG] getMyAllRents - Buscando todas as reservas para userId:', {
+        userId,
+        limit,
+        cursor,
+        includeFinished
+      })
+
+      const whereClause: {
+        userId: string
+        finished?: boolean
+      } = {
+        userId,
+      }
+
+      // Se includeFinished for false, só buscar reservas não finalizadas
+      if (!includeFinished) {
+        whereClause.finished = false
+      }
+
+      const allRents = await ctx.db.vehicleRent.findMany({
+        take: limit + 1,
+        where: whereClause,
+        cursor: cursor ? { id: cursor } : undefined,
+        include: {
+          vehicle: true,
+        },
+        orderBy: {
+          startDate: "desc",
+        },
+      })
+
+      // DEBUG: Log dos resultados de todas as reservas
+      console.log('📊 [DEBUG] getMyAllRents - Todas as reservas encontradas:', {
+        userId,
+        totalResults: allRents.length,
+        includeFinished,
+        results: allRents.map(rent => ({
+          id: rent.id,
+          startDate: rent.startDate.toISOString(),
+          possibleEnd: rent.possibleEnd?.toISOString(),
+          endDate: rent.endDate?.toISOString(),
+          vehicleModel: rent.vehicle.model,
+          finished: rent.finished
+        }))
+      })
+
+      let nextCursor: typeof cursor | undefined = undefined
+      if (allRents.length > limit) {
+        const nextItem = allRents.pop()
+        nextCursor = nextItem?.id
+      }
+
+      return {
+        items: allRents,
+        nextCursor,
+      }
+    }),
+
+  getCalendarReservations: protectedProcedure
+    .input(
+      z.object({
+        vehicleId: z.string().optional(),
+        month: z.number(), // 0-11 (JavaScript months)
+        year: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { vehicleId, month, year } = input
+
+      // Criar datas para o início e fim do mês
+      const startOfMonth = new Date(year, month, 1)
+      const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999)
+
+      // DEBUG: Log da consulta do calendário
+      console.log('📅 [DEBUG] getCalendarReservations - Buscando reservas para:', {
+        vehicleId,
+        month,
+        year,
+        startOfMonth: startOfMonth.toISOString(),
+        endOfMonth: endOfMonth.toISOString()
+      })
+
+      const reservations = await ctx.db.vehicleRent.findMany({
+        where: {
+          vehicleId: vehicleId,
+          // Removido finished: false para incluir todas as reservas (finalizadas e não finalizadas)
+          // Uma reserva deve aparecer no calendário se há sobreposição com o mês
+          OR: [
+            // Caso 1: reserva começa dentro do mês
+            {
+              startDate: {
+                gte: startOfMonth,
+                lte: endOfMonth,
+              },
+            },
+            // Caso 2: reserva termina dentro do mês
+            {
+              possibleEnd: {
+                gte: startOfMonth,
+                lte: endOfMonth,
+              },
+            },
+            // Caso 3: reserva cobre todo o mês (começa antes e termina depois)
+            {
+              AND: [
+                { startDate: { lte: startOfMonth } },
+                { possibleEnd: { gte: endOfMonth } },
+              ],
+            },
+          ],
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+          vehicle: true,
+        },
+        orderBy: {
+          startDate: "asc",
+        },
+      })
+
+      // DEBUG: Log dos resultados do calendário
+      console.log('📊 [DEBUG] getCalendarReservations - Reservas encontradas:', {
+        vehicleId,
+        month,
+        year,
+        totalReservations: reservations.length,
+        reservations: reservations.map(reservation => ({
+          id: reservation.id,
+          startDate: reservation.startDate.toISOString(),
+          possibleEnd: reservation.possibleEnd?.toISOString(),
+          endDate: reservation.endDate?.toISOString(),
+          finished: reservation.finished,
+          userName: `${reservation.user.firstName} ${reservation.user.lastName}`
+        }))
+      })
+
+      return reservations
+    }),
 
   create: protectedProcedure.input(createVehicleRentSchema).mutation(async ({ ctx, input }) => {
     // Verificar se o usuário tem permissão para fazer agendamentos de carros

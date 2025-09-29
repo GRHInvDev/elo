@@ -6,6 +6,7 @@ import { Bell, CheckCheck, Settings, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationItem } from "./notification-item"
 import { useNotifications } from "@/hooks/use-notifications"
+import { useUser } from "@clerk/nextjs"
 import type { NotificationData } from "@/types/notification-types"
 
 interface NotificationListProps {
@@ -16,8 +17,12 @@ interface NotificationListProps {
 export function NotificationList({ className, onNotificationClick }: NotificationListProps) {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
   const router = useRouter()
+  const { user } = useUser()
 
-  const notificationData = useNotifications({ unreadOnly: showUnreadOnly })
+  const notificationData = useNotifications({
+    unreadOnly: showUnreadOnly,
+    userId: user?.id
+  })
   const {
     notifications,
     unreadCount,

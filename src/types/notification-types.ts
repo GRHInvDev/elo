@@ -37,12 +37,15 @@ export interface UseNotificationsReturn {
   hasMore: boolean
   isLoading: boolean
   error: unknown
+  isWebSocketConnected: boolean
+  isUsingWebSocket: boolean
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
   deleteNotification: (id: string) => Promise<void>
   loadMore: () => void
   resetOffset: () => void
   refetch: () => Promise<unknown>
+  reconnectWebSocket: () => void
   isMarkingAsRead: boolean
   isMarkingAllAsRead: boolean
   isDeleting: boolean

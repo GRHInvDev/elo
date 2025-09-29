@@ -7,6 +7,9 @@ const prisma = new PrismaClient();
 // Mapa global para rastrear usuários online (compartilhado entre instâncias)
 const globalOnlineUsers = new Map<string, { socketId: string; userId: string; roomId?: string }>();
 
+// Mapa para rastrear usuários conectados para notificações
+export const notificationUsers = new Map<string, string>() // socketId -> userId
+
 export function createChatServer(io?: Server) {
   console.log('🔧 createChatServer chamado', { hasExistingIO: !!io })
 
@@ -23,6 +26,26 @@ export function createChatServer(io?: Server) {
 
   io.on('connection', (socket) => {
     console.log(`🔗 Novo cliente conectado: ${socket.id}`);
+
+    // Evento para usuário se registrar para notificações
+    socket.on('joinNotifications', ({ userId }: { userId: string }) => {
+      console.log(`🔔 Usuário ${userId} registrado para notificações: ${socket.id}`)
+      notificationUsers.set(socket.id, userId)
+
+      // Confirmar registro
+      socket.emit('notificationsJoined', { userId, message: 'Registrado para notificações' })
+
+      // Enviar contagem atual de notificações não lidas
+      try {
+        void prisma.notification.count({
+          where: { userId, isRead: false }
+        }).then((unreadCount) => {
+          socket.emit('unreadCountUpdate', { count: unreadCount })
+        })
+      } catch (error) {
+        console.error('Erro ao buscar contagem de notificações:', error)
+      }
+    })
 
     // Evento para usuário entrar no chat
     socket.on('joinChat', async ({ userId, roomId = 'global' }: { userId: string; roomId?: string }) => {
@@ -267,6 +290,13 @@ export function createChatServer(io?: Server) {
         globalOnlineUsers.delete(socket.id);
 
         console.log(`Usuário ${userId} desconectado da sala ${roomId}`);
+      }
+
+      // Remover do mapa de notificações se estava registrado
+      if (notificationUsers.has(socket.id)) {
+        const userId = notificationUsers.get(socket.id)
+        notificationUsers.delete(socket.id)
+        console.log(`🔔 Usuário ${userId} removido das notificações`)
       }
 
       console.log(`Cliente desconectado: ${socket.id}`);
