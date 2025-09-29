@@ -374,23 +374,32 @@ export default function NewsManagementPage() {
                   <Card key={post.id} className="overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex gap-4">
-                        {/* Imagem do post */}
+                        {/* Imagem do post
                         <div className="flex-shrink-0">
-                          {post.imageUrl ? (
+                          {(post.imageUrl || (post.images && post.images.length > 0)) ? (
                             <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted">
                               <Image
-                                src={post.imageUrl}
+                                src={
+                                  post.images && post.images.length > 0 
+                                    ? post.images[0].imageUrl
+                                    : post.imageUrl!
+                                }
                                 alt={post.title}
                                 fill
                                 className="object-cover"
                               />
+                              {(post.images && post.images.length > 1) && (
+                                <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 py-0.5 rounded">
+                                  +{post.images.length - 1}
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center">
                               <ImageIcon className="h-8 w-8 text-muted-foreground" />
                             </div>
                           )}
-                        </div>
+                        </div> */}
 
                         {/* Conteúdo do post */}
                         <div className="flex-1 min-w-0">

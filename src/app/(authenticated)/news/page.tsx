@@ -4,7 +4,9 @@ import { DashboardShell } from "@/components/dashboard-shell";
 export default function NewsPage() {
   return (
     <DashboardShell className="p-0 md:p-8">
-      <ContentFeed className="w-full md:max-w-lg lg:max-w-xl"/>
+      <div className="flex justify-center w-full">
+        <ContentFeed className="w-full max-w-4xl"/>
+      </div>
     </DashboardShell>
   );
 }
