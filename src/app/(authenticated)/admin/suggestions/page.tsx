@@ -1501,6 +1501,7 @@ export default function AdminSuggestionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [analystFilter, setAnalystFilter] = useState<string | null>(null)
   const [authorFilter, setAuthorFilter] = useState<string | null>(null)
+  const [paymentFilter, setPaymentFilter] = useState<string>("all")
   const [showMyTasks, setShowMyTasks] = useState<boolean>(false)
   const [showFilters, setShowFilters] = useState<boolean>(false)
 
@@ -1633,6 +1634,18 @@ export default function AdminSuggestionsPage() {
       filteredSuggestions = filteredSuggestions.filter(s => s.userId === authorFilter)
     }
 
+    // Aplicar filtro de pagamento se não for "all"
+    if (paymentFilter !== "all") {
+      filteredSuggestions = filteredSuggestions.filter(s => {
+        if (paymentFilter === "paid") {
+          return s.payment?.status === "paid"
+        } else if (paymentFilter === "unpaid") {
+          return s.payment?.status === "unpaid"
+        }
+        return true
+      })
+    }
+
     // Aplicar filtro de "Minhas pendências" se estiver marcado
     if (showMyTasks && currentUser) {
       filteredSuggestions = filteredSuggestions.filter(s => s.analystId === currentUser.id)
@@ -1656,7 +1669,7 @@ export default function AdminSuggestionsPage() {
         return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
       }
     })
-  }, [suggestions, statusFilter, analystFilter, authorFilter, showMyTasks, currentUser, sortOrder])
+  }, [suggestions, statusFilter, analystFilter, authorFilter, paymentFilter, showMyTasks, currentUser, sortOrder])
 
   const kanbanColumns = useMemo(() => {
     const map: Record<string, SuggestionLocal[]> = {}
@@ -1873,15 +1886,6 @@ export default function AdminSuggestionsPage() {
               <Plus className="w-4 h-4" />
               Nova Ideia
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsDoubtsPopupOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <HelpCircle className="w-4 h-4" />
-              Dúvidas
-            </Button>
           </div>
         </div>
       </div>
@@ -1951,6 +1955,30 @@ export default function AdminSuggestionsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setAnalystFilter(null)}
+                    className="ml-1"
+                  >
+                    <X className="w-4 h-4" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">Pagamento:</Label>
+                <Select value={paymentFilter} onValueChange={(value: string) => setPaymentFilter(value)}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="paid">Pago</SelectItem>
+                    <SelectItem value="unpaid">Não Pago</SelectItem>
+                  </SelectContent>
+                </Select>
+                {paymentFilter !== "all" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPaymentFilter("all")}
                     className="ml-1"
                   >
                     <X className="w-4 h-4" />
@@ -2039,22 +2067,48 @@ export default function AdminSuggestionsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
-              <Checkbox
-                id="show-my-tasks-mobile"
-                checked={showMyTasks}
-                onCheckedChange={(checked) => {
-                  setShowMyTasks(checked as boolean)
-                  // Se marcar "Minhas pendências", limpar o filtro de responsável
-                  if (checked) {
-                    setAnalystFilter(null)
-                  }
-                }}
-                disabled={!currentUser}
-              />
-              <Label htmlFor="show-my-tasks-mobile" className="text-sm cursor-pointer font-medium">
-                Mostrar apenas minhas pendências
-              </Label>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Pagamento</Label>
+                <Select value={paymentFilter} onValueChange={(value: string) => setPaymentFilter(value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="paid">Pago</SelectItem>
+                    <SelectItem value="unpaid">Não Pago</SelectItem>
+                  </SelectContent>
+                </Select>
+                {paymentFilter !== "all" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPaymentFilter("all")}
+                    className="w-full"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Limpar filtro de pagamento
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
+                <Checkbox
+                  id="show-my-tasks-mobile"
+                  checked={showMyTasks}
+                  onCheckedChange={(checked) => {
+                    setShowMyTasks(checked as boolean)
+                    // Se marcar "Minhas pendências", limpar o filtro de responsável
+                    if (checked) {
+                      setAnalystFilter(null)
+                    }
+                  }}
+                  disabled={!currentUser}
+                />
+                <Label htmlFor="show-my-tasks-mobile" className="text-sm cursor-pointer font-medium">
+                  Mostrar apenas minhas pendências
+                </Label>
+              </div>
             </div>
           </div>
         )}
