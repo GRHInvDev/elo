@@ -30,7 +30,7 @@ interface PostWithAuthor {
   content: string
   authorId: string
   imageUrl: string | null
-  images?: Array<{ imageUrl: string }>
+  images?: Array<{ id: string; imageUrl: string; order: number }>
   createdAt: Date
   author: AuthorWithRoleConfig
 }
@@ -91,22 +91,32 @@ function PostItem({ post }: PostItemProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Coluna da Imagem */}
           <div className="order-2 md:order-1">
-            {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
-              <ImageCarousel
-                images={
-                  (post.images?.length ?? 0) > 0 
-                    ? post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
-                    : post.imageUrl 
-                      ? [post.imageUrl]
-                      : []
-                }
-                alt={post.title}
-                aspectRatio="auto"
-                showArrows={true}
-                showDots={true}
-                className="max-h-[300px]"
-              />
-            )}
+            {(() => {
+              // Processar imagens: priorizar array de imagens múltiplas, depois imageUrl única
+              const imageUrls: string[] = []
+              
+              if (post.images && post.images.length > 0) {
+                // Ordenar por 'order' e extrair URLs
+                imageUrls.push(...post.images
+                  .sort((a, b) => a.order - b.order)
+                  .map(img => img.imageUrl)
+                )
+              } else if (post.imageUrl) {
+                // Fallback para imagem única (compatibilidade com posts antigos)
+                imageUrls.push(post.imageUrl)
+              }
+              
+              return imageUrls.length > 0 ? (
+                <ImageCarousel
+                  images={imageUrls}
+                  alt={post.title}
+                  aspectRatio="video"
+                  showArrows={imageUrls.length > 1}
+                  showDots={imageUrls.length > 1}
+                  className="max-h-[300px]"
+                />
+              ) : null
+            })()}
           </div>
 
           {/* Coluna do Conteúdo */}

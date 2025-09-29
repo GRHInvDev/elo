@@ -30,35 +30,50 @@ export function ImageCarousel({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
 
+  // Validar URLs das imagens
+  const validImages = images?.filter(img => {
+    if (!img || typeof img !== 'string') {
+      console.warn('ImageCarousel: Invalid image URL:', img)
+      return false
+    }
+    return true
+  }) ?? []
+
   // Auto play functionality
   useEffect(() => {
-    if (!autoPlay || images.length <= 1 || isHovered) return
+    if (!autoPlay || validImages.length <= 1 || isHovered) return
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length)
+      setCurrentIndex((prev) => (prev + 1) % validImages.length)
     }, autoPlayInterval)
 
     return () => clearInterval(interval)
-  }, [autoPlay, images.length, autoPlayInterval, isHovered])
+  }, [autoPlay, validImages.length, autoPlayInterval, isHovered])
 
   const goToPrevious = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length)
-  }, [images.length])
+    setCurrentIndex((prev) => (prev - 1 + validImages.length) % validImages.length)
+  }, [validImages.length])
 
   const goToNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % images.length)
-  }, [images.length])
+    setCurrentIndex((prev) => (prev + 1) % validImages.length)
+  }, [validImages.length])
 
   const goToSlide = useCallback((index: number) => {
     setCurrentIndex(index)
   }, [])
 
   if (!images || images.length === 0) {
+    console.warn('ImageCarousel: No images provided')
+    return null
+  }
+
+  if (validImages.length === 0) {
+    console.warn('ImageCarousel: No valid images found')
     return null
   }
 
   // Se há apenas uma imagem, não mostra o carrossel
-  if (images.length === 1) {
+  if (validImages.length === 1) {
     return (
       <div className={cn("relative w-full overflow-hidden rounded-lg border", className)}>
         <div className={cn(
@@ -68,7 +83,7 @@ export function ImageCarousel({
           aspectRatio === "auto" && "aspect-auto"
         )}>
           <Image
-            src={images[0]!}
+            src={validImages[0]!}
             alt={alt}
             fill
             className="object-cover"
@@ -93,7 +108,7 @@ export function ImageCarousel({
           aspectRatio === "video" && "aspect-video",
           aspectRatio === "auto" && "aspect-auto"
         )}>
-          {images.map((image, index) => (
+          {validImages.map((image, index) => (
             <div
               key={index}
               className={cn(
@@ -139,9 +154,9 @@ export function ImageCarousel({
         )}
 
         {/* Indicadores de posição (bolinhas) */}
-        {showDots && images.length > 1 && (
+        {showDots && validImages.length > 1 && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1">
-            {images.map((_, index) => (
+            {validImages.map((_, index) => (
               <button
                 key={index}
                 className={cn(
@@ -158,9 +173,9 @@ export function ImageCarousel({
         )}
 
         {/* Contador de imagens */}
-        {images.length > 1 && (
+        {validImages.length > 1 && (
           <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-            {currentIndex + 1} / {images.length}
+            {currentIndex + 1} / {validImages.length}
           </div>
         )}
       </div>

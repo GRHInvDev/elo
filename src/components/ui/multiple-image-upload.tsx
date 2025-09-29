@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useUploadThing } from "@/components/uploadthing"
+import { deleteFiles } from "@/components/uploadthing"
+import type { ClientUploadedFileData } from "uploadthing/types"
 
 interface MultipleImageUploadProps {
   onImagesChange: (images: string[]) => void
@@ -21,31 +24,25 @@ export function MultipleImageUpload({
   const [images, setImages] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    setIsUploading(true)
-    
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error("Erro ao fazer upload da imagem")
+  const { startUpload } = useUploadThing("multipleImageUploader", {
+    onClientUploadComplete: (res: ClientUploadedFileData<unknown>[]) => {
+      if (res && res.length > 0) {
+        const newUrls = res.map(file => file.ufsUrl).filter(Boolean)
+        const updatedImages = [...images, ...newUrls]
+        setImages(updatedImages)
+        onImagesChange(updatedImages)
       }
-
-      const data = await response.json() as { url: string }
-      return data.url
-    } catch (error) {
-      console.error("Erro no upload:", error)
-      throw error
-    } finally {
       setIsUploading(false)
-    }
-  }, [])
+    },
+    onUploadError: (error) => {
+      console.error("Erro no upload:", error)
+      alert("Erro no upload: Configure as credenciais do UploadThing no arquivo .env.local")
+      setIsUploading(false)
+    },
+    onUploadBegin: () => {
+      setIsUploading(true)
+    },
+  })
 
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? [])
@@ -59,18 +56,24 @@ export function MultipleImageUpload({
     }
 
     try {
-      const uploadPromises = files.map(file => handleImageUpload(file))
-      const urls = await Promise.all(uploadPromises)
-      
-      const newImages = [...images, ...urls]
-      setImages(newImages)
-      onImagesChange(newImages)
+      await startUpload(files)
     } catch (error) {
       console.error("Erro ao fazer upload das imagens:", error)
     }
-  }, [images, maxImages, handleImageUpload, onImagesChange])
+  }, [images.length, maxImages, startUpload])
 
-  const removeImage = useCallback((index: number) => {
+  const removeImage = useCallback(async (index: number) => {
+    const imageToRemove = images[index]
+    if (imageToRemove) {
+      try {
+        // Extrair o ID do arquivo da URL do UploadThing
+        const fileId = imageToRemove.replace("https://162synql7v.ufs.sh/f/", "")
+        await deleteFiles(fileId)
+      } catch (error) {
+        console.error("Erro ao deletar imagem do UploadThing:", error)
+      }
+    }
+    
     const newImages = images.filter((_, i) => i !== index)
     setImages(newImages)
     onImagesChange(newImages)
@@ -82,15 +85,20 @@ export function MultipleImageUpload({
       file.type.startsWith('image/')
     )
     
-    if (files.length > 0) {
-      const input = document.createElement('input')
-      input.type = 'file'
-      input.multiple = true
-      input.accept = 'image/*'
-      input.files = event.dataTransfer.files
-      void handleFileSelect({ target: input } as React.ChangeEvent<HTMLInputElement>)
+    if (files.length === 0) return
+
+    // Verificar limite de imagens
+    if (images.length + files.length > maxImages) {
+      alert(`Máximo de ${maxImages} imagens permitidas`)
+      return
     }
-  }, [handleFileSelect])
+
+    try {
+      void startUpload(files)
+    } catch (error) {
+      console.error("Erro ao fazer upload das imagens:", error)
+    }
+  }, [images.length, maxImages, startUpload])
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -161,7 +169,7 @@ export function MultipleImageUpload({
                     className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation()
-                      removeImage(index)
+                      void removeImage(index)
                     }}
                   >
                     <X className="h-3 w-3" />
