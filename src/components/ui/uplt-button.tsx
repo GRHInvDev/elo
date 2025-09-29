@@ -10,9 +10,10 @@ import { useCallback, useState } from "react";
 import { type ClientUploadedFileData } from "uploadthing/types";
 import { type UploadThingError } from "uploadthing/server";
 import { Button } from "./button";
-import { LucideImagePlus, LucideLoader2, LucideTrash2, LucideUpload } from 'lucide-react';
+import { LucideImagePlus, LucideLoader2, LucideTrash2, LucideUpload, LucideEdit } from 'lucide-react';
 import { type MaybePromise } from "@trpc/server/unstable-core-do-not-import";
 import { deleteFiles } from "@/server/upltActions";
+import { ImageEditor } from "@/components/image-editor";
 
 type JsonValue = string | number | boolean | null | undefined;
 type JsonObject = {
@@ -70,16 +71,35 @@ export function UPLTButton({
     setFiles([])
   }
   return (
-    <div {...getRootProps()}>
-      <input {...getInputProps()} />
-      <div className="w-full h-32 border-dashed flex items-center justify-center border rounded-md gap-2 cursor-pointer hover:bg-muted hover:border-primary transition-all">
-        { files.length > 0 ? isUploading? <LucideLoader2 className="animate-spin"/>: <>Arquivo carregado <LucideImagePlus/></> : <>Arraste ou clique para adicionar a imagem <LucideUpload/></> }
+    <div className="space-y-2">
+      <div {...getRootProps()}>
+        <input {...getInputProps()} />
+        <div className="w-full h-32 border-dashed flex items-center justify-center border rounded-md gap-2 cursor-pointer hover:bg-muted hover:border-primary transition-all">
+          { files.length > 0 ? isUploading? <LucideLoader2 className="animate-spin"/>: <>Arquivo carregado <LucideImagePlus/></> : <>Arraste ou clique para adicionar a imagem <LucideUpload/></> }
+        </div>
       </div>
-      {files.length > 0 &&
-        <Button variant='destructive' className="w-full mt-2" size='sm' onClick={handleRemove}>
-            Remover arquivos <LucideTrash2/>
-        </Button>
-      }
+      
+      {files.length > 0 && fileUrl && (
+        <div className="flex gap-2">
+          <ImageEditor 
+            imagemOriginal={fileUrl}
+            onImagemEditada={(novaUrl) => {
+              setFileUrl(novaUrl)
+              onImageUrlGenerated(novaUrl)
+            }}
+          >
+            <Button variant="outline" size="sm" className="flex-1">
+              <LucideEdit className="h-4 w-4 mr-2" />
+              Editar Imagem
+            </Button>
+          </ImageEditor>
+          
+          <Button variant='destructive' size='sm' onClick={handleRemove}>
+            <LucideTrash2 className="h-4 w-4 mr-2"/>
+            Remover
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

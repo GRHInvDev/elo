@@ -7,7 +7,8 @@ import type { RolesConfig } from "@/types/role-config"
 const createPostSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   content: z.string().min(1, "Conteúdo é obrigatório"),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().optional(), // Mantido para compatibilidade
+  images: z.array(z.string()).optional(), // Novas imagens múltiplas
   published: z.boolean().default(false),
 })
 
@@ -17,9 +18,11 @@ export const postRouter = createTRPCRouter({
   .mutation(async ({ ctx, input }) => {
     console.log("user Id", ctx.auth.userId)
 
+    const { images, ...postData } = input
+
     const post = await ctx.db.post.create({
       data: {
-        ...input,
+        ...postData,
         authorId: ctx.auth.userId,
       },
       include: {
@@ -31,6 +34,17 @@ export const postRouter = createTRPCRouter({
         }
       }
     })
+
+    // Criar registros de imagens se fornecidas
+    if (images && images.length > 0) {
+      await ctx.db.postImage.createMany({
+        data: images.map((imageUrl, index) => ({
+          postId: post.id,
+          imageUrl,
+          order: index,
+        }))
+      })
+    }
 
     // Notificações temporariamente desabilitadas
     // TODO: Reimplementar sistema de notificações
@@ -70,10 +84,34 @@ export const postRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.post.update({
+      const { images, ...postData } = input
+
+      // Atualizar o post
+      const updatedPost = await ctx.db.post.update({
         where: { id: input.id },
-        data: input,
+        data: postData,
       })
+
+      // Atualizar imagens se fornecidas
+      if (images !== undefined) {
+        // Deletar imagens existentes
+        await ctx.db.postImage.deleteMany({
+          where: { postId: input.id }
+        })
+
+        // Criar novas imagens se fornecidas
+        if (images.length > 0) {
+          await ctx.db.postImage.createMany({
+            data: images.map((imageUrl, index) => ({
+              postId: input.id,
+              imageUrl,
+              order: index,
+            }))
+          })
+        }
+      }
+
+      return updatedPost
     }),
 
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
@@ -106,8 +144,22 @@ export const postRouter = createTRPCRouter({
       })
     }
 
+    // Deletar imagens do UploadThing
     if (post.imageUrl){
       await utapi.deleteFiles(post.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
+    }
+
+    // Deletar imagens múltiplas do UploadThing
+    const postImages = await ctx.db.postImage.findMany({
+      where: { postId: input.id }
+    })
+
+    for (const image of postImages) {
+      try {
+        await utapi.deleteFiles(image.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
+      } catch (error) {
+        console.error("Erro ao deletar imagem:", error)
+      }
     }
 
     return ctx.db.post.delete({
@@ -144,6 +196,9 @@ export const postRouter = createTRPCRouter({
             role_config: true,
             enterprise: true,
           },
+        },
+        images: {
+          orderBy: { order: "asc" }
         },
         reactions: {
           distinct: ["emoji"]
@@ -183,6 +238,9 @@ export const postRouter = createTRPCRouter({
             enterprise: true,
             email: true,
           },
+        },
+        images: {
+          orderBy: { order: "asc" }
         },
         reactions: {
           distinct: ["emoji"]

@@ -11,9 +11,9 @@ import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import Image from "next/image"
+import { ImageCarousel } from "@/components/ui/image-carousel"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -30,6 +30,7 @@ interface PostWithAuthor {
   content: string
   authorId: string
   imageUrl: string | null
+  images?: Array<{ imageUrl: string }>
   createdAt: Date
   author: AuthorWithRoleConfig
 }
@@ -90,17 +91,21 @@ function PostItem({ post }: PostItemProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Coluna da Imagem */}
           <div className="order-2 md:order-1">
-            {post.imageUrl && (
-              <div className="w-full relative rounded-lg overflow-hidden border">
-                <Image
-                  alt={post.title}
-                  src={post.imageUrl}
-                  width={800}
-                  height={400}
-                  className="object-cover w-full h-auto max-h-[300px]"
-                  style={{ aspectRatio: 'auto' }}
-                />
-              </div>
+            {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
+              <ImageCarousel
+                images={
+                  (post.images?.length ?? 0) > 0 
+                    ? post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
+                    : post.imageUrl 
+                      ? [post.imageUrl]
+                      : []
+                }
+                alt={post.title}
+                aspectRatio="auto"
+                showArrows={true}
+                showDots={true}
+                className="max-h-[300px]"
+              />
             )}
           </div>
 

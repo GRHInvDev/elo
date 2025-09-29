@@ -44,7 +44,8 @@ import Image from "next/image"
 import type { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "next-themes"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
-import { UPLTButton } from "./ui/uplt-button"
+import { MultipleImageUpload } from "./ui/multiple-image-upload"
+import { ImageCarousel } from "./ui/image-carousel"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -61,6 +62,7 @@ interface PostWithAuthor {
   content: string
   authorId: string
   imageUrl: string | null
+  images?: Array<{ imageUrl: string }>
   createdAt: Date
   author: AuthorWithRoleConfig
 }
@@ -95,8 +97,9 @@ const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod
 
 export function ContentFeed({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
-  const [fileUrl, setFileUrl] = useState<string | undefined>(undefined)
-  const [loading, setLoading] = useState(false)
+  const [fileUrl] = useState<string | undefined>(undefined)
+  const [images, setImages] = useState<string[]>([])
+  const [loading] = useState(false)
   const { toast } = useToast()
   const utils = api.useUtils()
 
@@ -127,14 +130,6 @@ export function ContentFeed({ className }: { className?: string }) {
     },
   })
 
-  const handleImageUrlGenerated = (url: string) => {
-    setFileUrl(url)
-    toast({
-      title: "Imagem carregada",
-      description: "A imagem foi carregada com sucesso.",
-    })
-    setLoading(false)
-  }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -144,7 +139,8 @@ export function ContentFeed({ className }: { className?: string }) {
       title: formData.get("title") as string,
       content: normalizeLineBreaks(formData.get("content") as string),
       published: true,
-      imageUrl: fileUrl,
+      imageUrl: fileUrl, // Mantido para compatibilidade
+      images: images.length > 0 ? images : undefined, // Novas imagens múltiplas
     })
   }
 
@@ -173,23 +169,10 @@ export function ContentFeed({ className }: { className?: string }) {
                       <Input id="title" name="title" placeholder="Digite o título do post" required />
                     </div>
                     <div className="grid gap-2">
-                      <Label>Imagem</Label>
-                      <UPLTButton
-                        onImageUrlGenerated={handleImageUrlGenerated}
-                        onUploadBegin={()=>{
-                          setLoading(true)
-                          toast({
-                            title: "Anexando imagem",
-                            description: "Estamos anexando sua imagem.",
-                          })
-                        }}
-                        onUploadError={(error: Error) => {
-                          toast({
-                            title: "Erro",
-                            description: error.message,
-                            variant: "destructive",
-                          })
-                        }}
+                      <Label>Imagens</Label>
+                      <MultipleImageUpload
+                        onImagesChange={setImages}
+                        maxImages={10}
                       />
                     </div>
                     <div className="grid gap-2">
@@ -646,18 +629,23 @@ function PostItem({ post }: PostItemProps) {
             )}
           </div>
         )}
-        {post.imageUrl && (
-          <div className="mt-2 w-full relative rounded-lg overflow-hidden border">
-            <Image
+        {/* {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
+          <div className="mt-2">
+            <ImageCarousel
+              images={
+                (post.images?.length ?? 0) > 0 
+                  ? post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
+                  : post.imageUrl 
+                    ? [post.imageUrl]
+                    : []
+              }
               alt={post.title}
-              src={post.imageUrl}
-              width={800}
-              height={600}
-              className="object-cover w-full h-auto max-h-[80vh]"
-              style={{ aspectRatio: 'auto' }}
+              aspectRatio="video"
+              showArrows={true}
+              showDots={true}
             />
           </div>
-        )}
+        )} */}
       </CardContent>
 
       {(totalReactions > 0 || (comments && comments.length > 0)) && (

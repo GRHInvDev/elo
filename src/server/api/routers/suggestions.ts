@@ -93,8 +93,8 @@ export const suggestionRouter = createTRPCRouter({
   // Criar ideia manualmente (admin)
   createManual: adminProcedure
     .input(z.object({
-      submittedName: z.string().trim().min(1),
-      submittedSector: z.string().trim().min(1),
+      submittedName: z.string().trim().optional(),
+      submittedSector: z.string().trim().optional(),
       isNameVisible: z.boolean().default(true),
       description: z.string().trim().min(1), // Solução proposta
       problem: z.string().trim().min(1), // Problema identificado

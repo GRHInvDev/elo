@@ -100,12 +100,24 @@ model Post {
   reactionCount Int        @default(0)
   viewCount     Int        @default(0)
   lastViewedAt  DateTime?
-  imageUrl      String?
+  imageUrl      String?    // Mantido para compatibilidade com posts existentes
+  images        PostImage[] // Novas imagens múltiplas
   comments      Coment[]
   reactions     Reaction[]
   author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("posts")
+}
+
+model PostImage {
+  id        String   @id @default(cuid())
+  postId    String
+  imageUrl  String
+  order     Int      @default(0) // Ordem das imagens no carrossel
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_images")
 }
 
 model Reaction {

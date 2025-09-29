@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Car, Clock, MapPin, User, Filter, X } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { EditRentModal } from "@/components/edit-rent-modal"
+import { RentForm } from "@/components/rent-form"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { VehicleRent, Vehicle } from "@prisma/client"
 
 type VehicleRentWithVehicle = VehicleRent & { vehicle: Vehicle }
@@ -274,13 +275,22 @@ export default function MyRentsPage() {
       )}
 
       {/* Modal de Edição */}
-      {selectedRent && (
-        <EditRentModal
-          rent={selectedRent}
-          isOpen={isEditModalOpen}
-          onClose={closeEditModal}
-        />
-      )}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Reserva</DialogTitle>
+          </DialogHeader>
+          {selectedRent && (
+            <RentForm
+              vehicle={selectedRent.vehicle}
+              editMode={true}
+              existingRent={selectedRent}
+              isModal={true}
+              onCloseModal={closeEditModal}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
