@@ -10,17 +10,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NotificationItem } from "@/components/notifications/notification-item"
 import { NotificationPreferences } from "@/components/notifications/notification-preferences"
 import { useNotifications } from "@/hooks/use-notifications"
+import { useUser } from "@clerk/nextjs"
 import type { NotificationData } from "@/types/notification-types"
 
 export default function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [readFilter, setReadFilter] = useState<string>("all")
+  const { user } = useUser()
 
   const notificationData = useNotifications({
     limit: 50,
-    autoRefresh: true,
-    refreshInterval: 30000
+    userId: user?.id
   })
 
   const {

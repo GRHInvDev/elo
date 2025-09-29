@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
 import { NotificationType, NotificationChannel } from "@prisma/client"
+import { getNotificationWebSocketService } from "../../services/notification-websocket-service"
 
 export const notificationRouter = createTRPCRouter({
   // Listar notificações do usuário logado
@@ -41,25 +42,42 @@ export const notificationRouter = createTRPCRouter({
       id: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.notification.update({
+      const notification = await ctx.db.notification.update({
         where: {
           id: input.id,
           userId: ctx.auth.userId // Garantir que só o dono pode marcar como lida
         },
         data: { isRead: true }
       })
+
+      // Atualizar contagem via WebSocket
+      const wsService = getNotificationWebSocketService()
+      if (wsService) {
+        await wsService.emitNotificationUpdate(notification)
+        await wsService.updateUnreadCount(ctx.auth.userId)
+      }
+
+      return notification
     }),
 
   // Marcar todas as notificações como lidas
   markAllAsRead: protectedProcedure
     .mutation(async ({ ctx }) => {
-      return await ctx.db.notification.updateMany({
+      const result = await ctx.db.notification.updateMany({
         where: {
           userId: ctx.auth.userId,
           isRead: false
         },
         data: { isRead: true }
       })
+
+      // Atualizar contagem via WebSocket
+      const wsService = getNotificationWebSocketService()
+      if (wsService) {
+        await wsService.updateUnreadCount(ctx.auth.userId)
+      }
+
+      return result
     }),
 
   // Criar notificação (admin ou sistema)
@@ -77,7 +95,7 @@ export const notificationRouter = createTRPCRouter({
       data: z.any().optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.notification.create({
+      const notification = await ctx.db.notification.create({
         data: {
           title: input.title,
           message: input.message,
@@ -91,6 +109,15 @@ export const notificationRouter = createTRPCRouter({
         data: input.data
         }
       })
+
+      // Emitir notificação via WebSocket em tempo real
+      const wsService = getNotificationWebSocketService()
+      if (wsService) {
+        await wsService.emitNewNotification(notification)
+        await wsService.updateUnreadCount(input.userId)
+      }
+
+      return notification
     }),
 
   // Criar notificação para múltiplos usuários
@@ -128,9 +155,37 @@ export const notificationRouter = createTRPCRouter({
         data: input.data
       }))
 
-      return await ctx.db.notification.createMany({
+      const result = await ctx.db.notification.createMany({
         data: notifications
       })
+
+      // Para notificações em lote, buscar as notificações criadas para emitir via WebSocket
+      if (result.count > 0) {
+        const wsService = getNotificationWebSocketService()
+        if (wsService) {
+          // Buscar as notificações recém-criadas
+          const createdNotifications = await ctx.db.notification.findMany({
+            where: {
+              userId: { in: input.userIds },
+              createdAt: {
+                gte: new Date(Date.now() - 1000) // Último segundo
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: result.count
+          })
+
+          // Emitir cada notificação via WebSocket
+          await Promise.all(createdNotifications.map(notification =>
+            Promise.all([
+              wsService.emitNewNotification(notification),
+              wsService.updateUnreadCount(notification.userId)
+            ])
+          ))
+        }
+      }
+
+      return result
     }),
 
   // Deletar notificação
@@ -139,12 +194,21 @@ export const notificationRouter = createTRPCRouter({
       id: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.notification.delete({
+      const notification = await ctx.db.notification.delete({
         where: {
           id: input.id,
           userId: ctx.auth.userId // Garantir que só o dono pode deletar
         }
       })
+
+      // Emitir exclusão via WebSocket
+      const wsService = getNotificationWebSocketService()
+      if (wsService) {
+        await wsService.emitNotificationDelete(notification)
+        await wsService.updateUnreadCount(ctx.auth.userId)
+      }
+
+      return notification
     }),
 
   // Deletar notificações antigas (cleanup)

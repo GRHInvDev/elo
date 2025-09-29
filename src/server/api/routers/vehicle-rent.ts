@@ -116,6 +116,70 @@ export const vehicleRentRouter = createTRPCRouter({
     return activeRent
   }),
 
+  getCalendarReservations: protectedProcedure
+    .input(
+      z.object({
+        vehicleId: z.string().optional(),
+        month: z.number(), // 0-11 (JavaScript months)
+        year: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { vehicleId, month, year } = input
+
+      // Criar datas para o início e fim do mês
+      const startOfMonth = new Date(year, month, 1)
+      const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999)
+
+      const reservations = await ctx.db.vehicleRent.findMany({
+        where: {
+          vehicleId: vehicleId,
+          finished: false,
+          // Uma reserva deve aparecer no calendário se há sobreposição com o mês
+          OR: [
+            // Caso 1: reserva começa dentro do mês
+            {
+              startDate: {
+                gte: startOfMonth,
+                lte: endOfMonth,
+              },
+            },
+            // Caso 2: reserva termina dentro do mês
+            {
+              possibleEnd: {
+                gte: startOfMonth,
+                lte: endOfMonth,
+              },
+            },
+            // Caso 3: reserva cobre todo o mês (começa antes e termina depois)
+            {
+              AND: [
+                { startDate: { lte: startOfMonth } },
+                { possibleEnd: { gte: endOfMonth } },
+              ],
+            },
+          ],
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+          vehicle: true,
+        },
+        orderBy: {
+          startDate: "asc",
+        },
+      })
+
+      return reservations
+    }),
+
   create: protectedProcedure.input(createVehicleRentSchema).mutation(async ({ ctx, input }) => {
     // Verificar se o usuário tem permissão para fazer agendamentos de carros
     const db_user = await ctx.db.user.findUnique({

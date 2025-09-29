@@ -64,7 +64,7 @@ function CalendarSkeleton() {
 export function VehicleCalendar() {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [selectedVehicleId, setSelectedVehicleId] = useState<string | undefined>(undefined)
-    const [selectedEvent, setSelectedEvent] = useState<inferProcedureOutput<AppRouter['vehicleRent']['getAll']>['items'][number] | null>(null)
+    const [selectedEvent, setSelectedEvent] = useState<inferProcedureOutput<AppRouter['vehicleRent']['getCalendarReservations']>[number] | null>(null)
     const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar")
 
     const isMobile = useMediaQuery("(max-width: 768px)")
@@ -84,12 +84,11 @@ export function VehicleCalendar() {
 
     // Fetch vehicles for the dropdown
     const { data: vehiclesData } = api.vehicle.getAll.useQuery({})
-
     // Fetch reservations for the current month
-    const { data: reservationsData, isLoading: isLoadingReservations } = api.vehicleRent.getAll.useQuery({
+    const { data: reservationsData, isLoading: isLoadingReservations } = api.vehicleRent.getCalendarReservations.useQuery({
         vehicleId: selectedVehicleId,
-        initial_date: firstDayOfMonth,
-        final_date: lastDayOfMonth,
+        month: currentDate.getMonth(),
+        year: currentDate.getFullYear(),
     })
 
     // Generate days for the calendar
@@ -102,17 +101,17 @@ export function VehicleCalendar() {
 
     // Group reservations by day
     const reservationsByDay = useMemo(() => {
-        const grouped: Record<string, inferProcedureOutput<AppRouter['vehicleRent']['getAll']>['items'][number][]> = {}
+        const grouped: Record<string, inferProcedureOutput<AppRouter['vehicleRent']['getCalendarReservations']>[number][]> = {}
         
-        if (reservationsData?.items) {
-            reservationsData.items.forEach((reservation) => {
+        if (reservationsData) {
+            reservationsData.forEach((reservation) => {
                 const startDate = utcToLocalDate(reservation.startDate)
                 if (!startDate) return
 
                 const dateKey = format(startDate, "yyyy-MM-dd")
 
                 grouped[dateKey] ??= []
-                grouped[dateKey].push(reservation)
+                grouped[dateKey]?.push(reservation)
             })
         }
         return grouped

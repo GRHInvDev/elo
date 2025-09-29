@@ -7,6 +7,7 @@ import { UserNav } from "@/components/user-nav"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
 import { BrowserNotificationPermission } from "@/components/notifications/browser-notification-permission"
+import { GlobalNotificationManager } from "@/components/notifications/global-notification-manager"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 
@@ -69,6 +70,7 @@ export default function AuthenticatedLayoutClient({
 
       <FloatingChatButton/>
       <BrowserNotificationPermission />
+      <GlobalNotificationManager />
     </div>
   )
 }

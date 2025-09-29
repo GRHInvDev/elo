@@ -1,63 +1,75 @@
 import { useState, useEffect, useCallback } from "react"
 import { api } from "@/trpc/react"
 import { useBrowserNotifications } from "./use-browser-notifications"
+import { useNotificationSocket } from "./use-notification-socket"
 import type { UseNotificationsReturn } from "@/types/notification-types"
 
 interface UseNotificationsProps {
   limit?: number
   unreadOnly?: boolean
-  autoRefresh?: boolean
-  refreshInterval?: number
   enableSound?: boolean
+  userId?: string
 }
 
 export const useNotifications = ({
   limit = 20,
   unreadOnly = false,
-  autoRefresh = true,
-  refreshInterval = 30000, // 30 segundos
   enableSound = true,
-  enableBrowserNotifications = true
+  enableBrowserNotifications = true,
+  userId
 }: UseNotificationsProps & { enableBrowserNotifications?: boolean } = {}): UseNotificationsReturn => {
   const [offset, setOffset] = useState(0)
-  const [lastUnreadCount, setLastUnreadCount] = useState(0)
 
   // Hook para notificações do browser
   const { showChatNotification, shouldShowNotification } = useBrowserNotifications()
 
-  // Query para buscar notificações
+  // Hook para WebSocket de notificações (sempre habilitado quando userId está disponível)
+  const {
+    isConnected: isWebSocketConnected,
+    isConnecting: isWebSocketConnecting,
+    error: websocketError,
+    unreadCount: websocketUnreadCount,
+    reconnect: reconnectWebSocket
+  } = useNotificationSocket({
+    userId,
+    enabled: !!userId,
+    onNotification: (data) => {
+      console.log('📡 Nova notificação recebida via WebSocket:', data)
+      // Forçar refetch para atualizar a lista
+      void refetch()
+    },
+    onUnreadCountChange: (count) => {
+      console.log('🔢 Contagem de notificações atualizada:', count)
+    }
+  })
+
+  // Query para buscar notificações (sempre atual quando WebSocket não está disponível)
   const notificationsQuery = api.notification.list.useQuery({
     limit,
     offset,
     unreadOnly
+  }, {
+    // Desabilitar query automática se WebSocket estiver conectado
+    enabled: !isWebSocketConnected || isWebSocketConnecting
   })
 
   const notificationsData = notificationsQuery.data
-  const isLoading = notificationsQuery.isLoading
+  const isLoading = notificationsQuery.isLoading || isWebSocketConnecting
   const refetch = notificationsQuery.refetch
-  const error = notificationsQuery.error
+  const error = notificationsQuery.error ?? websocketError
 
   // Mutations
   const markAsReadMutation = api.notification.markAsRead.useMutation()
   const markAllAsReadMutation = api.notification.markAllAsRead.useMutation()
   const deleteMutation = api.notification.delete.useMutation()
 
-  // Auto-refresh
-  useEffect(() => {
-    if (!autoRefresh) return
-
-    const interval = setInterval(() => {
-      void refetch()
-    }, refreshInterval)
-
-    return () => clearInterval(interval)
-  }, [autoRefresh, refreshInterval, refetch])
-
-  // Funções de manipulação
+  // Funções de manipulação (sempre dependem do WebSocket para atualizações)
   const markAsRead = async (id: string): Promise<void> => {
     try {
       await markAsReadMutation.mutateAsync({ id })
-      await refetch() // Refresh após marcar como lida
+      // WebSocket vai emitir a atualização automaticamente
+      // Forçar refetch para garantir consistência
+      void refetch()
     } catch (error) {
       console.error('Erro ao marcar notificação como lida:', error)
       throw error
@@ -67,7 +79,9 @@ export const useNotifications = ({
   const markAllAsRead = async (): Promise<void> => {
     try {
       await markAllAsReadMutation.mutateAsync()
-      await refetch() // Refresh após marcar todas como lidas
+      // WebSocket vai emitir a atualização automaticamente
+      // Forçar refetch para garantir consistência
+      void refetch()
     } catch (error) {
       console.error('Erro ao marcar todas as notificações como lidas:', error)
       throw error
@@ -77,7 +91,9 @@ export const useNotifications = ({
   const deleteNotification = async (id: string): Promise<void> => {
     try {
       await deleteMutation.mutateAsync({ id })
-      await refetch() // Refresh após deletar
+      // WebSocket vai emitir a atualização automaticamente
+      // Forçar refetch para garantir consistência
+      void refetch()
     } catch (error) {
       console.error('Erro ao deletar notificação:', error)
       throw error
@@ -148,73 +164,11 @@ export const useNotifications = ({
     }
   }
 
-  // Verificar se há novas notificações para tocar som, mostrar popup e notificações do browser
+  // Handler para notificações recebidas via WebSocket
   useEffect(() => {
-    const currentUnreadCount = notificationsData?.unreadCount ?? 0
-
-    if (currentUnreadCount > lastUnreadCount) {
-      // Tocar som se habilitado
-      if (enableSound) {
-        playNotificationSound()
-      }
-
-      // Mostrar popup se disponível
-      if (typeof window !== 'undefined' && 'showNotificationPopup' in window) {
-        const latestNotification = notificationsData?.notifications?.[0]
-        if (latestNotification) {
-          const showNotificationPopup = (window as unknown as { showNotificationPopup?: (params: Record<string, unknown>) => void }).showNotificationPopup
-          if (showNotificationPopup) {
-            showNotificationPopup({
-              title: latestNotification.title,
-              message: latestNotification.message,
-              type: latestNotification.type?.toLowerCase() || 'info',
-              duration: 5000,
-              actionUrl: latestNotification.actionUrl
-            })
-          }
-        }
-      }
-
-      // Mostrar notificação do browser para mensagens de chat
-      if (enableBrowserNotifications) {
-        const latestNotification = notificationsData?.notifications?.[0]
-        if (latestNotification && latestNotification.entityType === 'chat_message') {
-          const data = latestNotification.data as {
-            roomId?: string
-            messageId?: string
-            senderId?: string
-            senderName?: string
-            content?: string
-            hasImage?: boolean
-          }
-
-          if (data?.roomId && shouldShowNotification(data.roomId)) {
-            showChatNotification({
-              senderName: data.senderName ?? 'Usuário',
-              message: data.hasImage ? '[Imagem]' : (data.content ?? 'Nova mensagem'),
-              roomId: data.roomId,
-              roomName: latestNotification.title?.includes('global')
-                ? 'Chat Global'
-                : latestNotification.title?.includes('privada')
-                  ? 'Chat Privado'
-                  : 'Grupo',
-            })
-          }
-        }
-      }
-    }
-
-    setLastUnreadCount(currentUnreadCount)
-  }, [
-    notificationsData?.unreadCount,
-    lastUnreadCount,
-    enableSound,
-    enableBrowserNotifications,
-    notificationsData?.notifications,
-    playNotificationSound,
-    showChatNotification,
-    shouldShowNotification
-  ])
+    // Esta lógica agora é tratada pelo onNotification callback no useNotificationSocket
+    // As notificações chegam em tempo real e disparam sons/popups diretamente
+  }, [])
 
   const loadMore = (): void => {
     if (notificationsData && notificationsData.notifications.length === limit) {
@@ -234,6 +188,7 @@ export const useNotifications = ({
     entityType: notification.entityType ?? undefined
   }))
   const total = notificationsData?.total ?? 0
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const unreadCount = notificationsData?.unreadCount ?? 0
   const hasMore = notifications.length < total
 
@@ -241,12 +196,14 @@ export const useNotifications = ({
     // Dados
     notifications,
     total,
-    unreadCount,
+    unreadCount: websocketUnreadCount,
     hasMore,
 
     // Estados
     isLoading,
     error,
+    isWebSocketConnected,
+    isUsingWebSocket: isWebSocketConnected,
 
     // Ações
     markAsRead,
@@ -255,6 +212,7 @@ export const useNotifications = ({
     loadMore,
     resetOffset,
     refetch,
+    reconnectWebSocket,
 
     // Estados das mutations
     isMarkingAsRead: markAsReadMutation.isPending,
@@ -264,15 +222,16 @@ export const useNotifications = ({
 }
 
 // Hook específico para contagem de notificações não lidas (para ícones/badges)
-export const useNotificationCount = () => {
-  const notificationQuery = api.notification.list.useQuery({
-    limit: 1,
-    unreadOnly: true
+export const useNotificationCount = (userId?: string) => {
+  // Usar WebSocket para contagem em tempo real
+  const { unreadCount, isConnected, isConnecting } = useNotificationSocket({
+    userId,
+    enabled: !!userId
   })
 
   return {
-    unreadCount: notificationQuery.data?.unreadCount ?? 0,
-    isLoading: notificationQuery.isLoading,
-    refetch: notificationQuery.refetch
+    unreadCount,
+    isLoading: isConnecting,
+    isWebSocketConnected: isConnected
   }
 }

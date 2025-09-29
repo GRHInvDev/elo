@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge"
 import { NotificationList } from "./notification-list"
 import { useNotificationCount, useNotifications } from "@/hooks/use-notifications"
+import { useUser } from "@clerk/nextjs"
 
 interface NotificationDropdownProps {
   className?: string
@@ -14,8 +15,9 @@ interface NotificationDropdownProps {
 
 export function NotificationDropdown({ className }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { unreadCount } = useNotificationCount()
-  const { markAllAsRead } = useNotifications({ limit: 1 })
+  const { user } = useUser()
+  const { unreadCount } = useNotificationCount(user?.id)
+  const { markAllAsRead } = useNotifications({ limit: 1, userId: user?.id })
 
   // Marcar todas as notificações como lidas quando o dropdown é aberto
   useEffect(() => {
