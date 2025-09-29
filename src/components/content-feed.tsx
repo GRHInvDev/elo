@@ -347,6 +347,7 @@ interface PostItemProps {
     content: string
     authorId: string
     imageUrl: string | null
+    images?: Array<{ imageUrl: string }>
     author: {
       firstName: string | null
       lastName: string | null
@@ -629,7 +630,7 @@ function PostItem({ post }: PostItemProps) {
             )}
           </div>
         )}
-        {/* {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
+        {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
           <div className="mt-2">
             <ImageCarousel
               images={
@@ -645,7 +646,7 @@ function PostItem({ post }: PostItemProps) {
               showDots={true}
             />
           </div>
-        )} */}
+        )}
       </CardContent>
 
       {(totalReactions > 0 || (comments && comments.length > 0)) && (

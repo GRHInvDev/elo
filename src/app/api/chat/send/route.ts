@@ -88,6 +88,8 @@ async function createMessageNotifications(message: PrismaMessage, senderUser: Se
   })
 
   // Criar notificações em lote
+  // TEMPORARIAMENTE DESATIVADO - Notificações de chat desabilitadas
+  /*
   if (recipientUserIds.length > 0) {
     const notifications = recipientUserIds.map(recipientId => ({
       title: `Nova mensagem ${roomId === 'global' ? 'no chat global' : roomId.startsWith('group_') ? 'no grupo' : 'privada'}`,
@@ -115,6 +117,7 @@ async function createMessageNotifications(message: PrismaMessage, senderUser: Se
 
     console.log(`📢 [NOTIFICATIONS] Criadas ${notifications.length} notificações para sala ${roomId}`)
   }
+  */
 }
 
 export async function POST(request: NextRequest) {

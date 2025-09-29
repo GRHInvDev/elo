@@ -6,7 +6,8 @@ import { db } from '@/server/db'
 import { cache } from 'react'
 
 // Flag para habilitar/desabilitar notificações globalmente
-export const NOTIFICATIONS_ENABLED = process.env.NEXT_PUBLIC_NOTIFICATIONS_ENABLED === 'true'
+// TEMPORARIAMENTE DESATIVADO - Para reativar, defina NEXT_PUBLIC_NOTIFICATIONS_ENABLED=true no .env
+export const NOTIFICATIONS_ENABLED = false // process.env.NEXT_PUBLIC_NOTIFICATIONS_ENABLED === 'true'
 
 // Configuração de notificações por módulo
 export const NOTIFICATION_CONFIG = {

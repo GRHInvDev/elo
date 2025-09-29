@@ -14,8 +14,14 @@ export class NotificationWebSocketService {
 
   /**
    * Emite uma nova notificação via WebSocket
+   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async emitNewNotification(notification: Notification) {
+    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
+    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket notification emission disabled:', notification.title)
+    return
+    
+    /*
     // Import notificationUsers dynamically to avoid circular dependency
     const { notificationUsers }: { notificationUsers: Map<string, string> } = await import('../websocket/chat-server')
 
@@ -33,12 +39,19 @@ export class NotificationWebSocketService {
         }
       })
     }
+    */
   }
 
   /**
    * Atualiza a contagem de notificações não lidas para um usuário
+   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async updateUnreadCount(userId: string) {
+    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
+    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket unread count update disabled for user:', userId)
+    return
+    
+    /*
     // Import notificationUsers and prisma dynamically
     const [{ notificationUsers }, { PrismaClient }] = await Promise.all([
       import('../websocket/chat-server'),
@@ -59,12 +72,19 @@ export class NotificationWebSocketService {
         console.error('Erro ao atualizar contagem de notificações:', error)
       })
     }
+    */
   }
 
   /**
    * Emite notificação de atualização (ex: marcada como lida)
+   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async emitNotificationUpdate(notification: Notification) {
+    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
+    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket notification update disabled:', notification.title)
+    return
+    
+    /*
     // Import notificationUsers dynamically to avoid circular dependency
     const { notificationUsers }: { notificationUsers: Map<string, string> } = await import('../websocket/chat-server')
 
@@ -82,12 +102,19 @@ export class NotificationWebSocketService {
         }
       })
     }
+    */
   }
 
   /**
    * Emite notificação de exclusão
+   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async emitNotificationDelete(notification: Notification) {
+    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
+    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket notification delete disabled:', notification.title)
+    return
+    
+    /*
     // Import notificationUsers dynamically to avoid circular dependency
     const { notificationUsers }: { notificationUsers: Map<string, string> } = await import('../websocket/chat-server')
 
@@ -105,6 +132,7 @@ export class NotificationWebSocketService {
         }
       })
     }
+    */
   }
 }
 

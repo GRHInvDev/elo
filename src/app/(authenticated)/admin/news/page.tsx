@@ -37,6 +37,11 @@ import { UPLTButton } from "@/components/ui/uplt-button"
 import Image from "next/image"
 import type { Post } from "@prisma/client"
 
+// Extend Post type to include images
+interface PostWithImages extends Post {
+  images?: Array<{ imageUrl: string }>
+}
+
 // Função utilitária para normalizar quebras de linha (CRLF -> LF)
 function normalizeLineBreaks(text: string): string {
   return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
@@ -374,23 +379,21 @@ export default function NewsManagementPage() {
                   <Card key={post.id} className="overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex gap-4">
-                        {/* Imagem do post
+                        {/* Imagem do post */}
                         <div className="flex-shrink-0">
-                          {(post.imageUrl || (post.images && post.images.length > 0)) ? (
+                          {(post.imageUrl ?? ((post as PostWithImages).images?.length ?? 0) > 0) ? (
                             <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted">
                               <Image
                                 src={
-                                  post.images && post.images.length > 0 
-                                    ? post.images[0].imageUrl
-                                    : post.imageUrl!
+                                  (post as PostWithImages).images?.[0]?.imageUrl ?? post.imageUrl ?? "/placeholder.svg"
                                 }
                                 alt={post.title}
                                 fill
                                 className="object-cover"
                               />
-                              {(post.images && post.images.length > 1) && (
+                              {((post as PostWithImages).images?.length ?? 0) > 1 && (
                                 <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 py-0.5 rounded">
-                                  +{post.images.length - 1}
+                                  +{((post as PostWithImages).images?.length ?? 0) - 1}
                                 </div>
                               )}
                             </div>
@@ -399,7 +402,7 @@ export default function NewsManagementPage() {
                               <ImageIcon className="h-8 w-8 text-muted-foreground" />
                             </div>
                           )}
-                        </div> */}
+                        </div>
 
                         {/* Conteúdo do post */}
                         <div className="flex-1 min-w-0">
