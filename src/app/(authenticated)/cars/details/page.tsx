@@ -91,7 +91,7 @@ function VehiclesPageContent() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                // Removido min para permitir seleção de datas passadas
               />
             </div>
             <div className="flex-1">
