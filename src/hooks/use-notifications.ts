@@ -9,6 +9,7 @@ interface UseNotificationsProps {
   unreadOnly?: boolean
   enableSound?: boolean
   userId?: string
+  enabled?: boolean
 }
 
 export const useNotifications = ({
@@ -16,7 +17,8 @@ export const useNotifications = ({
   unreadOnly = false,
   enableSound = true,
   enableBrowserNotifications = true,
-  userId
+  userId,
+  enabled = true
 }: UseNotificationsProps & { enableBrowserNotifications?: boolean } = {}): UseNotificationsReturn => {
   const [offset, setOffset] = useState(0)
 
@@ -32,14 +34,16 @@ export const useNotifications = ({
     reconnect: reconnectWebSocket
   } = useNotificationSocket({
     userId,
-    enabled: !!userId,
+    enabled: enabled && !!userId,
     onNotification: (data) => {
-      console.log('📡 Nova notificação recebida via WebSocket:', data)
+      // TEMPORARIAMENTE DESATIVADO - Logs de notificações desabilitados
+      // console.log('📡 Nova notificação recebida via WebSocket:', data)
       // Forçar refetch para atualizar a lista
       void refetch()
     },
     onUnreadCountChange: (count) => {
-      console.log('🔢 Contagem de notificações atualizada:', count)
+      // TEMPORARIAMENTE DESATIVADO - Logs de notificações desabilitados
+      // console.log('🔢 Contagem de notificações atualizada:', count)
     }
   })
 
@@ -49,8 +53,8 @@ export const useNotifications = ({
     offset,
     unreadOnly
   }, {
-    // Desabilitar query automática se WebSocket estiver conectado
-    enabled: !isWebSocketConnected || isWebSocketConnecting
+    // Desabilitar query automática se WebSocket estiver conectado ou se notificações estiverem desabilitadas
+    enabled: enabled && (!isWebSocketConnected || isWebSocketConnecting)
   })
 
   const notificationsData = notificationsQuery.data

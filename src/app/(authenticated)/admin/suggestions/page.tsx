@@ -3549,14 +3549,6 @@ function CreateSuggestionModal({
 
   const handleSubmit = () => {
     // Validações básicas
-    if (!formData.userId && !formData.submittedName.trim()) {
-      toast({ title: "Erro", description: "Nome do colaborador é obrigatório.", variant: "destructive" })
-      return
-    }
-    if (!formData.userId && !formData.submittedSector.trim()) {
-      toast({ title: "Erro", description: "Setor do colaborador é obrigatório.", variant: "destructive" })
-      return
-    }
     if (!formData.problem.trim()) {
       toast({ title: "Erro", description: "Problema identificado é obrigatório.", variant: "destructive" })
       return
@@ -3657,7 +3649,7 @@ function CreateSuggestionModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="submittedName">
-                    Nome do Colaborador {formData.userId ? "" : "*"}
+                    Nome do Colaborador {formData.userId ? "" : ""}
                   </Label>
                   <Input
                     id="submittedName"
@@ -3669,7 +3661,7 @@ function CreateSuggestionModal({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="submittedSector">
-                    Setor {formData.userId ? "" : "*"}
+                    Setor {formData.userId ? "" : ""}
                   </Label>
                   <Input
                     id="submittedSector"

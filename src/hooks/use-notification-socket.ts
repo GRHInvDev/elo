@@ -47,8 +47,9 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
   const { showChatNotification, shouldShowNotification } = useBrowserNotifications()
 
   // Hook WebSocket genérico
+  // TEMPORARIAMENTE DESATIVADO - WebSocket completamente desabilitado
   const { isConnected, isConnecting, error, emit, on, off, connect } = useWebSocket({
-    autoConnect: enabled
+    autoConnect: false // Desabilitado completamente
   })
 
   // Buscar contagem inicial de notificações não lidas
@@ -132,7 +133,8 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
   // Registrar usuário para receber notificações
   useEffect(() => {
     if (isConnected && userId && enabled) {
-      console.log('📡 Registrando usuário para notificações:', userId)
+      // TEMPORARIAMENTE DESATIVADO - Logs de notificações desabilitados
+      // console.log('📡 Registrando usuário para notificações:', userId)
       emit('joinNotifications', { userId })
     }
   }, [isConnected, userId, enabled, emit])
@@ -143,7 +145,8 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
 
     const handleNewNotification = (...args: unknown[]) => {
       const data = args[0] as NotificationSocketData
-      console.log('🔔 Nova notificação recebida:', data)
+      // TEMPORARIAMENTE DESATIVADO - Logs de notificações desabilitados
+      // console.log('🔔 Nova notificação recebida:', data)
 
       if (data.type === 'new') {
         // Tocar som se habilitado
@@ -219,15 +222,14 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
 
     const handleUnreadCountUpdate = (...args: unknown[]) => {
       const data = args[0] as { count: number }
-      console.log('🔢 Contagem de notificações atualizada:', data.count)
       setUnreadCount(data.count)
       onUnreadCountChange?.(data.count)
     }
 
     const handleNotificationError = (...args: unknown[]) => {
       const error = args[0] as { message: string }
-      console.error('❌ Erro nas notificações:', error.message)
     }
+    
 
     // Registrar listeners
     on('notification', handleNewNotification)

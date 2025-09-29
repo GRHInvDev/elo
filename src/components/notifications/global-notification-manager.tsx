@@ -13,6 +13,7 @@ export function GlobalNotificationManager() {
   const { user } = useUser()
 
   // Hook que gerencia todas as notificações globalmente com WebSocket (exclusivamente)
+  // TEMPORARIAMENTE DESATIVADO - Notificações desabilitadas
   const {
     isWebSocketConnected,
     isUsingWebSocket,
@@ -20,12 +21,15 @@ export function GlobalNotificationManager() {
     error
   } = useNotifications({
     limit: 1, // Só precisamos da contagem, não da lista completa
-    enableSound: true,
-    enableBrowserNotifications: true,
-    userId: user?.id
+    enableSound: false, // Desabilitado temporariamente
+    enableBrowserNotifications: false, // Desabilitado temporariamente
+    userId: user?.id,
+    enabled: false // Desabilitado completamente
   })
 
   // Log do status da conexão WebSocket
+  // TEMPORARIAMENTE DESATIVADO - Logs de WebSocket desabilitados
+  /*
   useEffect(() => {
     if (isUsingWebSocket) {
       console.log('🔔 Sistema de notificações: WebSocket ativo e funcionando')
@@ -35,8 +39,11 @@ export function GlobalNotificationManager() {
       console.log('⚠️ Sistema de notificações: WebSocket não conectado')
     }
   }, [isWebSocketConnected, isUsingWebSocket])
+  */
 
   // Tentar reconectar se houver erro de conexão
+  // TEMPORARIAMENTE DESATIVADO - Reconexão automática desabilitada
+  /*
   useEffect(() => {
     if (error && !isWebSocketConnected) {
       console.log('🔄 Tentando reconectar WebSocket devido a erro:', error)
@@ -47,6 +54,7 @@ export function GlobalNotificationManager() {
       return () => clearTimeout(timeoutId)
     }
   }, [error, isWebSocketConnected, reconnectWebSocket])
+  */
 
   // Este componente não renderiza nada visualmente
   // Ele apenas garante que o hook useNotifications esteja sempre ativo

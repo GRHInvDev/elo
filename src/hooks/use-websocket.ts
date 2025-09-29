@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { io, type Socket } from 'socket.io-client'
 
 interface UseWebSocketOptions {
   url?: string
@@ -42,63 +42,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const socketRef = useRef<Socket | null>(null)
 
   const connect = useCallback(() => {
-    if (socketRef.current?.connected) return
-
-    setIsConnecting(true)
-    setError(null)
-
-    try {
-      const newSocket = io(url, {
-        autoConnect: false,
-        reconnection,
-        reconnectionAttempts,
-        reconnectionDelay
-      })
-
-      newSocket.on('connect', () => {
-        console.log('🔗 WebSocket conectado')
-        setIsConnected(true)
-        setIsConnecting(false)
-        setError(null)
-      })
-
-      newSocket.on('disconnect', (reason) => {
-        console.log('🔌 WebSocket desconectado:', reason)
-        setIsConnected(false)
-        setIsConnecting(false)
-      })
-
-      newSocket.on('connect_error', (err) => {
-        console.error('❌ Erro na conexão WebSocket:', err)
-        setError(err.message)
-        setIsConnecting(false)
-      })
-
-      newSocket.on('reconnect', (attemptNumber) => {
-        console.log(`🔄 WebSocket reconectado após ${attemptNumber} tentativas`)
-        setIsConnected(true)
-        setError(null)
-      })
-
-      newSocket.on('reconnect_error', (err) => {
-        console.error('❌ Erro ao reconectar WebSocket:', err)
-        setError(`Falha na reconexão: ${err instanceof Error ? err.message : 'Erro desconhecido'}`)
-      })
-
-      socketRef.current = newSocket
-      setSocket(newSocket)
-
-      newSocket.connect()
-    } catch (err) {
-      console.error('❌ Erro ao criar conexão WebSocket:', err)
-      setError(err instanceof Error ? err.message : 'Erro desconhecido')
-      setIsConnecting(false)
-    }
-  }, [url, reconnection, reconnectionAttempts, reconnectionDelay])
+    // TEMPORARIAMENTE DESATIVADO - WebSocket completamente desabilitado
+    // Não fazer nada para evitar tentativas de conexão
+    return
+  }, [url])
 
   const disconnect = useCallback(() => {
     if (socketRef.current) {
-      console.log('🔌 Desconectando WebSocket')
       socketRef.current.disconnect()
       socketRef.current = null
       setSocket(null)
@@ -111,7 +61,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     if (socketRef.current?.connected) {
       socketRef.current.emit(event, data)
     } else {
-      console.warn('⚠️ Tentativa de emitir evento sem conexão WebSocket:', event)
     }
   }, [])
 
