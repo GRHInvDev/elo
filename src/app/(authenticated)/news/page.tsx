@@ -5,7 +5,11 @@ export default function NewsPage() {
   return (
     <DashboardShell className="p-0 md:p-8">
       <div className="flex justify-center w-full">
-        <ContentFeed className="w-full max-w-4xl"/>
+        <ContentFeed
+          className="w-full max-w-4xl"
+          postsPerPage={5}
+          enablePagination={true}
+        />
       </div>
     </DashboardShell>
   );

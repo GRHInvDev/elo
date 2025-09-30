@@ -58,7 +58,7 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
       >
         <CarouselContent>
           {itens.map((item, index) => (
-            <CarouselItem key={index} className="aspect-square md:h-96">
+            <CarouselItem key={index} className="w-full h-96">
               <div className="relative w-full h-full">
                 <OptimizedImage
                   alt={item.title}

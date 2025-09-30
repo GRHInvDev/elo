@@ -56,7 +56,7 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
       >
         <CarouselContent>
           {itens.map((item, index) => (
-            <CarouselItem key={index} className="w-full md:h-96 aspect-video">
+            <CarouselItem key={index} className="w-full h-96">
               <div className="relative w-full h-full">
                 <OptimizedImage
                   alt={item.title}
