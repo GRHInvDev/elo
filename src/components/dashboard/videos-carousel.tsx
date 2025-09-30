@@ -2,7 +2,7 @@
 
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
+import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
@@ -56,7 +56,7 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
           <CarouselItem className="object-contain w-full h-96 p-4 aspect-video md:basis-1/2">
             <div className="size-full">
               <Link className="rounded-md relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
-                <Image className="object-cover rounded-md" fill src="/banners/Banners-intranet-3.png" alt="box"/>
+                <OptimizedImage className="object-cover rounded-md" fill src="/banners/Banners-intranet-3.png" alt="box"/>
               </Link>
             </div>
           </CarouselItem>

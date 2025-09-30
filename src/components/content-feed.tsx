@@ -40,12 +40,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { useAuth } from "@clerk/nextjs"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
-import Image from "next/image"
 import type { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "next-themes"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { MultipleImageUpload } from "./ui/multiple-image-upload"
 import { ImageCarousel } from "./ui/image-carousel"
+import { OptimizedImage } from "./ui/optimized-image"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -299,7 +299,7 @@ export function ContentFeed({ className }: { className?: string }) {
                             <Dialog>
                               <DialogTrigger asChild>
                                 <div className="relative aspect-[1/1.414] w-full cursor-pointer overflow-hidden rounded-md">
-                                  <Image
+                                  <OptimizedImage
                                     src={flyer.imageUrl || "/placeholder.svg"}
                                     alt={flyer.title}
                                     fill
@@ -313,7 +313,7 @@ export function ContentFeed({ className }: { className?: string }) {
                             </Dialog>
                           ) : (
                             <div className="relative aspect-[1/1.414] w-full overflow-hidden rounded-md">
-                              <Image
+                              <OptimizedImage
                                 src={flyer.imageUrl || "/placeholder.svg"}
                                 alt={flyer.title}
                                 fill

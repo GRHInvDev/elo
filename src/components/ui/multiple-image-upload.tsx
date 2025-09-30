@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useUploadThing } from "@/components/uploadthing"
 import { deleteFiles } from "@/components/uploadthing"
+import { ImageEditor } from "@/components/image-editor"
 import type { ClientUploadedFileData } from "uploadthing/types"
 
 interface MultipleImageUploadProps {
@@ -23,6 +24,7 @@ export function MultipleImageUpload({
 }: MultipleImageUploadProps) {
   const [images, setImages] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null)
 
   const { startUpload } = useUploadThing("multipleImageUploader", {
     onClientUploadComplete: (res: ClientUploadedFileData<unknown>[]) => {
@@ -73,11 +75,21 @@ export function MultipleImageUpload({
         console.error("Erro ao deletar imagem do UploadThing:", error)
       }
     }
-    
+
     const newImages = images.filter((_, i) => i !== index)
     setImages(newImages)
     onImagesChange(newImages)
   }, [images, onImagesChange])
+
+  const handleImageEdited = useCallback((newImageUrl: string) => {
+    if (editingImageIndex !== null) {
+      const newImages = [...images]
+      newImages[editingImageIndex] = newImageUrl
+      setImages(newImages)
+      onImagesChange(newImages)
+      setEditingImageIndex(null)
+    }
+  }, [editingImageIndex, images, onImagesChange])
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -162,18 +174,39 @@ export function MultipleImageUpload({
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                   />
                   
-                  {/* Botão de remover */}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void removeImage(index)
-                    }}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+                  {/* Botões de ação */}
+                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Botão de editar */}
+                    <ImageEditor
+                      imagemOriginal={imageUrl}
+                      onImagemEditada={handleImageEdited}
+                    >
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingImageIndex(index)
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </ImageEditor>
+
+                    {/* Botão de remover */}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void removeImage(index)
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
 
                   {/* Indicador de ordem */}
                   <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 py-0.5 rounded">
