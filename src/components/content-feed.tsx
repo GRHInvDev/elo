@@ -95,13 +95,25 @@ interface FlyerWithAuthor {
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })
 
-export function ContentFeed({ className }: { className?: string }) {
+interface ContentFeedProps {
+  className?: string
+  postsPerPage?: number
+  enablePagination?: boolean
+}
+
+export function ContentFeed({
+  className,
+  postsPerPage = 3,
+  enablePagination = false
+}: ContentFeedProps) {
   const [open, setOpen] = useState(false)
   const [fileUrl] = useState<string | undefined>(undefined)
   const [images, setImages] = useState<string[]>([])
   const [loading] = useState(false)
+  const [visiblePostsCount, setVisiblePostsCount] = useState(enablePagination ? postsPerPage : postsPerPage)
   const { toast } = useToast()
   const utils = api.useUtils()
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
   const { data: events } = api.event.list.useQuery()
@@ -111,6 +123,31 @@ export function ContentFeed({ className }: { className?: string }) {
   const postsWithRoleConfig = posts as PostWithAuthor[] | undefined
   const eventsWithRoleConfig = events as EventWithAuthor[] | undefined
   const flyersWithRoleConfig = flyers as FlyerWithAuthor[] | undefined
+
+  // Intersection Observer para carregar mais posts
+  useEffect(() => {
+    if (!enablePagination || !postsWithRoleConfig || visiblePostsCount >= postsWithRoleConfig.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisiblePostsCount(prev => Math.min(prev + postsPerPage, postsWithRoleConfig.length))
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    const currentRef = loadMoreRef.current
+    if (currentRef) {
+      observer.observe(currentRef)
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef)
+      }
+    }
+  }, [enablePagination, postsWithRoleConfig, visiblePostsCount, postsPerPage])
 
   const createPost = api.post.create.useMutation({
     onSuccess: async () => {
@@ -206,7 +243,7 @@ export function ContentFeed({ className }: { className?: string }) {
             <TabsContent value="posts" className="mt-4">
               {isLoadingPosts ? (
                 <div className="space-y-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
+                  {Array.from({ length: enablePagination ? postsPerPage : 3 }).map((_, i) => (
                     <div key={i} className="space-y-2">
                       <Skeleton className="h-4 w-1/3" />
                       <Skeleton className="h-4 w-full" />
@@ -217,9 +254,17 @@ export function ContentFeed({ className }: { className?: string }) {
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum post publicado ainda.</p>
               ) : (
                 <div className="space-y-4">
-                  {postsWithRoleConfig?.map((post) => (
-                    <PostItem key={post.id} post={post} />
-                  ))}
+                  {postsWithRoleConfig
+                    ?.slice(0, enablePagination ? visiblePostsCount : postsWithRoleConfig.length)
+                    .map((post) => (
+                      <PostItem key={post.id} post={post} />
+                    ))}
+                  {/* Elemento de referência para carregar mais posts */}
+                  {enablePagination && visiblePostsCount < (postsWithRoleConfig?.length || 0) && (
+                    <div ref={loadMoreRef} className="flex justify-center py-4">
+                      <div className="text-sm text-muted-foreground">Carregando mais posts...</div>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>

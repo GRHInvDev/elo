@@ -113,9 +113,9 @@ export function ImageCarousel({
           {validImages.map((image, index) => (
             <CarouselItem key={index} className={cn(
               "w-full",
-              aspectRatio === "square" && "aspect-square",
-              aspectRatio === "video" && "aspect-video",
-              aspectRatio === "auto" && "aspect-auto"
+              aspectRatio === "square" && "h-96",
+              aspectRatio === "video" && "h-56",
+              aspectRatio === "auto" && "h-64"
             )}>
               <OptimizedImage
                 src={image}
