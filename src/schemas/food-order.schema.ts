@@ -8,6 +8,11 @@ export const createFoodOrderSchema = z.object({
   optionChoices: z.array(z.string()).optional(), // IDs das escolhas selecionadas
 })
 
+export const createManualFoodOrderSchema = createFoodOrderSchema.extend({
+  userId: z.string().min(1, "Usuário é obrigatório"),
+  status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
+})
+
 export const updateFoodOrderSchema = z.object({
   id: z.string(),
   status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]),

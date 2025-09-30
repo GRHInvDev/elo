@@ -308,6 +308,47 @@ export const userRouter = createTRPCRouter({
       })
     }),
 
+  searchMinimal: protectedProcedure
+    .input(z.object({ query: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = currentUser?.role_config as RolesConfig | null
+      if (!roleConfig?.sudo) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas usuários sudo podem listar colaboradores",
+        })
+      }
+
+      const where: Prisma.UserWhereInput = {}
+
+      if (input.query) {
+        where.OR = [
+          { firstName: { contains: input.query, mode: "insensitive" } },
+          { lastName: { contains: input.query, mode: "insensitive" } },
+          { email: { contains: input.query, mode: "insensitive" } },
+        ]
+      }
+
+      return ctx.db.user.findMany({
+        where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+        orderBy: {
+          firstName: "asc",
+        },
+        take: 100,
+      })
+    }),
+
   // Listar usuários para chat - acessível para todos os usuários autenticados
   listForChat: protectedProcedure
     .input(z.object({
@@ -526,7 +567,7 @@ export const userRouter = createTRPCRouter({
   // Listar ramais personalizados
   listCustomExtensions: protectedProcedure
     .query(async ({ ctx }) => {
-      return ctx.db.customExtension.findMany({
+      return await ctx.db.customExtension.findMany({
         include: {
           createdBy: {
             select: {
@@ -567,7 +608,7 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.customExtension.create({
+      return await ctx.db.customExtension.create({
         data: {
           name: input.name,
           email: input.email ?? null,

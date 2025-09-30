@@ -72,7 +72,7 @@ export const menuItemRouter = createTRPCRouter({
         const weekDay = input.date.getDay(); // 0 = Domingo, 1 = Segunda, ...
         weekDayFilter = { weekDay };
       }
-      return ctx.db.menuItem.findMany({
+      const items = await ctx.db.menuItem.findMany({
         where: {
           restaurantId: input.restaurantId,
           available: true,
@@ -80,12 +80,18 @@ export const menuItemRouter = createTRPCRouter({
         },
         include: {
           restaurant: true,
+          options: {
+            include: {
+              choices: true,
+            },
+          },
         },
         orderBy: [
           { category: "asc" },
           { name: "asc" },
         ],
       })
+      return items
     }),
 
   // Listar todas as categorias

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { api } from "@/trpc/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,9 @@ import { DatePicker } from "@/components/ui/date-picker"
 import * as XLSX from "xlsx"
 import { useEffect } from "react"
 import { Select as UiSelect } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { type UserMinimal } from "@/trpc/react"
 
 interface OrdersTabProps {
   selectedDate: Date
@@ -46,9 +49,42 @@ export default function OrdersTab({
   const [signatureExportDialogOpen, setSignatureExportDialogOpen] = useState(false)
   const [signatureExportDate, setSignatureExportDate] = useState<Date>(new Date())
   const [signatureExportRestaurant, setSignatureExportRestaurant] = useState<string>("")
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [createDate, setCreateDate] = useState<Date>(new Date())
+  const [createRestaurant, setCreateRestaurant] = useState<string>("")
+  const [createMenuItem, setCreateMenuItem] = useState<string>("")
+  const [createUser, setCreateUser] = useState<string>("")
+  const [createStatus, setCreateStatus] = useState<string>("PENDING")
+  const [createObservations, setCreateObservations] = useState<string>("")
+  const [createIncludeOptions, setCreateIncludeOptions] = useState<Record<string, string[]>>({})
+  const [createUserSearch, setCreateUserSearch] = useState<string>("")
+
+  const resetCreateState = () => {
+    setCreateDate(new Date())
+    setCreateRestaurant("")
+    setCreateMenuItem("")
+    setCreateUser("")
+    setCreateStatus("PENDING")
+    setCreateObservations("")
+    setCreateIncludeOptions({})
+    setCreateUserSearch("")
+  }
 
   // Buscar restaurantes
   const restaurants = api.restaurant.list.useQuery()
+  const currentUser = api.user.me.useQuery()
+
+  const menuItemsQuery = api.menuItem.byRestaurant.useQuery(
+    { restaurantId: createRestaurant, date: createDate },
+    { enabled: !!createRestaurant }
+  )
+
+  const isSudo = currentUser.data?.role_config?.sudo ?? false
+
+  const usersQuery = api.user.searchMinimal.useQuery(
+    { query: createUserSearch },
+    { enabled: isSudo && createDialogOpen }
+  )
 
   // Buscar pedidos com filtros - período da data selecionada
   const queryParams = {
@@ -273,10 +309,47 @@ export default function OrdersTab({
     },
   })
 
+  const manualCreate = api.foodOrder.createManual.useMutation({
+    onSuccess: async () => {
+      toast.success("Pedido criado com sucesso!")
+      resetCreateState()
+      setCreateDialogOpen(false)
+      await filteredOrders.refetch()
+    },
+    onError: (error) => {
+      toast.error(`Erro ao criar pedido: ${error.message}`)
+    },
+  })
+
+  const userOptions = useMemo(() => {
+    if (!usersQuery.data) return []
+    return usersQuery.data.map((user: UserMinimal) => ({
+      value: user.id,
+      label: `${[user.firstName, user.lastName].filter(Boolean).join(" ")}`.trim() || user.email,
+    }))
+  }, [usersQuery.data])
+
+  const handleCreateManualOrder = () => {
+    if (!createRestaurant || !createMenuItem || !createUser) {
+      toast.error("Selecione restaurante, prato e colaborador")
+      return
+    }
+
+    manualCreate.mutate({
+      userId: createUser,
+      restaurantId: createRestaurant,
+      menuItemId: createMenuItem,
+      orderDate: createDate,
+      observations: createObservations || undefined,
+      status: createStatus as "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED",
+      optionChoices: Object.values(createIncludeOptions).flat(),
+    })
+  }
+
   return (
     <div className="space-y-4">
       {/* Botões de exportação */}
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 flex-wrap">
         <Dialog open={signatureExportDialogOpen} onOpenChange={setSignatureExportDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline">
@@ -389,6 +462,174 @@ export default function OrdersTab({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {isSudo && (
+          <Dialog
+            open={createDialogOpen}
+            onOpenChange={(isOpen) => {
+              setCreateDialogOpen(isOpen)
+              if (!isOpen) {
+                resetCreateState()
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                Adicionar Pedido Manual
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Novo Pedido Manual</DialogTitle>
+                <DialogDescription>
+                  Registre um pedido em nome de um colaborador.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Colaborador</Label>
+                  <Input
+                    placeholder="Buscar colaborador"
+                    value={createUserSearch}
+                    onChange={(event) => setCreateUserSearch(event.target.value)}
+                  />
+                  <Select value={createUser} onValueChange={setCreateUser}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o colaborador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Data do Pedido</Label>
+                  <DatePicker date={createDate} onDateChange={(date) => { if (date) setCreateDate(date) }} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Restaurante</Label>
+                  <Select
+                    value={createRestaurant}
+                    onValueChange={(value) => {
+                      setCreateRestaurant(value)
+                      setCreateMenuItem("")
+                      setCreateIncludeOptions({})
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o restaurante" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {restaurants.data?.map((restaurant) => (
+                        <SelectItem key={restaurant.id} value={restaurant.id}>
+                          {restaurant.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Prato</Label>
+                  <Select
+                    value={createMenuItem}
+                    onValueChange={(value) => {
+                      setCreateMenuItem(value)
+                      setCreateIncludeOptions({})
+                    }}
+                    disabled={!createRestaurant || menuItemsQuery.isLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={menuItemsQuery.isLoading ? "Carregando pratos..." : "Selecione o prato"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {menuItemsQuery.data?.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} - R$ {item.price.toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={createStatus} onValueChange={setCreateStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDING">Pendente</SelectItem>
+                      <SelectItem value="CONFIRMED">Confirmado</SelectItem>
+                      <SelectItem value="DELIVERED">Entregue</SelectItem>
+                      <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Textarea value={createObservations} onChange={(event) => setCreateObservations(event.target.value)} placeholder="Observações opcionais" rows={3} />
+                </div>
+                {menuItemsQuery.data && menuItemsQuery.data.length > 0 && createMenuItem && (
+                  <div className="space-y-2">
+                    <Label>Opcionais</Label>
+                    <p className="text-xs text-muted-foreground">Selecione opcionais aplicáveis ao prato.</p>
+                    {menuItemsQuery.data
+                      .find((item) => item.id === createMenuItem)?.options?.map((option) => (
+                        <div key={option.id} className="space-y-1 border rounded-md p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{option.name}</span>
+                            {option.required && <Badge variant="outline" className="text-xs">Obrigatório</Badge>}
+                            {option.multiple && <Badge variant="secondary" className="text-xs">Múltipla</Badge>}
+                          </div>
+                          {option.description && <p className="text-xs text-muted-foreground">{option.description}</p>}
+                          <div className="space-y-1">
+                            {option.choices.map((choice) => {
+                              const selectedChoices = createIncludeOptions[option.id] ?? []
+                              const isMultiple = option.multiple
+                              const isChecked = selectedChoices.includes(choice.id)
+
+                              const handleChange = (checked: boolean) => {
+                                setCreateIncludeOptions((prev) => {
+                                  const next = { ...prev }
+                                  const current = next[option.id] ?? []
+                                  if (isMultiple) {
+                                    next[option.id] = checked
+                                      ? [...current, choice.id]
+                                      : current.filter((id) => id !== choice.id)
+                                  } else {
+                                    next[option.id] = checked ? [choice.id] : []
+                                  }
+                                  return next
+                                })
+                              }
+
+                              return (
+                                <label key={choice.id} className="flex items-center gap-2 text-sm">
+                                  <Checkbox
+                                    checked={isChecked}
+                                    onCheckedChange={(checked) => handleChange(Boolean(checked))}
+                                  />
+                                  <span>{choice.name}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button onClick={handleCreateManualOrder} disabled={manualCreate.isPending}>
+                  {manualCreate.isPending ? "Criando..." : "Criar pedido"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Filtros */}

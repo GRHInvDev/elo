@@ -1,8 +1,9 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { createFoodOrderSchema, updateFoodOrderSchema, foodOrderIdSchema, getOrdersByDateSchema, getOrdersByRestaurantSchema } from "@/schemas/food-order.schema"
+import { createFoodOrderSchema, updateFoodOrderSchema, foodOrderIdSchema, getOrdersByDateSchema, getOrdersByRestaurantSchema, createManualFoodOrderSchema } from "@/schemas/food-order.schema"
 import { type Prisma } from "@prisma/client"
+import type { RolesConfig } from "@/types/role-config"
 
 export const foodOrderRouter = createTRPCRouter({
   // Criar um novo pedido
@@ -96,6 +97,122 @@ export const foodOrderRouter = createTRPCRouter({
       }
 
       // Buscar o pedido novamente, agora incluindo as opções
+      return ctx.db.foodOrder.findUnique({
+        where: { id: createdOrder.id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          restaurant: true,
+          menuItem: true,
+          optionSelections: true,
+        },
+      })
+    }),
+
+  // Criar pedido manualmente (apenas superadmins)
+  createManual: protectedProcedure
+    .input(createManualFoodOrderSchema)
+    .mutation(async ({ ctx, input }) => {
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = currentUser?.role_config as RolesConfig | null
+
+      if (!roleConfig?.sudo) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas superadmins podem criar pedidos manualmente",
+        })
+      }
+
+      const targetUser = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: { id: true },
+      })
+
+      if (!targetUser) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado" })
+      }
+
+      const inputDate = new Date(input.orderDate)
+      const orderDateNormalized = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate(), 0, 0, 0, 0)
+
+      const existingOrder = await ctx.db.foodOrder.findUnique({
+        where: {
+          userId_orderDate: {
+            userId: input.userId,
+            orderDate: orderDateNormalized,
+          },
+        },
+      })
+
+      if (existingOrder) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "O usuário já possui um pedido para esta data",
+        })
+      }
+
+      const menuItem = await ctx.db.menuItem.findUnique({
+        where: { id: input.menuItemId },
+        include: { restaurant: true },
+      })
+
+      if (!menuItem) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Item do menu não encontrado" })
+      }
+
+      if (!menuItem.available) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este item não está disponível" })
+      }
+
+      if (!menuItem.restaurant.active) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este restaurante não está ativo" })
+      }
+
+      const orderTime = new Date()
+
+      const createdOrder = await ctx.db.foodOrder.create({
+        data: {
+          userId: input.userId,
+          restaurantId: input.restaurantId,
+          menuItemId: input.menuItemId,
+          orderDate: orderDateNormalized,
+          orderTime,
+          observations: input.observations,
+          status: input.status ?? "PENDING",
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          restaurant: true,
+          menuItem: true,
+        },
+      })
+
+      if (input.optionChoices && input.optionChoices.length > 0) {
+        await ctx.db.orderOptionSelection.createMany({
+          data: input.optionChoices.map((choiceId: string) => ({
+            orderId: createdOrder.id,
+            choiceId,
+          })),
+        })
+      }
+
       return ctx.db.foodOrder.findUnique({
         where: { id: createdOrder.id },
         include: {
