@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import Image from "next/image"
+import { OptimizedImage } from "@/components/ui/optimized-image"
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -27,7 +28,8 @@ export function ImageCarousel({
   autoPlay = false,
   autoPlayInterval = 3000
 }: ImageCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>()
+  const [current, setCurrent] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
 
   // Validar URLs das imagens
@@ -39,28 +41,28 @@ export function ImageCarousel({
     return true
   }) ?? []
 
+  useEffect(() => {
+    if (!carouselApi) {
+      return
+    }
+
+    setCurrent(carouselApi.selectedScrollSnap())
+
+    carouselApi.on("select", () => {
+      setCurrent(carouselApi.selectedScrollSnap())
+    })
+  }, [carouselApi])
+
   // Auto play functionality
   useEffect(() => {
     if (!autoPlay || validImages.length <= 1 || isHovered) return
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % validImages.length)
+      carouselApi?.scrollNext()
     }, autoPlayInterval)
 
     return () => clearInterval(interval)
-  }, [autoPlay, validImages.length, autoPlayInterval, isHovered])
-
-  const goToPrevious = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + validImages.length) % validImages.length)
-  }, [validImages.length])
-
-  const goToNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % validImages.length)
-  }, [validImages.length])
-
-  const goToSlide = useCallback((index: number) => {
-    setCurrentIndex(index)
-  }, [])
+  }, [autoPlay, validImages.length, autoPlayInterval, isHovered, carouselApi])
 
   if (!images || images.length === 0) {
     console.warn('ImageCarousel: No images provided')
@@ -82,12 +84,11 @@ export function ImageCarousel({
           aspectRatio === "video" && "aspect-video",
           aspectRatio === "auto" && "aspect-auto"
         )}>
-          <Image
+          <OptimizedImage
             src={validImages[0]!}
             alt={alt}
             fill
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         </div>
       </div>
@@ -95,90 +96,88 @@ export function ImageCarousel({
   }
 
   return (
-    <div 
+    <div
       className={cn("relative w-full overflow-hidden rounded-lg border", className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Container das imagens */}
-      <div className="relative">
-        <div className={cn(
-          "relative w-full",
-          aspectRatio === "square" && "aspect-square",
-          aspectRatio === "video" && "aspect-video",
-          aspectRatio === "auto" && "aspect-auto"
-        )}>
+      <Carousel
+        className="w-full"
+        setApi={setCarouselApi}
+        opts={{
+          loop: true,
+          align: "center",
+        }}
+      >
+        <CarouselContent>
           {validImages.map((image, index) => (
-            <div
-              key={index}
-              className={cn(
-                "absolute inset-0 transition-transform duration-300 ease-in-out",
-                index === currentIndex ? "translate-x-0" : 
-                index < currentIndex ? "-translate-x-full" : "translate-x-full"
-              )}
-            >
-              <Image
+            <CarouselItem key={index} className={cn(
+              "w-full",
+              aspectRatio === "square" && "aspect-square",
+              aspectRatio === "video" && "aspect-video",
+              aspectRatio === "auto" && "aspect-auto"
+            )}>
+              <OptimizedImage
                 src={image}
                 alt={`${alt} ${index + 1}`}
                 fill
                 className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                priority={index === currentIndex}
+                priority={index === current}
               />
-            </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+
+      {/* Setas de navegação - apenas em desktop */}
+      {showArrows && (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex"
+            onClick={() => carouselApi?.scrollPrev()}
+            disabled={validImages.length <= 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex"
+            onClick={() => carouselApi?.scrollNext()}
+            disabled={validImages.length <= 1}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+
+      {/* Indicadores de posição (bolinhas) */}
+      {showDots && validImages.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1">
+          {validImages.map((_, index) => (
+            <button
+              key={index}
+              className={cn(
+                "h-2 w-2 rounded-full transition-all duration-200",
+                index === current
+                  ? "bg-white scale-125"
+                  : "bg-white/50 hover:bg-white/75"
+              )}
+              onClick={() => carouselApi?.scrollTo(index)}
+              aria-label={`Ir para imagem ${index + 1}`}
+            />
           ))}
         </div>
+      )}
 
-        {/* Setas de navegação - apenas em desktop */}
-        {showArrows && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex"
-              onClick={goToPrevious}
-              disabled={images.length <= 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex"
-              onClick={goToNext}
-              disabled={images.length <= 1}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-
-        {/* Indicadores de posição (bolinhas) */}
-        {showDots && validImages.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1">
-            {validImages.map((_, index) => (
-              <button
-                key={index}
-                className={cn(
-                  "h-2 w-2 rounded-full transition-all duration-200",
-                  index === currentIndex 
-                    ? "bg-white scale-125" 
-                    : "bg-white/50 hover:bg-white/75"
-                )}
-                onClick={() => goToSlide(index)}
-                aria-label={`Ir para imagem ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Contador de imagens */}
-        {validImages.length > 1 && (
-          <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-            {currentIndex + 1} / {validImages.length}
-          </div>
-        )}
-      </div>
+      {/* Contador de imagens */}
+      {validImages.length > 1 && (
+        <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+          {current + 1} / {validImages.length}
+        </div>
+      )}
     </div>
   )
 }

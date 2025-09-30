@@ -2,7 +2,7 @@
 
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
+import { OptimizedImage } from "@/components/ui/optimized-image"
 import { useEffect, useState } from "react"
 
 interface BirthdayCarouselProps {
@@ -60,7 +60,7 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
           {itens.map((item, index) => (
             <CarouselItem key={index} className="aspect-square md:h-96">
               <div className="relative w-full h-full">
-                <Image
+                <OptimizedImage
                   alt={item.title}
                   src={item.imageRef || "/placeholder.svg"}
                   fill
