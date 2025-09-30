@@ -130,7 +130,7 @@ export function ContentFeed({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0]?.isIntersecting) {
           setVisiblePostsCount(prev => Math.min(prev + postsPerPage, postsWithRoleConfig.length))
         }
       },
