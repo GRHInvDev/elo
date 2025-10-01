@@ -36,6 +36,8 @@ model User {
   analyzedSuggestions Suggestion[] @relation("SuggestionAnalyst")
   extension       BigInt              @default(0) // ramal do usuario
   emailExtension   String?            // email personalizado para exibição no ramal
+  nameExtension      String?            // nome personalizado para exibição no ramal
+  setorExtension      String?            // setor personalizado para exibição no ramal
 
   // Notificações
   notifications Notification[]
@@ -48,7 +50,7 @@ model User {
   addedGroupMembers   chat_group_member[] @relation("ChatGroupMemberAdder")
 
   // Ramais personalizados
-  customExtensions    CustomExtension[]
+  customExtensions    custom_extension[]
 
   @@map("users")
 }
@@ -686,7 +688,7 @@ model chat_message {
 }
 
 // Ramais personalizados criados manualmente
-model CustomExtension {
+model custom_extension {
   id          String   @id @default(cuid())
   name        String   // Nome do contato/ramal personalizado
   email       String?  // Email opcional

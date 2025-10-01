@@ -498,6 +498,8 @@ export const userRouter = createTRPCRouter({
           setor: true,
           extension: true,
           emailExtension: true,
+          nameExtension: true,
+          setorExtension: true,
         },
         orderBy: [
           { setor: 'asc' },
@@ -522,6 +524,9 @@ export const userRouter = createTRPCRouter({
     .input(z.object({
       userId: z.string(),
       extension: z.string().transform(val => BigInt(val)), // Ramal/telefone deve ser positivo
+      emailExtension: z.string().email().optional().or(z.literal("")),
+      nameExtension: z.string().optional(),
+      setorExtension: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário atual tem permissão para gerenciar ramais
@@ -550,7 +555,12 @@ export const userRouter = createTRPCRouter({
 
       return ctx.db.user.update({
         where: { id: input.userId },
-        data: { extension: input.extension },
+        data: {
+          extension: input.extension,
+          emailExtension: input.emailExtension ?? null,
+          nameExtension: input.nameExtension ?? null,
+          setorExtension: input.setorExtension ?? null,
+        },
         select: {
           id: true,
           firstName: true,
@@ -558,6 +568,9 @@ export const userRouter = createTRPCRouter({
           email: true,
           extension: true,
           setor: true,
+          emailExtension: true,
+          nameExtension: true,
+          setorExtension: true,
         },
       })
     }),
@@ -565,9 +578,9 @@ export const userRouter = createTRPCRouter({
   // === RAMAIS PERSONALIZADOS ===
 
   // Listar ramais personalizados
-  listCustomExtensions: protectedProcedure
+  listcustom_extensions: protectedProcedure
     .query(async ({ ctx }) => {
-      return await ctx.db.customExtension.findMany({
+      return await ctx.db.custom_extension.findMany({
         include: {
           createdBy: {
             select: {
@@ -583,7 +596,7 @@ export const userRouter = createTRPCRouter({
     }),
 
   // Criar ramal personalizado
-  createCustomExtension: protectedProcedure
+  createcustom_extension: protectedProcedure
     .input(z.object({
       name: z.string().min(1, "Nome é obrigatório"),
       email: z.string().email().optional().or(z.literal("")),
@@ -608,7 +621,7 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      return await ctx.db.customExtension.create({
+      return await ctx.db.custom_extension.create({
         data: {
           name: input.name,
           email: input.email ?? null,
@@ -628,8 +641,9 @@ export const userRouter = createTRPCRouter({
       })
     }),
 
+
   // Atualizar ramal personalizado
-  updateCustomExtension: protectedProcedure
+  updatecustom_extension: protectedProcedure
     .input(z.object({
       id: z.string(),
       name: z.string().min(1, "Nome é obrigatório"),
@@ -667,7 +681,7 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      const existingCustom = await ctx.db.customExtension.findFirst({
+      const existingCustom = await ctx.db.custom_extension.findFirst({
         where: {
           extension: input.extension,
           id: { not: input.id }
@@ -681,7 +695,7 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.customExtension.update({
+      return ctx.db.custom_extension.update({
         where: { id: input.id },
         data: {
           name: input.name,
@@ -701,7 +715,7 @@ export const userRouter = createTRPCRouter({
     }),
 
   // Deletar ramal personalizado
-  deleteCustomExtension: protectedProcedure
+  deletecustom_extension: protectedProcedure
     .input(z.object({
       id: z.string(),
     }))
@@ -722,7 +736,7 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.customExtension.delete({
+      return ctx.db.custom_extension.delete({
         where: { id: input.id },
       })
     }),

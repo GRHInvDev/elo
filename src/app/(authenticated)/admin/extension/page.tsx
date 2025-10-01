@@ -15,9 +15,9 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { Phone, Users, Edit3, Save, X, Shield, Plus, Trash2, Edit, UserPlus } from "lucide-react"
-import type { CustomExtension } from "@prisma/client"
+import type { custom_extension } from "@prisma/client"
 
-type CustomExtensionWithCreator = CustomExtension & {
+type CustomExtensionWithCreator = custom_extension & {
   createdBy: {
     firstName: string | null
     lastName: string | null
@@ -39,7 +39,7 @@ export default function ExtensionManagementPage() {
   })
 
   const { data: extensionsBySector, isLoading, refetch } = api.user.listExtensions.useQuery()
-  const { data: customExtensions, refetch: refetchCustom } = api.user.listCustomExtensions.useQuery()
+  const { data: customExtensions, refetch: refetchCustom } = api.user.listcustom_extensions.useQuery()
   const { toast } = useToast()
   const { isSudo } = useAccessControl()
 
@@ -90,7 +90,7 @@ export default function ExtensionManagementPage() {
   })
 
   // Mutações para ramais personalizados
-  const createCustomExtension = api.user.createCustomExtension.useMutation({
+  const createCustomExtension = api.user.createcustom_extension.useMutation({
     onSuccess: () => {
       toast({
         title: "Ramal personalizado criado",
@@ -109,7 +109,7 @@ export default function ExtensionManagementPage() {
     },
   })
 
-  const updateCustomExtension = api.user.updateCustomExtension.useMutation({
+  const updateCustomExtension = api.user.updatecustom_extension.useMutation({
     onSuccess: () => {
       toast({
         title: "Ramal personalizado atualizado",
@@ -128,7 +128,7 @@ export default function ExtensionManagementPage() {
     },
   })
 
-  const deleteCustomExtension = api.user.deleteCustomExtension.useMutation({
+  const deleteCustomExtension = api.user.deletecustom_extension.useMutation({
     onSuccess: () => {
       toast({
         title: "Ramal personalizado removido",

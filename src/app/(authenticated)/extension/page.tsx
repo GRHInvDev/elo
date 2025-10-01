@@ -14,10 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { useToast } from "@/hooks/use-toast"
-import { Plus, ArrowUp, ArrowDown, X, Filter, Edit, Trash2, Users } from "lucide-react"
-import type { CustomExtension } from "@prisma/client"
+import { Plus, ArrowUp, ArrowDown, X, Filter, Edit, Trash2, Users, Download } from "lucide-react"
+import * as XLSX from "xlsx"
+import type { custom_extension } from "@prisma/client"
 
-type CustomExtensionWithCreator = CustomExtension & {
+type CustomExtensionWithCreator = custom_extension & {
   createdBy: {
     firstName: string | null
     lastName: string | null
@@ -70,11 +71,20 @@ export default function ExtensionListPage() {
   const [editUserForm, setEditUserForm] = useState({
     extension: "",
     emailExtension: "",
+    nameExtension: "",
+    setorExtension: "",
   })
 
   // Estados para excluir contato
   const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false)
-  const [deletingContact, setDeletingContact] = useState<CustomExtensionWithCreator | null>(null)
+  const [deletingContact, setDeletingContact] = useState<{
+    id: string
+    name: string
+    extension: bigint
+    email?: string | null
+    setor: string
+    type: 'Colaborador' | 'Manual'
+  } | null>(null)
 
   // Verificar permissões
   const { canManageExtensions } = useAccessControl()
@@ -89,21 +99,31 @@ interface ListaSetores {
         setor: string;
         extension: bigint | null;
         emailExtension: string | null;
+        nameExtension: string | null;
+        setorExtension: string | null;
     }[];
     totalUsers: number;
 }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: extensionsBySector, isLoading } = api.user.listExtensions.useQuery()
-  const { data: customExtensions, refetch: refetchCustomExtensions } = api.user.listCustomExtensions.useQuery()
+  const { data: extensionsBySector, isLoading, refetch: refetchExtensions } = api.user.listExtensions.useQuery()
+  const { data: customExtensions, refetch: refetchCustomExtensions } = api.user.listcustom_extensions.useQuery()
   const { toast } = useToast()
 
+  // Função para refetch de todas as queries de ramais
+  const refetchAllExtensions = async () => {
+    await Promise.all([
+      refetchExtensions(),
+      refetchCustomExtensions()
+    ])
+  }
+
   // Mutations para gerenciar ramais
-  const createCustomExtension = api.user.createCustomExtension.useMutation({
+  const createCustomExtension = api.user.createcustom_extension.useMutation({
     onSuccess: (data) => {
       setIsAddContactOpen(false)
       setContactForm({ name: "", email: "", extension: "", description: "", setor: "" })
-      void refetchCustomExtensions()
+      void refetchAllExtensions()
 
       toast({
         title: "✅ Contato adicionado com sucesso!",
@@ -134,12 +154,12 @@ interface ListaSetores {
     },
   })
 
-  const updateCustomExtension = api.user.updateCustomExtension.useMutation({
+  const updateCustomExtension = api.user.updatecustom_extension.useMutation({
     onSuccess: (data) => {
       setIsEditContactOpen(false)
       setEditingContact(null)
       setEditContactForm({ name: "", email: "", extension: "", description: "", setor: "" })
-      void refetchCustomExtensions()
+      void refetchAllExtensions()
 
       toast({
         title: "✅ Contato atualizado com sucesso!",
@@ -161,8 +181,8 @@ interface ListaSetores {
     onSuccess: (data) => {
       setIsEditContactOpen(false)
       setEditingUser(null)
-      setEditUserForm({ extension: "", emailExtension: "" })
-      void refetchCustomExtensions()
+      setEditUserForm({ extension: "", emailExtension: "", nameExtension: "", setorExtension: "" })
+      void refetchAllExtensions()
 
       toast({
         title: "✅ Ramal atualizado com sucesso!",
@@ -177,14 +197,22 @@ interface ListaSetores {
         description: "Ocorreu um erro ao atualizar o ramal.",
         variant: "destructive",
       })
+      // indicar erro de email inválido
+      if (error.message?.includes("Invalid email")) {
+        toast({
+          title: "❌ Erro ao atualizar ramal - Email inválido",
+          description: "O email informado é inválido. Insira um email válido.",
+          variant: "destructive",
+        })
+      }
     },
   })
 
-  const deleteCustomExtension = api.user.deleteCustomExtension.useMutation({
+  const deleteCustomExtension = api.user.deletecustom_extension.useMutation({
     onSuccess: () => {
       setIsDeleteContactOpen(false)
       setDeletingContact(null)
-      void refetchCustomExtensions()
+      void refetchAllExtensions()
 
       toast({
         title: "✅ Contato removido com sucesso!",
@@ -216,7 +244,9 @@ interface ListaSetores {
         lastName: string | null; 
         setor: string; 
         extension: bigint | null; 
-        emailExtension: string | null 
+        emailExtension: string | null;
+        nameExtension: string | null;
+        setorExtension: string | null;
     }>) ?? [],
       totalUsers: users?.length ?? 0,
     }))
@@ -261,10 +291,10 @@ interface ListaSetores {
       sector.users.forEach(user => {
         users.push({
           id: user.id,
-          name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'Nome não informado',
+          name: user.nameExtension ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() ?? 'Nome não informado',
           email: user.emailExtension ?? user.email,
           extension: user.extension ?? 0n,
-          setor: user.setor,
+          setor: user.setorExtension ?? user.setor,
           type: 'Colaborador' as const,
         })
       })
@@ -286,6 +316,42 @@ interface ListaSetores {
 
     return [...users, ...customContacts]
   }, [sectorsList, customExtensions])
+
+  // Função para exportar dados para Excel
+  const handleExportToExcel = () => {
+    try {
+      // Preparar dados para exportação na ordem: SETOR | NOME | RAMAL | EMAIL
+      const dataToExport = filteredAndSortedContacts.map(contact => ({
+        "Setor": contact.setor,
+        "Nome": contact.name,
+        "Ramal": Number(contact.extension.toString()),
+        "Email": contact.email ?? "",
+      }))
+
+      // Criar planilha
+      const ws = XLSX.utils.json_to_sheet(dataToExport)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "Lista de Ramais")
+
+      // Gerar nome do arquivo com data atual
+      const fileName = `lista_ramais_${new Date().toISOString().split('T')[0]}.xlsx`
+
+      // Baixar arquivo
+      XLSX.writeFile(wb, fileName)
+
+      toast({
+        title: "✅ Exportação concluída!",
+        description: `Arquivo Excel "${fileName}" foi baixado com sucesso.`,
+      })
+    } catch (error) {
+      console.error("Erro ao exportar para Excel:", error)
+      toast({
+        title: "❌ Erro na exportação",
+        description: "Ocorreu um erro ao gerar o arquivo Excel.",
+        variant: "destructive",
+      })
+    }
+  }
 
   // Dados filtrados e ordenados para a tabela
   const filteredAndSortedContacts = useMemo(() => {
@@ -384,12 +450,16 @@ interface ListaSetores {
     extension: bigint | null;
     emailExtension: string | null;
     setor: string;
+    nameExtension: string | null;
+    setorExtension: string | null;
   }) => {
     setEditingUser(user)
     setEditingContact(null)
     setEditUserForm({
       extension: user.extension?.toString() ?? "",
       emailExtension: user.emailExtension ?? "",
+      nameExtension: user.nameExtension ?? "",
+      setorExtension: user.setorExtension ?? "",
     })
     setIsEditContactOpen(true)
   }
@@ -417,7 +487,7 @@ interface ListaSetores {
         description: editContactForm.description || undefined,
       })
     } else if (editingUser) {
-      // Editando usuário
+      // Editando usuário - atualizar ramal na tabela users
       let extension: bigint | undefined
       if (editUserForm.extension.trim()) {
         try {
@@ -435,12 +505,22 @@ interface ListaSetores {
       updateExtension.mutate({
         userId: editingUser.id,
         extension: extension?.toString() ?? "0",
+        emailExtension: editUserForm.emailExtension.trim() || undefined,
+        nameExtension: editUserForm.nameExtension.trim() || undefined,
+        setorExtension: editUserForm.setorExtension.trim() || undefined,
       })
     }
   }
 
   // Funções para excluir contato
-  const handleDeleteContact = (contact: CustomExtensionWithCreator) => {
+  const handleDeleteContact = (contact: {
+    id: string
+    name: string
+    extension: bigint
+    email?: string | null
+    setor: string
+    type: 'Colaborador' | 'Manual'
+  }) => {
     setDeletingContact(contact)
     setIsDeleteContactOpen(true)
   }
@@ -448,9 +528,21 @@ interface ListaSetores {
   const handleConfirmDeleteContact = () => {
     if (!deletingContact) return
 
-    deleteCustomExtension.mutate({
-      id: deletingContact.id,
-    })
+    if (deletingContact.type === 'Manual') {
+      // Excluir contato manual completamente
+      deleteCustomExtension.mutate({
+        id: deletingContact.id,
+      })
+    } else {
+      // "Remover" usuário do canal do ramal (zerar extension e limpar personalizações)
+      updateExtension.mutate({
+        userId: deletingContact.id,
+        extension: "0",
+        emailExtension: undefined,
+        nameExtension: undefined,
+        setorExtension: undefined,
+      })
+    }
   }
 
   return (
@@ -463,8 +555,17 @@ interface ListaSetores {
               Lista de ramais telefônicos organizados por setor em ordem alfabética
             </p>
           </div>
-          {canManageExtensions() && (
-            <Dialog open={isAddContactOpen} onOpenChange={setIsAddContactOpen}>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleExportToExcel}
+              disabled={filteredAndSortedContacts.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Excel
+            </Button>
+            {canManageExtensions() && (
+              <Dialog open={isAddContactOpen} onOpenChange={setIsAddContactOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
@@ -554,6 +655,7 @@ interface ListaSetores {
             </DialogContent>
           </Dialog>
           )}
+          </div>
 
           {/* Modal para editar contato */}
           {canManageExtensions() && (
@@ -652,6 +754,24 @@ interface ListaSetores {
                           placeholder="email@exemplo.com"
                         />
                       </div>
+                      <div>
+                        <Label htmlFor="edit-user-custom-name">Nome personalizado para ramal (opcional)</Label>
+                        <Input
+                          id="edit-user-custom-name"
+                          value={editUserForm.nameExtension}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, nameExtension: e.target.value })}
+                          placeholder="Nome que aparecerá na lista de ramais"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-user-custom-setor">Setor personalizado para ramal (opcional)</Label>
+                        <Input
+                          id="edit-user-custom-setor"
+                          value={editUserForm.setorExtension}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, setorExtension: e.target.value })}
+                          placeholder="Setor que aparecerá na lista de ramais"
+                        />
+                      </div>
                     </>
                   ) : null}
                 </div>
@@ -663,7 +783,7 @@ interface ListaSetores {
                     onClick={handleSaveEditContact}
                     disabled={updateCustomExtension.isPending || updateExtension.isPending}
                   >
-                    {(updateCustomExtension.isPending || false) || (updateExtension.isPending || false) ? "Salvando..." : "Salvar Alterações"}
+                    {(updateCustomExtension.isPending || updateExtension.isPending) ? "Salvando..." : "Salvar Alterações"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -675,9 +795,14 @@ interface ListaSetores {
             <Dialog open={isDeleteContactOpen} onOpenChange={setIsDeleteContactOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Confirmar Exclusão</DialogTitle>
+                  <DialogTitle>
+                    {deletingContact?.type === 'Manual' ? 'Confirmar Exclusão' : 'Confirmar Remoção'}
+                  </DialogTitle>
                   <DialogDescription>
-                    Tem certeza que deseja remover este contato da lista de ramais? Esta ação não pode ser desfeita.
+                    {deletingContact?.type === 'Manual'
+                      ? 'Tem certeza que deseja remover este contato da lista de ramais? Esta ação não pode ser desfeita.'
+                      : 'Tem certeza que deseja remover este usuário do canal de ramais? O ramal será zerado e as personalizações removidas.'
+                    }
                   </DialogDescription>
                 </DialogHeader>
                 {deletingContact && (
@@ -704,9 +829,12 @@ interface ListaSetores {
                   <Button
                     variant="destructive"
                     onClick={handleConfirmDeleteContact}
-                    disabled={deleteCustomExtension.isPending}
+                    disabled={deleteCustomExtension.isPending || updateExtension.isPending}
                   >
-                    {deleteCustomExtension.isPending ? "Removendo..." : "Confirmar Exclusão"}
+                    {(deleteCustomExtension.isPending || updateExtension.isPending)
+                      ? (deletingContact?.type === 'Manual' ? "Removendo..." : "Removendo ramal...")
+                      : (deletingContact?.type === 'Manual' ? "Confirmar Exclusão" : "Confirmar Remoção")
+                    }
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -908,10 +1036,10 @@ interface ListaSetores {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Ramal</TableHead>
                       <TableHead>Setor</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Ramal</TableHead>
+                      <TableHead>Email</TableHead>
                       {canManageExtensions() && <TableHead className="w-20">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -919,19 +1047,19 @@ interface ListaSetores {
                     {filteredAndSortedContacts.length > 0 ? (
                       filteredAndSortedContacts.map(contact => (
                         <TableRow key={`${contact.type}-${contact.id}`}>
+                          <TableCell>{contact.setor}</TableCell>
                           <TableCell className="font-medium">
                             {contact.name}
                           </TableCell>
-                          <TableCell>{contact.email ?? 'Sem email'}</TableCell>
                           <TableCell>
                             <Badge
-                              variant={contact.type === 'Colaborador' ? 'default' : 'secondary'}
+                              variant="default"
                               className="font-mono"
                             >
                               {contact.extension}
                             </Badge>
                           </TableCell>
-                          <TableCell>{contact.setor}</TableCell>
+                          <TableCell>{contact.email ?? 'Sem email'}</TableCell>
                           {canManageExtensions() && (
                             <TableCell>
                               <div className="flex items-center gap-1">
@@ -959,21 +1087,23 @@ interface ListaSetores {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                {contact.type === 'Manual' && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      const customContact = customExtensions?.find(c => c.id === contact.id);
-                                      if (customContact) {
-                                        handleDeleteContact(customContact);
-                                      }
-                                    }}
-                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    handleDeleteContact({
+                                      id: contact.id,
+                                      name: contact.name,
+                                      extension: contact.extension,
+                                      email: contact.email,
+                                      setor: contact.setor,
+                                      type: contact.type,
+                                    });
+                                  }}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           )}
