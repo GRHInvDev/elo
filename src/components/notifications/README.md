@@ -1,5 +1,4 @@
 # Notificações do Browser
-
 Este componente implementa notificações nativas do sistema operacional para mensagens do chat.
 ## Como Funciona
 
