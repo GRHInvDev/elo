@@ -708,6 +708,16 @@ interface ListaSetores {
                         />
                       </div>
                       <div>
+                        <Label htmlFor="edit-contact-extension">Setor (opcional)</Label>
+                        <Input
+                          id="edit-contact-extension"
+                          type="text"
+                          value={editContactForm.setor}
+                          onChange={(e) => setEditContactForm({ ...editContactForm, extension: e.target.value })}
+                          placeholder="Setor"
+                        />
+                      </div>
+                      <div>
                         <Label htmlFor="edit-contact-description">Descrição (opcional)</Label>
                         <Textarea
                           id="edit-contact-description"
