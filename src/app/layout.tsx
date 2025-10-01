@@ -11,6 +11,11 @@ import { type Metadata } from "next"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
+// Configure UploadThing token globally
+if (typeof window !== 'undefined') {
+  (window as any).UPLOADTHING_TOKEN = process.env.NEXT_PUBLIC_UPLOADTHING_TOKEN
+}
+
 export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.svg" }]
 }

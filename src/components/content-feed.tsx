@@ -46,6 +46,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import { MultipleImageUpload } from "./ui/multiple-image-upload"
 import { ImageCarousel } from "./ui/image-carousel"
 import { OptimizedImage } from "./ui/optimized-image"
+import { ImageViewer } from "./ui/image-viewer"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -207,10 +208,12 @@ export function ContentFeed({
                     </div>
                     <div className="grid gap-2">
                       <Label>Imagens</Label>
+                      <h3 className="text-sm text-muted-foreground">Tamanho recomendado: 515px x 300px</h3>
                       <MultipleImageUpload
                         onImagesChange={setImages}
                         maxImages={10}
                       />
+
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="content">Conteúdo</Label>
@@ -677,19 +680,30 @@ function PostItem({ post }: PostItemProps) {
         )}
         {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
           <div className="mt-2">
-            <ImageCarousel
+            <ImageViewer
               images={
-                (post.images?.length ?? 0) > 0 
+                (post.images?.length ?? 0) > 0
                   ? post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
-                  : post.imageUrl 
+                  : post.imageUrl
                     ? [post.imageUrl]
                     : []
               }
               alt={post.title}
-              aspectRatio="video"
-              showArrows={true}
-              showDots={true}
-            />
+            >
+              <ImageCarousel
+                images={
+                  (post.images?.length ?? 0) > 0
+                    ? post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
+                    : post.imageUrl
+                      ? [post.imageUrl]
+                      : []
+                }
+                alt={post.title}
+                aspectRatio="video"
+                showArrows={true}
+                showDots={true}
+              />
+            </ImageViewer>
           </div>
         )}
       </CardContent>
