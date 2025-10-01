@@ -115,7 +115,7 @@ export function ImageCarousel({
               "w-full",
               aspectRatio === "square" && "h-96",
               aspectRatio === "video" && "h-56",
-              aspectRatio === "auto" && "h-64"
+              aspectRatio === "auto" && "h-full min-h-64"
             )}>
               <OptimizedImage
                 src={image}
