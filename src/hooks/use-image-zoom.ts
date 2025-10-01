@@ -19,6 +19,7 @@ interface UseImageZoomReturn {
   handleTouchStart: (e: React.TouchEvent) => void
   handleTouchMove: (e: React.TouchEvent) => void
   handleTouchEnd: () => void
+  handleDoubleClick: () => void
 }
 
 export function useImageZoom(): UseImageZoomReturn {
@@ -93,7 +94,7 @@ export function useImageZoom(): UseImageZoomReturn {
 
   // Calculate distance between two touch points
   const getTouchDistance = useCallback((touches: React.TouchList) => {
-    if (touches.length < 2) return 0
+    if (touches.length < 2 || !touches[0] || !touches[1]) return 0
     const touch1 = touches[0]
     const touch2 = touches[1]
     return Math.sqrt(
@@ -108,7 +109,7 @@ export function useImageZoom(): UseImageZoomReturn {
       const distance = getTouchDistance(e.touches)
       setInitialDistance(distance)
       setInitialZoom(zoom)
-    } else if (e.touches.length === 1 && zoom > 1) {
+    } else if (e.touches.length === 1 && zoom > 1 && e.touches[0]) {
       // Single touch drag
       setIsDragging(true)
       setDragStart({
@@ -129,7 +130,7 @@ export function useImageZoom(): UseImageZoomReturn {
 
       setZoom(newZoom)
       setIsZoomed(newZoom > 1)
-    } else if (e.touches.length === 1 && isDragging && zoom > 1) {
+    } else if (e.touches.length === 1 && isDragging && zoom > 1 && e.touches[0]) {
       // Single touch drag
       setPosition({
         x: e.touches[0].clientX - dragStart.x,

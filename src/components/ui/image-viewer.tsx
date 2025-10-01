@@ -8,9 +8,7 @@ import {
   ZoomOut,
   RotateCcw,
   X,
-  Download,
-  Maximize2,
-  Minimize2
+  Download
 } from "lucide-react"
 import { useImageZoom } from "@/hooks/use-image-zoom"
 import Image from "next/image"
@@ -76,6 +74,8 @@ export function ImageViewer({
   }
 
   const handleDownload = async () => {
+    if (!currentImage) return
+
     try {
       const response = await fetch(currentImage)
       const blob = await response.blob()
@@ -88,7 +88,7 @@ export function ImageViewer({
       document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Erro ao baixar imagem:', error)
+      console.error('Erro ao baixar imagem:', error instanceof Error ? error.message : error)
     }
   }
 
@@ -213,19 +213,21 @@ export function ImageViewer({
               onTouchEnd={handleTouchEnd}
               onDoubleClick={handleDoubleClick}
             >
-              <Image
-                ref={imageRef}
-                src={currentImage}
-                alt={alt}
-                fill
-                className="object-contain transition-transform duration-200 ease-out select-none"
-                style={{
-                  transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-                  transformOrigin: 'center center'
-                }}
-                draggable={false}
-                priority
-              />
+              {currentImage && (
+                <Image
+                  ref={imageRef}
+                  src={currentImage}
+                  alt={alt}
+                  fill
+                  className="object-contain transition-transform duration-200 ease-out select-none"
+                  style={{
+                    transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+                    transformOrigin: 'center center'
+                  }}
+                  draggable={false}
+                  priority
+                />
+              )}
             </div>
 
             {/* Instructions */}
