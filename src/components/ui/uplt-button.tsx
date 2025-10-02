@@ -55,7 +55,9 @@ export function UPLTButton({
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(acceptedFiles);
-    void startUpload(acceptedFiles)
+    if (acceptedFiles.length > 0) {
+      void startUpload(acceptedFiles)
+    }
   }, [startUpload]);
 
   const { getRootProps, getInputProps } = useDropzone({
@@ -72,22 +74,83 @@ export function UPLTButton({
     setFiles([])
     setFileUrl("")
   }
+  // Função para lidar com seleção de arquivo via input tradicional
+  const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    if (selectedFiles.length > 0) {
+      setFiles(selectedFiles);
+      void startUpload(selectedFiles);
+    }
+  }, [startUpload]);
+
   return (
     <>
       <div className="space-y-2">
+        {/* Área de drop e input oculto */}
         <div {...getRootProps()}>
           <input {...getInputProps()} />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileInputChange}
+            className="hidden"
+            id="file-input"
+          />
           <div className="w-full h-32 border-dashed flex items-center justify-center border rounded-md gap-2 cursor-pointer hover:bg-muted hover:border-primary transition-all">
-            { files.length > 0 ? isUploading? <LucideLoader2 className="animate-spin"/>: <>Arquivo carregado <LucideImagePlus/></> : <>Arraste ou clique para adicionar a imagem <LucideUpload/></> }
+            {isUploading ? (
+              <>
+                <LucideLoader2 className="animate-spin h-6 w-6" />
+                <span>Fazendo upload...</span>
+              </>
+            ) : files.length > 0 && fileUrl ? (
+              <>
+                <LucideImagePlus className="h-6 w-6 text-green-600" />
+                <span>Imagem carregada</span>
+              </>
+            ) : (
+              <>
+                <LucideUpload className="h-6 w-6" />
+                <span>Arraste ou clique para adicionar imagem</span>
+              </>
+            )}
           </div>
         </div>
 
-        {files.length > 0 && fileUrl && (
-          <div className="flex gap-2">
-            <Button variant='destructive' size='sm' onClick={handleRemove}>
-              <LucideTrash2 className="h-4 w-4 mr-2"/>
+        {/* Botões de ação */}
+        <div className="flex gap-2">
+          {files.length === 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => document.getElementById('file-input')?.click()}
+            >
+              <LucideUpload className="h-4 w-4 mr-2" />
+              Selecionar Arquivo
+            </Button>
+          )}
+
+          {files.length > 0 && fileUrl && (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleRemove}
+            >
+              <LucideTrash2 className="h-4 w-4 mr-2" />
               Remover
             </Button>
+          )}
+        </div>
+
+        {/* Preview da imagem */}
+        {fileUrl && (
+          <div className="mt-2">
+            <img
+              src={fileUrl}
+              alt="Preview"
+              className="w-full max-w-xs h-auto rounded border"
+            />
           </div>
         )}
       </div>
