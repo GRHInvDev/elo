@@ -40,29 +40,20 @@ export function UPLTButton({
 
   const { startUpload, routeConfig, isUploading } = useUploadThing("imageUploader", {
     onClientUploadComplete: (res) => {
-      console.log("Upload concluído:", res);
       // Quando o upload for concluído, extrair a URL e passar para o componente pai
       if (res && res.length > 0 && res[0]?.ufsUrl) {
         const imageUrl = res[0].ufsUrl
-        console.log("URL da imagem:", imageUrl);
         onImageUrlGenerated(imageUrl);
         setFileUrl(imageUrl)
       }
       // Ainda chama o callback original se existir
       onClientUploadComplete?.(res);
     },
-    onUploadError: (error) => {
-      console.error("Erro no upload:", error);
-      onUploadError?.(error);
-    },
-    onUploadBegin: (filename) => {
-      console.log("Iniciando upload:", filename);
-      onUploadBegin?.(filename);
-    },
+    onUploadError,
+    onUploadBegin,
   });
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    console.log("Arquivos dropped:", acceptedFiles);
     setFiles(acceptedFiles);
     if (acceptedFiles.length > 0) {
       void startUpload(acceptedFiles)
@@ -86,7 +77,6 @@ export function UPLTButton({
   // Função para lidar com seleção de arquivo via input tradicional
   const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
-    console.log("Arquivos selecionados via input:", selectedFiles);
     if (selectedFiles.length > 0) {
       setFiles(selectedFiles);
       void startUpload(selectedFiles);

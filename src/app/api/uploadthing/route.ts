@@ -11,13 +11,13 @@ export const { GET, POST } = createRouteHandler({
 // DELETE route for deleting files
 export async function DELETE(request: Request) {
   try {
-    const { fileKey } = await request.json();
+    const body = await request.json() as { fileKey?: string };
 
-    if (!fileKey) {
+    if (!body.fileKey) {
       return Response.json({ error: "File key is required" }, { status: 400 });
     }
 
-    await utapi.deleteFiles(fileKey);
+    await utapi.deleteFiles(body.fileKey);
 
     return Response.json({ success: true });
   } catch (error) {
