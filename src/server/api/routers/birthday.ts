@@ -111,7 +111,7 @@ export const birthdayRouter = createTRPCRouter({
       orderBy: [
         // Ordena por mês e dia, independente do ano
         {
-          data: "asc",
+          data: "desc",
         },
       ],
     })

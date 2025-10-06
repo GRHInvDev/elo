@@ -4,7 +4,7 @@ import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
 import { api } from "@/trpc/react"
 import { cn } from "@/lib/utils"
-import { LinkIcon, LucideGraduationCap, LucideNewspaper, LucidePlane, LucidePlay } from "lucide-react"
+import { LinkIcon, LucideGraduationCap, LucidePlane, LucidePlay } from "lucide-react"
 import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import { NewsDisplay } from "@/components/dashboard/news-displ"
@@ -15,7 +15,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/complete-profile-modal"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 
 export default function DashboardPage() {
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -35,6 +35,26 @@ export default function DashboardPage() {
       setShowProfileModal(true)
     }
   }, [user, userEnterprise, userSetor])
+
+  const todayBirthdays = useMemo(() => {
+    if (!birthdays) {
+      return []
+    }
+
+    const today = new Date()
+    const currentDay = today.getDate()
+    const currentMonth = today.getMonth()
+
+    return birthdays.filter((birthday) => {
+      const birthdayDate = new Date(birthday.data)
+      return (
+        birthdayDate.getDate() === currentDay &&
+        birthdayDate.getMonth() === currentMonth
+      )
+    })
+  }, [birthdays])
+
+  const hasTodayBirthdays = todayBirthdays.length > 0
 
   const posts: {
     imageRef: string,
@@ -71,21 +91,21 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Seção Principal - Banners e Aniversários */}
-      <div className={cn("grid grid-cols-1 md:grid-cols-3", (birthdays?.length==0 ) && "md:grid-cols-1")}>
+      <div className={cn("grid grid-cols-1 md:grid-cols-3", !hasTodayBirthdays && "md:grid-cols-1")}>
         {
           posts.length > 0 &&
-          <MainCarousel className={cn("w-full md:col-span-2", (birthdays?.length==0) && "md:col-span-1")} itens={posts}/>
+          <MainCarousel className={cn("w-full md:col-span-2", !hasTodayBirthdays && "md:col-span-1")} itens={posts}/>
         }
         {
-          birthdays && birthdays.length > 0 &&
-          <BirthdaysCarousel className="w-full md:col-span-1" itens={birthdays.map((b)=>({
+          hasTodayBirthdays && (
+          <BirthdaysCarousel className="w-full md:col-span-1" itens={todayBirthdays.map((b)=>({
             imageRef: b.imageUrl ?? "",
             title: b.name
           }))}/>
+          )
         }
     </div>
-      <div className={cn("grid grid-cols-1 gap-4 md:gap-6", (birthdays?.length==0
-       ) && "md:grid-cols-1")}>
+      <div className={cn("grid grid-cols-1 gap-4 md:gap-6", !hasTodayBirthdays && "md:grid-cols-1")}>
 
         {/* Seção de Conteúdo - Vídeos, Links e ideias */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
