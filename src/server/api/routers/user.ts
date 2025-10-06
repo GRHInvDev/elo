@@ -650,6 +650,7 @@ export const userRouter = createTRPCRouter({
       email: z.string().email().optional().or(z.literal("")),
       extension: z.string().transform(val => BigInt(val)),
       description: z.string().optional(),
+      setor: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar se o usuário atual tem permissão para gerenciar ramais
@@ -668,32 +669,7 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      // Verificar se o ramal já existe (exceto para o próprio registro)
-      const existingUser = await ctx.db.user.findFirst({
-        where: { extension: input.extension },
-        select: { id: true, firstName: true, lastName: true }
-      })
-
-      if (existingUser) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: `Este ramal já está sendo usado por ${existingUser.firstName} ${existingUser.lastName}`,
-        })
-      }
-
-      const existingCustom = await ctx.db.custom_extension.findFirst({
-        where: {
-          extension: input.extension,
-          id: { not: input.id }
-        }
-      })
-
-      if (existingCustom) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Este ramal já está sendo usado por outro ramal personalizado",
-        })
-      }
+      // Validação de unicidade removida - permitindo múltiplos usuários com o mesmo ramal
 
       return ctx.db.custom_extension.update({
         where: { id: input.id },
@@ -702,6 +678,7 @@ export const userRouter = createTRPCRouter({
           email: input.email ?? null,
           extension: input.extension,
           description: input.description ?? null,
+          setor: input.setor ?? null,
         },
         include: {
           createdBy: {
