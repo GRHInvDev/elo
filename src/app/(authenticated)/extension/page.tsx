@@ -407,6 +407,11 @@ interface ListaSetores {
 
   // Função para adicionar contato
   const handleAddContact = () => {
+    if (!contactForm.extension.trim()) {
+      console.error("Ramal é obrigatório")
+      return
+    }
+
     let extension: bigint
     try {
       extension = BigInt(contactForm.extension)
@@ -467,6 +472,11 @@ interface ListaSetores {
   const handleSaveEditContact = () => {
     if (editingContact) {
       // Editando contato manual
+      if (!editContactForm.extension.trim()) {
+        console.error("Ramal é obrigatório")
+        return
+      }
+
       let extension: bigint
       try {
         extension = BigInt(editContactForm.extension)
@@ -485,6 +495,7 @@ interface ListaSetores {
         email: editContactForm.email || undefined,
         extension: extension.toString(),
         description: editContactForm.description || undefined,
+        setor: editContactForm.setor || undefined,
       })
     } else if (editingUser) {
       // Editando usuário - atualizar ramal na tabela users
@@ -708,12 +719,12 @@ interface ListaSetores {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="edit-contact-extension">Setor (opcional)</Label>
+                        <Label htmlFor="edit-contact-setor">Setor (opcional)</Label>
                         <Input
-                          id="edit-contact-extension"
+                          id="edit-contact-setor"
                           type="text"
                           value={editContactForm.setor}
-                          onChange={(e) => setEditContactForm({ ...editContactForm, extension: e.target.value })}
+                          onChange={(e) => setEditContactForm({ ...editContactForm, setor: e.target.value })}
                           placeholder="Setor"
                         />
                       </div>
