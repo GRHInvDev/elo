@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { OptimizedImage } from "@/components/ui/optimized-image"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
@@ -16,6 +16,7 @@ interface ImageCarouselProps {
   showDots?: boolean
   autoPlay?: boolean
   autoPlayInterval?: number
+  imageFit?: "cover" | "contain"
 }
 
 export function ImageCarousel({
@@ -26,11 +27,13 @@ export function ImageCarousel({
   showArrows = true,
   showDots = true,
   autoPlay = false,
-  autoPlayInterval = 3000
+  autoPlayInterval = 3000,
+  imageFit = "cover"
 }: ImageCarouselProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
+  const [computedAspectClasses, setComputedAspectClasses] = useState<Record<number, string>>({})
 
   // Validar URLs das imagens
   const validImages = images?.filter(img => {
@@ -64,6 +67,87 @@ export function ImageCarousel({
     return () => clearInterval(interval)
   }, [autoPlay, validImages.length, autoPlayInterval, isHovered, carouselApi])
 
+
+  const allowedAspects = useMemo(() => ([
+    { value: 1, className: "aspect-square" },
+    { value: 4 / 3, className: "aspect-[4/3]" },
+    { value: 3 / 4, className: "aspect-[3/4]" },
+    { value: 4 / 5, className: "aspect-[4/5]" },
+  ] as const), [])
+
+  const defaultAspectClass = "aspect-square"
+
+  const resolveAspectClass = (index: number): string => {
+    if (aspectRatio === "square") {
+      return "aspect-square"
+    }
+
+    if (aspectRatio === "video") {
+      return "aspect-video"
+    }
+
+    if (aspectRatio === "auto") {
+      return computedAspectClasses[index] ?? defaultAspectClass
+    }
+
+    return "aspect-auto"
+  }
+
+  const handleImageLoad = useCallback((index: number, img: HTMLImageElement) => {
+    if (aspectRatio !== "auto") {
+      return
+    }
+
+    const { naturalWidth, naturalHeight } = img
+    if (!naturalWidth || !naturalHeight) {
+      return
+    }
+
+    const ratio = naturalWidth / naturalHeight
+    let closest = allowedAspects[0]
+    let minDiff = Math.abs(ratio - closest.value)
+
+    for (let i = 1; i < allowedAspects.length; i += 1) {
+      const diff = Math.abs(ratio - allowedAspects[i]!.value)
+      if (diff < minDiff) {
+        closest = allowedAspects[i]!
+        minDiff = diff
+      }
+    }
+
+    setComputedAspectClasses(prev => {
+      if (prev[index] === closest.className) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        [index]: closest.className,
+      }
+    })
+  }, [allowedAspects, aspectRatio])
+
+  const renderImage = (image: string, index: number) => (
+    <div className={cn(
+      "relative w-full overflow-hidden",
+      resolveAspectClass(index),
+    )}>
+      <OptimizedImage
+        src={image}
+        alt={`${alt} ${index + 1}`}
+        fill
+        className={cn(
+          imageFit === "contain"
+            ? "object-contain object-center"
+            : "object-cover"
+        )}
+        priority={index === current}
+        onLoadingComplete={(img) => handleImageLoad(index, img.target)}
+        imageFit={imageFit}
+      />
+    </div>
+  )
+
   if (!images || images.length === 0) {
     console.warn('ImageCarousel: No images provided')
     return null
@@ -77,27 +161,23 @@ export function ImageCarousel({
   // Se há apenas uma imagem, não mostra o carrossel
   if (validImages.length === 1) {
     return (
-      <div className={cn("relative w-full overflow-hidden rounded-lg border", className)}>
-        <div className={cn(
-          "relative w-full",
-          aspectRatio === "square" && "aspect-square",
-          aspectRatio === "video" && "aspect-video",
-          aspectRatio === "auto" && "aspect-auto"
-        )}>
-          <OptimizedImage
-            src={validImages[0]!}
-            alt={alt}
-            fill
-            className="object-cover"
-          />
-        </div>
+      <div
+        className={cn(
+          "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none",
+          className
+        )}
+      >
+        {renderImage(validImages[0]!, 0)}
       </div>
     )
   }
 
   return (
     <div
-      className={cn("relative w-full overflow-hidden rounded-lg border", className)}
+      className={cn(
+        "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none",
+        className
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -111,19 +191,8 @@ export function ImageCarousel({
       >
         <CarouselContent>
           {validImages.map((image, index) => (
-            <CarouselItem key={index} className={cn(
-              "w-full",
-              aspectRatio === "square" && "h-96",
-              aspectRatio === "video" && "h-56",
-              aspectRatio === "auto" && "h-full min-h-64"
-            )}>
-              <OptimizedImage
-                src={image}
-                alt={`${alt} ${index + 1}`}
-                fill
-                className="object-cover"
-                priority={index === current}
-              />
+            <CarouselItem key={index} className="w-full">
+              {renderImage(image, index)}
             </CarouselItem>
           ))}
         </CarouselContent>

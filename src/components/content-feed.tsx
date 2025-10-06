@@ -699,7 +699,7 @@ function PostItem({ post }: PostItemProps) {
                       : []
                 }
                 alt={post.title}
-                aspectRatio="video"
+                  aspectRatio="auto"
                 showArrows={true}
                 showDots={true}
               />

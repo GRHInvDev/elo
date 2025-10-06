@@ -110,10 +110,11 @@ function PostItem({ post }: PostItemProps) {
                 <ImageCarousel
                   images={imageUrls}
                   alt={post.title}
-                  aspectRatio="video"
+                  aspectRatio="auto"
                   showArrows={imageUrls.length > 1}
                   showDots={imageUrls.length > 1}
                   className="max-h-[300px]"
+                  imageFit="contain"
                 />
               ) : null
             })()}

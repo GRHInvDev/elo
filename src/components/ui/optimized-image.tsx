@@ -1,7 +1,7 @@
 "use client"
 
-import Image from "next/image"
-import { useState } from "react"
+import Image, { type ImageProps } from "next/image"
+import { useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
 
 interface OptimizedImageProps {
@@ -13,6 +13,8 @@ interface OptimizedImageProps {
   priority?: boolean
   fill?: boolean
   blurIntensity?: number
+  onLoadingComplete?: ImageProps["onLoad"]
+  imageFit?: "cover" | "contain"
 }
 
 export function OptimizedImage({
@@ -23,9 +25,16 @@ export function OptimizedImage({
   className,
   priority = false,
   fill = false,
-  blurIntensity = 8
+  blurIntensity = 8,
+  onLoadingComplete,
+  imageFit = "cover"
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
+
+  const handleLoadingComplete = useCallback<NonNullable<ImageProps["onLoad"]>>((img) => {
+    setIsLoaded(true)
+    onLoadingComplete?.(img)
+  }, [onLoadingComplete])
 
   return (
     <div className="relative overflow-hidden w-full h-full">
@@ -39,7 +48,7 @@ export function OptimizedImage({
         className={cn(
           "absolute inset-0 scale-110",
           `blur-[${blurIntensity}px]`,
-          "object-cover",
+        "object-cover",
           "transition-opacity duration-500",
           isLoaded ? "opacity-100" : "opacity-0"
         )}
@@ -56,12 +65,13 @@ export function OptimizedImage({
         height={!fill ? height : undefined}
         className={cn(
           "relative z-10",
-          className, // Aplicar classes personalizadas à imagem principal
+          className,
+          imageFit === "contain" ? "object-contain" : "object-cover",
           "transition-opacity duration-300",
           isLoaded ? "opacity-100" : "opacity-0"
         )}
         priority={priority}
-        onLoad={() => setIsLoaded(true)}
+        onLoad={handleLoadingComplete}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
       />
     </div>
