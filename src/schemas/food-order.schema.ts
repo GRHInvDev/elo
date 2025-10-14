@@ -5,7 +5,7 @@ export const createFoodOrderSchema = z.object({
   menuItemId: z.string().min(1, "Item do menu é obrigatório"),
   orderDate: z.date(),
   observations: z.string().optional(),
-  optionChoices: z.array(z.string()).optional(), // IDs das escolhas selecionadas
+  optionChoices: z.array(z.string()).min(1, "Opções são obrigatórias"),
 })
 
 export const createManualFoodOrderSchema = createFoodOrderSchema.extend({

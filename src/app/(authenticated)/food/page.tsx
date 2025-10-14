@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Clock, MapPin, Phone, CheckCircle, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react"
+import { Clock, MapPin, Phone, CheckCircle, ChevronDown, ChevronUp, Loader2, Trash2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -19,9 +19,11 @@ type MenuItemOptionsSelectorProps = {
   menuItemId: string;
   value: Record<string, string[]>;
   onChange: (choices: Record<string, string[]>) => void;
+  onValidationChange?: (isValid: boolean) => void;
 };
 
-function MenuItemOptionsSelector({ menuItemId, value, onChange }: MenuItemOptionsSelectorProps) {
+{/* Tornar obrigatório a escolha de sim ou não em opcionais */}
+function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChange }: MenuItemOptionsSelectorProps) {
   const options = api.menuItemOption.byMenuItem.useQuery({ menuItemId }, { enabled: !!menuItemId })
   const [selectedChoices, setSelectedChoices] = useState<Record<string, string[]>>(value ?? {})
 
@@ -33,6 +35,18 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange }: MenuItemOption
   useEffect(() => {
     setSelectedChoices(value ?? {})
   }, [value, menuItemId])
+
+  // Validação: verificar se todas as opções obrigatórias foram selecionadas
+  useEffect(() => {
+    if (options.data) {
+      const isValid = options.data.every(option => {
+        if (!option.required) return true // Opções não obrigatórias são sempre válidas
+        const selected = selectedChoices[option.id]
+        return selected && selected.length > 0 // Deve ter pelo menos uma escolha
+      })
+      onValidationChange?.(isValid)
+    }
+  }, [options.data, selectedChoices, onValidationChange])
 
   if (options.isLoading) return <div className="text-sm text-muted-foreground">Carregando opcionais...</div>
   if (!options.data || options.data.length === 0) return <div className="text-sm text-muted-foreground">Nenhum opcional disponível para este prato.</div>
@@ -93,6 +107,7 @@ export default function FoodPage() {
   const [step, setStep] = useState<number>(1)
   const [showHistory, setShowHistory] = useState<boolean>(false)
   const [optionChoices, setOptionChoices] = useState<Record<string, string[]>>({})
+  const [optionsValid, setOptionsValid] = useState<boolean>(true)
 
   const utils = api.useUtils()
 
@@ -154,6 +169,11 @@ export default function FoodPage() {
     endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
   })
 
+  const menuItemOptions = api.menuItemOption.byMenuItem.useQuery(
+    { menuItemId: selectedMenuItem },
+    { enabled: !!selectedMenuItem }
+  )
+
   const handleCreateOrder = () => {
     if (!selectedRestaurant || !selectedMenuItem) {
       toast.error("Selecione um restaurante e um prato")
@@ -162,6 +182,11 @@ export default function FoodPage() {
 
     const now = new Date()
     const orderDate = now.getHours() < FOOD_ORDER_DEADLINE_HOUR ? startOfDay(now) : startOfDay(addDays(now, 1))
+
+    if (!menuItemOptions || menuItemOptions.data?.length === 0) {
+      toast.error("Nenhum opcional disponível para este prato")
+      return
+    }
 
     // Flatten as escolhas para um array de IDs
     const selectedChoicesIds = Object.values(optionChoices).flat()
@@ -447,12 +472,26 @@ export default function FoodPage() {
                     menuItemId={selectedMenuItem}
                     value={optionChoices}
                     onChange={setOptionChoices}
+                    onValidationChange={setOptionsValid}
                   />
                 )}
                 <div className="flex justify-between mt-4">
                   <Button variant="outline" onClick={() => { setSelectedMenuItem(""); setStep(1); }}>Voltar</Button>
-                  <Button disabled={!selectedMenuItem} onClick={() => setStep(3)}>Próximo</Button>
+                  <Button
+                    disabled={!selectedMenuItem || !optionsValid}
+                    onClick={() => setStep(3)}
+                  >
+                    Próximo
+                  </Button>
                 </div>
+                {!optionsValid && selectedMenuItem && (
+                  <Alert className="mt-2 border-red-400">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-white">
+                      Você deve selecionar as opções obrigatórias antes de continuar.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
 

@@ -18,6 +18,27 @@ export const foodOrderRouter = createTRPCRouter({
       const inputDate = new Date(input.orderDate)
       const orderDateNormalized = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate(), 0, 0, 0, 0)
       
+      // Verificar se as opções escolhidas existem
+      const menuItemOpiton = await ctx.db.menuItemOption.findMany({
+        where: { menuItemId: input.menuItemId },
+        include: { choices: true},
+      })
+
+      const requerOption = menuItemOpiton.filter((option) => option.required)
+
+      for (const option of requerOption) {
+        const hasChoice = input.optionChoices.some(choiceId => 
+          option.choices.some(choice => choice.id === choiceId)
+        )
+        
+        if (!hasChoice) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Opção obrigatória não selecionada: ${option.name}`,
+          })
+        }
+      }
+
       const existingOrder = await ctx.db.foodOrder.findUnique({
         where: {
           userId_orderDate: {
