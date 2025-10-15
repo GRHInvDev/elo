@@ -22,7 +22,6 @@ type MenuItemOptionsSelectorProps = {
   onValidationChange?: (isValid: boolean) => void;
 };
 
-{/* Tornar obrigatório a escolha de sim ou não em opcionais */}
 function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChange }: MenuItemOptionsSelectorProps) {
   const options = api.menuItemOption.byMenuItem.useQuery({ menuItemId }, { enabled: !!menuItemId })
   const [selectedChoices, setSelectedChoices] = useState<Record<string, string[]>>(value ?? {})
@@ -35,10 +34,16 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
   useEffect(() => {
     setSelectedChoices(value ?? {})
   }, [value, menuItemId])
-
+  
   // Validação: verificar se todas as opções obrigatórias foram selecionadas
   useEffect(() => {
     if (options.data) {
+      // Se não há opcionais para o prato, considera válido automaticamente
+      if (options.data.length === 0) {
+        onValidationChange?.(true)
+        return
+      }
+
       const isValid = options.data.every(option => {
         if (!option.required) return true // Opções não obrigatórias são sempre válidas
         const selected = selectedChoices[option.id]
@@ -168,7 +173,7 @@ export default function FoodPage() {
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
   })
-
+  
   const menuItemOptions = api.menuItemOption.byMenuItem.useQuery(
     { menuItemId: selectedMenuItem },
     { enabled: !!selectedMenuItem }
@@ -183,19 +188,14 @@ export default function FoodPage() {
     const now = new Date()
     const orderDate = now.getHours() < FOOD_ORDER_DEADLINE_HOUR ? startOfDay(now) : startOfDay(addDays(now, 1))
 
-    if (!menuItemOptions || menuItemOptions.data?.length === 0) {
-      toast.error("Nenhum opcional disponível para este prato")
-      return
-    }
-
-    // Flatten as escolhas para um array de IDs
+    // Flatten as escolhas para um array de IDs (pode estar vazio se não há opcionais)
     const selectedChoicesIds = Object.values(optionChoices).flat()
 
     createOrder.mutate({
       restaurantId: selectedRestaurant,
       menuItemId: selectedMenuItem,
       orderDate: orderDate,
-      optionChoices: selectedChoicesIds,
+      optionChoices: selectedChoicesIds.length > 0 ? selectedChoicesIds : undefined,
     })
   }
 
