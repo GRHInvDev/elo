@@ -492,9 +492,9 @@ export default function FoodPage() {
                   </Button>
                 </div>
                 {!optionsValid && selectedMenuItem && (
-                  <Alert className="mt-2 border-red-400">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-white">
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
                       Você deve selecionar as opções obrigatórias antes de continuar.
                     </AlertDescription>
                   </Alert>
