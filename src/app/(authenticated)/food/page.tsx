@@ -35,7 +35,7 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
     setSelectedChoices(value ?? {})
   }, [value, menuItemId])
   
-  // Validação: verificar se todas as opções obrigatórias foram selecionadas
+  // Validação: verificar obrigatórias e exigir ao menos uma se só houver opcionais
   useEffect(() => {
     if (options.data) {
       // Se não há opcionais para o prato, considera válido automaticamente
@@ -44,11 +44,16 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
         return
       }
 
-      const isValid = options.data.every(option => {
-        if (!option.required) return true // Opções não obrigatórias são sempre válidas
-        const selected = selectedChoices[option.id]
-        return selected && selected.length > 0 // Deve ter pelo menos uma escolha
-      })
+      const hasRequired = options.data.some(option => option.required)
+
+      const isValid = hasRequired
+        ? options.data.every(option => {
+            if (!option.required) return true
+            const selected = selectedChoices[option.id]
+            return !!selected && selected.length > 0
+          })
+        : Object.values(selectedChoices).flat().length > 0
+
       onValidationChange?.(isValid)
     }
   }, [options.data, selectedChoices, onValidationChange])
