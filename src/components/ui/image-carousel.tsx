@@ -104,7 +104,7 @@ export function ImageCarousel({
     }
 
     const ratio = naturalWidth / naturalHeight
-    let closest = allowedAspects[0]
+    let closest: typeof allowedAspects[number] = allowedAspects[0]
     let minDiff = Math.abs(ratio - closest.value)
 
     for (let i = 1; i < allowedAspects.length; i += 1) {
@@ -142,7 +142,7 @@ export function ImageCarousel({
             : "object-cover"
         )}
         priority={index === current}
-        onLoadingComplete={(img) => handleImageLoad(index, img.target)}
+        onLoadingComplete={(img) => handleImageLoad(index, img.target as HTMLImageElement)}
         imageFit={imageFit}
       />
     </div>
