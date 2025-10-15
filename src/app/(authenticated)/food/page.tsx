@@ -54,7 +54,11 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
   }, [options.data, selectedChoices, onValidationChange])
 
   if (options.isLoading) return <div className="text-sm text-muted-foreground">Carregando opcionais...</div>
-  if (!options.data || options.data.length === 0) return <div className="text-sm text-muted-foreground">Nenhum opcional disponível para este prato.</div>
+
+  // Se não há opcionais, mostra mensagem mas validação já foi feita no useEffect
+  if (!options.data || options.data.length === 0) {
+    return <div className="text-sm text-muted-foreground">Nenhum opcional disponível para este prato.</div>
+  }
 
   return (
     <div className="space-y-4 mt-4">
@@ -113,6 +117,12 @@ export default function FoodPage() {
   const [showHistory, setShowHistory] = useState<boolean>(false)
   const [optionChoices, setOptionChoices] = useState<Record<string, string[]>>({})
   const [optionsValid, setOptionsValid] = useState<boolean>(true)
+
+  // Resetar validação quando o prato muda
+  useEffect(() => {
+    setOptionsValid(true)
+    setOptionChoices({})
+  }, [selectedMenuItem])
 
   const utils = api.useUtils()
 
@@ -174,10 +184,7 @@ export default function FoodPage() {
     endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
   })
   
-  const menuItemOptions = api.menuItemOption.byMenuItem.useQuery(
-    { menuItemId: selectedMenuItem },
-    { enabled: !!selectedMenuItem }
-  )
+  
 
   const handleCreateOrder = () => {
     if (!selectedRestaurant || !selectedMenuItem) {
