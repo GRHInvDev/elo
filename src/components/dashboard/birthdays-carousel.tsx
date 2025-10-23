@@ -4,6 +4,7 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { cn } from "@/lib/utils"
 import { OptimizedImage } from "@/components/ui/optimized-image"
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 interface BirthdayCarouselProps {
   itens: {
@@ -17,6 +18,7 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
+  const router = useRouter()
 
   useEffect(() => {
     if (!carouselApi) {
@@ -43,18 +45,23 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
     return () => clearInterval(interval);
   }, [carouselApi]);
 
+  const handleCarouselClick = () => {
+    router.push('/birthdays')
+  }
+
   return (
     <div className={cn(className)}>
       <div className="-mt-11 flex justify-between backdrop-blur-sm items-center translate-y-11 relative z-40 bg-gradient-to-b from-black/50 pb-4 to-transparent">
         <h2 className="text-xl font-semibold ml-2 text-white drop-shadow-md z-50">Aniversariantes do dia 🎉</h2>
       </div>
       <Carousel
-        className="w-full"
+        className="w-full cursor-pointer"
         setApi={setCarouselApi}
         opts={{
           loop: true,
           align: "center",
         }}
+        onClick={handleCarouselClick}
       >
         <CarouselContent>
           {itens.map((item, index) => (
