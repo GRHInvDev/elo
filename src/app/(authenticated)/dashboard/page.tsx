@@ -159,6 +159,10 @@ export default function DashboardPage() {
                   <Image src="/icon_cristal.svg" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="Cristaluni"/>
                   <span className="text-xs truncate">Cristallux</span>
                 </Link>
+                <Link href={'https://centraldofuncionario.com.br/60939'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
+                  <Image src="/icon_cristal.svg" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="Cristaluni"/>
+                  <span className="text-xs truncate">Central do Colaborador</span>
+                </Link>
               </div>
             </div>
 
