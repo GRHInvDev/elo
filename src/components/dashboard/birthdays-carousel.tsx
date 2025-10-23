@@ -46,7 +46,7 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
   return (
     <div className={cn(className)}>
       <div className="-mt-11 flex justify-between backdrop-blur-sm items-center translate-y-11 relative z-40 bg-gradient-to-b from-black/50 pb-4 to-transparent">
-        <h2 className="text-xl font-semibold ml-2 text-white drop-shadow-md z-50">Aniversariantes do mês 🎉</h2>
+        <h2 className="text-xl font-semibold ml-2 text-white drop-shadow-md z-50">Aniversariantes do dia 🎉</h2>
       </div>
       <Carousel
         className="w-full"
