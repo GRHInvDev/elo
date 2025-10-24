@@ -10,6 +10,8 @@ import FloatingChatButton from "@/components/ai/floating-chat-button"
 // import { GlobalNotificationManager } from "@/components/notifications/global-notification-manager" --> Desativado temporariamente
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
+import { AnimatedBackground } from "@/components/animated-background"
+import { AnimationProvider } from "@/contexts/animation-context"
 
 export default function AuthenticatedLayoutClient({
   children,
@@ -23,6 +25,7 @@ export default function AuthenticatedLayoutClient({
   }
 
   return (
+      <AnimationProvider>
     <div className="flex min-h-screen">
       {/* Sidebar - hidden on mobile, visible on desktop */}
       <aside className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 transition-all duration-300 ${
@@ -72,5 +75,7 @@ export default function AuthenticatedLayoutClient({
       {/* <BrowserNotificationPermission /> --> Desativado temporariamente */}
       {/* <GlobalNotificationManager /> --> Desativado temporariamente*/}
     </div>
+      <AnimatedBackground/>
+      </AnimationProvider>
   )
 }

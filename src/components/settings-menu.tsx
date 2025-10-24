@@ -10,9 +10,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { useAnimation } from "@/contexts/animation-context"
 
 export function SettingsMenu({size}:{size?: "small"}) {
   const { setTheme, theme } = useTheme()
+  const { setAnimationEnabled, isAnimationEnabled } = useAnimation()
 
   return (
     <DropdownMenu>
@@ -49,6 +51,12 @@ export function SettingsMenu({size}:{size?: "small"}) {
           <LucideComputer className="mr-2 h-4 w-4"/>
           <span>Sistema</span>
           {theme === "system" && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => setAnimationEnabled(!isAnimationEnabled)}>
+          <LucideSunMoon className="mr-2 h-4 w-4"/>
+          <span>Animações</span>
+          {isAnimationEnabled && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

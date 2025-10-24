@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
 interface AnimationContextType {
   isAnimationEnabled: boolean
@@ -10,11 +10,35 @@ interface AnimationContextType {
 
 const AnimationContext = createContext<AnimationContextType | undefined>(undefined)
 
+const ANIMATION_STORAGE_KEY = "elo-animation-enabled"
+
 export function AnimationProvider({
   children,
-  defaultEnabled = true,
+  defaultEnabled = false,
 }: { children: ReactNode; defaultEnabled?: boolean }) {
   const [isAnimationEnabled, setIsAnimationEnabled] = useState(defaultEnabled)
+
+  // Carregar estado do localStorage na inicialização
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem(ANIMATION_STORAGE_KEY)
+      if (savedState !== null) {
+        const parsedState = JSON.parse(savedState) as boolean
+        setIsAnimationEnabled(parsedState)
+      }
+    } catch (error) {
+      console.warn("Erro ao carregar estado de animação do localStorage:", error)
+    }
+  }, [])
+
+  // Salvar estado no localStorage sempre que mudar
+  useEffect(() => {
+    try {
+      localStorage.setItem(ANIMATION_STORAGE_KEY, JSON.stringify(isAnimationEnabled))
+    } catch (error) {
+      console.warn("Erro ao salvar estado de animação no localStorage:", error)
+    }
+  }, [isAnimationEnabled])
 
   const toggleAnimation = () => {
     setIsAnimationEnabled((prev) => !prev)
