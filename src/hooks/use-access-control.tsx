@@ -143,6 +143,12 @@ export function useAccessControl() {
     return db_user.role_config.can_manage_extensions ?? false;
   };
 
+  const canManageShop = (): boolean => {
+    if (!db_user?.role_config) return false;
+    if (db_user.role_config.sudo) return true;
+    return db_user.role_config.can_manage_shop ?? false;
+  };
+
   return {
     db_user,
     hasAdminAccess,
@@ -160,6 +166,7 @@ export function useAccessControl() {
     canLocateCars,
     canViewDREReport,
     canManageExtensions,
+    canManageShop,
     canAccessChat,
     isLoading: !db_user,
     isSudo: db_user?.role_config?.sudo ?? false,

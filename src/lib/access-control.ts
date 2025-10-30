@@ -66,6 +66,12 @@ export function canViewShop(): boolean {
   return true;
 }
 
+export function canManageShop(roleConfig: RolesConfig | null): boolean {
+  if (!roleConfig) return false;
+  if (roleConfig.sudo) return true;
+  return roleConfig.can_manage_shop ?? false;
+}
+
 export function canViewForms(roleConfig: RolesConfig | null): boolean {
   // Todos podem visualizar formulários, exceto usuários TOTEM
   if (!roleConfig) return false;

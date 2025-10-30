@@ -226,6 +226,8 @@ model Product {
   name        String
   description String
   price       Float
+  code        String     @unique
+  active      Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   enterprise  Enterprise

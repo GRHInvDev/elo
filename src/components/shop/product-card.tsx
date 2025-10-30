@@ -54,7 +54,7 @@ export default function ProductCard({ product }:{ product: Product }) {
               <CardFooter>
                 <Button disabled className="w-full" size="sm" >
                   <LucideShoppingCart/>
-                  Indisponível
+                  {product.active ? "Em breve" : "Indisponível"}
                 </Button>
               </CardFooter>
             </Card>
