@@ -247,51 +247,96 @@ export default function OrdersTab({
       }
 
       try {
-        // Função auxiliar para verificar se uma opção foi selecionada
-        const hasOptionSelected = (
-          order: (typeof data)[number],
-          optionName: string
-        ): "Sim" | "Não" => {
+        // Coletar todas as opções únicas de todos os pedidos (escalável)
+        const allOptions = new Set<string>()
+        
+        data.forEach((order) => {
+          const orderWithSelections = order as typeof order & {
+            optionSelections?: Array<{
+              choice?: {
+                name?: string
+                option?: {
+                  name?: string
+                }
+              }
+            }>
+          }
+          const selections = orderWithSelections.optionSelections
+          
+          if (Array.isArray(selections)) {
+            selections.forEach((selection) => {
+              const optionName = selection?.choice?.option?.name
+              if (optionName && typeof optionName === "string") {
+                allOptions.add(optionName)
+              }
+            })
+          }
+        })
+
+        // Converter Set para Array e ordenar para manter consistência
+        const sortedOptions = Array.from(allOptions).sort()
+
+        // Função auxiliar para obter a escolha de uma opção específica
+        const getOptionChoice = (order: (typeof data)[number], optionName: string): string => {
           try {
-            const orderAny = order as unknown as {
+            const orderWithSelections = order as typeof order & {
               optionSelections?: Array<{
                 choice?: {
+                  name?: string
                   option?: {
                     name?: string
                   }
                 }
               }>
             }
+            const selections = orderWithSelections.optionSelections
             
-            const selections = orderAny.optionSelections
             if (!Array.isArray(selections) || selections.length === 0) {
-              return "Não"
+              return ""
             }
 
-            const hasSelection = selections.some((selection) => {
-              const choice = selection?.choice
-              const option = choice?.option
-              const name = option?.name
-              return typeof name === "string" && name === optionName
+            // Normalizar nome da opção para comparação
+            const normalizedOptionName = optionName.trim().toLowerCase()
+
+            // Procurar a seleção correspondente à opção
+            const matchingSelection = selections.find((selection) => {
+              const optionNameValue = selection?.choice?.option?.name
+              if (!optionNameValue || typeof optionNameValue !== "string") {
+                return false
+              }
+              const normalizedOption = optionNameValue.trim().toLowerCase()
+              return normalizedOption === normalizedOptionName
             })
 
-            return hasSelection ? "Sim" : "Não"
-          } catch {
-            return "Não"
+            // Retornar o nome da escolha (choice.name) ou string vazia
+            return matchingSelection?.choice?.name?.trim() ?? ""
+          } catch (error) {
+            console.error(`[getOptionChoice] Erro ao obter escolha da opção "${optionName}":`, error)
+            return ""
           }
         }
 
-        // Formatar dados conforme SQL especificado
-        const dataToExport = data.map((order) => ({
-          "Nome": `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim(),
-          "Email": order.user?.email ?? "",
-          "Restaurante": order.restaurant?.name ?? "",
-          "Cidade": order.restaurant?.city ?? "",
-          "Prato": order.menuItem?.name ?? "",
-          "Feijão": hasOptionSelected(order, "Feijão"),
-          "Salada": hasOptionSelected(order, "Salada"),
-          "Assinatura": ""
-        }))
+        // Formatar dados dinamicamente com colunas para cada opção encontrada
+        const dataToExport = data.map((order) => {
+          const baseRow: Record<string, string> = {
+            "Nome": `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim(),
+            "Email": order.user?.email ?? "",
+            "Restaurante": order.restaurant?.name ?? "",
+            "Cidade": order.restaurant?.city ?? "",
+            "Prato": order.menuItem?.name ?? "",
+          }
+
+          // Adicionar uma coluna para cada opção encontrada
+          sortedOptions.forEach((optionName) => {
+            const choice = getOptionChoice(order, optionName)
+            baseRow[optionName] = choice
+          })
+
+          // Adicionar coluna de assinatura ao final
+          baseRow.Assinatura = ""
+
+          return baseRow
+        })
 
         console.log("Dados formatados para Excel:", dataToExport)
 
