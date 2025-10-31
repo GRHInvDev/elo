@@ -520,15 +520,26 @@ export const foodOrderRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Usar a mesma normalização que é usada na criação de pedidos (timezone local)
       const inputDate = new Date(input.orderDate)
       const year = inputDate.getFullYear()
       const month = inputDate.getMonth()
       const day = inputDate.getDate()
 
-      const start = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
-      const end = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+      // Normalizar para início do dia no timezone local (igual à criação de pedidos)
+      const start = new Date(year, month, day, 0, 0, 0, 0)
+      const end = new Date(year, month, day, 23, 59, 59, 999)
 
-      return ctx.db.foodOrder.findMany({
+      // Debug: log dos parâmetros da query
+      console.log("[exportOrdersByRestaurantAndDate] Buscando pedidos:", {
+        orderDate: input.orderDate,
+        inputDate: inputDate.toISOString(),
+        start: start.toISOString(),
+        end: end.toISOString(),
+        restaurantId: input.restaurantId ?? "todos",
+      })
+
+      const orders = await ctx.db.foodOrder.findMany({
         where: {
           orderDate: {
             gte: start,
@@ -560,12 +571,30 @@ export const foodOrderRouter = createTRPCRouter({
               name: true,
             },
           },
+          optionSelections: {
+            include: {
+              choice: {
+                include: {
+                  option: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: [
           { restaurant: { name: "asc" } },
           { user: { firstName: "asc" } },
         ],
       })
+
+      console.log("[exportOrdersByRestaurantAndDate] Pedidos encontrados:", orders.length)
+
+      return orders
     }),
 
   // Listar pedidos por data
