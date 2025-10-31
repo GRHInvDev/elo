@@ -95,7 +95,7 @@ export async function GET() {
             restaurant.email,
             `Pedidos do Dia - ${restaurant.name}`,
             emailContent,
-            "rh@boxdistribuidor.com.br"
+            "rh@boxdistribuidor.com.br, dp@boxdistribuidor.com.br"
           );
 
           console.log(`| CRONJOB | Email enviado para ${restaurant.name} com ${ordersData.length} pedidos`);
