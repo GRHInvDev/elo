@@ -717,5 +717,47 @@ export const userRouter = createTRPCRouter({
         where: { id: input.id },
       })
     }),
+
+  // Verificar se o usuário é novo colaborador
+  checkNewCollaborator: protectedProcedure.query(async ({ ctx }) => {
+    const newCollaborator = await ctx.db.newCollaborator.findUnique({
+      where: { userId: ctx.auth.userId },
+    })
+
+    // Se não existe registro, criar com isNew = true (primeiro acesso)
+    if (!newCollaborator) {
+      const created = await ctx.db.newCollaborator.create({
+        data: {
+          userId: ctx.auth.userId,
+          isNew: true,
+        },
+      })
+      return { isNew: created.isNew }
+    }
+
+    return { isNew: newCollaborator.isNew }
+  }),
+
+  // Marcar colaborador como não novo (fechar card de boas-vindas)
+  markAsNotNew: protectedProcedure.mutation(async ({ ctx }) => {
+    const existing = await ctx.db.newCollaborator.findUnique({
+      where: { userId: ctx.auth.userId },
+    })
+
+    if (existing) {
+      return await ctx.db.newCollaborator.update({
+        where: { userId: ctx.auth.userId },
+        data: { isNew: false },
+      })
+    }
+
+    // Se não existe, criar com isNew = false
+    return await ctx.db.newCollaborator.create({
+      data: {
+        userId: ctx.auth.userId,
+        isNew: false,
+      },
+    })
+  }),
 })
 
