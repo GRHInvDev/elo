@@ -188,10 +188,47 @@ export const suggestionRouter = createTRPCRouter({
         })
       }
 
+      // Buscar ou criar usuário "Não atribuído" quando não há userId especificado
+      let userIdToAssign = input.userId
+      if (!userIdToAssign) {
+        const UNASSIGNED_USER_ID = "Não atribuído"
+        const UNASSIGNED_USER_EMAIL = "sistema@elo.boxdistribuidor"
+        
+        const unassignedUser = await ctx.db.user.upsert({
+          where: {
+            email: UNASSIGNED_USER_EMAIL
+          },
+          update: {
+            // Garantir que setor seja nulo ao atualizar
+            setor: null
+          },
+          create: {
+            id: UNASSIGNED_USER_ID,
+            email: UNASSIGNED_USER_EMAIL,
+            firstName: "Não",
+            lastName: "Atribuído",
+            setor: null, // Setor nulo conforme solicitado
+            enterprise: "NA",
+            role_config: {
+              sudo: false,
+              admin_pages: [],
+              can_create_form: false,
+              can_create_event: false,
+              can_create_flyer: false,
+              can_create_booking: false,
+              can_locate_cars: false,
+              can_view_dre_report: false,
+              isTotem: false
+            }
+          }
+        })
+        userIdToAssign = unassignedUser.id
+      }
+
       const suggestion = await ctx.db.suggestion.create({
         data: {
           ideaNumber,
-          userId: input.userId ?? ctx.user.id, // Se não especificado, atribuir ao admin que criou
+          userId: userIdToAssign,
           submittedName: input.submittedName,
           submittedSector: input.submittedSector,
           isNameVisible: input.isNameVisible,
@@ -229,8 +266,15 @@ export const suggestionRouter = createTRPCRouter({
         },
       })
 
-      // Criar notificação para o usuário (se não for o próprio admin)
-      if (input.userId && input.userId !== ctx.user.id) {
+      // Criar notificação para o usuário (se não for o próprio admin e não for o usuário "Não atribuído")
+      const UNASSIGNED_USER_EMAIL = "nao-atribuido@interno.sistema"
+      const assignedUser = await ctx.db.user.findUnique({
+        where: { id: userIdToAssign },
+        select: { email: true }
+      })
+      const isUnassignedUser = assignedUser?.email === UNASSIGNED_USER_EMAIL
+
+      if (input.userId && input.userId !== ctx.user.id && !isUnassignedUser) {
         try {
           await ctx.db.notification.create({
             data: {
