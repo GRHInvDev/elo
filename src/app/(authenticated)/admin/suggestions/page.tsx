@@ -3875,7 +3875,7 @@ function CreateSuggestionModal({
               <Button
                 onClick={handleSubmit}
                 disabled={createSuggestion.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-white hover:bg-slate-700 hover:text-white"
               >
                 {createSuggestion.isPending ? "Criando..." : "Criar Ideia"}
               </Button>

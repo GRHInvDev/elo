@@ -15,6 +15,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/complete-profile-modal"
+import { WelcomeCard } from "@/components/dashboard/welcome-card"
 import { useState, useEffect, useMemo } from "react"
 
 export default function DashboardPage() {
@@ -90,6 +91,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen">
+      {/* Card de Boas-vindas para novos colaboradores */}
+      <div className="w-full max-w-6xl mx-auto px-4 pt-6 pb-4">
+        <WelcomeCard />
+      </div>
+
       {/* Seção Principal - Banners e Aniversários */}
       <div className={cn("grid grid-cols-1 md:grid-cols-3", !hasTodayBirthdays && "md:grid-cols-1")}>
         {
