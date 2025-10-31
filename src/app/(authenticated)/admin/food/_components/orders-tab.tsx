@@ -79,6 +79,7 @@ export default function OrdersTab({
     { enabled: !!createRestaurant }
   )
 
+
   const isSudo = currentUser.data?.role_config?.sudo ?? false
 
   const usersQuery = api.user.searchMinimal.useQuery(
@@ -246,6 +247,40 @@ export default function OrdersTab({
       }
 
       try {
+        // Função auxiliar para verificar se uma opção foi selecionada
+        const hasOptionSelected = (
+          order: (typeof data)[number],
+          optionName: string
+        ): "Sim" | "Não" => {
+          try {
+            const orderAny = order as unknown as {
+              optionSelections?: Array<{
+                choice?: {
+                  option?: {
+                    name?: string
+                  }
+                }
+              }>
+            }
+            
+            const selections = orderAny.optionSelections
+            if (!Array.isArray(selections) || selections.length === 0) {
+              return "Não"
+            }
+
+            const hasSelection = selections.some((selection) => {
+              const choice = selection?.choice
+              const option = choice?.option
+              const name = option?.name
+              return typeof name === "string" && name === optionName
+            })
+
+            return hasSelection ? "Sim" : "Não"
+          } catch {
+            return "Não"
+          }
+        }
+
         // Formatar dados conforme SQL especificado
         const dataToExport = data.map((order) => ({
           "Nome": `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim(),
@@ -253,7 +288,9 @@ export default function OrdersTab({
           "Restaurante": order.restaurant?.name ?? "",
           "Cidade": order.restaurant?.city ?? "",
           "Prato": order.menuItem?.name ?? "",
-          "Assinatura": "" // Campo vazio para assinatura manual
+          "Feijão": hasOptionSelected(order, "Feijão"),
+          "Salada": hasOptionSelected(order, "Salada"),
+          "Assinatura": ""
         }))
 
         console.log("Dados formatados para Excel:", dataToExport)
