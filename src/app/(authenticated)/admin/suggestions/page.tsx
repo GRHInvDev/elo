@@ -117,7 +117,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     ideaNumber: dbSuggestion.ideaNumber,
     userId: (dbSuggestion as any).userId ?? "",
     submittedName: dbSuggestion.submittedName,
-    submittedSector: user.setor,
+    submittedSector: (dbSuggestion as any).submittedSector ?? null, // Manter null se não foi informado (ocultado)
     isNameVisible: dbSuggestion.isNameVisible,
     description: dbSuggestion.description || "", // Solução proposta
     problem: (dbSuggestion as any).problem ?? null, // Problema identificado
@@ -1097,7 +1097,8 @@ function SuggestionDetailsModal({
 
   const pontuacao = impactScore + capacityScore - effortScore
   const nomeExibicao = suggestion.isNameVisible ? (suggestion.submittedName ?? "Não informado") : "Nome oculto"
-  const setorExibido = suggestion.submittedSector ?? suggestion.user.setor ?? "Setor não informado"
+  // Respeitar ocultação do setor: só mostrar se isNameVisible for true e submittedSector não for null
+  const setorExibido = suggestion.isNameVisible && suggestion.submittedSector ? suggestion.submittedSector : null
   const contribType = suggestion.contribution?.type ?? ""
   const contribOther = suggestion.contribution?.other
 
@@ -1131,7 +1132,7 @@ function SuggestionDetailsModal({
           <div className="text-sm font-medium">Autor</div>
           <div className="text-sm text-muted-foreground">
             {nomeExibicao}
-            {setorExibido && setorExibido !== "Setor não informado" && (
+            {setorExibido && (
               <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
                 {setorExibido}
               </span>
@@ -1881,7 +1882,7 @@ export default function AdminSuggestionsPage() {
               variant="default"
               size="sm"
               onClick={() => setIsCreateSuggestionModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              className="flex items-center gap-2 bg-white hover:bg-slate-700 hover:text-white"
             >
               <Plus className="w-4 h-4" />
               Nova Ideia
@@ -2159,9 +2160,9 @@ export default function AdminSuggestionsPage() {
                                       <div className="truncate">
                                         {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
                                       </div>
-                                      {s.isNameVisible && (s.submittedSector ?? s.user.setor) && (
+                                      {s.isNameVisible && s.submittedSector && (
                                         <span className="ml-1 text-[9px] md:text-[10px] bg-muted px-1 py-0.5 rounded inline-block mt-1">
-                                          {s.submittedSector ?? s.user.setor}
+                                          {s.submittedSector}
                                         </span>
                                       )}
                                       <div className="text-[10px] md:text-[11px] opacity-75 mt-1">
@@ -2485,7 +2486,8 @@ function SuggestionItem({
   const effortScore = s.effort?.score ?? 0
   const pontuacao = impactScore + capacityScore - effortScore
   const nomeExibicao = s.isNameVisible ? (s.submittedName ?? "Não informado") : "Nome oculto"
-  const setorExibido = s.submittedSector ?? s.user.setor ?? "Setor não informado"
+  // Respeitar ocultação do setor: só mostrar se isNameVisible for true e submittedSector não for null
+  const setorExibido = s.isNameVisible && s.submittedSector ? s.submittedSector : null
   const contribType = s.contribution?.type ?? ""
   const contribOther = s.contribution?.other
 
@@ -2502,7 +2504,7 @@ function SuggestionItem({
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-xs text-muted-foreground">
                       Nome: {nomeExibicao}
-                    {setorExibido && setorExibido !== "Setor não informado" && (
+                    {setorExibido && (
                       <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
                         {setorExibido}
                       </span>
@@ -2547,7 +2549,11 @@ function SuggestionItem({
                     <div>
                       <div className="text-sm font-medium">Setor</div>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">{setorExibido}</Badge>
+                        {setorExibido ? (
+                          <Badge variant="secondary">{setorExibido}</Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground italic">Setor oculto</span>
+                        )}
                       </div>
                     </div>
                     <div className="md:col-span-2">
@@ -3672,15 +3678,6 @@ function CreateSuggestionModal({
                   />
                 </div>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isNameVisible"
-                  checked={formData.isNameVisible}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isNameVisible: checked as boolean }))}
-                />
-                <Label htmlFor="isNameVisible">Nome visível publicamente</Label>
-              </div>
             </div>
           </div>
 
@@ -3767,18 +3764,6 @@ function CreateSuggestionModal({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Gestão da Ideia</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Atribuir a Usuário (Opcional)</Label>
-                <UserSelector
-                  value={formData.userId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, userId: value }))}
-                  adminOnly={false}
-                  placeholder="Selecionar usuário..."
-                />
-                <p className="text-xs text-muted-foreground">
-                  Se não selecionado, será atribuído ao admin que está criando.
-                </p>
-              </div>
               <div className="space-y-2">
                 <Label>Responsável pela Devolutiva</Label>
                 <UserSelector
