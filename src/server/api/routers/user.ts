@@ -240,17 +240,19 @@ export const userRouter = createTRPCRouter({
       search: z.string().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      // Verificar se o usuário é sudo
+      // Verificar se o usuário tem permissão
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 
       const roleConfig = currentUser?.role_config as RolesConfig | null;
-      if (!roleConfig?.sudo) {
+      const hasAccess = ((roleConfig?.sudo ?? false) || (roleConfig?.can_manage_dados_basicos_users ?? false)) as boolean;
+      
+      if (!hasAccess) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Apenas usuários sudo podem listar usuários",
+          message: "Você não tem permissão para listar usuários",
         })
       }
 
@@ -300,6 +302,7 @@ export const userRouter = createTRPCRouter({
           setor: true,
           extension: true,
           emailExtension: true,
+          matricula: true,
           role_config: true,
         },
         orderBy: {
@@ -409,6 +412,7 @@ export const userRouter = createTRPCRouter({
         can_locate_cars: z.boolean(),
         can_view_dre_report: z.boolean(),
         can_manage_extensions: z.boolean().optional(),
+        can_manage_dados_basicos_users: z.boolean().optional(),
         isTotem: z.boolean().optional(),
         visible_forms: z.array(z.string()).optional(),
         hidden_forms: z.array(z.string()).optional(),
@@ -446,23 +450,47 @@ export const userRouter = createTRPCRouter({
       setor: z.string().optional(),
       extension: z.string().transform(val => BigInt(val)).optional(),
       emailExtension: z.string().email().optional().or(z.literal("")),
+      matricula: z.string().optional().or(z.literal("")),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Verificar se o usuário é sudo
+      // Verificar permissões do usuário
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 
       const roleConfig = currentUser?.role_config as RolesConfig | null;
-      if (!roleConfig?.sudo) {
+      
+      // Permitir se for sudo ou se tiver a permissão específica
+      const canEdit = (roleConfig?.sudo ?? false) || (roleConfig?.can_manage_dados_basicos_users ?? false) as boolean;
+      
+      if (!canEdit) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Apenas usuários sudo podem alterar dados de usuários",
+          message: "Você não tem permissão para alterar dados de usuários",
         })
       }
 
       const { userId, ...updateData } = input
+      
+      // Se o usuário não é sudo, apenas permitir alterar dados básicos
+      if (!roleConfig?.sudo) {
+        // Garantir que apenas dados básicos sejam atualizados
+        const allowedFields = {
+          firstName: input.firstName,
+          lastName: input.lastName,
+          email: input.email,
+          setor: input.setor,
+          extension: input.extension,
+          emailExtension: input.emailExtension,
+          matricula: input.matricula,
+        }
+        
+        return ctx.db.user.update({
+          where: { id: userId },
+          data: allowedFields,
+        })
+      }
       
       return ctx.db.user.update({
         where: { id: userId },

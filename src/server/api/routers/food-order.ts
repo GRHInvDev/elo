@@ -502,6 +502,7 @@ export const foodOrderRouter = createTRPCRouter({
               email: true,
               enterprise: true,
               setor: true,
+              matricula: true,
             },
           },
           restaurant: true,
@@ -556,6 +557,7 @@ export const foodOrderRouter = createTRPCRouter({
               email: true,
               enterprise: true,
               setor: true,
+              matricula: true,
             },
           },
           restaurant: {

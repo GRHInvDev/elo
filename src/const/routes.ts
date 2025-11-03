@@ -92,7 +92,7 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
           title: "Aniversariantes do Mês",
           icon: LucideCake,
           describe: "Página para visualizar os aniversariantes do mês",
-          href: "/birthday",
+          href: "/birthdays",
         },
         {
           title: "Eventos",

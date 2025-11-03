@@ -38,6 +38,7 @@ model User {
   emailExtension   String?            // email personalizado para exibição no ramal
   nameExtension      String?            // nome personalizado para exibição no ramal
   setorExtension      String?            // setor personalizado para exibição no ramal
+  matricula          String?            // matrícula do usuário - para exportação de pedidos
 
   // Notificações
   notifications Notification[]
