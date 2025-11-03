@@ -14,6 +14,7 @@ import { LucideCalendar,
   SearchCheck,
   Book,
   FileText,
+  LucideCake,
 } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
@@ -85,8 +86,14 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
     {
       title: "Anúncios",
       icon: LucideMegaphone,
-      describe: "Eventos, encartes e notícias",
+      describe: "Aniversariantes do Mês, Eventos, Encartes e Notícias",
       children: [
+        {
+          title: "Aniversariantes do Mês",
+          icon: LucideCake,
+          describe: "Página para visualizar os aniversariantes do mês",
+          href: "/birthday",
+        },
         {
           title: "Eventos",
           icon: LucideCalendar,
