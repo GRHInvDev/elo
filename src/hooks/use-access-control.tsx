@@ -150,7 +150,7 @@ export function useAccessControl() {
     if (db_user.role_config.sudo) return true;
 
     // Verifica permissão específica para gerenciar dados básicos
-    return (db_user.role_config.can_manage_dados_basicos_users ?? false) as boolean;
+    return Boolean(db_user.role_config.can_manage_dados_basicos_users);
   };
 
   return {
