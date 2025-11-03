@@ -247,7 +247,7 @@ export const userRouter = createTRPCRouter({
       })
 
       const roleConfig = currentUser?.role_config as RolesConfig | null;
-      const hasAccess = ((roleConfig?.sudo ?? false) || (roleConfig?.can_manage_dados_basicos_users ?? false)) as boolean;
+      const hasAccess = Boolean(roleConfig?.sudo) || Boolean(roleConfig?.can_manage_dados_basicos_users);
       
       if (!hasAccess) {
         throw new TRPCError({
@@ -462,7 +462,7 @@ export const userRouter = createTRPCRouter({
       const roleConfig = currentUser?.role_config as RolesConfig | null;
       
       // Permitir se for sudo ou se tiver a permissão específica
-      const canEdit = (roleConfig?.sudo ?? false) || (roleConfig?.can_manage_dados_basicos_users ?? false) as boolean;
+      const canEdit = Boolean(roleConfig?.sudo) || Boolean(roleConfig?.can_manage_dados_basicos_users);
       
       if (!canEdit) {
         throw new TRPCError({
