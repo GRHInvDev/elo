@@ -143,6 +143,16 @@ export function useAccessControl() {
     return db_user.role_config.can_manage_extensions ?? false;
   };
 
+  const canManageBasicUserData = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, pode gerenciar tudo
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica para gerenciar dados básicos
+    return (db_user.role_config.can_manage_dados_basicos_users ?? false) as boolean;
+  };
+
   return {
     db_user,
     hasAdminAccess,
@@ -160,6 +170,7 @@ export function useAccessControl() {
     canLocateCars,
     canViewDREReport,
     canManageExtensions,
+    canManageBasicUserData,
     canAccessChat,
     isLoading: !db_user,
     isSudo: db_user?.role_config?.sudo ?? false,

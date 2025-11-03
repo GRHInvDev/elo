@@ -31,6 +31,7 @@ import type { RolesConfig } from "@/types/role-config"
 type ExtendedRolesConfig = RolesConfig & {
   can_view_dre_report: boolean
   can_manage_extensions?: boolean
+  can_manage_dados_basicos_users?: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
 
@@ -58,10 +59,10 @@ const AVAILABLE_SETORES = [
 export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
 
-  const { isSudo, hasAdminAccess } = useAccessControl()
+  const { isSudo, hasAdminAccess, canManageBasicUserData } = useAccessControl()
 
   // Verificar se tem acesso à página de usuários
-  const hasAccess = isSudo || hasAdminAccess("/admin/users")
+  const hasAccess = isSudo || hasAdminAccess("/admin/users") || canManageBasicUserData()
 
   const { data: users, isLoading, refetch } = api.user.listUsers.useQuery({
     search: searchTerm || undefined,
@@ -191,6 +192,7 @@ interface UserManagementCardProps {
     extension: bigint | null
     role_config: RolesConfig
     emailExtension: string | null
+    matricula: string | null
   }
   allForms: { id: string; title: string }[]
   onUserUpdate: () => void
@@ -200,6 +202,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const [isEditingBasic, setIsEditingBasic] = useState(false)
   const [isEditingPermissions, setIsEditingPermissions] = useState(false)
   const [isEditingAdminRoutes, setIsEditingAdminRoutes] = useState(false)
+  
+  const { isSudo, canManageBasicUserData } = useAccessControl()
+  const canEditBasicOnly = canManageBasicUserData() && !isSudo
   
   // Função auxiliar para obter o nome do setor
   const getSetorLabel = (setorValue: string | null | undefined): string => {
@@ -214,6 +219,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     setor: user.setor ?? "none",
     extension: user.extension ?? 0n,
     emailExtension: user.emailExtension ?? "",
+    matricula: user.matricula ?? "",
   })
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
     {
@@ -305,6 +311,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       extension: basicData.extension?.toString(),
       setor: basicData.setor === "none" ? "" : basicData.setor,
       emailExtension: basicData.emailExtension || "",
+      matricula: basicData.matricula || "",
     })
   }
 
@@ -321,6 +328,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_locate_cars: permissionsData.can_locate_cars ?? false,
         can_view_dre_report: permissionsData.can_view_dre_report ?? false,
         can_manage_extensions: permissionsData.can_manage_extensions ?? false,
+        can_manage_dados_basicos_users: permissionsData.can_manage_dados_basicos_users ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
@@ -505,6 +513,19 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       Email personalizado exibido na lista de ramais (deixe vazio para usar o email padrão)
                     </p>
                   </div>
+                  <div>
+                    <Label htmlFor="matricula">Matrícula</Label>
+                    <Input
+                      id="matricula"
+                      type="text"
+                      value={basicData.matricula}
+                      onChange={(e) => setBasicData({ ...basicData, matricula: e.target.value })}
+                      placeholder="Digite a matrícula"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Matrícula do usuário utilizada para exportação de pedidos
+                    </p>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsEditingBasic(false)}>
@@ -542,6 +563,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       {user.emailExtension ?? 'Usa email padrão'}
                     </p>
                   </div>
+                  <div>
+                    <Label className="text-sm font-medium">Matrícula</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {user.matricula ?? 'Não informado'}
+                    </p>
+                  </div>
                 </div>
                 <Button onClick={() => setIsEditingBasic(true)} size="sm">
                   <Edit3 className="h-4 w-4 mr-2" />
@@ -555,6 +582,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         <Separator />
 
         {/* Seção de Permissões Avançadas */}
+        {!canEditBasicOnly && (
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
@@ -815,11 +843,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             )}
           </CollapsibleContent>
         </Collapsible>
+        )}
 
         <Separator />
 
         {/* Seção de Rotas Admin */}
-        {!permissionsData.isTotem && (
+        {!canEditBasicOnly && !permissionsData.isTotem && (
           <Collapsible>
             <CollapsibleTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
@@ -956,7 +985,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         <Separator />
 
         {/* Seção de Visibilidade de Solicitações */}
-        {!permissionsData.sudo && !permissionsData.isTotem && (
+        {!canEditBasicOnly && !permissionsData.sudo && !permissionsData.isTotem && (
           <Collapsible>
             <CollapsibleTrigger asChild>
               <Button variant="outline" className="w-full justify-between">

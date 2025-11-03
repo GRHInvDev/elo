@@ -183,6 +183,7 @@ export default function OrdersTab({
 
       // Agrupar pedidos por usuário
       const resumoPorUsuario: Record<string, {
+        matricula: string
         nome: string
         email: string
         empresa?: string
@@ -191,15 +192,18 @@ export default function OrdersTab({
         valorTotal: number
       }> = {}
 
-      data.forEach((order: typeof data[0]) => {
-        const email = order.user?.email ?? "(sem email)"
-        const nome = `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim()
-        const empresa = order.user?.enterprise ?? undefined
-        const setor = order.user?.setor ?? null
+      data.forEach((order) => {
+        const user = order.user
+        const matricula = user && "matricula" in user ? (user.matricula as string | null | undefined) ?? "" : ""
+        const email = user?.email ?? "(sem email)"
+        const nome = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
+        const empresa = user?.enterprise ?? undefined
+        const setor = user?.setor ?? null
         const valor = order.menuItem?.price ?? 0
         let resumo = resumoPorUsuario[email]
         if (!resumo) {
           resumo = {
+            matricula,
             nome,
             email,
             empresa,
@@ -215,6 +219,7 @@ export default function OrdersTab({
 
       // Montar os dados para exportação
       const dataToExport = Object.values(resumoPorUsuario).map((usuario) => ({
+        "Matrícula": usuario.matricula,
         "Nome do Usuário": usuario.nome,
         "Email do Usuário": usuario.email,
         "Empresa": usuario.empresa ?? "",
