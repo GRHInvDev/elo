@@ -27,6 +27,7 @@ interface FormBuilderWithSaveProps {
   initialIsPrivate?: boolean
   initialAllowedUsers?: string[]
   initialAllowedSectors?: string[]
+  initialOwnerIds?: string[]
 }
 
 export function FormBuilderWithSave({
@@ -38,6 +39,7 @@ export function FormBuilderWithSave({
   initialIsPrivate = false,
   initialAllowedUsers = [],
   initialAllowedSectors = [],
+  initialOwnerIds = [],
 }: FormBuilderWithSaveProps) {
   const [title, setTitle] = useState(initialTitle)
   const [description, setDescription] = useState(initialDescription)
@@ -45,6 +47,7 @@ export function FormBuilderWithSave({
   const [isPrivate, setIsPrivate] = useState(initialIsPrivate)
   const [allowedUsers, setAllowedUsers] = useState<string[]>(initialAllowedUsers)
   const [allowedSectors, setAllowedSectors] = useState<string[]>(initialAllowedSectors)
+  const [ownerIds, setOwnerIds] = useState<string[]>(initialOwnerIds)
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
@@ -95,6 +98,7 @@ export function FormBuilderWithSave({
         isPrivate,
         allowedUsers,
         allowedSectors,
+        ownerIds,
       })
     } else if (mode === "edit" && formId) {
       updateForm.mutate({
@@ -105,6 +109,7 @@ export function FormBuilderWithSave({
         isPrivate,
         allowedUsers,
         allowedSectors,
+        ownerIds,
       })
     }
   }
@@ -113,6 +118,38 @@ export function FormBuilderWithSave({
 
   return (
     <div className="space-y-8">
+      {/* Seção de Responsáveis */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Responsáveis do Formulário
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Adicione um ou mais responsáveis que poderão ver e interagir com todas as respostas deste formulário.
+          </p>
+          <UserSearch
+            users={usersAndSectors?.map(user => ({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              setor: user.setor,
+            })) ?? []}
+            selectedUsers={ownerIds}
+            onSelectionChange={setOwnerIds}
+            placeholder="Buscar responsáveis por nome, email ou setor..."
+            maxHeight="300px"
+          />
+          {ownerIds.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              {ownerIds.length} responsável(is) selecionado(s)
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-6">
           <div className="space-y-4">

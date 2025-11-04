@@ -32,10 +32,11 @@ export const formResponseRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
       // Verificar se o usuário é o dono do formulário
       const form = await ctx.db.form.findUnique({
         where: { id: input.formId },
-        select: { userId: true },
+        select: { userId: true, ownerIds: true },
       })
 
       if (!form) {
@@ -45,7 +46,7 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
-      const isOwner = form.userId === ctx.auth.userId
+      const isOwner = form.userId === currentUserId || (form.ownerIds).includes(currentUserId)
 
       if (isOwner) {
         // Se for o dono, retorna todas as respostas
@@ -94,10 +95,14 @@ export const formResponseRouter = createTRPCRouter({
     }),
 
   listKanBan: protectedProcedure.query(async ({ ctx }) => {
+    const currentUserId = ctx.auth.userId
     return await ctx.db.formResponse.findMany({
       where: {
         form: {
-          userId: ctx.auth.userId,
+          OR: [
+            { userId: currentUserId },
+            { ownerIds: { has: currentUserId } },
+          ],
         },
       },
       include: {
@@ -166,11 +171,12 @@ export const formResponseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
       // Verificar se a resposta existe
       const response = await ctx.db.formResponse.findUnique({
         where: { id: input.responseId },
         include: {
-          form: { select: { userId: true } },
+          form: { select: { userId: true, ownerIds: true } },
           user: { select: { id: true } },
         },
       })
@@ -183,7 +189,8 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Verificar se o usuário é o dono do formulário ou o autor da resposta
-      if (response.form.userId !== ctx.auth.userId && response.userId !== ctx.auth.userId) {
+      const isOwner = response.form.userId === currentUserId || (response.form.ownerIds).includes(currentUserId)
+      if (!isOwner && response.userId !== currentUserId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para enviar mensagens neste chat",
@@ -249,10 +256,11 @@ export const formResponseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const currentUserId: string = ctx.auth.userId
       // Verificar se a resposta existe
       const response = await ctx.db.formResponse.findUnique({
         where: { id: input.responseId },
-        include: { form: { select: { userId: true } } },
+        include: { form: { select: { userId: true, ownerIds: true } } },
       })
 
       if (!response) {
@@ -263,7 +271,8 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Verificar se o usuário é o dono do formulário
-      if (response.form.userId !== ctx.auth.userId) {
+      const isOwner = response.form.userId === currentUserId || response.form.ownerIds.includes(currentUserId)
+      if (!isOwner) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Apenas o dono do formulário pode atualizar o status",
@@ -304,6 +313,7 @@ export const formResponseRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      const currentUserId: string = ctx.auth.userId
       const response = await ctx.db.formResponse.findUnique({
         where: { id: input.responseId },
         include: {
@@ -314,6 +324,7 @@ export const formResponseRouter = createTRPCRouter({
               description: true,
               fields: true,
               userId: true,
+              ownerIds: true,
               user: true,
             },
           },
@@ -337,7 +348,8 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Verificar se o usuário é o dono do formulário ou o autor da resposta
-      if (response.form.userId !== ctx.auth.userId && response.userId !== ctx.auth.userId) {
+      const isOwner = response.form.userId === currentUserId || response.form.ownerIds.includes(currentUserId)
+      if (!isOwner && response.userId !== currentUserId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para visualizar esta resposta",
@@ -355,11 +367,12 @@ export const formResponseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const currentUserId: string = ctx.auth.userId
       // Verificar se a resposta existe
       const existingResponse = await ctx.db.formResponse.findUnique({
         where: { id: input.responseId },
         include: {
-          form: { select: { userId: true } },
+          form: { select: { userId: true, ownerIds: true } },
           user: { select: { id: true } },
         },
       })
@@ -372,7 +385,8 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Verificar se o usuário é o dono do formulário ou o autor da resposta
-      if (existingResponse.form.userId !== ctx.auth.userId && existingResponse.userId !== ctx.auth.userId) {
+      const isOwner = existingResponse.form.userId === currentUserId || existingResponse.form.ownerIds.includes(currentUserId)
+      if (!isOwner && existingResponse.userId !== currentUserId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para editar esta resposta",

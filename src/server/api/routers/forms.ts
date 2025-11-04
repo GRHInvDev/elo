@@ -14,6 +14,7 @@ export const formsRouter = createTRPCRouter({
         isPrivate: z.boolean().default(false),
         allowedUsers: z.array(z.string()).default([]),
         allowedSectors: z.array(z.string()).default([]),
+        ownerIds: z.array(z.string()).default([]),
     }))
     .mutation(async ({ ctx, input })=>{
         // Criar o formulário
@@ -22,7 +23,8 @@ export const formsRouter = createTRPCRouter({
                 title: input.title,
                 description: input.description,
                 fields: input.fields as unknown as InputJsonValue[], 
-                userId: ctx.auth.userId
+                userId: ctx.auth.userId,
+                ownerIds: input.ownerIds,
             }
         });
 
@@ -95,6 +97,7 @@ export const formsRouter = createTRPCRouter({
         isPrivate: z.boolean().optional(),
         allowedUsers: z.array(z.string()).optional(),
         allowedSectors: z.array(z.string()).optional(),
+        ownerIds: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input })=>{
         const form = await ctx.db.form.update({
@@ -102,7 +105,8 @@ export const formsRouter = createTRPCRouter({
                 title: input.title,
                 description: input.description,
                 fields: input.fields as unknown as InputJsonValue[], 
-                userId: ctx.auth.userId
+                userId: ctx.auth.userId,
+                ...(input.ownerIds ? { ownerIds: input.ownerIds } : {}),
             },
             where: {
                 id: input.id

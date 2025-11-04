@@ -274,6 +274,7 @@ model Form {
   isPrivate         Boolean        @default(false)
   allowedUsers      String[]       @default([])
   allowedSectors    String[]       @default([])
+  ownerIds          String[]       @default([])
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
