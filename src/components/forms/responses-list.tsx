@@ -1,37 +1,66 @@
-import { api } from "@/trpc/server"
+"use client"
+
+import { useState } from "react"
+import { api } from "@/trpc/react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Eye, FileText } from "lucide-react"
+import { Eye, FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
+import { ResponsesFilters, type ResponsesFiltersState } from "./responses-filters"
 
-export async function ResponsesList({ formId }: { formId: string }) {
-  const responses = await api.formResponse.listByForm(formId)
-  const form = await api.form.getById(formId)
-  const currentUser = await api.user.me();
+export function ResponsesList({ formId }: { formId: string }) {
+  const [filters, setFilters] = useState<ResponsesFiltersState>({
+    userIds: [],
+    setores: [],
+  })
+
+  const { data: responses, isLoading } = api.formResponse.listByForm.useQuery({
+    formId,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    priority: filters.priority,
+    userIds: filters.userIds.length > 0 ? filters.userIds : undefined,
+    setores: filters.setores.length > 0 ? filters.setores : undefined,
+    hasResponse: filters.hasResponse,
+  })
+
+  const { data: form } = api.form.getById.useQuery({ id: formId })
+  const { data: currentUser } = api.user.me.useQuery()
   const isOwner = form?.userId === currentUser?.id
 
-  if (responses.length === 0) {
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium">Nenhuma resposta encontrada</h3>
-        <p className="text-muted-foreground mt-1 mb-4">
-          {isOwner ? "Ainda não há respostas para este formulário." : "Você ainda não respondeu este formulário."}
-        </p>
-        {!isOwner && (
-          <Link href={`/forms/${formId}/respond`}>
-            <Button>
-              <FileText className="mr-2 h-4 w-4" />
-              Responder Formulário
-            </Button>
-          </Link>
-        )}
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    )
+  }
+
+  if (!responses || responses.length === 0) {
+    return (
+      <>
+        <ResponsesFilters filters={filters} onFiltersChange={setFilters} />
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium">Nenhuma resposta encontrada</h3>
+          <p className="text-muted-foreground mt-1 mb-4">
+            {isOwner ? "Ainda não há respostas para este formulário." : "Você ainda não respondeu este formulário."}
+          </p>
+          {!isOwner && (
+            <Link href={`/forms/${formId}/respond`}>
+              <Button>
+                <FileText className="mr-2 h-4 w-4" />
+                Responder Formulário
+              </Button>
+            </Link>
+          )}
+        </div>
+      </>
     )
   }
 
@@ -62,6 +91,7 @@ export async function ResponsesList({ formId }: { formId: string }) {
 
   return (
     <div className="space-y-6">
+      <ResponsesFilters filters={filters} onFiltersChange={setFilters} />
       <div className="grid grid-cols-1 gap-6">
         {responses.map((response) => (
           <Card key={response.id}>

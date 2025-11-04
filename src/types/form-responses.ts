@@ -28,6 +28,7 @@ export interface FormResponse {
         lastName: string | null
         email: string
         imageUrl: string | null
+        setor?: string | null
     }
 }
 
@@ -44,5 +45,6 @@ export interface ChatMessage {
         lastName: string | null
         email: string
         imageUrl: string | null
+        setor?: string | null
     }
 }
