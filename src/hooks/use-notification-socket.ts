@@ -47,9 +47,8 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
   const { showChatNotification, shouldShowNotification } = useBrowserNotifications()
 
   // Hook WebSocket genérico
-  // TEMPORARIAMENTE DESATIVADO - WebSocket completamente desabilitado
   const { isConnected, isConnecting, error, emit, on, off, connect } = useWebSocket({
-    autoConnect: false // Desabilitado completamente
+    autoConnect: true
   })
 
   // Buscar contagem inicial de notificações não lidas
@@ -226,8 +225,8 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
       onUnreadCountChange?.(data.count)
     }
 
-    const handleNotificationError = (...args: unknown[]) => {
-      const error = args[0] as { message: string }
+    const handleNotificationError = (..._args: unknown[]) => {
+      // noop
     }
     
 
@@ -242,7 +241,7 @@ export function useNotificationSocket(options: UseNotificationSocketOptions = {}
       off('unreadCountUpdate', handleUnreadCountUpdate)
       off('notificationError', handleNotificationError)
     }
-  }, [enabled, on, off, onNotification, onUnreadCountChange])
+  }, [enabled, on, off, onNotification, onUnreadCountChange, enableBrowserNotifications, enableSound, playNotificationSound, shouldShowNotification, showChatNotification])
 
   const reconnect = useCallback(() => {
     connect()

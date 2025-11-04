@@ -3,9 +3,11 @@ import { initializeNotificationWebSocketService } from '@/server/services/notifi
 import type { NextRequest } from 'next/server'
 import type { Server } from 'socket.io'
 
+export const runtime = 'nodejs'
+
 let io: Server | null
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   // Evitar inicialização múltipla
   if (io) {
     return new Response('Socket.IO server already running', { status: 200 })
@@ -26,3 +28,5 @@ export async function GET(req: NextRequest) {
     return new Response('Failed to start Socket.IO server', { status: 500 })
   }
 }
+
+// POST handler separado em /api/socket/emit

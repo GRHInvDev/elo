@@ -6,6 +6,7 @@ import type { InputJsonValue } from "@prisma/client/runtime/library"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
 import type { RolesConfig } from "@/types/role-config"
+import { getNotificationWebSocketService } from "../../services/notification-websocket-service"
 
 const StatusEnum = z.enum(["NEW","IN_REVIEW","APPROVED","IN_PROGRESS","DONE","NOT_IMPLEMENTED"])
 
@@ -289,7 +290,7 @@ export const suggestionRouter = createTRPCRouter({
 
       if (input.userId && input.userId !== ctx.user.id && !isUnassignedUser) {
         try {
-          await ctx.db.notification.create({
+          const created = await ctx.db.notification.create({
             data: {
               title: "Nova Ideia Criada",
               message: `Uma nova ideia #${ideaNumber} foi criada em seu nome.`,
@@ -301,6 +302,10 @@ export const suggestionRouter = createTRPCRouter({
               actionUrl: `/my-suggestions`
             }
           })
+          const wsService = getNotificationWebSocketService()
+          if (wsService) {
+            await wsService.updateUnreadCount(created.userId)
+          }
         } catch (notificationError) {
           console.error("Erro ao criar notificação:", notificationError)
         }
@@ -527,7 +532,7 @@ export const suggestionRouter = createTRPCRouter({
               notificationType = "SUGGESTION_UPDATED"
           }
 
-          await ctx.db.notification.create({
+          const created = await ctx.db.notification.create({
             data: {
               title: notificationTitle,
               message: notificationMessage,
@@ -539,9 +544,13 @@ export const suggestionRouter = createTRPCRouter({
               actionUrl: `/my-suggestions`
             }
           })
+          const wsService = getNotificationWebSocketService()
+          if (wsService) {
+            await wsService.updateUnreadCount(created.userId)
+          }
         } else if (input.impact || input.capacity || input.effort) {
           // Notificação de atualização de classificação da ideia
-          await ctx.db.notification.create({
+          const created = await ctx.db.notification.create({
             data: {
               title: "Classificação Atualizada",
               message: `A classificação da ideia #${suggestionData.ideaNumber} foi atualizada.`,
@@ -553,6 +562,10 @@ export const suggestionRouter = createTRPCRouter({
               actionUrl: `/my-suggestions`
             }
           })
+          const wsService = getNotificationWebSocketService()
+          if (wsService) {
+            await wsService.updateUnreadCount(created.userId)
+          }
         }
       } catch (notificationError) {
         // Não falhar a operação principal se a notificação falhar
