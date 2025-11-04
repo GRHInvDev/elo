@@ -38,11 +38,11 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
   }))
 
   const hasActiveFilters = 
-    filters.startDate ||
-    filters.endDate ||
-    filters.priority ||
-    filters.userIds.length > 0 ||
-    filters.setores.length > 0 ||
+    filters.startDate ??
+    filters.endDate ??
+    filters.priority ??
+    filters.userIds.length > 0 ??
+    filters.setores.length > 0 ??
     filters.hasResponse !== undefined
 
   const clearFilters = () => {
@@ -95,7 +95,7 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
           <div className="space-y-2">
             <Label>Prioridade (Urgência)</Label>
             <Select
-              value={filters.priority || "all"}
+              value={filters.priority ?? "all"}
               onValueChange={(value) => {
                 onFiltersChange({
                   ...filters,

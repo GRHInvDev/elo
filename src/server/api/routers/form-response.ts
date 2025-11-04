@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { z } from "zod"
 import type { InputJsonValue } from "@prisma/client/runtime/library"
-import type { ResponseStatus } from "@prisma/client"
+import type { ResponseStatus, Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario } from "@/lib/mail/html-mock"
@@ -55,7 +55,7 @@ export const formResponseRouter = createTRPCRouter({
       const isOwner = form.userId === currentUserId || (form.ownerIds).includes(currentUserId)
 
       // Construir where clause
-      const where: any = {
+      const where: Prisma.FormResponseWhereInput = {
         formId: input.formId,
       }
 
@@ -65,7 +65,7 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Filtro por data
-      if (input?.startDate || input?.endDate) {
+      if (input?.startDate ?? input?.endDate) {
         where.createdAt = {}
         if (input.startDate) {
           where.createdAt.gte = input.startDate
@@ -142,10 +142,9 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Determinar ordenação
-      let orderBy: any = { createdAt: "desc" }
-      if (input?.priority) {
-        orderBy = { createdAt: input.priority === "ASC" ? "asc" : "desc" }
-      }
+      const orderBy: Prisma.FormResponseOrderByWithRelationInput = input?.priority === "ASC"
+        ? { createdAt: "asc" }
+        : { createdAt: "desc" }
 
       return await ctx.db.formResponse.findMany({
         where,
@@ -182,7 +181,7 @@ export const formResponseRouter = createTRPCRouter({
       const currentUserId = ctx.auth.userId
 
       // Construir where clause
-      const where: any = {
+      const where: Prisma.FormResponseWhereInput = {
         form: {
           OR: [
             { userId: currentUserId },
@@ -192,7 +191,7 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Filtro por data
-      if (input?.startDate || input?.endDate) {
+      if (input?.startDate ?? input?.endDate) {
         where.createdAt = {}
         if (input.startDate) {
           where.createdAt.gte = input.startDate
@@ -268,13 +267,9 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Determinar ordenação
-      let orderBy: any = { createdAt: "desc" }
-      if (input?.priority) {
-        // Para prioridade, vamos ordenar por data de criação
-        // Se ASC, mais antigas primeiro (menor urgência)
-        // Se DESC, mais recentes primeiro (maior urgência)
-        orderBy = { createdAt: input.priority === "ASC" ? "asc" : "desc" }
-      }
+      const orderBy: Prisma.FormResponseOrderByWithRelationInput = input?.priority === "ASC"
+        ? { createdAt: "asc" }
+        : { createdAt: "desc" }
 
       const responses = await ctx.db.formResponse.findMany({
         where,

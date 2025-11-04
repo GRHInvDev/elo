@@ -111,7 +111,7 @@ export function DateRangePicker({
           </PopoverContent>
         </Popover>
 
-        {(startDate || endDate) && (
+        {(startDate ?? endDate) && (
           <Button
             variant="ghost"
             size="icon"
