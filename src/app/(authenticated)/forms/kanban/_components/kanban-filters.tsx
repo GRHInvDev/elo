@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -38,11 +37,11 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
   }))
 
   const hasActiveFilters = 
-    filters.startDate ??
-    filters.endDate ??
-    filters.priority ??
-    filters.userIds.length > 0 ??
-    filters.setores.length > 0 ??
+    !filters.startDate ||
+    !filters.endDate ||
+    !filters.priority ||
+    filters.userIds.length > 0 ||
+    filters.setores.length > 0 ||
     filters.hasResponse !== undefined
 
   const clearFilters = () => {
