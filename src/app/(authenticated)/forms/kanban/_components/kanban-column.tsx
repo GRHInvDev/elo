@@ -37,7 +37,7 @@ export function KanbanColumn({ title, status, responses, onOpenDetails }: Kanban
                     <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="flex min-h-[500px] max-h-[500px] overflow-y-auto flex-col gap-3"
+                        className="flex min-h-[600px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col gap-3"
                     >
                         {responses.map((response, index) => (
                             <Draggable key={response.id} draggableId={response.id} index={index}>

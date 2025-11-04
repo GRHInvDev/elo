@@ -4,8 +4,6 @@ import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { ResponsesList } from "@/components/forms/responses-list"
-import { Suspense } from "react"
-import { ResponsesSkeleton } from "@/components/forms/responses-skeleton"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { canAccessForm } from "@/lib/access-control"
 
@@ -51,9 +49,7 @@ export default async function ResponsesPage({ params }: ResponsesPageProps) {
         </div>
       </div>
 
-      <Suspense fallback={<ResponsesSkeleton />}>
-        <ResponsesList formId={id} />
-      </Suspense>
+      <ResponsesList formId={id} />
     </DashboardShell>
   )
 }

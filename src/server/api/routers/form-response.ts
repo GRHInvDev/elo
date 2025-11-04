@@ -29,6 +29,12 @@ export const formResponseRouter = createTRPCRouter({
     .input(
       z.object({
         formId: z.string(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        priority: z.enum(["ASC", "DESC"]).optional(),
+        userIds: z.array(z.string()).optional(),
+        setores: z.array(z.string()).optional(),
+        hasResponse: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -48,92 +54,260 @@ export const formResponseRouter = createTRPCRouter({
 
       const isOwner = form.userId === currentUserId || (form.ownerIds).includes(currentUserId)
 
-      if (isOwner) {
-        // Se for o dono, retorna todas as respostas
-        return await ctx.db.formResponse.findMany({
-          where: {
-            formId: input.formId,
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                imageUrl: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-        })
-      } else {
-        // Se não for o dono, retorna apenas as respostas do usuário atual
-        return await ctx.db.formResponse.findMany({
-          where: {
-            formId: input.formId,
-            userId: ctx.auth.userId,
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                imageUrl: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-        })
+      // Construir where clause
+      const where: any = {
+        formId: input.formId,
       }
+
+      // Se não for o dono, só pode ver suas próprias respostas
+      if (!isOwner) {
+        where.userId = ctx.auth.userId
+      }
+
+      // Filtro por data
+      if (input?.startDate || input?.endDate) {
+        where.createdAt = {}
+        if (input.startDate) {
+          where.createdAt.gte = input.startDate
+        }
+        if (input.endDate) {
+          // Adicionar 23:59:59 ao final do dia
+          const endDate = new Date(input.endDate)
+          endDate.setHours(23, 59, 59, 999)
+          where.createdAt.lte = endDate
+        }
+      }
+
+      // Filtro por usuários e setores
+      const userIdsToFilter: string[] = []
+      
+      if (input?.userIds && input.userIds.length > 0) {
+        userIdsToFilter.push(...input.userIds)
+      }
+
+      if (input?.setores && input.setores.length > 0) {
+        const usersInSetores = await ctx.db.user.findMany({
+          where: {
+            setor: { in: input.setores },
+          },
+          select: { id: true },
+        })
+        const userIdsFromSetores = usersInSetores.map((u) => u.id)
+        userIdsToFilter.push(...userIdsFromSetores)
+      }
+
+      if (userIdsToFilter.length > 0) {
+        // Remover duplicatas
+        const uniqueUserIds = [...new Set(userIdsToFilter)]
+        // Se não for owner, ainda precisa respeitar o filtro de userId
+        if (isOwner) {
+          where.userId = { in: uniqueUserIds }
+        } else {
+          // Se não for owner e os filtros não incluem o usuário atual, retornar vazio
+          if (!uniqueUserIds.includes(ctx.auth.userId)) {
+            return []
+          }
+        }
+      }
+
+      // Filtro por respondido (baseado na existência de mensagens no chat)
+      let responseIdsFilter: string[] | null = null
+      if (input?.hasResponse !== undefined) {
+        const responsesWithChat = await ctx.db.formResponseChat.findMany({
+          select: { formResponseId: true },
+          distinct: ["formResponseId"],
+        })
+        const responseIdsWithChat = responsesWithChat.map((r) => r.formResponseId)
+
+        if (input.hasResponse) {
+          if (responseIdsWithChat.length > 0) {
+            responseIdsFilter = responseIdsWithChat
+          } else {
+            return []
+          }
+        } else {
+          if (responseIdsWithChat.length > 0) {
+            responseIdsFilter = responseIdsWithChat
+          }
+        }
+      }
+
+      // Aplicar filtro de respondido se necessário
+      if (responseIdsFilter !== null) {
+        if (input?.hasResponse) {
+          where.id = { in: responseIdsFilter }
+        } else {
+          where.id = { notIn: responseIdsFilter }
+        }
+      }
+
+      // Determinar ordenação
+      let orderBy: any = { createdAt: "desc" }
+      if (input?.priority) {
+        orderBy = { createdAt: input.priority === "ASC" ? "asc" : "desc" }
+      }
+
+      return await ctx.db.formResponse.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+              setor: true,
+            },
+          },
+        },
+        orderBy,
+      })
     }),
 
-  listKanBan: protectedProcedure.query(async ({ ctx }) => {
-    const currentUserId = ctx.auth.userId
-    return await ctx.db.formResponse.findMany({
-      where: {
+  listKanBan: protectedProcedure
+    .input(
+      z
+        .object({
+          startDate: z.date().optional(),
+          endDate: z.date().optional(),
+          priority: z.enum(["ASC", "DESC"]).optional(),
+          userIds: z.array(z.string()).optional(),
+          setores: z.array(z.string()).optional(),
+          hasResponse: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
+
+      // Construir where clause
+      const where: any = {
         form: {
           OR: [
             { userId: currentUserId },
             { ownerIds: { has: currentUserId } },
           ],
         },
-      },
-      include: {
-        form: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                imageUrl: true,
+      }
+
+      // Filtro por data
+      if (input?.startDate || input?.endDate) {
+        where.createdAt = {}
+        if (input.startDate) {
+          where.createdAt.gte = input.startDate
+        }
+        if (input.endDate) {
+          // Adicionar 23:59:59 ao final do dia
+          const endDate = new Date(input.endDate)
+          endDate.setHours(23, 59, 59, 999)
+          where.createdAt.lte = endDate
+        }
+      }
+
+      // Filtro por usuários e setores
+      const userIdsToFilter: string[] = []
+      
+      if (input?.userIds && input.userIds.length > 0) {
+        userIdsToFilter.push(...input.userIds)
+      }
+
+      if (input?.setores && input.setores.length > 0) {
+        const usersInSetores = await ctx.db.user.findMany({
+          where: {
+            setor: { in: input.setores },
+          },
+          select: { id: true },
+        })
+        const userIdsFromSetores = usersInSetores.map((u) => u.id)
+        userIdsToFilter.push(...userIdsFromSetores)
+      }
+
+      if (userIdsToFilter.length > 0) {
+        // Remover duplicatas
+        const uniqueUserIds = [...new Set(userIdsToFilter)]
+        where.userId = { in: uniqueUserIds }
+      }
+
+      // Filtro por respondido (baseado na existência de mensagens no chat)
+      // Este filtro precisa ser aplicado após os outros, então vamos buscar os IDs primeiro
+      let responseIdsFilter: string[] | null = null
+      if (input?.hasResponse !== undefined) {
+        const responsesWithChat = await ctx.db.formResponseChat.findMany({
+          select: { formResponseId: true },
+          distinct: ["formResponseId"],
+        })
+        const responseIdsWithChat = responsesWithChat.map((r) => r.formResponseId)
+
+        if (input.hasResponse) {
+          // Apenas respostas que têm mensagens
+          if (responseIdsWithChat.length > 0) {
+            responseIdsFilter = responseIdsWithChat
+          } else {
+            // Se não há respostas com chat, retornar vazio
+            return []
+          }
+        } else {
+          // Para não respondidos, vamos buscar todos os IDs e filtrar depois
+          // Se houver respostas com chat, vamos excluí-las
+          if (responseIdsWithChat.length > 0) {
+            responseIdsFilter = responseIdsWithChat
+          }
+        }
+      }
+
+      // Aplicar filtro de respondido se necessário
+      if (responseIdsFilter !== null) {
+        if (input?.hasResponse) {
+          // Respondidos: incluir apenas os IDs que têm chat
+          where.id = { in: responseIdsFilter }
+        } else {
+          // Não respondidos: excluir os IDs que têm chat
+          where.id = { notIn: responseIdsFilter }
+        }
+      }
+
+      // Determinar ordenação
+      let orderBy: any = { createdAt: "desc" }
+      if (input?.priority) {
+        // Para prioridade, vamos ordenar por data de criação
+        // Se ASC, mais antigas primeiro (menor urgência)
+        // Se DESC, mais recentes primeiro (maior urgência)
+        orderBy = { createdAt: input.priority === "ASC" ? "asc" : "desc" }
+      }
+
+      const responses = await ctx.db.formResponse.findMany({
+        where,
+        include: {
+          form: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  imageUrl: true,
+                },
               },
             },
           },
-        },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            imageUrl: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+              setor: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    })
-  }),
+        orderBy,
+      })
+
+      return responses
+    }),
 
   getChat: protectedProcedure
     .input(

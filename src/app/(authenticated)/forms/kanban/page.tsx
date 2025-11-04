@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react"
 import type { ResponseStatus } from "@/types/form-responses"
 import { KanbanColumn } from "./_components/kanban-column"
 import { ResponseDialog } from "./_components/response-dialog"
+import { KanbanFilters, type KanbanFiltersState } from "./_components/kanban-filters"
 import type { FormResponse } from "@/types/form-responses"
 import { DashboardShell } from "@/components/dashboard-shell"
 
@@ -14,9 +15,20 @@ export default function KanbanPage() {
     const [selectedResponse, setSelectedResponse] = useState<string | null>(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [localResponses, setLocalResponses] = useState<FormResponse[]>([])
+    const [filters, setFilters] = useState<KanbanFiltersState>({
+        userIds: [],
+        setores: [],
+    })
 
-    // Fetch form responses
-    const { data: responses, isLoading, refetch } = api.formResponse.listKanBan.useQuery()
+    // Fetch form responses with filters
+    const { data: responses, isLoading, refetch } = api.formResponse.listKanBan.useQuery({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        priority: filters.priority,
+        userIds: filters.userIds.length > 0 ? filters.userIds : undefined,
+        setores: filters.setores.length > 0 ? filters.setores : undefined,
+        hasResponse: filters.hasResponse,
+    })
 
     // Update local state when server data changes
     useEffect(() => {
@@ -117,6 +129,8 @@ export default function KanbanPage() {
                     Visualize e organize as respostas recebidas nos seus formulários.
                 </p>
             </div>
+
+            <KanbanFilters filters={filters} onFiltersChange={setFilters} />
 
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
