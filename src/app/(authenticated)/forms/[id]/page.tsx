@@ -9,8 +9,7 @@ import { ptBR } from "date-fns/locale"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { auth } from "@clerk/nextjs/server"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
+import { FormDescription } from "@/components/forms/form-description"
 import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
@@ -56,7 +55,7 @@ export default async function FormPage({ params }: FormPageProps) {
               Criado {formatDistanceToNow(new Date(form.createdAt), { addSuffix: true, locale: ptBR })}
             </p>
             <div className="text-wrap">
-              {form.description && <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.description ?? "Sem descrição"}</ReactMarkdown>}
+              <FormDescription description={form.description} />
             </div>
           </div>
 

@@ -6,8 +6,7 @@ import { notFound, redirect } from "next/navigation"
 import { FormResponseComponent } from "@/components/forms/form-response"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
+import { FormDescription } from "@/components/forms/form-description"
 import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
@@ -45,7 +44,7 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
           </Button>
         </Link>
         <h1 className="text-3xl font-bold tracking-tight mt-4">{form.title}</h1>
-        {form.description && <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.description}</ReactMarkdown>}
+        <FormDescription description={form.description} />
       </div>
 
       <div className="bg-card p-6 rounded-lg border">

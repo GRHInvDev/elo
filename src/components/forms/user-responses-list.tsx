@@ -238,7 +238,13 @@ export function UserResponsesList() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-sm text-muted-foreground">{response.form.description ?? "Sem descrição"}</div>
+                    {response.form.description ? (
+                      <div className="text-sm text-muted-foreground whitespace-pre-line">
+                        {response.form.description.replace(/\\n/g, "\n")}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">Sem descrição</div>
+                    )}
                   </CardContent>
                   <CardFooter className="flex flex-col md:flex-row gap-y-2 justify-between pt-3 border-t">
                     <Link className="w-full md:w-auto" href={`/forms/${response.formId}`}>
