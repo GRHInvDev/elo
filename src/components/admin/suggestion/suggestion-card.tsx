@@ -23,12 +23,24 @@ type ContribType = "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" 
 
 // Componente de prévia que abre modal
 export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void }) {
-  // Query para buscar estatísticas das ideias
+  // Query para buscar estatísticas e usuário
   const { data: stats, isLoading } = api.suggestion.getStats.useQuery()
+  const { data: userData } = api.user.me.useQuery()
+  const isTotem = userData?.role_config?.isTotem === true
 
   return (
     <div
-      onClick={onOpenModal}
+      onClick={() => {
+        if (isTotem) {
+          toast({
+            title: "Acesso restrito",
+            description: "Usuários Totem não podem submeter ideias.",
+            variant: "destructive"
+          })
+          return
+        }
+        onOpenModal()
+      }}
       className="cursor-pointer bg-muted hover:bg-muted/80 rounded-lg p-3 md:p-4 border hover:shadow-md transition-all duration-200 w-full group"
     >
       <div className="flex items-center gap-3">
@@ -85,6 +97,7 @@ export function SuggestionsCard() {
 
   // Buscar dados do usuário logado
   const { data: userData, isLoading: userLoading } = api.user.me.useQuery()
+  const isTotem = userData?.role_config?.isTotem === true
 
   // Pré-preencher o nome quando os dados do usuário chegarem
   useEffect(() => {
@@ -174,8 +187,20 @@ export function SuggestionsCard() {
 
   const userSector = userData?.setor ?? "Não informado"
 
-
-
+  if (isTotem) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto mt-6">
+        <CardContent className="p-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Caixa de Ideias</h3>
+            <p className="text-sm text-muted-foreground">
+              Usuários Totem não podem submeter ideias. Para enviar sugestões, utilize uma conta de colaborador.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
   return (
     <Card className="w-full max-w-2xl mx-auto mt-6">
       <Accordion type="single" collapsible className="w-full">
@@ -334,6 +359,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
 
   // Buscar dados do usuário logado
   const { data: userData, isLoading: userLoading } = api.user.me.useQuery()
+  const isTotem = userData?.role_config?.isTotem === true
 
   // Pré-preencher o nome quando os dados do usuário chegarem
   useEffect(() => {
@@ -430,6 +456,17 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             <div className="h-4 bg-gray-200 rounded w-1/4"></div>
             <div className="h-10 bg-gray-200 rounded"></div>
             <div className="h-20 bg-gray-200 rounded"></div>
+          </div>
+        ) : isTotem ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Usuários Totem não podem submeter ideias. Para enviar sugestões, utilize uma conta de colaborador.
+            </p>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Fechar
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4 md:space-y-6">

@@ -38,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { BirthdaysTab } from "./birthdays-tab"
 import { useAuth } from "@clerk/nextjs"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import type { Theme, EmojiClickData } from "emoji-picker-react"
@@ -47,6 +48,7 @@ import { MultipleImageUpload } from "./ui/multiple-image-upload"
 import { ImageCarousel } from "./ui/image-carousel"
 import { OptimizedImage } from "./ui/optimized-image"
 import { ImageViewer } from "./ui/image-viewer"
+import { LazyIframe } from "./ui/lazy-iframe"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -238,10 +240,11 @@ export function ContentFeed({
         </CardHeader>
         <CardContent className="p-0 md:p-6">
           <Tabs defaultValue="posts">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="posts">Posts</TabsTrigger>
               <TabsTrigger value="events">Eventos</TabsTrigger>
               <TabsTrigger value="flyers">Encartes</TabsTrigger>
+              <TabsTrigger value="birthdays">Aniversários</TabsTrigger>
             </TabsList>
             <TabsContent value="posts" className="mt-4">
               {isLoadingPosts ? (
@@ -356,7 +359,13 @@ export function ContentFeed({
                                 </div>
                               </DialogTrigger>
                               <DialogContent className="block h-full w-full max-w-none p-0 sm:h-[95vh] sm:w-auto sm:max-w-7xl sm:rounded-lg">
-                                <iframe src={flyer.iframe} className="w-full h-full border-0" />
+                                <div className="w-full h-full">
+                                  <LazyIframe
+                                    src={flyer.iframe}
+                                    title={`Encarte: ${flyer.title}`}
+                                    autoLoad={false}
+                                  />
+                                </div>
                               </DialogContent>
                             </Dialog>
                           ) : (
@@ -380,6 +389,9 @@ export function ContentFeed({
                   ))}
                 </div>
               )}
+            </TabsContent>
+            <TabsContent value="birthdays" className="mt-4">
+              <BirthdaysTab />
             </TabsContent>
           </Tabs>
         </CardContent>
