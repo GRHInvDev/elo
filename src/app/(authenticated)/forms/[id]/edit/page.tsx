@@ -55,6 +55,7 @@ export default async function EditFormPage({ params }: EditFormPageProps) {
         initialIsPrivate={form.isPrivate ?? false}
         initialAllowedUsers={form.allowedUsers ?? []}
         initialAllowedSectors={form.allowedSectors ?? []}
+        initialOwnerIds={form.ownerIds ?? [] as string[]}
       />
     </DashboardShell>
   )

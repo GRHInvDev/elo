@@ -47,7 +47,9 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
     notFound()
   }
 
-  const isOwner = response.form.userId === userData?.id
+  const currentUserId = typeof userData?.id === "string" ? userData.id : ""
+  const ownerIds = Array.isArray((response)?.form?.ownerIds) ? (response).form.ownerIds : []
+  const isOwner = response.form.userId === currentUserId || ownerIds.includes(currentUserId)
   const isAuthor = response.userId === userData?.id
 
   function getStatusBadge(status: string) {
