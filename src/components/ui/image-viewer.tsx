@@ -8,7 +8,8 @@ import {
   ZoomOut,
   RotateCcw,
   X,
-  Download
+  Download,
+  Loader2
 } from "lucide-react"
 import { useImageZoom } from "@/hooks/use-image-zoom"
 import Image from "next/image"
@@ -30,6 +31,7 @@ export function ImageViewer({
 }: ImageViewerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
+  const [isImageLoaded, setIsImageLoaded] = useState(false)
 
   const {
     zoom,
@@ -108,9 +110,12 @@ export function ImageViewer({
           className="max-w-none w-screen h-screen p-0 bg-black/95"
           onKeyDown={handleKeyDown}
         >
-          <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+          <div
+            className="relative w-full h-full flex items-center justify-center overflow-hidden"
+            onClick={() => setIsOpen(false)}
+          >
             {/* Controls overlay */}
-            <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
+            <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2">
                 {/* Counter */}
                 {hasMultiple && (
@@ -137,7 +142,7 @@ export function ImageViewer({
             </div>
 
             {/* Zoom controls */}
-            <div className="absolute top-1/2 right-4 z-20 flex flex-col gap-2 -translate-y-1/2">
+            <div className="absolute top-1/2 right-4 z-20 flex flex-col gap-2 -translate-y-1/2" onClick={(e) => e.stopPropagation()}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -182,6 +187,7 @@ export function ImageViewer({
                   size="icon"
                   onClick={handlePrevious}
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+                  onClickCapture={(e) => e.stopPropagation()}
                 >
                   <div className="text-2xl">‹</div>
                 </Button>
@@ -190,6 +196,7 @@ export function ImageViewer({
                   size="icon"
                   onClick={handleNext}
                   className="absolute right-20 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+                  onClickCapture={(e) => e.stopPropagation()}
                 >
                   <div className="text-2xl">›</div>
                 </Button>
@@ -212,7 +219,18 @@ export function ImageViewer({
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               onDoubleClick={handleDoubleClick}
+              onClick={(e) => e.stopPropagation()}
             >
+              {currentImage && !isImageLoaded && (
+                <Image
+                  src={currentImage}
+                  alt=""
+                  fill
+                  className="object-contain blur-md scale-105 opacity-70 transition-opacity duration-300"
+                  draggable={false}
+                  priority
+                />
+              )}
               {currentImage && (
                 <Image
                   ref={imageRef}
@@ -226,12 +244,21 @@ export function ImageViewer({
                   }}
                   draggable={false}
                   priority
+                  onLoad={() => setIsImageLoaded(true)}
                 />
+              )}
+              {!isImageLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-white/80">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm">Carregando imagem...</span>
+                  </div>
+                </div>
               )}
             </div>
 
             {/* Instructions */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm text-center">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm text-center" onClick={(e) => e.stopPropagation()}>
               <p>
                 Use a roda do mouse ou pinça para zoom • Clique e arraste para mover •
                 Duplo clique para resetar • Teclas + - 0 para zoom

@@ -27,7 +27,7 @@ export interface RouteItem {
 }
 
 export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
-  // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes)
+  // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes, Aniversários)
   if (roleConfig && 'isTotem' in roleConfig && roleConfig.isTotem) {
     return [
       {
@@ -47,6 +47,12 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
         icon: LucideNewspaper,
         describe: "Página para visualizar e criar encartes",
         href: "/flyers",
+      },
+      {
+        title: "Aniversários",
+        icon: LucideCake,
+        describe: "Página para visualizar os aniversariantes do mês",
+        href: "/birthdays",
       },
     ]
   }

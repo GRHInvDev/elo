@@ -68,6 +68,19 @@ export const suggestionRouter = createTRPCRouter({
       }),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Bloquear usuários TOTEM de submeter sugestões
+      const me = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+      const roleConfig = (me?.role_config ?? {}) as RolesConfig
+      if (roleConfig?.isTotem) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Usuários Totem não podem submeter sugestões.",
+        })
+      }
+
       const last = await ctx.db.suggestion.findFirst({
         orderBy: { ideaNumber: "desc" },
         select: { ideaNumber: true },
