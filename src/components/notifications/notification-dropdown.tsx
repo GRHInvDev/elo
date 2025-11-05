@@ -15,9 +15,14 @@ interface NotificationDropdownProps {
 
 export function NotificationDropdown({ className }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { user } = useUser()
   const { unreadCount } = useNotificationCount(user?.id)
   const { markAllAsRead } = useNotifications({ limit: 1, userId: user?.id })
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Marcar todas as notificações como lidas quando o dropdown é aberto
   useEffect(() => {
@@ -27,6 +32,8 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
       })
     }
   }, [isOpen, unreadCount, markAllAsRead])
+
+  if (!mounted) return null
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
