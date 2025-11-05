@@ -41,7 +41,7 @@ export const finishRentSchema = z.object({
   endLocation: z.object({
     latitude: z.number(),
     longitude: z.number(),
-  }),
+  }).optional(),
 })
 
 export const vehicleRentIdSchema = z.object({
