@@ -8,53 +8,54 @@ datasource db {
 }
 
 model User {
-  id               String             @id
-  email            String             @unique
-  firstName        String?
-  lastName         String?
-  imageUrl         String?
-  role_config      Json?              // Configuração granular de roles
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  enterprise       Enterprise         @default(NA)
-  setor            String?            @db.VarChar
-  comments         Coment[]
-  reactions        Reaction[]
-  birthDay         Birthday?
-  bookings         Booking[]
-  events           Event[]
-  flyers           Flyer[]
-  foodOrders       FoodOrder[]
-  forms            Form[]
-  formResponses    FormResponse[]
-  FormResponseChat FormResponseChat[]
-  posts            Post[]
-  sells            Sell?
-  shopCart         ShopCart?
-  vehicleRents     VehicleRent[]
-  authoredSuggestions Suggestion[] @relation("SuggestionAuthor")
-  analyzedSuggestions Suggestion[] @relation("SuggestionAnalyst")
-  extension       BigInt              @default(0) // ramal do usuario
-  emailExtension   String?            // email personalizado para exibição no ramal
-  nameExtension      String?            // nome personalizado para exibição no ramal
-  setorExtension      String?            // setor personalizado para exibição no ramal
-  matricula          String?            // matrícula do usuário - para exportação de pedidos
+  id                  String             @id
+  email               String             @unique
+  firstName           String?
+  lastName            String?
+  imageUrl            String?
+  role_config         Json? // Configuração granular de roles
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  enterprise          Enterprise         @default(NA)
+  setor               String?            @db.VarChar
+  comments            Coment[]
+  reactions           Reaction[]
+  birthDay            Birthday?
+  bookings            Booking[]
+  events              Event[]
+  flyers              Flyer[]
+  foodOrders          FoodOrder[]
+  forms               Form[]
+  formResponses       FormResponse[]
+  FormResponseChat    FormResponseChat[]
+  FormResponseView    FormResponseView[]
+  posts               Post[]
+  sells               Sell?
+  shopCart            ShopCart?
+  vehicleRents        VehicleRent[]
+  authoredSuggestions Suggestion[]       @relation("SuggestionAuthor")
+  analyzedSuggestions Suggestion[]       @relation("SuggestionAnalyst")
+  extension           BigInt             @default(0) // ramal do usuario
+  emailExtension      String? // email personalizado para exibição no ramal
+  nameExtension       String? // nome personalizado para exibição no ramal
+  setorExtension      String? // setor personalizado para exibição no ramal
+  matricula           String? // matrícula do usuário - para exportação de pedidos
 
   // Notificações
-  notifications Notification[]
+  notifications           Notification[]
   notificationPreferences NotificationPreference?
 
   // Chat
-  chatMessages        chat_message[]     @relation("ChatMessageUser")
-  createdChatGroups   chat_group[]       @relation("ChatGroupCreator")
+  chatMessages         chat_message[]      @relation("ChatMessageUser")
+  createdChatGroups    chat_group[]        @relation("ChatGroupCreator")
   chatGroupMemberships chat_group_member[] @relation("ChatGroupMembers")
-  addedGroupMembers   chat_group_member[] @relation("ChatGroupMemberAdder")
+  addedGroupMembers    chat_group_member[] @relation("ChatGroupMemberAdder")
 
   // Ramais personalizados
-  customExtensions    custom_extension[]
+  customExtensions custom_extension[]
 
   // Novo colaborador
-  newCollaborator     NewCollaborator?
+  newCollaborator NewCollaborator?
 
   @@map("users")
 }
@@ -95,22 +96,22 @@ model Booking {
 }
 
 model Post {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   title         String
   content       String
-  published     Boolean    @default(false)
+  published     Boolean     @default(false)
   authorId      String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  commentsCount Int        @default(0)
-  reactionCount Int        @default(0)
-  viewCount     Int        @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  commentsCount Int         @default(0)
+  reactionCount Int         @default(0)
+  viewCount     Int         @default(0)
   lastViewedAt  DateTime?
-  imageUrl      String?    // Mantido para compatibilidade com posts existentes
+  imageUrl      String? // Mantido para compatibilidade com posts existentes
   images        PostImage[] // Novas imagens múltiplas
   comments      Coment[]
   reactions     Reaction[]
-  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("posts")
 }
@@ -266,19 +267,19 @@ model Sell {
 }
 
 model Form {
-  id                String         @id @default(cuid())
-  userId            String
-  title             String
-  description       String?
-  fields            Json[]         @db.Json
-  isPrivate         Boolean        @default(false)
-  allowedUsers      String[]       @default([])
-  allowedSectors    String[]       @default([])
-  ownerIds          String[]       @default([])
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  responses         FormResponse[]
+  id             String         @id @default(cuid())
+  userId         String
+  title          String
+  description    String?
+  fields         Json[]         @db.Json
+  isPrivate      Boolean        @default(false)
+  allowedUsers   String[]       @default([])
+  allowedSectors String[]       @default([])
+  ownerIds       String[]       @default([])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses      FormResponse[]
 
   @@map("forms")
 }
@@ -295,6 +296,7 @@ model FormResponse {
   form             Form               @relation(fields: [formId], references: [id], onDelete: Cascade)
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   FormResponseChat FormResponseChat[]
+  FormResponseView FormResponseView[]
 
   @@map("forms_responses")
 }
@@ -310,6 +312,21 @@ model FormResponseChat {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("forms_responses_chat")
+}
+
+// Registro de visualização por usuário para cada resposta de formulário (chamado)
+model FormResponseView {
+  id             String   @id @default(cuid())
+  userId         String
+  formResponseId String
+  lastViewedAt   DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formResponse FormResponse @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, formResponseId])
+  @@index([formResponseId, userId])
+  @@map("forms_responses_views")
 }
 
 model Restaurant {
@@ -423,15 +440,13 @@ model OrderLog {
   @@map("order_logs")
 }
 
-
-
 enum Enterprise {
   NA
   Box
   RHenz
   Cristallux
   Box_Filial
-  Cristallux_Filial                
+  Cristallux_Filial
 }
 
 enum ResponseStatus {
@@ -457,46 +472,46 @@ enum SuggestionStatus {
 }
 
 model Suggestion {
-  id                  String            @id @default(cuid())
-  ideaNumber          Int               @unique @default(0)
+  id         String @id @default(cuid())
+  ideaNumber Int    @unique @default(0)
 
   // relação com autor
-  userId              String
-  user                User              @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation("SuggestionAuthor", fields: [userId], references: [id], onDelete: Cascade)
 
   // identificação visível/oculta
-  submittedName       String?
-  submittedSector     String?
-  isNameVisible       Boolean           @default(true)
+  submittedName   String?
+  submittedSector String?
+  isNameVisible   Boolean @default(true)
 
-  description         String  // Solução proposta
-  problem             String? // Problema identificado
-  contribution        Json?
-  dateRef             DateTime?
+  description  String // Solução proposta
+  problem      String? // Problema identificado
+  contribution Json?
+  dateRef      DateTime?
 
-  impact              Json?
-  capacity            Json?
-  effort              Json?
-  kpis                Json?
+  impact   Json?
+  capacity Json?
+  effort   Json?
+  kpis     Json?
 
   finalScore          Int?
   finalClassification Json?
 
-  status              SuggestionStatus  @default(NEW)
-  rejectionReason     String?
+  status          SuggestionStatus @default(NEW)
+  rejectionReason String?
 
-  analystId           String?
-  analyst             User?             @relation("SuggestionAnalyst", fields: [analystId], references: [id])
+  analystId String?
+  analyst   User?   @relation("SuggestionAnalyst", fields: [analystId], references: [id])
 
   // Campos de pagamento (para Ideias concluídas)
-  payment             Json?             // { status: "paid" | "unpaid", amount?: number, description?: string }
-  paymentDate         DateTime?
+  payment     Json? // { status: "paid" | "unpaid", amount?: number, description?: string }
+  paymentDate DateTime?
 
   // Relacionamento many-to-many com KPIs
-  kpiLinks            SuggestionKpi[]
+  kpiLinks SuggestionKpi[]
 
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status, createdAt])
   @@index([finalScore])
@@ -504,31 +519,31 @@ model Suggestion {
 
 // Modelo para KPIs reutilizáveis
 model Kpi {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
-  isActive    Boolean  @default(true)
-  order       Int      @default(0)
+  isActive    Boolean @default(true)
+  order       Int     @default(0)
 
   // Relacionamento m-m com Ideias
   suggestions SuggestionKpi[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
 }
 
 // Tabela de junção para relacionamento m-m entre Ideias e KPIs
 model SuggestionKpi {
-  id           String    @id @default(cuid())
+  id           String @id @default(cuid())
   suggestionId String
   kpiId        String
 
-  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
-  kpi          Kpi        @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  suggestion Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  kpi        Kpi        @relation(fields: [kpiId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime   @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([suggestionId, kpiId])
   @@index([suggestionId])
@@ -543,16 +558,16 @@ enum ClassificationType {
 }
 
 model Classification {
-  id          String            @id @default(cuid())
-  label       String
-  score       Int               @db.SmallInt
-  type        ClassificationType
-  isActive    Boolean           @default(true)
-  order       Int               @default(0)
-  
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  
+  id       String             @id @default(cuid())
+  label    String
+  score    Int                @db.SmallInt
+  type     ClassificationType
+  isActive Boolean            @default(true)
+  order    Int                @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([label, type])
   @@index([type, isActive, order])
 }
@@ -581,22 +596,22 @@ enum NotificationChannel {
 }
 
 model Notification {
-  id          String             @id @default(cuid())
-  title       String
-  message     String
-  type        NotificationType   @default(INFO)
-  channel     NotificationChannel @default(IN_APP)
-  isRead      Boolean            @default(false)
-  data        Json?              // Dados adicionais da notificação
-  userId      String
-  entityId    String?            // ID da entidade relacionada (sugestão, kpi, etc)
-  entityType  String?            // Tipo da entidade (suggestion, kpi, etc)
-  actionUrl   String?            // URL para redirecionar ao clicar
+  id         String              @id @default(cuid())
+  title      String
+  message    String
+  type       NotificationType    @default(INFO)
+  channel    NotificationChannel @default(IN_APP)
+  isRead     Boolean             @default(false)
+  data       Json? // Dados adicionais da notificação
+  userId     String
+  entityId   String? // ID da entidade relacionada (sugestão, kpi, etc)
+  entityType String? // Tipo da entidade (suggestion, kpi, etc)
+  actionUrl  String? // URL para redirecionar ao clicar
 
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
@@ -605,107 +620,107 @@ model Notification {
 
 // Configurações de notificação por usuário
 model NotificationPreference {
-  id                   String             @id @default(cuid())
-  userId               String             @unique
-  emailNotifications   Boolean            @default(true)
-  pushNotifications    Boolean            @default(true)
-  suggestionUpdates    Boolean            @default(true)
-  systemNotifications  Boolean            @default(true)
-  postNotifications    Boolean            @default(true)
-  bookingNotifications Boolean            @default(true)
-  foodOrderNotifications Boolean          @default(true)
-  birthdayNotifications Boolean           @default(true)
-  soundEnabled         Boolean            @default(true)
-  popupEnabled         Boolean            @default(true)
+  id                       String  @id @default(cuid())
+  userId                   String  @unique
+  emailNotifications       Boolean @default(true)
+  pushNotifications        Boolean @default(true)
+  suggestionUpdates        Boolean @default(true)
+  systemNotifications      Boolean @default(true)
+  postNotifications        Boolean @default(true)
+  bookingNotifications     Boolean @default(true)
+  foodOrderNotifications   Boolean @default(true)
+  birthdayNotifications    Boolean @default(true)
+  soundEnabled             Boolean @default(true)
+  popupEnabled             Boolean @default(true)
   // Tipos específicos de notificação
-  successNotifications Boolean            @default(true)
-  errorNotifications   Boolean            @default(true)
-  warningNotifications Boolean            @default(true)
-  suggestionNotifications Boolean         @default(true)
-  kpiNotifications     Boolean            @default(true)
-  maintenanceNotifications Boolean        @default(true)
+  successNotifications     Boolean @default(true)
+  errorNotifications       Boolean @default(true)
+  warningNotifications     Boolean @default(true)
+  suggestionNotifications  Boolean @default(true)
+  kpiNotifications         Boolean @default(true)
+  maintenanceNotifications Boolean @default(true)
 
-  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model chat_group {
-    id          String   @id @default(cuid())
-    name        String
-    description String?
-    createdById String
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-    isActive    Boolean  @default(true)
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
 
-    // Relacionamentos
-    createdBy   User            @relation("ChatGroupCreator", fields: [createdById], references: [id])
-    members     chat_group_member[]
-    messages    chat_message[]
+  // Relacionamentos
+  createdBy User                @relation("ChatGroupCreator", fields: [createdById], references: [id])
+  members   chat_group_member[]
+  messages  chat_message[]
 
-    @@index([createdById])
-    @@index([isActive])
-    @@map("chat_groups")
+  @@index([createdById])
+  @@index([isActive])
+  @@map("chat_groups")
 }
 
 model chat_group_member {
-    id        String   @id @default(cuid())
-    groupId   String
-    userId    String
-    joinedAt  DateTime @default(now())
-    addedById String   // Quem adicionou o usuário ao grupo
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String
+  joinedAt  DateTime @default(now())
+  addedById String // Quem adicionou o usuário ao grupo
 
-    // Relacionamentos
-    group     chat_group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-    user      User      @relation("ChatGroupMembers", fields: [userId], references: [id], onDelete: Cascade)
-    addedBy   User      @relation("ChatGroupMemberAdder", fields: [addedById], references: [id])
+  // Relacionamentos
+  group   chat_group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    User       @relation("ChatGroupMembers", fields: [userId], references: [id], onDelete: Cascade)
+  addedBy User       @relation("ChatGroupMemberAdder", fields: [addedById], references: [id])
 
-    @@unique([groupId, userId])
-    @@index([groupId])
-    @@index([userId])
-    @@map("chat_group_members")
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("chat_group_members")
 }
 
 model chat_message {
-    id        String   @id @default(cuid())
-    content   String?  // Agora opcional, pois mensagens podem ter apenas imagens
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    userId    String
-    roomId    String   @default("global") // Mantém compatibilidade com chat global
-    groupId   String?  // Referência ao grupo (null para chat global)
-    imageUrl  String?  // URL da imagem anexada à mensagem
-    fileUrl   String?  // URL do arquivo anexado à mensagem
-    fileName  String?  // Nome original do arquivo
-    fileSize  Int?     // Tamanho do arquivo em bytes
-    fileType  String?  // Tipo MIME do arquivo
+  id        String   @id @default(cuid())
+  content   String? // Agora opcional, pois mensagens podem ter apenas imagens
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  roomId    String   @default("global") // Mantém compatibilidade com chat global
+  groupId   String? // Referência ao grupo (null para chat global)
+  imageUrl  String? // URL da imagem anexada à mensagem
+  fileUrl   String? // URL do arquivo anexado à mensagem
+  fileName  String? // Nome original do arquivo
+  fileSize  Int? // Tamanho do arquivo em bytes
+  fileType  String? // Tipo MIME do arquivo
 
-    // Relacionamentos
-    user      User         @relation("ChatMessageUser", fields: [userId], references: [id], onDelete: Cascade)
-    group     chat_group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  // Relacionamentos
+  user  User        @relation("ChatMessageUser", fields: [userId], references: [id], onDelete: Cascade)
+  group chat_group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-    @@index([roomId, createdAt])
-    @@index([groupId, createdAt])
-    @@index([userId, createdAt])
-    @@map("chat_messages")
+  @@index([roomId, createdAt])
+  @@index([groupId, createdAt])
+  @@index([userId, createdAt])
+  @@map("chat_messages")
 }
 
 // Ramais personalizados criados manualmente
 model custom_extension {
   id          String   @id @default(cuid())
-  name        String   // Nome do contato/ramal personalizado
-  email       String?  // Email opcional
-  extension   BigInt   // Número do ramal/telefone
-  description String?  // Descrição opcional
-  setor       String?  // Setor do contato (opcional)
-  createdById String   // ID do usuário que criou
+  name        String // Nome do contato/ramal personalizado
+  email       String? // Email opcional
+  extension   BigInt // Número do ramal/telefone
+  description String? // Descrição opcional
+  setor       String? // Setor do contato (opcional)
+  createdById String // ID do usuário que criou
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relacionamentos
-  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([createdById])
   @@index([setor])
@@ -720,7 +735,7 @@ model NewCollaborator {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isNew])

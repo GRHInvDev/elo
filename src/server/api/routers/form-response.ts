@@ -5,7 +5,6 @@ import type { ResponseStatus, Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario } from "@/lib/mail/html-mock"
-import { getNotificationWebSocketService } from "../../services/notification-websocket-service"
 
 export const formResponseRouter = createTRPCRouter({
   create: protectedProcedure
@@ -47,10 +46,6 @@ export const formResponseRouter = createTRPCRouter({
                 updatedAt: now,
               }))
             })
-            const wsService = getNotificationWebSocketService()
-            if (wsService) {
-              await Promise.all(recipients.map(uid => wsService.updateUnreadCount(uid)))
-            }
           }
         }
       } catch (notificationError) {
@@ -335,7 +330,46 @@ export const formResponseRouter = createTRPCRouter({
         orderBy,
       })
 
-      return responses
+      // Enriquecer com último chat e última visualização do usuário logado
+      const responseIds = responses.map(r => r.id)
+      if (responseIds.length === 0) return responses
+
+      // Buscar mensagens em ordem desc e pegar a mais recente por formResponseId
+      const chats = await ctx.db.formResponseChat.findMany({
+        where: { formResponseId: { in: responseIds } },
+        orderBy: { createdAt: "desc" },
+        select: { formResponseId: true, createdAt: true },
+      })
+
+      type FormResponseViewFindManyArgs = {
+        where: { formResponseId: { in: string[] }; userId: string }
+        select: { formResponseId: true; lastViewedAt: true }
+      }
+      type FormResponseViewClient = {
+        findMany: (args: FormResponseViewFindManyArgs) => Promise<Array<{ formResponseId: string; lastViewedAt: Date }>>
+        upsert: (args: { where: { userId_formResponseId: { userId: string; formResponseId: string } }; update: { lastViewedAt: Date }; create: { userId: string; formResponseId: string; lastViewedAt: Date } }) => Promise<unknown>
+      }
+      const formResponseViewClient: FormResponseViewClient = (ctx.db as unknown as { formResponseView: FormResponseViewClient }).formResponseView
+
+      const views = await formResponseViewClient.findMany({
+        where: { formResponseId: { in: responseIds }, userId: currentUserId },
+        select: { formResponseId: true, lastViewedAt: true },
+      })
+
+      const lastChatMap = new Map<string, Date | null>()
+      for (const c of chats) {
+        if (!lastChatMap.has(c.formResponseId)) {
+          lastChatMap.set(c.formResponseId, c.createdAt ?? null)
+        }
+      }
+      const viewMap = new Map<string, Date>(views.map((v) => [v.formResponseId, v.lastViewedAt]))
+
+      return responses.map((r) => {
+        const lastChatAt = lastChatMap.get(r.id) ?? null
+        const myLastViewedAt = viewMap.get(r.id) ?? null
+        const hasNewMessages = !!lastChatAt && (!myLastViewedAt || lastChatAt >= myLastViewedAt)
+        return { ...r, lastChatAt, myLastViewedAt, hasNewMessages }
+      })
     }),
 
   getChat: protectedProcedure
@@ -441,15 +475,52 @@ export const formResponseRouter = createTRPCRouter({
               updatedAt: now,
             }))
           })
-          const wsService = getNotificationWebSocketService()
-          if (wsService) {
-            await Promise.all(Array.from(recipients).map(uid => wsService.updateUnreadCount(uid)))
-          }
         }
       } catch (notificationError) {
         console.error('Erro ao criar/emitter notificações de chat de formulário:', notificationError)
       }
       return created
+    }),
+
+  // Marcar visualização de um chamado (resposta) pelo usuário atual
+  markViewed: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
+      const response = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+        include: { form: { select: { userId: true, ownerIds: true } }, user: { select: { id: true } } },
+      })
+
+      if (!response) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Resposta não encontrada" })
+      }
+
+      const isOwner = response.form.userId === currentUserId || response.form.ownerIds.includes(currentUserId)
+      const isAuthor = response.userId === currentUserId
+      if (!isOwner && !isAuthor) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para marcar visualização" })
+      }
+
+      type FormResponseViewUpsertArgs = {
+        where: { userId_formResponseId: { userId: string; formResponseId: string } }
+        update: { lastViewedAt: Date }
+        create: { userId: string; formResponseId: string; lastViewedAt: Date }
+      }
+      type FormResponseViewClient = { upsert: (args: FormResponseViewUpsertArgs) => Promise<unknown> }
+      const formResponseViewClient: FormResponseViewClient = (ctx.db as unknown as { formResponseView: FormResponseViewClient }).formResponseView
+
+      await formResponseViewClient.upsert({
+        where: { userId_formResponseId: { userId: currentUserId, formResponseId: input.responseId } },
+        update: { lastViewedAt: new Date() },
+        create: { userId: currentUserId, formResponseId: input.responseId, lastViewedAt: new Date() },
+      })
+
+      return { ok: true }
     }),
 
   listUserResponses: protectedProcedure.query(async ({ ctx }) => {

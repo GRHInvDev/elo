@@ -3,9 +3,7 @@ import { createCaller } from "@/server/api/root";
 import { createTRPCContext } from "@/server/api/trpc";
 import { cache } from "react";
 import { headers } from "next/headers";
-import type { NotificationType, NotificationChannel } from "@prisma/client";
 
-// Simplified server-side caller for RSC
 const createServerCaller = cache(async () => {
   const heads = new Headers(await headers());
   heads.set("x-trpc-source", "rsc");
@@ -136,35 +134,4 @@ export const api = {
       return caller.product.getAll();
     },
   },
-  notification: {
-    create: async (data: {
-      title: string;
-      message: string;
-      userId: string;
-      type?: NotificationType;
-      channel?: NotificationChannel;
-      entityId?: string;
-      entityType?: string;
-      actionUrl?: string;
-    }) => {
-      const caller = await createServerCaller();
-      return caller.notification.create(data);
-    },
-    createBulk: async (data: {
-      title: string;
-      message: string;
-      userIds: string[];
-      notifications: {
-        title: string;
-        message: string;
-        userId: string;
-        type?: NotificationType;
-        channel?: NotificationChannel;
-        entityType?: string;
-      }[];
-    }) => {
-      const caller = await createServerCaller();
-      return caller.notification.createBulk(data);
-    }
-  }
 };

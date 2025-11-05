@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { type FormResponse, type ResponseStatus } from "@/types/form-responses";
+import { Badge } from "@/components/ui/badge";
 
 interface KanbanColumnProps {
     title: string;
@@ -49,9 +50,14 @@ export function KanbanColumn({ title, status, responses, onOpenDetails }: Kanban
                                     >
                                         <Card className="bg-muted shadow-sm">
                                             <CardHeader className="pb-2">
-                                                <CardTitle className="text-base font-medium">
-                                                    {response.form.title}
-                                                </CardTitle>
+                                                <div className="flex items-center justify-between">
+                                                    <CardTitle className="text-base font-medium">
+                                                        {response.form.title}
+                                                    </CardTitle>
+                                                    {response.hasNewMessages && (
+                                                        <Badge variant="destructive">Novo</Badge>
+                                                    )}
+                                                </div>
                                             </CardHeader>
                                             <CardContent className="pb-2">
                                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

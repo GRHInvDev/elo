@@ -1,14 +1,12 @@
 import type { NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
-import { getOnlineUsers } from '@/server/websocket/chat-server'
 
 const prisma = new PrismaClient()
 
 export async function GET(_request: NextRequest) {
   try {
-    // Buscar usuários realmente online do WebSocket server
-    const onlineUsersData = getOnlineUsers()
-    const onlineUserIds = onlineUsersData.map(user => String(user.userId))
+    // WebSocket removido: retornar vazio para status online
+    const onlineUserIds: string[] = []
 
     // Buscar dados completos dos usuários online (excluindo Sistema)
     const onlineUsersDetails = await prisma.user.findMany({
@@ -43,7 +41,7 @@ export async function GET(_request: NextRequest) {
     return new Response(JSON.stringify({
       onlineUserIds: finalOnlineUserIds,
       totalOnline: finalOnlineUserIds.length,
-      details: onlineUsersData, // Dados técnicos para debug
+      details: onlineUserIds,
     }), {
       status: 200,
       headers: {
