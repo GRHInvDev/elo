@@ -26,9 +26,14 @@ interface UseWebSocketReturn {
  * @param options - Opções de configuração do WebSocket
  * @returns Objeto com socket e métodos de controle
  */
+
+const NEXT_PUBLIC_WS_URL = 'https://intranet.boxdistribuidor.com.br/'
+
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
+  // Usar a URL do Next.js se NEXT_PUBLIC_WS_URL não estiver definido
+  const defaultUrl = NEXT_PUBLIC_WS_URL 
   const {
-    url = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:3001',
+    url = defaultUrl,
     autoConnect = true,
     reconnection = true,
     reconnectionAttempts = 5,

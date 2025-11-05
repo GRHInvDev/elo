@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Bell, CheckCheck, Settings, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ interface NotificationListProps {
 
 export function NotificationList({ className, onNotificationClick }: NotificationListProps) {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const { user } = useUser()
 
@@ -33,6 +34,20 @@ export function NotificationList({ className, onNotificationClick }: Notificatio
     isMarkingAllAsRead
   } = notificationData
   const notificationError = notificationData.error as Error | null
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className={`w-full max-w-md ${className}`}>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </div>
+    )
+  }
 
   const handleMarkAllAsRead = async () => {
     try {

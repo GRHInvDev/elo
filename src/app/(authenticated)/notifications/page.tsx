@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Bell, Settings, Filter, Search, CheckCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,7 @@ export default function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [readFilter, setReadFilter] = useState<string>("all")
+  const [mounted, setMounted] = useState(false)
   const { user } = useUser()
 
   const notificationData = useNotifications({
@@ -71,6 +72,20 @@ export default function NotificationsPage() {
     { value: "CLASSIFICATION_UPDATED", label: "Classificação atualizada" },
     { value: "SYSTEM_MAINTENANCE", label: "Manutenção do sistema" },
   ]
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className="container mx-auto py-6 px-4 max-w-6xl">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-red-600 border-t-transparent" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-6xl">
