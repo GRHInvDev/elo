@@ -4,13 +4,11 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { MapPin, Car, AlertTriangle, LucideInfo, LucideGauge, LucideSparkles } from "lucide-react"
+import { MapPin, Car, LucideInfo, LucideGauge, LucideSparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { api } from "@/trpc/react"
-import { isMinimumDistanceAway } from "@/lib/geoUtils"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -24,16 +22,6 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "./ui/textarea"
 import { Switch } from "./ui/switch"
-
-// Localização de referência (onde o carro deve ser devolvido)
-const REFERENCE_LOCATION = {
-  latitude: -29.251994,
-  longitude: -51.524403,
-  name: "Local de devolução", // Nome do local para exibição
-}
-
-// Distância mínima em quilômetros
-const MIN_DISTANCE = 5
 
 interface FinishRentButtonProps {
   rentId: string
@@ -49,7 +37,6 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   const [locationError, setLocationError] = useState<string | null>(null)
   const [finalKilometers, setFinalKilometers] = useState<number>(currentKilometers)
   const [kilometersError, setKilometersError] = useState<string | null>(null)
-  const [distanceError, setDistanceError] = useState<string | null>(null)
   const [gasLevel, setGasLevel] = useState<"Reserva" | "1/4" | "1/2" | "3/4" | "Cheio">()
   const [needCleaning, setNeedCleaning] = useState<boolean>()
   const [considerations, setConsiderations] = useState<string>()
@@ -75,27 +62,6 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
     },
   })
 
-
-   // Função para verificar a distância quando a localização é obtida
-  useEffect(() => {
-    if (location) {
-      const isDistanceOk = isMinimumDistanceAway(
-        location.coords.latitude,
-        location.coords.longitude,
-        REFERENCE_LOCATION.latitude,
-        REFERENCE_LOCATION.longitude,
-        MIN_DISTANCE,
-      )
-
-      if (!isDistanceOk) {
-        setDistanceError(
-          `Você precisa estar próximo da Box para finalizar a reserva.`,
-        )
-      } else {
-        setDistanceError(null)
-      }
-    }
-  }, [location])
 
   // Função para solicitar a localização apenas uma vez quando o diálogo é aberto
   useEffect(() => {
@@ -136,7 +102,6 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   const handleRetryLocation = () => {
     locationRequested.current = false
     setLocationError(null)
-    setDistanceError(null)
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -173,27 +138,6 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   }
 
   const handleConfirmFinish = () => {
-    // Validar localização
-    if (!location) {
-      setLocationError("É necessário compartilhar sua localização para finalizar a reserva.")
-      return
-    }
-
-    const isDistanceOk = isMinimumDistanceAway(
-      location.coords.latitude,
-      location.coords.longitude,
-      REFERENCE_LOCATION.latitude,
-      REFERENCE_LOCATION.longitude,
-      MIN_DISTANCE,
-    )
-
-    if (!isDistanceOk) {
-      setDistanceError(
-        `Você precisa estar próximo da Box para finalizar a reserva.`,
-      )
-      return
-    }
-
     // Validar quilometragem
     if (isNaN(finalKilometers)) {
       setKilometersError("Por favor, insira um número válido.")
@@ -219,10 +163,10 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
 
     finishRent.mutate({
       id: rentId,
-      endLocation: {
+      endLocation: location ? {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      },
+      } : undefined,
       observations: {
         gasLevel,
         needCleaning: !!needCleaning,
@@ -243,24 +187,16 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
           <DialogHeader>
             <DialogTitle>Finalizar Reserva</DialogTitle>
             <DialogDescription>
-              Confirme a devolução do veículo. Sua localização atual e a quilometragem final serão registradas.
+              Confirme a devolução do veículo. Informe a quilometragem final e as observações necessárias.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Alerta sobre o local de devolução */}
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Atenção</AlertTitle>
-              <AlertDescription>
-                Para finalizar a reserva, você precisa estar próximo da Box.
-              </AlertDescription>
-            </Alert>
-            {/* Seção de localização */}
+            {/* Seção de localização (opcional) */}
             <div className="space-y-2">
-              <Label>Localização atual</Label>
+              <Label>Localização atual (opcional)</Label>
               {locationError ? (
-                <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+                <div className="rounded-lg border border-muted bg-muted/10 p-4 text-muted-foreground">
                   <p>{locationError}</p>
                   <Button variant="outline" size="sm" className="mt-2" onClick={handleRetryLocation}>
                     Tentar novamente
@@ -277,11 +213,6 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
                     <br />
                     Longitude: {location.coords.longitude.toFixed(6)}
                   </p>
-                  {distanceError && (
-                    <div className="mt-2 rounded-lg border border-destructive bg-destructive/10 p-2 text-destructive text-sm">
-                      {distanceError}
-                      </div>
-                    )}
                 </div>
               ) : (
                 <div className="flex items-center justify-center rounded-lg border p-4">
@@ -361,10 +292,8 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
             <Button
               onClick={handleConfirmFinish}
               disabled={
-                !location ||
                 isSubmitting ||
                 !!kilometersError ||
-                !!distanceError ||
                 finalKilometers <= currentKilometers
               }
             >
