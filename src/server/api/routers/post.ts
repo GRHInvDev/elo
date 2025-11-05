@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { utapi } from "@/server/uploadthing"
 import type { RolesConfig } from "@/types/role-config"
+import { getNotificationWebSocketService } from "../../services/notification-websocket-service"
 
 const createPostSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -46,8 +47,36 @@ export const postRouter = createTRPCRouter({
       })
     }
 
-    // Notificações temporariamente desabilitadas
-    // TODO: Reimplementar sistema de notificações
+    // Notificação: Novo Post para todos usuários
+    try {
+      const allUsers = await ctx.db.user.findMany({ select: { id: true } })
+      const userIds = allUsers.map(u => u.id).filter(id => id !== ctx.auth.userId)
+
+      if (userIds.length > 0) {
+        const now = new Date()
+        await ctx.db.notification.createMany({
+          data: userIds.map(userId => ({
+            title: 'Novo Post publicado',
+            message: post.title,
+            type: 'INFO',
+            channel: 'IN_APP',
+            userId,
+            entityId: post.id,
+            entityType: 'post',
+            actionUrl: '/news',
+            createdAt: now,
+            updatedAt: now,
+          }))
+        })
+
+        const wsService = getNotificationWebSocketService()
+        if (wsService) {
+          await Promise.all(userIds.map(uid => wsService.updateUnreadCount(uid)))
+        }
+      }
+    } catch (notificationError) {
+      console.error('Erro ao criar/emitter notificações de novo post:', notificationError)
+    }
 
     return post
   }),

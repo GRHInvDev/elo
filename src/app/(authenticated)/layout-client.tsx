@@ -5,9 +5,9 @@ import { useState } from "react"
 import { MainNav, Sidebar } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
-// import { NotificationDropdown } from "@/components/notifications/notification-dropdown" --> Desativado temporariamente
-// import { BrowserNotificationPermission } from "@/components/notifications/browser-notification-permission" --> Desativado temporariamente
-// import { GlobalNotificationManager } from "@/components/notifications/global-notification-manager" --> Desativado temporariamente
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import { BrowserNotificationPermission } from "@/components/notifications/browser-notification-permission"
+import { GlobalNotificationManager } from "@/components/notifications/global-notification-manager"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { AnimatedBackground } from "@/components/animated-background"
@@ -42,7 +42,7 @@ export default function AuthenticatedLayoutClient({
         <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:hidden">
           <MainNav />
           <div className="ml-auto flex items-center space-x-4">
-            {/* <NotificationDropdown /> --> Desativado temporariamente */}
+            <NotificationDropdown />
             <UserNav />
           </div>
         </header>
@@ -58,7 +58,7 @@ export default function AuthenticatedLayoutClient({
             <h2 className="text-lg ml-8 font-semibold">Grupo R Henz</h2>
           </div>
           <div className="flex items-center space-x-4">
-            {/* <NotificationDropdown /> --> Desativado temporariamente */}
+            <NotificationDropdown />
             <UserNav />
           </div>
         </header>
@@ -72,8 +72,8 @@ export default function AuthenticatedLayoutClient({
       </div>
 
       <FloatingChatButton/>
-      {/* <BrowserNotificationPermission /> --> Desativado temporariamente */}
-      {/* <GlobalNotificationManager /> --> Desativado temporariamente*/}
+      <BrowserNotificationPermission />
+      <GlobalNotificationManager />
     </div>
       <AnimatedBackground/>
       </AnimationProvider>

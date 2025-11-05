@@ -14,125 +14,94 @@ export class NotificationWebSocketService {
 
   /**
    * Emite uma nova notificação via WebSocket
-   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async emitNewNotification(notification: Notification) {
-    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
-    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket notification emission disabled:', notification.title)
-    return
-    
-    /*
-    // Import notificationUsers dynamically to avoid circular dependency
-    const { notificationUsers }: { notificationUsers: Map<string, string> } = await import('../websocket/chat-server')
-
-    // Encontrar socket do usuário destinatário
-    const recipientSocketId = Array.from(notificationUsers.entries())
-      .find(([_socketId, userId]) => userId === notification.userId)?.[0]
-
-    if (recipientSocketId) {
-      this.io.to(recipientSocketId).emit('notification', {
-        type: 'new',
-        notification: {
-          ...notification,
-          createdAt: notification.createdAt.toISOString(),
-          updatedAt: notification.updatedAt.toISOString()
-        }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    if (!baseUrl) return
+    try {
+      await fetch(`${baseUrl}/api/socket/emit`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId: notification.userId,
+          type: 'notification:new',
+          payload: {
+            ...notification,
+            createdAt: notification.createdAt.toISOString(),
+            updatedAt: notification.updatedAt.toISOString(),
+          }
+        })
       })
+    } catch (error) {
+      console.error('Erro ao emitir nova notificação via WS:', error)
     }
-    */
   }
 
   /**
    * Atualiza a contagem de notificações não lidas para um usuário
-   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async updateUnreadCount(userId: string) {
-    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
-    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket unread count update disabled for user:', userId)
-    return
-    
-    /*
-    // Import notificationUsers and prisma dynamically
-    const [{ notificationUsers }, { PrismaClient }] = await Promise.all([
-      import('../websocket/chat-server'),
-      import('@prisma/client')
-    ])
-    const prisma = new PrismaClient()
-
-    // Encontrar socket do usuário
-    const userSocketId = Array.from(notificationUsers.entries())
-      .find(([_socketId, id]) => id === userId)?.[0]
-
-    if (userSocketId) {
-      void prisma.notification.count({
-        where: { userId, isRead: false }
-      }).then((unreadCount: number) => {
-        this.io.to(userSocketId).emit('unreadCountUpdate', { count: unreadCount })
-      }).catch((error: Error) => {
-        console.error('Erro ao atualizar contagem de notificações:', error)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    if (!baseUrl) return
+    try {
+      await fetch(`${baseUrl}/api/socket/emit`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId, type: 'unreadCount' })
       })
+    } catch (error) {
+      console.error('Erro ao emitir atualização de contagem via WS:', error)
     }
-    */
   }
 
   /**
    * Emite notificação de atualização (ex: marcada como lida)
-   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async emitNotificationUpdate(notification: Notification) {
-    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
-    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket notification update disabled:', notification.title)
-    return
-    
-    /*
-    // Import notificationUsers dynamically to avoid circular dependency
-    const { notificationUsers }: { notificationUsers: Map<string, string> } = await import('../websocket/chat-server')
-
-    // Encontrar socket do usuário
-    const recipientSocketId = Array.from(notificationUsers.entries())
-      .find(([_socketId, userId]) => userId === notification.userId)?.[0]
-
-    if (recipientSocketId) {
-      this.io.to(recipientSocketId).emit('notification', {
-        type: 'update',
-        notification: {
-          ...notification,
-          createdAt: notification.createdAt.toISOString(),
-          updatedAt: notification.updatedAt.toISOString()
-        }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    if (!baseUrl) return
+    try {
+      await fetch(`${baseUrl}/api/socket/emit`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId: notification.userId,
+          type: 'notification:update',
+          payload: {
+            ...notification,
+            createdAt: notification.createdAt.toISOString(),
+            updatedAt: notification.updatedAt.toISOString(),
+          }
+        })
       })
+    } catch (error) {
+      console.error('Erro ao emitir atualização de notificação via WS:', error)
     }
-    */
   }
 
   /**
    * Emite notificação de exclusão
-   * TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
    */
   async emitNotificationDelete(notification: Notification) {
-    // TEMPORARIAMENTE DESATIVADO - Notificações WebSocket desabilitadas
-    console.log('🔕 [NOTIFICATIONS DISABLED] WebSocket notification delete disabled:', notification.title)
-    return
-    
-    /*
-    // Import notificationUsers dynamically to avoid circular dependency
-    const { notificationUsers }: { notificationUsers: Map<string, string> } = await import('../websocket/chat-server')
-
-    // Encontrar socket do usuário
-    const recipientSocketId = Array.from(notificationUsers.entries())
-      .find(([_socketId, userId]) => userId === notification.userId)?.[0]
-
-    if (recipientSocketId) {
-      this.io.to(recipientSocketId).emit('notification', {
-        type: 'delete',
-        notification: {
-          ...notification,
-          createdAt: notification.createdAt.toISOString(),
-          updatedAt: notification.updatedAt.toISOString()
-        }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    if (!baseUrl) return
+    try {
+      await fetch(`${baseUrl}/api/socket/emit`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId: notification.userId,
+          type: 'notification:delete',
+          payload: {
+            ...notification,
+            createdAt: notification.createdAt.toISOString(),
+            updatedAt: notification.updatedAt.toISOString(),
+          }
+        })
       })
+    } catch (error) {
+      console.error('Erro ao emitir exclusão de notificação via WS:', error)
     }
-    */
   }
 }
 

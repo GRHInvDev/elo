@@ -54,7 +54,8 @@ export const useNotifications = ({
     unreadOnly
   }, {
     // Desabilitar query automática se WebSocket estiver conectado ou se notificações estiverem desabilitadas
-    enabled: enabled && (!isWebSocketConnected || isWebSocketConnecting)
+    enabled: enabled && (!isWebSocketConnected || isWebSocketConnecting),
+    staleTime: 5 * 60 * 1000
   })
 
   const notificationsData = notificationsQuery.data

@@ -42,10 +42,42 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const socketRef = useRef<Socket | null>(null)
 
   const connect = useCallback(() => {
-    // TEMPORARIAMENTE DESATIVADO - WebSocket completamente desabilitado
-    // Não fazer nada para evitar tentativas de conexão
-    return
-  }, [url])
+    try {
+      if (socketRef.current?.connected) return
+      setIsConnecting(true)
+      setError(null)
+
+      const socketInstance = io(url, {
+        transports: ['websocket', 'polling'],
+        reconnection,
+        reconnectionAttempts,
+        reconnectionDelay,
+        withCredentials: false,
+      })
+
+      socketRef.current = socketInstance
+      setSocket(socketInstance)
+
+      socketInstance.on('connect', () => {
+        setIsConnected(true)
+        setIsConnecting(false)
+      })
+
+      socketInstance.on('connect_error', (err: unknown) => {
+        setError((err as Error)?.message ?? 'Erro de conexão')
+        setIsConnecting(false)
+        setIsConnected(false)
+      })
+
+      socketInstance.on('disconnect', () => {
+        setIsConnected(false)
+      })
+    } catch (e) {
+      setError((e as Error)?.message ?? 'Erro ao inicializar WebSocket')
+      setIsConnecting(false)
+      setIsConnected(false)
+    }
+  }, [url, reconnection, reconnectionAttempts, reconnectionDelay])
 
   const disconnect = useCallback(() => {
     if (socketRef.current) {

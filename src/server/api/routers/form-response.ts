@@ -5,6 +5,7 @@ import type { ResponseStatus, Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario } from "@/lib/mail/html-mock"
+import { getNotificationWebSocketService } from "../../services/notification-websocket-service"
 
 export const formResponseRouter = createTRPCRouter({
   create: protectedProcedure
@@ -15,7 +16,7 @@ export const formResponseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.formResponse.create({
+      const created = await ctx.db.formResponse.create({
         data: {
           userId: ctx.auth.userId,
           formId: input.formId,
@@ -23,6 +24,39 @@ export const formResponseRouter = createTRPCRouter({
           status: "NOT_STARTED",
         },
       })
+      try {
+        const form = await ctx.db.form.findUnique({
+          where: { id: input.formId },
+          select: { userId: true, ownerIds: true, title: true }
+        })
+        if (form) {
+          const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
+          if (recipients.length > 0) {
+            const now = new Date()
+            await ctx.db.notification.createMany({
+              data: recipients.map(userId => ({
+                title: `Nova resposta no formulário`,
+                message: form.title ?? 'Formulário',
+                type: 'INFO',
+                channel: 'IN_APP',
+                userId,
+                entityId: created.id,
+                entityType: 'form_response',
+                actionUrl: `/forms/${form.userId}`,
+                createdAt: now,
+                updatedAt: now,
+              }))
+            })
+            const wsService = getNotificationWebSocketService()
+            if (wsService) {
+              await Promise.all(recipients.map(uid => wsService.updateUnreadCount(uid)))
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Erro ao criar/emitter notificações de resposta de formulário:', notificationError)
+      }
+      return created
     }),
 
   listByForm: protectedProcedure
@@ -366,7 +400,7 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
-      return await ctx.db.formResponseChat.create({
+      const created = await ctx.db.formResponseChat.create({
         data: {
           userId: ctx.auth.userId,
           formResponseId: input.responseId,
@@ -384,6 +418,38 @@ export const formResponseRouter = createTRPCRouter({
           },
         },
       })
+      try {
+        const recipients = new Set<string>()
+        recipients.add(response.userId)
+        recipients.add(response.form.userId)
+        response.form.ownerIds.forEach(id => recipients.add(id))
+        recipients.delete(currentUserId)
+
+        if (recipients.size > 0) {
+          const now = new Date()
+          await ctx.db.notification.createMany({
+            data: Array.from(recipients).map(userId => ({
+              title: 'Nova mensagem no formulário',
+              message: input.message,
+              type: 'COMMENT_ADDED',
+              channel: 'IN_APP',
+              userId,
+              entityId: input.responseId,
+              entityType: 'form_response',
+              actionUrl: `/forms/${response.form.userId}`,
+              createdAt: now,
+              updatedAt: now,
+            }))
+          })
+          const wsService = getNotificationWebSocketService()
+          if (wsService) {
+            await Promise.all(Array.from(recipients).map(uid => wsService.updateUnreadCount(uid)))
+          }
+        }
+      } catch (notificationError) {
+        console.error('Erro ao criar/emitter notificações de chat de formulário:', notificationError)
+      }
+      return created
     }),
 
   listUserResponses: protectedProcedure.query(async ({ ctx }) => {
