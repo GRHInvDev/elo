@@ -44,7 +44,7 @@ export async function GET(_req: NextRequest) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ unreadCounts: userIds.map(userId => ({ userId })) })
-      }).catch(() => {})
+      }).catch(() => undefined)
     }
 
     return new Response('OK', { status: 200 })
