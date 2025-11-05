@@ -3,7 +3,6 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { utapi } from "@/server/uploadthing"
 import type { RolesConfig } from "@/types/role-config"
-import { getNotificationWebSocketService } from "../../services/notification-websocket-service"
 
 const createPostSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -68,11 +67,6 @@ export const postRouter = createTRPCRouter({
             updatedAt: now,
           }))
         })
-
-        const wsService = getNotificationWebSocketService()
-        if (wsService) {
-          await Promise.all(userIds.map(uid => wsService.updateUnreadCount(uid)))
-        }
       }
     } catch (notificationError) {
       console.error('Erro ao criar/emitter notificações de novo post:', notificationError)

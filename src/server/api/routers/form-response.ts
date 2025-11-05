@@ -5,7 +5,6 @@ import type { ResponseStatus, Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario } from "@/lib/mail/html-mock"
-import { getNotificationWebSocketService } from "../../services/notification-websocket-service"
 
 export const formResponseRouter = createTRPCRouter({
   create: protectedProcedure
@@ -47,10 +46,6 @@ export const formResponseRouter = createTRPCRouter({
                 updatedAt: now,
               }))
             })
-            const wsService = getNotificationWebSocketService()
-            if (wsService) {
-              await Promise.all(recipients.map(uid => wsService.updateUnreadCount(uid)))
-            }
           }
         }
       } catch (notificationError) {
@@ -441,10 +436,6 @@ export const formResponseRouter = createTRPCRouter({
               updatedAt: now,
             }))
           })
-          const wsService = getNotificationWebSocketService()
-          if (wsService) {
-            await Promise.all(Array.from(recipients).map(uid => wsService.updateUnreadCount(uid)))
-          }
         }
       } catch (notificationError) {
         console.error('Erro ao criar/emitter notificações de chat de formulário:', notificationError)
