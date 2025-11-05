@@ -9,6 +9,10 @@ export interface FormResponse {
     statusComment: string | null
     createdAt: Date
     updatedAt: Date
+    // Campos derivados (Kanban)
+    lastChatAt?: Date | null
+    myLastViewedAt?: Date | null
+    hasNewMessages?: boolean
     form: {
         id: string
         title: string

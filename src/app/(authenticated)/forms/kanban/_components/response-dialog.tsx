@@ -31,6 +31,7 @@ interface ResponseDialogProps {
 export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialogProps) {
     const [message, setMessage] = useState("")
     const chatEndRef = useRef<HTMLDivElement>(null)
+  const trpcContext = api.useContext()
 
     // Fetch response details
     const { data: response, isLoading: isLoadingResponse } = api.formResponse.getById.useQuery(
@@ -50,8 +51,23 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
         onSuccess: () => {
             setMessage("")
             void refetchChat()
+      // Atualizar lista do Kanban para refletir possíveis mudanças
+      void trpcContext.formResponse.listKanBan.invalidate()
         },
     })
+
+  // Marcar visualização ao abrir o diálogo
+  const markViewed = api.formResponse.markViewed.useMutation({
+    onSuccess: () => {
+      void trpcContext.formResponse.listKanBan.invalidate()
+    }
+  })
+
+  useEffect(() => {
+    if (open && responseId) {
+      markViewed.mutate({ responseId })
+    }
+  }, [open, responseId])
 
     // Scroll to bottom of chat when new messages arrive
     useEffect(() => {
