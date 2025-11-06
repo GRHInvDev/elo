@@ -29,6 +29,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       setQuantity(1)
       onOpenChange(false)
       void utils.productOrder.listMyOrders.invalidate()
+      void utils.product.getAll.invalidate() // Atualizar lista de produtos para refletir novo estoque
       onSuccess?.()
     },
     onError: (error) => {
