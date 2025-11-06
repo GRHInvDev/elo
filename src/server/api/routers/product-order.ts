@@ -34,27 +34,42 @@ export const productOrderRouter = createTRPCRouter({
                 })
             }
 
-            // Criar pedido
-            return await ctx.db.productOrder.create({
-                data: {
-                    userId,
-                    productId: input.productId,
-                    quantity: input.quantity,
-                    status: "SOLICITADO",
-                    read: false,
-                },
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                            imageUrl: true,
-                        }
+            // Criar pedido e atualizar estoque em uma transação
+            return await ctx.db.$transaction(async (tx) => {
+                // Criar pedido
+                const order = await tx.productOrder.create({
+                    data: {
+                        userId,
+                        productId: input.productId,
+                        quantity: input.quantity,
+                        status: "SOLICITADO",
+                        read: false,
                     },
-                    product: true,
-                }
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                                imageUrl: true,
+                            }
+                        },
+                        product: true,
+                    }
+                })
+
+                // Atualizar estoque do produto
+                await tx.product.update({
+                    where: { id: input.productId },
+                    data: {
+                        stock: {
+                            decrement: input.quantity
+                        }
+                    }
+                })
+
+                return order
             })
         }),
 
@@ -211,7 +226,19 @@ export const productOrderRouter = createTRPCRouter({
                     userId
                 },
                 include: {
-                    product: true,
+                    product: {
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true,
+                            price: true,
+                            stock: true,
+                            enterprise: true,
+                            imageUrl: true,
+                            createdAt: true,
+                            updatedAt: true,
+                        }
+                    },
                 },
                 orderBy: {
                     createdAt: "desc"
