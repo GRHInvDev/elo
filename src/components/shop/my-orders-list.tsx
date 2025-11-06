@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -44,11 +44,6 @@ export function MyOrdersList() {
   const orders: MyOrder[] = Array.isArray(rawOrders) 
     ? rawOrders.filter(isMyOrder) 
     : []
-
-  // Debug: verificar estrutura dos dados
-  if (orders.length > 0 && process.env.NODE_ENV === "development") {
-    console.log("First order product imageUrl:", orders[0]?.product?.imageUrl)
-  }
 
   const getStatusBadge = (status: ProductOrderStatus) => {
     switch (status) {
@@ -104,99 +99,115 @@ export function MyOrdersList() {
       {orders.map((order) => {
         const isUnread = order.read === false
         return (
-          <Card key={order.id} className={isUnread ? "ring-2 ring-primary" : ""}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{order.product.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">{order.product.description}</p>
-                </div>
-                {isUnread && (
-                  <Badge variant="destructive" className="ml-2">Novo</Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                {/* Imagem do produto */}
-                <div className="relative h-24 w-24 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
-                  {(() => {
-                    const imageUrl = order.product.imageUrl
-                    const firstImage = Array.isArray(imageUrl) && imageUrl.length > 0 ? imageUrl[0] : null
-                    
-                    if (firstImage && typeof firstImage === "string" && firstImage.trim() !== "") {
-                      return (
-                        <Image
-                          src={firstImage}
-                          alt={order.product.name}
-                          fill
-                          className="object-cover"
-                          sizes="96px"
-                          onError={(e) => {
-                            console.error("Erro ao carregar imagem:", firstImage)
-                            e.currentTarget.style.display = "none"
-                          }}
-                        />
-                      )
-                    }
-                    
-                    return (
-                      <div className="flex items-center justify-center h-full w-full bg-muted text-muted-foreground">
-                        <Package className="h-8 w-8 opacity-50" />
-                      </div>
-                    )
-                  })()}
-                </div>
-
-                {/* Informações do pedido */}
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Package className="h-4 w-4" />
-                      <span>Quantidade: {order.quantity}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {format(new Date(order.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {getStatusBadge(order.status as ProductOrderStatus)}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(order.updatedAt), {
-                          addSuffix: true,
-                          locale: ptBR,
-                        })}
-                      </p>
-                    </div>
-
-                    {isUnread && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleMarkAsRead(order.id)}
-                        disabled={markAsReadMutation.isPending}
-                      >
-                        {markAsReadMutation.isPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                        )}
-                        Marcar como lido
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <OrderCard 
+            key={order.id} 
+            order={order} 
+            isUnread={isUnread} 
+            onMarkAsRead={handleMarkAsRead} 
+            markAsReadMutation={markAsReadMutation} 
+            getStatusBadge={getStatusBadge} 
+          />
         )
       })}
     </div>
   )
 }
 
+function OrderCard({ 
+  order, 
+  isUnread, 
+  onMarkAsRead, 
+  markAsReadMutation,
+  getStatusBadge 
+}: { 
+  order: MyOrder
+  isUnread: boolean
+  onMarkAsRead: (id: string) => void
+  markAsReadMutation: ReturnType<typeof api.productOrder.markMyOrderAsRead.useMutation>
+  getStatusBadge: (status: ProductOrderStatus) => JSX.Element
+}) {
+  const [imageError, setImageError] = useState(false)
+  const imageUrl = order.product.imageUrl
+  const firstImage = Array.isArray(imageUrl) && imageUrl.length > 0 ? imageUrl[0] : null
+
+  return (
+    <Card className={isUnread ? "ring-2 ring-primary" : ""}>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-lg">{order.product.name}</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">{order.product.description}</p>
+          </div>
+          {isUnread && (
+            <Badge variant="destructive" className="ml-2">Novo</Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex gap-4">
+          {/* Imagem do produto */}
+          <div className="relative h-24 w-24 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
+            {firstImage && typeof firstImage === "string" && firstImage.trim() !== "" && !imageError ? (
+              <img
+                src={firstImage}
+                alt={order.product.name}
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={() => {
+                  setImageError(true)
+                }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full w-full bg-muted text-muted-foreground">
+                <Package className="h-8 w-8 opacity-50" />
+              </div>
+            )}
+          </div>
+
+          {/* Informações do pedido */}
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Package className="h-4 w-4" />
+                <span>Quantidade: {order.quantity}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>
+                  {format(new Date(order.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                {getStatusBadge(order.status as ProductOrderStatus)}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatDistanceToNow(new Date(order.updatedAt), {
+                    addSuffix: true,
+                    locale: ptBR,
+                  })}
+                </p>
+              </div>
+
+              {isUnread && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onMarkAsRead(order.id)}
+                  disabled={markAsReadMutation.isPending}
+                >
+                  {markAsReadMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                  )}
+                  Marcar como lido
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

@@ -12,6 +12,14 @@ const config = {
             protocol: 'https',
             hostname: '**',
           },
+          {
+            protocol: 'https',
+            hostname: '*.ufs.sh',
+          },
+          {
+            protocol: 'https',
+            hostname: 'ufs.sh',
+          },
         ],
       },
     // Configurações para WebSocket
