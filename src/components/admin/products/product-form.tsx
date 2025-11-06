@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import type { z } from "zod"
 import { createProductSchema, updateProductSchema } from "@/schemas/product.schema"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -101,12 +101,12 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         toast.success("Produto atualizado com sucesso!")
       } else {
         const createData: CreateProductData = {
-          name: data.name as string,
-          description: data.description as string,
-          enterprise: data.enterprise as "Box" | "Cristallux" | "RHenz",
+          name: data.name ?? "",
+          description: data.description ?? "",
+          enterprise: data.enterprise ?? "RHenz",
           imageUrl: imageUrls,
-          price: data.price as number,
-          stock: data.stock as number,
+          price: data.price ?? 0,
+          stock: data.stock ?? 0,
         }
         await createProduct.mutateAsync(createData)
         toast.success("Produto criado com sucesso!")
@@ -162,7 +162,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         <div className="space-y-2">
           <Label htmlFor="enterprise">Empresa *</Label>
           <Select
-            value={selectedEnterprise || "RHenz"}
+            value={selectedEnterprise ?? "RHenz"}
             onValueChange={(value: "Box" | "Cristallux" | "RHenz") => {
               setValue("enterprise", value, { shouldValidate: true })
             }}
@@ -225,11 +225,11 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         <MultipleImageUpload
           onImagesChange={setImageUrls}
           maxImages={5}
-          initialImages={product?.imageUrl || []}
+          initialImages={product?.imageUrl ?? []}
         />
         {errors.imageUrl && (
           <p className="text-sm text-destructive">
-            {errors.imageUrl.message || "Adicione pelo menos uma imagem"}
+            {errors.imageUrl.message ?? "Adicione pelo menos uma imagem"}
           </p>
         )}
         {imageUrls.length === 0 && (

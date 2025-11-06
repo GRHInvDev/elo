@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +16,6 @@ import { Plus, AlertTriangle, Loader2, ShoppingBag, Package } from "lucide-react
 import type { Product } from "@prisma/client"
 
 export default function AdminProductsPage() {
-  const router = useRouter()
   const { hasAdminAccess, isLoading: isLoadingAccess, canManageProducts, isSudo } = useAccessControl()
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined)
