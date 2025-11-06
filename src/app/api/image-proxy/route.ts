@@ -1,31 +1,58 @@
 import { NextResponse } from "next/server"
 
+const ALLOWED_HOSTS = ["ufs.sh"]
+
+function isAllowed(url: URL): boolean {
+	const host = url.hostname.toLowerCase()
+	return host === "ufs.sh" || host.endsWith(".ufs.sh")
+}
+
 export async function GET(request: Request) {
 	try {
 		const { searchParams } = new URL(request.url)
-		const url = searchParams.get("url")
+		const urlParam = searchParams.get("url")
 
-		if (!url) {
+		if (!urlParam) {
 			return NextResponse.json({ error: "Missing url param" }, { status: 400 })
 		}
 
-		// Permitir apenas http/https
-		if (!/^https?:\/\//i.test(url)) {
+		let target: URL
+		try {
+			target = new URL(urlParam)
+		} catch {
 			return NextResponse.json({ error: "Invalid url" }, { status: 400 })
 		}
 
-		const res = await fetch(url, { cache: "no-store" })
-		if (!res.ok || !res.body) {
-			return NextResponse.json({ error: "Failed to fetch image" }, { status: 502 })
+		if (!/^https?:$/i.test(target.protocol)) {
+			return NextResponse.json({ error: "Invalid protocol" }, { status: 400 })
 		}
 
-		const contentType = res.headers.get("content-type") ?? "image/jpeg"
+		if (!isAllowed(target)) {
+			return NextResponse.json({ error: "Host not allowed" }, { status: 400 })
+		}
+
+		const upstream = await fetch(target.toString(), {
+			cache: "no-store",
+			headers: {
+				"User-Agent":
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119 Safari/537.36",
+				Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+				Referer: "https://intranet.boxdistribuidor.com.br/",
+			},
+		})
+
+		// Fallback: se o upstream falhar, redireciona o cliente direto para o recurso
+		if (!upstream.ok || !upstream.body) {
+			return NextResponse.redirect(target.toString(), { status: 302 })
+		}
+
+		const contentType = upstream.headers.get("content-type") ?? "image/jpeg"
 		const headers = new Headers()
 		headers.set("Content-Type", contentType)
-		// Desabilitar cache forte para evitar problemas
-		headers.set("Cache-Control", "public, max-age=60, s-maxage=60")
+		headers.set("Cache-Control", "public, max-age=300, s-maxage=300")
+		headers.set("Access-Control-Allow-Origin", "*")
 
-		return new NextResponse(res.body, { status: 200, headers })
+		return new NextResponse(upstream.body, { status: 200, headers })
 	} catch (err) {
 		return NextResponse.json({ error: "Unexpected error" }, { status: 500 })
 	}
