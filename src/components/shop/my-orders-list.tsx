@@ -149,7 +149,7 @@ function OrderCard({
           <div className="relative h-24 w-24 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
             {firstImage && typeof firstImage === "string" && firstImage.trim() !== "" && !imageError ? (
               <img
-                src={firstImage}
+                src={`/api/image-proxy?url=${encodeURIComponent(firstImage)}`}
                 alt={order.product.name}
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={() => {
