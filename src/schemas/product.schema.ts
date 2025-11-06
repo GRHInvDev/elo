@@ -1,19 +1,25 @@
 import { z } from "zod"
 
 export const createProductSchema = z.object({
-    name: z.string().min(2).catch("O nome do produto é obrigatório."),
-    description: z.string().catch("a descrição do produto é obrigatória."),
+    name: z.string().min(2, "O nome do produto é obrigatório."),
+    description: z.string().min(1, "A descrição do produto é obrigatória."),
     enterprise: z.enum(["Box", "Cristallux", "RHenz"]),
-    imageUrls: z.array(z.string().url().catch("Url inválida.")),
+    imageUrl: z.array(z.string().url("URL inválida.")).min(1, "Adicione pelo menos uma imagem."),
     price: z.number().gt(0, "Valor não pode ser negativo ou igual a 0."),
+    stock: z.number().int().min(0, "Estoque não pode ser negativo.").default(0),
 })
 
 export const updateProductSchema = z.object({
-    id: z.string().cuid("id inválido"),
-    name: z.string().optional(),
-    description: z.string().optional(),
+    id: z.string().cuid("ID inválido"),
+    name: z.string().min(2, "O nome do produto é obrigatório.").optional(),
+    description: z.string().min(1, "A descrição do produto é obrigatória.").optional(),
     enterprise: z.enum(["Box", "Cristallux", "RHenz"]).optional(),
-    imageUrls: z.array(z.string().url().optional()),
-    price: z.number().optional(),
+    imageUrl: z.array(z.string().url("URL inválida.")).optional(),
+    price: z.number().gt(0, "Valor não pode ser negativo ou igual a 0.").optional(),
+    stock: z.number().int().min(0, "Estoque não pode ser negativo.").optional(),
+})
+
+export const deleteProductSchema = z.object({
+    id: z.string().cuid("ID inválido"),
 })
 

@@ -1,4 +1,4 @@
-import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, MessageSquare, Phone } from "lucide-react"
+import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, MessageSquare, Phone, ShoppingBag } from "lucide-react"
 
 export interface AdminRoute {
   id: string
@@ -74,6 +74,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     path: "/admin/vehicles",
     requiresBasicAdmin: true,
   },
+  {
+    id: "/admin/products",
+    title: "Gerenciar Produtos",
+    description: "Criar, editar e gerenciar produtos da loja",
+    icon: ShoppingBag,
+    path: "/admin/products",
+    requiresBasicAdmin: true,
+  },
   // {
   //   id: "/admin/chat",
   //   title: "Gerenciar Chat",
@@ -101,15 +109,26 @@ export function getAccessibleAdminRoutes(adminPages: string[]): AdminRoute[] {
   })
 }
 
-export function hasAccessToAdminRoute(adminPages: string[], routeId: string): boolean {
-  // Se não tem acesso ao /admin básico, não pode acessar nada
-  if (!adminPages.includes("/admin")) {
-    return false
+export function hasAccessToAdminRoute(adminPages: string[], routeId: string, canManageProducts?: boolean): boolean {
+  // Se é a rota base, verificar se tem qualquer acesso admin
+  if (routeId === "/admin") {
+    // Tem acesso se tem /admin na lista OU tem qualquer rota que comece com /admin
+    return adminPages.includes("/admin") || adminPages.some(route => route.startsWith("/admin"))
   }
 
-  // Se é a rota base, já tem acesso
-  if (routeId === "/admin") {
+  // Para /admin/products, verificar também can_manage_produtos se fornecido
+  if (routeId === "/admin/products" && canManageProducts === true) {
     return true
+  }
+
+  // Se não tem acesso ao /admin básico, não pode acessar outras rotas
+  // EXCETO se tem a rota específica e can_manage_produtos (para /admin/products)
+  if (!adminPages.includes("/admin")) {
+    // Permitir se tem can_manage_produtos e a rota é /admin/products
+    if (routeId === "/admin/products" && canManageProducts === true) {
+      return true
+    }
+    return false
   }
 
   // Verificar se tem acesso à rota específica

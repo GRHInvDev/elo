@@ -413,6 +413,7 @@ export const userRouter = createTRPCRouter({
         can_view_dre_report: z.boolean(),
         can_manage_extensions: z.boolean().optional(),
         can_manage_dados_basicos_users: z.boolean().optional(),
+        can_manage_produtos: z.boolean().optional(),
         isTotem: z.boolean().optional(),
         visible_forms: z.array(z.string()).optional(),
         hidden_forms: z.array(z.string()).optional(),

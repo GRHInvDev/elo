@@ -32,6 +32,7 @@ type ExtendedRolesConfig = RolesConfig & {
   can_view_dre_report: boolean
   can_manage_extensions?: boolean
   can_manage_dados_basicos_users?: boolean
+  can_manage_produtos?: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
 
@@ -232,6 +233,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       can_locate_cars: (user.role_config as ExtendedRolesConfig)?.can_locate_cars ?? false,
       can_view_dre_report: (user.role_config as ExtendedRolesConfig)?.can_view_dre_report ?? false,
       can_manage_extensions: (user.role_config as ExtendedRolesConfig)?.can_manage_extensions ?? false,
+      can_manage_dados_basicos_users: (user.role_config as ExtendedRolesConfig)?.can_manage_dados_basicos_users ?? false,
+      can_manage_produtos: (user.role_config as ExtendedRolesConfig)?.can_manage_produtos ?? false,
       isTotem: (user.role_config as ExtendedRolesConfig)?.isTotem ?? false,
       visible_forms: (user.role_config as ExtendedRolesConfig)?.visible_forms,
       hidden_forms: (user.role_config as ExtendedRolesConfig)?.hidden_forms,
@@ -248,6 +251,38 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       setAdminRoutesData(newAdminPages)
     }
   }, [permissionsData.admin_pages])
+
+  // Sincronizar can_manage_produtos com admin_pages
+  useEffect(() => {
+    const currentAdminPages = permissionsData.admin_pages || []
+    const hasAdminRoute = currentAdminPages.includes("/admin")
+    const hasProductsRoute = currentAdminPages.includes("/admin/products")
+    
+    if (permissionsData.can_manage_produtos) {
+      // Se can_manage_produtos está true, garantir que /admin e /admin/products estão na lista
+      const newRoutes = [...currentAdminPages]
+      if (!hasAdminRoute) {
+        newRoutes.push("/admin")
+      }
+      if (!hasProductsRoute) {
+        newRoutes.push("/admin/products")
+      }
+      
+      if (newRoutes.length !== currentAdminPages.length) {
+        setPermissionsData({
+          ...permissionsData,
+          admin_pages: newRoutes
+        })
+      }
+    } else if (!permissionsData.can_manage_produtos && hasProductsRoute) {
+      // Remover /admin/products se can_manage_produtos está false mas a rota está na lista
+      // Nota: não removemos /admin automaticamente, pois pode ser usado por outras rotas
+      setPermissionsData({
+        ...permissionsData,
+        admin_pages: currentAdminPages.filter(route => route !== "/admin/products")
+      })
+    }
+  }, [permissionsData.can_manage_produtos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { toast } = useToast()
   
@@ -329,6 +364,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_view_dre_report: permissionsData.can_view_dre_report ?? false,
         can_manage_extensions: permissionsData.can_manage_extensions ?? false,
         can_manage_dados_basicos_users: permissionsData.can_manage_dados_basicos_users ?? false,
+        can_manage_produtos: permissionsData.can_manage_produtos ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
@@ -375,11 +411,26 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       if (routeId === "/admin") {
         console.log("🔄 Removing /admin, clearing all routes")
         setAdminRoutesData([])
+        setPermissionsData({
+          ...permissionsData,
+          admin_pages: []
+        })
       } else {
         console.log("🔄 Removing route:", routeId)
         setAdminRoutesData(prev => {
           const newRoutes = prev.filter(id => id !== routeId)
           console.log("🔄 New routes after removal:", newRoutes)
+          const updatedPermissions = {
+            ...permissionsData,
+            admin_pages: newRoutes
+          }
+          
+          // Se está removendo /admin/products, também remover can_manage_produtos
+          if (routeId === "/admin/products") {
+            updatedPermissions.can_manage_produtos = false
+          }
+          
+          setPermissionsData(updatedPermissions)
           return newRoutes
         })
       }
@@ -390,6 +441,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         setAdminRoutesData(prev => {
           const newRoutes = ["/admin", ...prev, routeId]
           console.log("🔄 New routes after adding with /admin:", newRoutes)
+          const updatedPermissions = {
+            ...permissionsData,
+            admin_pages: newRoutes
+          }
+          
+          // Se está adicionando /admin/products, também adicionar can_manage_produtos
+          if (routeId === "/admin/products") {
+            updatedPermissions.can_manage_produtos = true
+          }
+          
+          setPermissionsData(updatedPermissions)
           return newRoutes
         })
       } else {
@@ -397,6 +459,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         setAdminRoutesData(prev => {
           const newRoutes = [...prev, routeId]
           console.log("🔄 New routes after adding:", newRoutes)
+          const updatedPermissions = {
+            ...permissionsData,
+            admin_pages: newRoutes
+          }
+          
+          // Se está adicionando /admin/products, também adicionar can_manage_produtos
+          if (routeId === "/admin/products") {
+            updatedPermissions.can_manage_produtos = true
+          }
+          
+          setPermissionsData(updatedPermissions)
           return newRoutes
         })
       }
@@ -652,10 +725,6 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       <Key className="h-4 w-4" />
                       <Label className="text-base font-semibold">Permissões de Criação</Label>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      SISTEMA SIMPLIFICADO: Todos podem visualizar, apenas configure quem pode criar.
-                    </p>
-
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
@@ -770,6 +839,23 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                             (permite editar ramais de outros usuários)
                           </span>
                         </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="manage_produtos"
+                            checked={permissionsData.can_manage_produtos}
+                            onCheckedChange={(checked) => {
+                              setPermissionsData({
+                                ...permissionsData,
+                                can_manage_produtos: checked === true
+                              });
+                            }}
+                          />
+                          <Label htmlFor="manage_produtos">Gerenciar produtos da loja</Label>
+                          <span className="text-xs text-muted-foreground">
+                            (permite criar, editar e deletar produtos)
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -822,13 +908,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       {permissionsData.can_manage_extensions && (
                         <Badge variant="secondary">Alterar Ramais</Badge>
                       )}
+                      {permissionsData.can_manage_produtos && (
+                        <Badge variant="secondary">Gerenciar Produtos</Badge>
+                      )}
                       {!permissionsData.can_create_form &&
                        !permissionsData.can_create_event &&
                        !permissionsData.can_create_flyer &&
                        !permissionsData.can_create_booking &&
                        !permissionsData.can_locate_cars &&
                        !permissionsData.can_view_dre_report &&
-                       !permissionsData.can_manage_extensions && (
+                       !permissionsData.can_manage_extensions &&
+                       !permissionsData.can_manage_produtos && (
                         <span className="text-sm text-muted-foreground">Apenas visualização</span>
                       )}
                     </div>

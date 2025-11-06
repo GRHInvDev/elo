@@ -57,6 +57,9 @@ model User {
   // Novo colaborador
   newCollaborator NewCollaborator?
 
+  // Pedidos de produtos
+  productOrders ProductOrder[]
+
   @@map("users")
 }
 
@@ -231,12 +234,14 @@ model Product {
   name        String
   description String
   price       Float
+  stock       Int        @default(0)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   enterprise  Enterprise
   imageUrl    String[]
   sells       Sell[]     @relation("ProductToSell")
   shopCarts   ShopCart[] @relation("ProductToShopCart")
+  orders      ProductOrder[]
 
   @@map("products")
 }
@@ -264,6 +269,22 @@ model Sell {
   products   Product[] @relation("ProductToSell")
 
   @@map("sells")
+}
+
+model ProductOrder {
+  id          String              @id @default(cuid())
+  userId      String
+  productId   String
+  quantity    Int                 @default(1)
+  status      ProductOrderStatus  @default(SOLICITADO)
+  read        Boolean             @default(false)
+  readAt      DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_orders")
 }
 
 model Form {
@@ -460,6 +481,13 @@ enum OrderStatus {
   CONFIRMED
   DELIVERED
   CANCELLED
+}
+
+enum ProductOrderStatus {
+  SOLICITADO
+  EM_COMPRA
+  EM_RETIRADA
+  ENTREGUE
 }
 
 enum SuggestionStatus {
