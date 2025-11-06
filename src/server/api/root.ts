@@ -12,6 +12,7 @@ import { commentRouter } from "./routers/comment";
 import { vehicleRouter } from "./routers/vehicle";
 import { vehicleRentRouter } from "./routers/vehicle-rent";
 import { productRouter } from "./routers/product";
+import { productOrderRouter } from "./routers/product-order";
 import { formsRouter } from "./routers/forms";
 import { formResponseRouter } from "./routers/form-response";
 import { restaurantRouter } from "./routers/restaurant";
@@ -44,6 +45,7 @@ export const appRouter = createTRPCRouter({
   vehicle: vehicleRouter,
   vehicleRent: vehicleRentRouter,
   product: productRouter,
+  productOrder: productOrderRouter,
   form: formsRouter,
   formResponse: formResponseRouter,
   restaurant: restaurantRouter,

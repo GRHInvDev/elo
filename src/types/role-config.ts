@@ -18,6 +18,7 @@ export type RolesConfig = {
   can_view_dre_report: boolean; // Pode visualizar relatório DRE (Demonstrativo de Resultados do Exercício)
   can_manage_extensions?: boolean; // Pode alterar ramais de usuários
   can_manage_dados_basicos_users?: boolean; // Pode editar apenas dados básicos de usuários (sem permissões avançadas)
+  can_manage_produtos?: boolean; // Pode gerenciar produtos da loja (criar, editar, deletar)
 
   isTotem?: boolean; // Para usuários TOTEM (acesso limitado)
 }
@@ -37,5 +38,5 @@ export type RolesConfig = {
 ⠀⠀⢀⣤⡒⢤⣀⡆⠀⠀⠀⢐⠀⠀⠀⠀⠀⠀⠀⠀
 ⢀⡾⣋⣵⣾⡀⣿⣿⣶⢂⡌⣍⠆⠀⠀⠀⠀⠀⠀⠀
 ⠘⠛⠛⠛⠛⠃⠉⠙⢏⣾⣧⢹⣿⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⣾⡏⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀ ⠀⠀⠙⠿⣾⡏⠀⠀⠀⠀⠀⠀⠀
 */

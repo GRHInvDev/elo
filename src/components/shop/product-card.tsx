@@ -1,12 +1,19 @@
+"use client"
+
+import { useState } from "react"
 import type {Product} from "@prisma/client"
 import Image from "next/image"
 import { Card, CardContent, /*CardDescription,*/ CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { LucideBadgeInfo, LucideShoppingCart } from "lucide-react";
 import { Button } from "../ui/button";
+import { CreateOrderModal } from "./create-order-modal";
 
 export default function ProductCard({ product }:{ product: Product }) {
+    const [isModalOpen, setIsModalOpen] = useState(false)
+
     return (
+        <>
         <Card className="overflow-hidden min-h-[24em] flex flex-col">
             <div>
               <div className="relative h-48 w-full">
@@ -52,11 +59,23 @@ export default function ProductCard({ product }:{ product: Product }) {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button disabled className="w-full" size="sm" >
+                <Button 
+                  disabled={product.stock <= 0} 
+                  className="w-full" 
+                  size="sm"
+                  onClick={() => setIsModalOpen(true)}
+                >
                   <LucideShoppingCart/>
-                  Indisponível
+                  {product.stock <= 0 ? "Indisponível" : "Adicionar ao Carrinho"}
                 </Button>
               </CardFooter>
             </Card>
+
+            <CreateOrderModal
+              product={product}
+              open={isModalOpen}
+              onOpenChange={setIsModalOpen}
+            />
+        </>
     );
 }

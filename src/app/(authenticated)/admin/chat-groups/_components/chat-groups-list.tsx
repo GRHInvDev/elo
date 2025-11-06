@@ -2,7 +2,6 @@
 
 import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
@@ -73,14 +72,6 @@ export function ChatGroupsList() {
     if (groupToDelete) {
       deleteGroupMutation.mutate({ id: groupToDelete.id })
     }
-  }
-
-
-  const formatUserName = (user: { firstName: string | null; lastName: string | null; email: string }) => {
-    if (user.firstName || user.lastName) {
-      return `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
-    }
-    return user.email
   }
 
   if (isLoading) {

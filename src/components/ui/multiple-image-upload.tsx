@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -14,23 +14,35 @@ interface MultipleImageUploadProps {
   onImagesChange: (images: string[]) => void
   maxImages?: number
   className?: string
+  initialImages?: string[]
 }
 
 export function MultipleImageUpload({
   onImagesChange,
   maxImages = 10,
-  className
+  className,
+  initialImages = []
 }: MultipleImageUploadProps) {
-  const [images, setImages] = useState<string[]>([])
+  const [images, setImages] = useState<string[]>(initialImages)
   const [isUploading, setIsUploading] = useState(false)
+
+  // Sincronizar quando initialImages mudar
+  useEffect(() => {
+    setImages(initialImages)
+    if (initialImages.length > 0) {
+      onImagesChange(initialImages)
+    }
+  }, [initialImages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { startUpload } = useUploadThing("multipleImageUploader", {
     onClientUploadComplete: (res: ClientUploadedFileData<unknown>[]) => {
       if (res && res.length > 0) {
         const newUrls = res.map(file => file.ufsUrl).filter(Boolean)
-        const updatedImages = [...images, ...newUrls]
-        setImages(updatedImages)
-        onImagesChange(updatedImages)
+        setImages((prevImages) => {
+          const updatedImages = [...prevImages, ...newUrls]
+          onImagesChange(updatedImages)
+          return updatedImages
+        })
       }
       setIsUploading(false)
     },

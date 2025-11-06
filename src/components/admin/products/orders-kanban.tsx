@@ -1,0 +1,152 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd"
+import { Loader2 } from "lucide-react"
+import { api } from "@/trpc/react"
+import { OrdersKanbanColumn, type ProductOrderWithRelations, type ProductOrderStatus } from "./orders-kanban-column"
+import type { RouterOutputs } from "@/trpc/react"
+type KanbanOrders = RouterOutputs["productOrder"]["listKanban"]
+
+export function OrdersKanban() {
+  const [localOrders, setLocalOrders] = useState<ProductOrderWithRelations[]>([])
+
+  const ordersQuery = api.productOrder.listKanban.useQuery(undefined, {
+    enabled: true,
+  })
+  const orders = ordersQuery.data as ProductOrderWithRelations[]
+  const isLoading = ordersQuery.isLoading
+  const refetch = ordersQuery.refetch
+
+  // Update local state when server data changes
+  useEffect(() => {
+    if (Array.isArray(orders)) {
+      setLocalOrders(orders)
+    }
+  }, [orders])
+
+  // Update status mutation
+  const updateStatusMutation = api.productOrder.updateStatus.useMutation({
+    onSuccess: () => {
+      void refetch()
+    },
+  })
+
+  // Mark as read mutation
+  const markAsReadMutation = api.productOrder.markAsRead.useMutation({
+    onSuccess: () => {
+      void refetch()
+    },
+  })
+
+  // Group orders by status
+  const columns = {
+    SOLICITADO: localOrders.filter((order) => order.status === "SOLICITADO"),
+    EM_COMPRA: localOrders.filter((order) => order.status === "EM_COMPRA"),
+    EM_RETIRADA: localOrders.filter((order) => order.status === "EM_RETIRADA"),
+    ENTREGUE: localOrders.filter((order) => order.status === "ENTREGUE"),
+  }
+
+  // Handle drag end
+  const onDragEnd: OnDragEndResponder = (result) => {
+    const { destination, source, draggableId } = result
+
+    // If dropped outside a droppable area
+    if (!destination) return
+
+    // If dropped in the same place
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return
+    }
+
+    // Update local state immediately for instant UI feedback
+    setLocalOrders((prev) =>
+      prev.map((order) => {
+        if (order.id === draggableId) {
+          return {
+            ...order,
+            status: destination.droppableId as ProductOrderStatus,
+          }
+        }
+        return order
+      }),
+    )
+
+    // Update the status in the database
+    updateStatusMutation.mutate({
+      id: draggableId,
+      status: destination.droppableId as ProductOrderStatus,
+    })
+  }
+
+  const handleMarkAsRead = (orderId: string) => {
+    markAsReadMutation.mutate({ id: orderId })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // Verificar se não há pedidos ou se algum pedido tem status nulo
+  if (!isLoading) {
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>Nenhum pedido encontrado.</p>
+        </div>
+      )
+    }
+    
+    // Verificar se algum pedido tem status nulo
+    const hasNullStatus = orders.some((order) => {
+      if (typeof order !== "object" || order === null) return false
+      if (!("status" in order)) return false
+      const orderWithStatus = order as { status: unknown }
+      return orderWithStatus.status === null
+    })
+    
+    if (hasNullStatus) {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>Nenhum pedido encontrado.</p>
+        </div>
+      )
+    }
+  }
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <OrdersKanbanColumn
+          title="Solicitado"
+          status="SOLICITADO"
+          orders={columns.SOLICITADO}
+          onMarkAsRead={handleMarkAsRead}
+        />
+        <OrdersKanbanColumn
+          title="Em Compra"
+          status="EM_COMPRA"
+          orders={columns.EM_COMPRA}
+          onMarkAsRead={handleMarkAsRead}
+        />
+        <OrdersKanbanColumn
+          title="Em Retirada"
+          status="EM_RETIRADA"
+          orders={columns.EM_RETIRADA}
+          onMarkAsRead={handleMarkAsRead}
+        />
+        <OrdersKanbanColumn
+          title="Entregue"
+          status="ENTREGUE"
+          orders={columns.ENTREGUE}
+          onMarkAsRead={handleMarkAsRead}
+        />
+      </div>
+    </DragDropContext>
+  )
+}
+

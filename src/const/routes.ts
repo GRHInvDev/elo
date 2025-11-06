@@ -154,7 +154,18 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
   ]
   
   // Verificar acesso admin usando role_config granular
-  const hasAdminAccess = !!roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages.includes("/admin"));
+  // Usuário tem acesso admin se:
+  // 1. É sudo
+  // 2. Tem /admin na lista de admin_pages
+  // 3. Tem qualquer rota que comece com /admin na lista de admin_pages
+  // 4. Tem permissão can_manage_produtos (que dá acesso a /admin/products)
+  const hasAdminPages = Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages?.length && roleConfig?.admin_pages?.length > 0
+  const hasAnyAdminRoute = hasAdminPages && roleConfig?.admin_pages.some((route: string) => route.startsWith("/admin"))
+  const hasCanManageProducts = roleConfig?.can_manage_produtos === true
+  const hasAdminAccess = !!roleConfig?.sudo || 
+                        (hasAdminPages && roleConfig?.admin_pages?.includes("/admin")) ||
+                        hasAnyAdminRoute ||
+                        hasCanManageProducts
 
   if (hasAdminAccess) {
     items.push({

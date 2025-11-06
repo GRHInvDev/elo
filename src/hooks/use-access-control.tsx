@@ -153,6 +153,16 @@ export function useAccessControl() {
     return Boolean(db_user.role_config.can_manage_dados_basicos_users);
   };
 
+  const canManageProducts = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, pode gerenciar produtos
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica para gerenciar produtos
+    return db_user.role_config.can_manage_produtos ?? false;
+  };
+
   return {
     db_user,
     hasAdminAccess,
@@ -171,6 +181,7 @@ export function useAccessControl() {
     canViewDREReport,
     canManageExtensions,
     canManageBasicUserData,
+    canManageProducts,
     canAccessChat,
     isLoading: !db_user,
     isSudo: db_user?.role_config?.sudo ?? false,
