@@ -233,6 +233,7 @@ model Product {
   id          String     @id @default(cuid())
   name        String
   description String
+  code        String?
   price       Float
   stock       Int        @default(0)
   createdAt   DateTime   @default(now())

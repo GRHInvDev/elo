@@ -39,6 +39,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           id: product.id,
           name: product.name,
           description: product.description,
+          code: product.code ?? "",
           enterprise: product.enterprise,
           price: product.price,
           stock: product.stock,
@@ -49,6 +50,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         defaultValues: {
           name: "",
           description: "",
+          code: "",
           enterprise: "RHenz" as const,
           price: 0,
           stock: 0,
@@ -92,6 +94,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           id: product.id,
           name: data.name,
           description: data.description,
+          code: data.code,
           enterprise: data.enterprise,
           imageUrl: imageUrls.length > 0 ? imageUrls : undefined,
           price: data.price,
@@ -103,6 +106,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         const createData: CreateProductData = {
           name: data.name ?? "",
           description: data.description ?? "",
+          code: data.code,
           enterprise: data.enterprise ?? "RHenz",
           imageUrl: imageUrls,
           price: data.price ?? 0,
@@ -154,6 +158,25 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         {errors.description && (
           <p id="description-error" className="text-sm text-destructive">
             {errors.description.message}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="code">Código do Produto</Label>
+        <Input
+          id="code"
+          {...register("code")}
+          placeholder="Ex: PROD-001"
+          aria-invalid={!!errors.code}
+          aria-describedby={errors.code ? "code-error" : undefined}
+        />
+        <p className="text-xs text-muted-foreground">
+          Código interno para identificação do produto (não será exibido na loja)
+        </p>
+        {errors.code && (
+          <p id="code-error" className="text-sm text-destructive">
+            {errors.code.message}
           </p>
         )}
       </div>
