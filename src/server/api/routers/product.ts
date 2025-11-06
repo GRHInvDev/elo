@@ -11,6 +11,7 @@ export const productRouter = createTRPCRouter({
                 data: {
                     name: input.name,
                     description: input.description,
+                    code: input.code ?? null,
                     enterprise: input.enterprise,
                     imageUrl: input.imageUrl,
                     price: input.price,
@@ -28,6 +29,7 @@ export const productRouter = createTRPCRouter({
             const updateData: {
                 name?: string
                 description?: string
+                code?: string | null
                 enterprise?: "Box" | "Cristallux" | "RHenz"
                 imageUrl?: string[]
                 price?: number
@@ -36,6 +38,7 @@ export const productRouter = createTRPCRouter({
             
             if (data.name !== undefined) updateData.name = data.name
             if (data.description !== undefined) updateData.description = data.description
+            if (data.code !== undefined) updateData.code = data.code ?? null
             if (data.enterprise !== undefined) updateData.enterprise = data.enterprise
             if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl
             if (data.price !== undefined) updateData.price = data.price

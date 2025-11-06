@@ -79,6 +79,7 @@ export function ProductListTable({ products, onEdit, onRefresh }: ProductListTab
           <TableRow>
             <TableHead className="w-[100px]">Imagem</TableHead>
             <TableHead>Nome</TableHead>
+            <TableHead>Código</TableHead>
             <TableHead>Descrição</TableHead>
             <TableHead>Empresa</TableHead>
             <TableHead className="text-right">Preço</TableHead>
@@ -107,6 +108,15 @@ export function ProductListTable({ products, onEdit, onRefresh }: ProductListTab
                 )}
               </TableCell>
               <TableCell className="font-medium">{product.name}</TableCell>
+              <TableCell>
+                {product.code ? (
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {product.code}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">-</span>
+                )}
+              </TableCell>
               <TableCell className="max-w-md">
                 <p className="truncate text-sm text-muted-foreground">
                   {product.description}
