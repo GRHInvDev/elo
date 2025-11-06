@@ -45,6 +45,11 @@ export function MyOrdersList() {
     ? rawOrders.filter(isMyOrder) 
     : []
 
+  // Debug: verificar estrutura dos dados
+  if (orders.length > 0 && process.env.NODE_ENV === "development") {
+    console.log("First order product imageUrl:", orders[0]?.product?.imageUrl)
+  }
+
   const getStatusBadge = (status: ProductOrderStatus) => {
     switch (status) {
       case "SOLICITADO":
@@ -114,17 +119,34 @@ export function MyOrdersList() {
             <CardContent>
               <div className="flex gap-4">
                 {/* Imagem do produto */}
-                {order.product.imageUrl && order.product.imageUrl.length > 0 && (
-                  <div className="relative h-24 w-24 rounded-md overflow-hidden border flex-shrink-0">
-                    <Image
-                      src={order.product.imageUrl[0] ?? "/placeholder.svg"}
-                      alt={order.product.name}
-                      fill
-                      className="object-cover"
-                      sizes="96px"
-                    />
-                  </div>
-                )}
+                <div className="relative h-24 w-24 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
+                  {(() => {
+                    const imageUrl = order.product.imageUrl
+                    const firstImage = Array.isArray(imageUrl) && imageUrl.length > 0 ? imageUrl[0] : null
+                    
+                    if (firstImage && typeof firstImage === "string" && firstImage.trim() !== "") {
+                      return (
+                        <Image
+                          src={firstImage}
+                          alt={order.product.name}
+                          fill
+                          className="object-cover"
+                          sizes="96px"
+                          onError={(e) => {
+                            console.error("Erro ao carregar imagem:", firstImage)
+                            e.currentTarget.style.display = "none"
+                          }}
+                        />
+                      )
+                    }
+                    
+                    return (
+                      <div className="flex items-center justify-center h-full w-full bg-muted text-muted-foreground">
+                        <Package className="h-8 w-8 opacity-50" />
+                      </div>
+                    )
+                  })()}
+                </div>
 
                 {/* Informações do pedido */}
                 <div className="flex-1 space-y-2">
