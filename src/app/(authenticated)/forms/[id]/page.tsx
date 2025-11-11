@@ -42,6 +42,11 @@ export default async function FormPage({ params }: FormPageProps) {
     redirect("/forms")
   }
 
+  // Se não tem ID de usuário, redirecionar
+  if (!userData.id) {
+    redirect("/forms")
+  }
+
   // Se é o criador, sempre tem acesso
   if (form.userId === userData.id) {
     // Continua normalmente
