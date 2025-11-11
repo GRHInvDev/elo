@@ -24,6 +24,9 @@ export const formsRouter = createTRPCRouter({
                 description: input.description,
                 fields: input.fields as unknown as InputJsonValue[], 
                 userId: ctx.auth.userId,
+                isPrivate: input.isPrivate,
+                allowedUsers: input.allowedUsers,
+                allowedSectors: input.allowedSectors,
                 ownerIds: input.ownerIds,
             }
         });
@@ -106,6 +109,9 @@ export const formsRouter = createTRPCRouter({
                 description: input.description,
                 fields: input.fields as unknown as InputJsonValue[], 
                 userId: ctx.auth.userId,
+                ...(input.isPrivate !== undefined ? { isPrivate: input.isPrivate } : {}),
+                ...(input.allowedUsers !== undefined ? { allowedUsers: input.allowedUsers } : {}),
+                ...(input.allowedSectors !== undefined ? { allowedSectors: input.allowedSectors } : {}),
                 ...(input.ownerIds ? { ownerIds: input.ownerIds } : {}),
             },
             where: {
@@ -115,13 +121,20 @@ export const formsRouter = createTRPCRouter({
 
         // Se a configuração de privacidade foi alterada, atualizar role_config dos usuários
         if (input.isPrivate !== undefined) {
-            if (input.isPrivate && input.allowedUsers && input.allowedSectors) {
+            if (input.isPrivate) {
                 // Mesma lógica da criação para formulários privados
                 const usersToUpdate = new Set<string>();
                 
-                input.allowedUsers.forEach(userId => usersToUpdate.add(userId));
+                // Adicionar o criador do formulário (sempre tem acesso)
+                usersToUpdate.add(ctx.auth.userId);
                 
-                if (input.allowedSectors.length > 0) {
+                // Adicionar usuários específicos se fornecidos
+                if (input.allowedUsers && input.allowedUsers.length > 0) {
+                    input.allowedUsers.forEach(userId => usersToUpdate.add(userId));
+                }
+                
+                // Adicionar usuários dos setores permitidos se fornecidos
+                if (input.allowedSectors && input.allowedSectors.length > 0) {
                     const usersFromSectors = await ctx.db.user.findMany({
                         where: {
                             setor: { in: input.allowedSectors }

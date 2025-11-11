@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { FormBuilder } from "@/components/forms/form-builder"
 import type { Field } from "@/lib/form-types"
 import { Button } from "@/components/ui/button"
@@ -51,6 +51,17 @@ export function FormBuilderWithSave({
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
+
+  // Atualizar estado quando os props iniciais mudarem (especialmente ao editar)
+  useEffect(() => {
+    setTitle(initialTitle)
+    setDescription(initialDescription)
+    setFields(initialFields)
+    setIsPrivate(initialIsPrivate)
+    setAllowedUsers(initialAllowedUsers)
+    setAllowedSectors(initialAllowedSectors)
+    setOwnerIds(initialOwnerIds)
+  }, [initialTitle, initialDescription, initialFields, initialIsPrivate, initialAllowedUsers, initialAllowedSectors, initialOwnerIds])
 
   // Buscar usuários e setores para o filtro
   const { data: usersAndSectors } = api.form.getUsersForFormVisibility.useQuery()
