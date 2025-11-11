@@ -114,7 +114,13 @@ export async function POST(req: Request) {
       })
       break
     case "user.deleted":
-      await db.user.delete({
+      await db.user.update({
+        select: {
+          email: true,
+        },
+        data: {
+          email: `DEACTIVATED_${email_addresses[0]?.email_address}.${id}`,
+        },
         where: { id },
       })
       break
