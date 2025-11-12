@@ -1,6 +1,6 @@
 # 📋 Changelog - ELO Application
 
-## [1.5.0] - 15/01/2025
+## [1.5.0] - 15/09/2025
 
 ### 🔐 **MAJOR: Sistema de Controle de Acesso Granular**
 

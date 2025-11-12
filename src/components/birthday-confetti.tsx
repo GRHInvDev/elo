@@ -8,6 +8,8 @@ interface BirthdayConfettiProps {
 }
 
 export function BirthdayConfetti({ birthdays }: BirthdayConfettiProps) {
+  // Usa a data atual como chave para resetar quando o dia mudar
+  const todayKey = useRef(new Date().toDateString())
   const hasTriggeredRef = useRef(false)
 
   useEffect(() => {
@@ -16,12 +18,31 @@ export function BirthdayConfetti({ birthdays }: BirthdayConfettiProps) {
       return
     }
 
-    // Só dispara confetes se houver aniversários e ainda não tiver disparado
-    if (birthdays.length === 0 || hasTriggeredRef.current) {
+    // Verifica se o dia mudou - se sim, reseta o estado
+    const currentDateKey = new Date().toDateString()
+    if (todayKey.current !== currentDateKey) {
+      todayKey.current = currentDateKey
+      hasTriggeredRef.current = false
+    }
+
+    // Verifica se realmente é hoje antes de disparar
+    const today = new Date()
+    const hasTodayBirthday = birthdays.some((birthday) => {
+      const birthdayDate = new Date(birthday.data)
+      return (
+        birthdayDate.getDate() === today.getDate() &&
+        birthdayDate.getMonth() === today.getMonth()
+      )
+    })
+
+    // Só dispara confetes se houver aniversários de HOJE e ainda não tiver disparado
+    if (!hasTodayBirthday || birthdays.length === 0 || hasTriggeredRef.current) {
         // eslint-disable-next-line no-console
         console.log("🎉 BirthdayConfetti: Não disparando -", {
           hasBirthdays: birthdays.length > 0,
+          hasTodayBirthday,
           alreadyTriggered: hasTriggeredRef.current,
+          todayKey: currentDateKey,
         })
       return
     }
