@@ -174,6 +174,7 @@ export const birthdayRouter = createTRPCRouter({
 
   // Verificar se hoje é aniversário de alguém
   getTodayBirthdays: protectedProcedure.query(async ({ ctx }) => {
+    // Usa UTC para evitar problemas de timezone
     const today = new Date()
     const todayMonth = today.getMonth() + 1 // JavaScript months are 0-indexed
     const todayDay = today.getDate()

@@ -11,63 +11,87 @@ export function BirthdayConfetti({ birthdays }: BirthdayConfettiProps) {
   const hasTriggeredRef = useRef(false)
 
   useEffect(() => {
-    // Só dispara confetes se houver aniversários e ainda não tiver disparado
-    if (birthdays.length === 0 || hasTriggeredRef.current) {
+    // Verifica se está no browser
+    if (typeof window === "undefined") {
       return
     }
 
-    // Importação dinâmica do canvas-confetti
-    void import("canvas-confetti")
-      .then((confetti) => {
-        const confettiInstance = confetti.default
+    // Só dispara confetes se houver aniversários e ainda não tiver disparado
+    if (birthdays.length === 0 || hasTriggeredRef.current) {
+        // eslint-disable-next-line no-console
+        console.log("🎉 BirthdayConfetti: Não disparando -", {
+          hasBirthdays: birthdays.length > 0,
+          alreadyTriggered: hasTriggeredRef.current,
+        })
+      return
+    }
 
-        // Configuração dos confetes
-        const duration = 3000 // 3 segundos
-        const end = Date.now() + duration
+      // eslint-disable-next-line no-console
+      console.log("🎉 BirthdayConfetti: Disparando confetes para", birthdays.length, "aniversariante(s)")
 
-        // Função para disparar confetes
-        const frame = () => {
-          void confettiInstance({
-            particleCount: 3,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 },
-            colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
-          })
+    // Pequeno delay para garantir que o DOM está pronto
+    const timeoutId = setTimeout(() => {
+      // Importação dinâmica do canvas-confetti
+      void import("canvas-confetti")
+        .then((confetti) => {
+          const confettiInstance = confetti.default
 
-          void confettiInstance({
-            particleCount: 3,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 },
-            colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
-          })
+            // eslint-disable-next-line no-console
+            console.log("✅ canvas-confetti carregado com sucesso")
 
-          if (Date.now() < end) {
-            requestAnimationFrame(frame)
+          // Configuração dos confetes
+          const duration = 3000 // 3 segundos
+          const end = Date.now() + duration
+
+          // Função para disparar confetes
+          const frame = () => {
+            void confettiInstance({
+              particleCount: 3,
+              angle: 60,
+              spread: 55,
+              origin: { x: 0 },
+              colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
+            })
+
+            void confettiInstance({
+              particleCount: 3,
+              angle: 120,
+              spread: 55,
+              origin: { x: 1 },
+              colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
+            })
+
+            if (Date.now() < end) {
+              requestAnimationFrame(frame)
+            }
           }
-        }
 
-        // Dispara os confetes
-        frame()
+          // Dispara os confetes
+          frame()
 
-        // Dispara uma explosão central após um pequeno delay
-        void setTimeout(() => {
-          void confettiInstance({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
-          })
-        }, 500)
+          // Dispara uma explosão central após um pequeno delay
+          void setTimeout(() => {
+            void confettiInstance({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
+            })
+          }, 500)
 
-        // Marca como já disparado
-        hasTriggeredRef.current = true
-      })
-      .catch((error) => {
-        // Silenciosamente ignora erros se a biblioteca não estiver instalada
-        console.warn("canvas-confetti não está disponível:", error)
-      })
+          // Marca como já disparado
+          hasTriggeredRef.current = true
+        })
+        .catch((error) => {
+          // Log de erro para debug
+          // eslint-disable-next-line no-console
+          console.error("❌ Erro ao carregar canvas-confetti:", error)
+        })
+    }, 100) // Delay de 100ms para garantir que o DOM está pronto
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
   }, [birthdays])
 
   // Não renderiza nada visualmente
