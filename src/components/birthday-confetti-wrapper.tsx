@@ -1,25 +1,31 @@
 "use client"
 
+import { useMemo } from "react"
 import { api } from "@/trpc/react"
 import { BirthdayConfetti } from "./birthday-confetti"
 
 export function BirthdayConfettiWrapper() {
-  const { data: todayBirthdays, isLoading, error } = api.birthday.getTodayBirthdays.useQuery(
-    undefined,
-    {
-      refetchInterval: 1000 * 60 * 60, // Refaz a query a cada hora
-      staleTime: 1000 * 60 * 30, // Considera os dados válidos por 30 minutos
-    }
-  )
+  // Usa a mesma query do dashboard
+  const { data: birthdays, isLoading } = api.birthday.listCurrentMonth.useQuery()
 
-  // Debug: log para verificar se está funcionando
-    // eslint-disable-next-line no-console
-    console.log("🎂 BirthdayConfettiWrapper:", {
-      isLoading,
-      hasData: !!todayBirthdays,
-      count: todayBirthdays?.length ?? 0,
-      error: error?.message,
+  // Usa a mesma lógica do dashboard para filtrar aniversários de hoje
+  const todayBirthdays = useMemo(() => {
+    if (!birthdays) {
+      return []
+    }
+
+    const today = new Date()
+    const currentDay = today.getDate()
+    const currentMonth = today.getMonth()
+
+    return birthdays.filter((birthday) => {
+      const birthdayDate = new Date(birthday.data)
+      return (
+        birthdayDate.getDate() === currentDay &&
+        birthdayDate.getMonth() === currentMonth
+      )
     })
+  }, [birthdays])
 
   if (isLoading) {
     return null
