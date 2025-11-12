@@ -42,7 +42,7 @@ export async function checkAdminAccess(route: string) {
   return db_user;
 }
 
-export async function checkFormAccess(_formId: string) {
+export async function checkFormAccess(formId: string) {
   const db_user = await api.user.me();
 
   if (!db_user?.role_config) {
@@ -51,6 +51,44 @@ export async function checkFormAccess(_formId: string) {
 
   if (db_user.role_config.isTotem) {
     redirect("/dashboard");
+  }
+
+  // Buscar o formulário para verificar se é privado
+  const form = await api.form.getById(formId);
+
+  if (!form) {
+    redirect("/forms");
+  }
+
+  // Se não tem ID de usuário, redirecionar
+  if (!db_user.id) {
+    redirect("/forms");
+  }
+
+  // Se é o criador do formulário, sempre tem acesso
+  if (form.userId === db_user.id) {
+    return db_user;
+  }
+
+  // Se o formulário é privado, verificar se o usuário tem acesso
+  if (form.isPrivate) {
+    const roleConfig = db_user.role_config;
+    
+    // Verificar se o formulário está na lista de ocultos
+    if (roleConfig.hidden_forms?.includes(formId)) {
+      redirect("/forms");
+    }
+
+    // Verificar se o usuário está na lista de usuários permitidos
+    const isAllowedUser = form.allowedUsers?.includes(db_user.id) ?? false;
+    
+    // Verificar se o usuário está em um setor permitido
+    const isAllowedSector = form.allowedSectors?.includes(db_user.setor ?? "") ?? false;
+
+    // Se não tem acesso nem por usuário nem por setor, redirecionar
+    if (!isAllowedUser && !isAllowedSector) {
+      redirect("/forms");
+    }
   }
 
   return db_user;

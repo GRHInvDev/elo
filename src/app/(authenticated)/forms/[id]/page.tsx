@@ -10,7 +10,6 @@ import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { auth } from "@clerk/nextjs/server"
 import { FormDescription } from "@/components/forms/form-description"
-import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Visualizar Formulário",
@@ -30,12 +29,36 @@ export default async function FormPage({ params }: FormPageProps) {
   const userData = await api.user.me()
 
   // Verificar se o usuário tem permissão para acessar este formulário
-  if (!canAccessForm(userData.role_config, id)) {
+  // A verificação completa é feita no checkFormAccess que verifica privacidade
+  if (!form) {
+    notFound()
+  }
+
+  // Verificar acesso considerando privacidade
+  const roleConfig = userData.role_config;
+  
+  // Se é TOTEM, não pode ver
+  if (roleConfig?.isTotem) {
     redirect("/forms")
   }
 
-  if (!form) {
-    notFound()
+  // Se não tem ID de usuário, redirecionar
+  if (!userData.id) {
+    redirect("/forms")
+  }
+
+  // Se é o criador, sempre tem acesso
+  if (form.userId === userData.id) {
+    // Continua normalmente
+  } else if (form.isPrivate) {
+    // Se é privado, verificar se tem acesso
+    const isHidden = roleConfig?.hidden_forms?.includes(form.id) ?? false;
+    const isAllowedUser = form.allowedUsers?.includes(userData.id) ?? false;
+    const isAllowedSector = form.allowedSectors?.includes(userData.setor ?? "") ?? false;
+
+    if (isHidden || (!isAllowedUser && !isAllowedSector)) {
+      redirect("/forms")
+    }
   }
 
   return (
