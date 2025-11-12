@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { AnimatedBackground } from "@/components/animated-background"
 import { AnimationProvider } from "@/contexts/animation-context"
+import { BirthdayConfettiWrapper } from "@/components/birthday-confetti-wrapper"
 
 export default function AuthenticatedLayoutClient({
   children,
@@ -69,6 +70,7 @@ export default function AuthenticatedLayoutClient({
       <FloatingChatButton/>
     </div>
       <AnimatedBackground/>
+      <BirthdayConfettiWrapper />
       </AnimationProvider>
   )
 }

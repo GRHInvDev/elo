@@ -171,5 +171,27 @@ export const birthdayRouter = createTRPCRouter({
         ),
       )
     }),
+
+  // Verificar se hoje é aniversário de alguém
+  getTodayBirthdays: protectedProcedure.query(async ({ ctx }) => {
+    const today = new Date()
+    const todayMonth = today.getMonth() + 1 // JavaScript months are 0-indexed
+    const todayDay = today.getDate()
+
+    // Busca todos os aniversários
+    const allBirthdays = await ctx.db.birthday.findMany({
+      include: { user: true },
+    })
+
+    // Filtra os aniversários de hoje (mesmo mês e dia, independente do ano)
+    const todayBirthdays = allBirthdays.filter((birthday) => {
+      const birthdayDate = new Date(birthday.data)
+      const birthdayMonth = birthdayDate.getMonth() + 1
+      const birthdayDay = birthdayDate.getDate()
+      return birthdayMonth === todayMonth && birthdayDay === todayDay
+    })
+
+    return todayBirthdays
+  }),
 })
 
