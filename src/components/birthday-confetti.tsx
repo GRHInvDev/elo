@@ -37,18 +37,11 @@ export function BirthdayConfetti({ birthdays }: BirthdayConfettiProps) {
 
     // Só dispara confetes se houver aniversários de HOJE e ainda não tiver disparado
     if (!hasTodayBirthday || birthdays.length === 0 || hasTriggeredRef.current) {
-        // eslint-disable-next-line no-console
-        console.log("🎉 BirthdayConfetti: Não disparando -", {
-          hasBirthdays: birthdays.length > 0,
-          hasTodayBirthday,
-          alreadyTriggered: hasTriggeredRef.current,
-          todayKey: currentDateKey,
-        })
       return
     }
 
-      // eslint-disable-next-line no-console
-      console.log("🎉 BirthdayConfetti: Disparando confetes para", birthdays.length, "aniversariante(s)")
+    // eslint-disable-next-line no-console
+    console.log("🎉 BirthdayConfetti: Disparando confetes para", birthdays.length, "aniversariante(s)")
 
     // Pequeno delay para garantir que o DOM está pronto
     const timeoutId = setTimeout(() => {
