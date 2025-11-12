@@ -1,23 +1,18 @@
 "use client"
 
-import { useMemo, useRef, useEffect } from "react"
+import { useMemo, useRef } from "react"
 import { api } from "@/trpc/react"
 import { BirthdayConfetti } from "./birthday-confetti"
 
 export function BirthdayConfettiWrapper() {
-  const utils = api.useUtils()
-  
-  // Força refetch ao montar para garantir dados frescos
-  useEffect(() => {
-    void utils.birthday.listCurrentMonth.invalidate()
-  }, [utils])
+  // Busca o usuário atual
+  const { data: currentUser } = api.user.me.useQuery()
 
-  // Usa a mesma query do dashboard
-  // Configura cache para invalidar rapidamente
-  const { data: birthdays, isLoading, dataUpdatedAt } = api.birthday.listCurrentMonth.useQuery(undefined, {
+  // Busca o aniversário do usuário atual
+  const { data: myBirthday, isLoading: isLoadingBirthday } = api.birthday.getMine.useQuery(undefined, {
+    enabled: !!currentUser?.id,
     staleTime: 0, // Dados ficam stale imediatamente - força refetch
-    cacheTime: 1000 * 60 * 2, // Cache por apenas 2 minutos
-    refetchInterval: 1000 * 60 * 5, // Refaz a query a cada 5 minutos
+    gcTime: 1000 * 60 * 2, // Cache por apenas 2 minutos (React Query v5)
     refetchOnWindowFocus: true, // Refaz quando a janela ganha foco
     refetchOnMount: true, // Sempre refaz ao montar
   })
@@ -25,13 +20,10 @@ export function BirthdayConfettiWrapper() {
   // Usa ref para rastrear a data atual sem causar re-renders
   const dateKeyRef = useRef(new Date().toDateString())
 
-  // Usa a mesma lógica do dashboard para filtrar aniversários de hoje
-  // Recalcula apenas quando birthdays mudar
-  const todayBirthdays = useMemo(() => {
-    if (!birthdays) {
-      // eslint-disable-next-line no-console
-      console.log("🔍 BirthdayConfettiWrapper: Sem dados de aniversários")
-      return []
+  // Verifica se hoje é o aniversário do usuário atual
+  const isMyBirthdayToday = useMemo(() => {
+    if (!myBirthday || !currentUser) {
+      return false
     }
 
     const today = new Date()
@@ -41,57 +33,45 @@ export function BirthdayConfettiWrapper() {
     // Atualiza a ref com a data atual
     dateKeyRef.current = today.toDateString()
 
-    // Log detalhado para debug
+    const birthdayDate = new Date(myBirthday.data)
+    const isToday = (
+      birthdayDate.getDate() === currentDay &&
+      birthdayDate.getMonth() === currentMonth
+    )
+
     // eslint-disable-next-line no-console
-    console.log("🔍 BirthdayConfettiWrapper - Debug:", {
-      dataUpdatedAt: new Date(dataUpdatedAt).toISOString(),
-      totalBirthdays: birthdays.length,
+    console.log("🔍 BirthdayConfettiWrapper - Verificando aniversário:", {
+      userId: currentUser.id,
+      userName: currentUser.firstName ?? currentUser.email,
+      myBirthday: myBirthday.data.toISOString(),
       today: today.toISOString(),
+      birthdayDay: birthdayDate.getDate(),
+      birthdayMonth: birthdayDate.getMonth() + 1,
       currentDay,
       currentMonth: currentMonth + 1,
-      allBirthdays: birthdays.map((b) => ({
-        id: b.id,
-        name: b.name,
-        data: b.data.toISOString(),
-        day: new Date(b.data).getDate(),
-        month: new Date(b.data).getMonth() + 1,
-      })),
+      isMyBirthdayToday: isToday,
     })
 
-    const filtered = birthdays.filter((birthday) => {
-      const birthdayDate = new Date(birthday.data)
-      const matches = (
-        birthdayDate.getDate() === currentDay &&
-        birthdayDate.getMonth() === currentMonth
-      )
-      
-      if (matches) {
-        // eslint-disable-next-line no-console
-        console.log("✅ Aniversário encontrado para hoje:", {
-          id: birthday.id,
-          name: birthday.name,
-          birthdayDate: birthdayDate.toISOString(),
-        })
-      }
-      
-      return matches
-    })
+    return isToday
+  }, [myBirthday, currentUser])
 
-    // eslint-disable-next-line no-console
-    console.log("🎂 Total de aniversários de HOJE:", filtered.length)
-
-    return filtered
-  }, [birthdays, dataUpdatedAt]) // Recalcula quando dados mudam
-
-  if (isLoading) {
+  if (isLoadingBirthday || !currentUser) {
     return null
   }
 
-  if (!todayBirthdays || todayBirthdays.length === 0) {
+  // Só mostra confetes se for o aniversário do usuário atual
+  if (!isMyBirthdayToday || !myBirthday) {
     return null
   }
+
+  // Cria array com o aniversário do usuário incluindo o user para passar ao componente
+  // Usa type assertion pois o componente só precisa do birthday, não usa o user
+  const myBirthdayArray = [{
+    ...myBirthday,
+    user: currentUser,
+  }] as unknown as Parameters<typeof BirthdayConfetti>[0]['birthdays']
 
   // Usa a data atual como key para forçar remontagem quando o dia mudar
-  return <BirthdayConfetti key={dateKeyRef.current} birthdays={todayBirthdays} />
+  return <BirthdayConfetti key={dateKeyRef.current} birthdays={myBirthdayArray} />
 }
 
