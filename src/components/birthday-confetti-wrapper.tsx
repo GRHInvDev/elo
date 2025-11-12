@@ -1,62 +1,77 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useRef } from "react"
 import { api } from "@/trpc/react"
 import { BirthdayConfetti } from "./birthday-confetti"
 
 export function BirthdayConfettiWrapper() {
-  // Estado para rastrear a data atual e forçar atualização quando mudar
-  const [currentDateKey, setCurrentDateKey] = useState(() => new Date().toDateString())
+  // Busca o usuário atual
+  const { data: currentUser } = api.user.me.useQuery()
 
-  // Atualiza a data a cada minuto para detectar mudança de dia
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newDateKey = new Date().toDateString()
-      if (newDateKey !== currentDateKey) {
-        setCurrentDateKey(newDateKey)
-      }
-    }, 1000 * 60) // Verifica a cada minuto
-
-    return () => clearInterval(interval)
-  }, [currentDateKey])
-
-  // Usa a mesma query do dashboard
-  // Configura cache para invalidar quando necessário
-  const { data: birthdays, isLoading } = api.birthday.listCurrentMonth.useQuery(undefined, {
-    staleTime: 1000 * 60 * 5, // 5 minutos - dados ficam frescos por pouco tempo
-    refetchInterval: 1000 * 60 * 30, // Refaz a query a cada 30 minutos
+  // Busca o aniversário do usuário atual
+  const { data: myBirthday, isLoading: isLoadingBirthday } = api.birthday.getMine.useQuery(undefined, {
+    enabled: !!currentUser?.id,
+    staleTime: 0, // Dados ficam stale imediatamente - força refetch
+    gcTime: 1000 * 60 * 2, // Cache por apenas 2 minutos (React Query v5)
     refetchOnWindowFocus: true, // Refaz quando a janela ganha foco
+    refetchOnMount: true, // Sempre refaz ao montar
   })
 
-  // Usa a mesma lógica do dashboard para filtrar aniversários de hoje
-  // Recalcula quando birthdays ou a data mudar
-  const todayBirthdays = useMemo(() => {
-    if (!birthdays) {
-      return []
+  // Usa ref para rastrear a data atual sem causar re-renders
+  const dateKeyRef = useRef(new Date().toDateString())
+
+  // Verifica se hoje é o aniversário do usuário atual
+  const isMyBirthdayToday = useMemo(() => {
+    if (!myBirthday || !currentUser) {
+      return false
     }
 
     const today = new Date()
     const currentDay = today.getDate()
     const currentMonth = today.getMonth()
+    
+    // Atualiza a ref com a data atual
+    dateKeyRef.current = today.toDateString()
 
-    return birthdays.filter((birthday) => {
-      const birthdayDate = new Date(birthday.data)
-      return (
-        birthdayDate.getDate() === currentDay &&
-        birthdayDate.getMonth() === currentMonth
-      )
+    const birthdayDate = new Date(myBirthday.data)
+    const isToday = (
+      birthdayDate.getDate() === currentDay &&
+      birthdayDate.getMonth() === currentMonth
+    )
+
+    // eslint-disable-next-line no-console
+    console.log("🔍 BirthdayConfettiWrapper - Verificando aniversário:", {
+      userId: currentUser.id,
+      userName: currentUser.firstName ?? currentUser.email,
+      myBirthday: myBirthday.data.toISOString(),
+      today: today.toISOString(),
+      birthdayDay: birthdayDate.getDate(),
+      birthdayMonth: birthdayDate.getMonth() + 1,
+      currentDay,
+      currentMonth: currentMonth + 1,
+      isMyBirthdayToday: isToday,
     })
-  }, [birthdays, currentDateKey]) // Recalcula quando a data muda
 
-  if (isLoading) {
+    return isToday
+  }, [myBirthday, currentUser])
+
+  if (isLoadingBirthday || !currentUser) {
     return null
   }
 
-  if (!todayBirthdays || todayBirthdays.length === 0) {
+  // Só mostra confetes se for o aniversário do usuário atual
+  if (!isMyBirthdayToday || !myBirthday) {
     return null
   }
+
+  // Cria array com o aniversário do usuário incluindo o user para passar ao componente
+  // Usa type assertion pois o componente só precisa do birthday, não usa o user
+  const myBirthdayArray = [{
+    ...myBirthday,
+    user: currentUser,
+  }] as unknown as Parameters<typeof BirthdayConfetti>[0]['birthdays']
 
   // Usa a data atual como key para forçar remontagem quando o dia mudar
-  return <BirthdayConfetti key={currentDateKey} birthdays={todayBirthdays} />
+  return <BirthdayConfetti key={dateKeyRef.current} birthdays={myBirthdayArray} />
 }
 
