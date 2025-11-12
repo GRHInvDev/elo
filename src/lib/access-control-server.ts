@@ -60,6 +60,11 @@ export async function checkFormAccess(formId: string) {
     redirect("/forms");
   }
 
+  // Se não tem ID de usuário, redirecionar
+  if (!db_user.id) {
+    redirect("/forms");
+  }
+
   // Se é o criador do formulário, sempre tem acesso
   if (form.userId === db_user.id) {
     return db_user;
