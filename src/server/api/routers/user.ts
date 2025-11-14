@@ -529,6 +529,7 @@ export const userRouter = createTRPCRouter({
           emailExtension: true,
           nameExtension: true,
           setorExtension: true,
+          enterprise: true,
         },
         orderBy: [
           { setor: 'asc' },

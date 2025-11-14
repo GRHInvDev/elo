@@ -16,7 +16,7 @@ import { useAccessControl } from "@/hooks/use-access-control"
 import { useToast } from "@/hooks/use-toast"
 import { Plus, ArrowUp, ArrowDown, X, Filter, Edit, Trash2, Users, Download } from "lucide-react"
 import * as XLSX from "xlsx"
-import type { custom_extension } from "@prisma/client"
+import type { custom_extension, Enterprise } from "@prisma/client"
 
 type CustomExtensionWithCreator = custom_extension & {
   createdBy: {
@@ -29,6 +29,7 @@ export default function ExtensionListPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [searchTerm, setSearchTerm] = useState("")
 
+
   // Estados para filtros da tabela
   const [tableFilters, setTableFilters] = useState({
     sortBy: 'name' as 'name' | 'email' | 'extension' | 'setor',
@@ -37,6 +38,7 @@ export default function ExtensionListPage() {
     emailFilter: '',
     extensionFilter: '',
     setorFilter: '',
+    enterpriseFilter: '',
   })
 
   // Estado para o modal de adicionar contato
@@ -101,6 +103,7 @@ interface ListaSetores {
         emailExtension: string | null;
         nameExtension: string | null;
         setorExtension: string | null;
+        enterprise: Enterprise;
     }[];
     totalUsers: number;
 }
@@ -235,9 +238,8 @@ interface ListaSetores {
   const sectorsList: ListaSetores[] = useMemo(() => {
     if (!extensionsBySector) return []
 
-    return Object.entries(extensionsBySector).map(([sector, users]) => ({
-      sector,
-      users: (users as Array<{ 
+    return Object.entries(extensionsBySector).map(([sector, users]) => {
+      const typedUsers = (users as Array<{ 
         id: string; 
         email: string; 
         firstName: string | null; 
@@ -247,9 +249,15 @@ interface ListaSetores {
         emailExtension: string | null;
         nameExtension: string | null;
         setorExtension: string | null;
-    }>) ?? [],
-      totalUsers: users?.length ?? 0,
-    }))
+        enterprise: Enterprise;
+      }>) ?? []
+      
+      return {
+        sector,
+        users: typedUsers,
+        totalUsers: typedUsers.length,
+      }
+    })
   }, [extensionsBySector])
 
   // Lista de setores disponíveis
@@ -266,6 +274,21 @@ interface ListaSetores {
     return Array.from(sectors).sort()
   }, [sectorsList, customExtensions])
 
+  // Lista de empresas disponíveis
+  const enterprises = useMemo(() => {
+    const enterpriseSet = new Set<Enterprise>()
+    sectorsList.forEach(sector => {
+      sector.users.forEach(user => {
+        if (user.enterprise) {
+          enterpriseSet.add(user.enterprise)
+        }
+      })
+    })
+    return Array.from(enterpriseSet).sort()
+  }, [sectorsList])
+
+
+  
   // Dados combinados para a tabela (usuários + contatos manuais)
   const allContacts = useMemo(() => {
     const users: Array<{
@@ -274,6 +297,7 @@ interface ListaSetores {
       email: string | null
       extension: bigint
       setor: string
+      enterprise: Enterprise
       type: 'Colaborador'
     }> = []
 
@@ -283,6 +307,7 @@ interface ListaSetores {
       email: string | null
       extension: bigint
       setor: string
+      enterprise: Enterprise | null
       type: 'Manual'
     }> = []
 
@@ -295,12 +320,13 @@ interface ListaSetores {
           email: user.emailExtension ?? user.email,
           extension: user.extension ?? 0n,
           setor: user.setorExtension ?? user.setor,
+          enterprise: user.enterprise,
           type: 'Colaborador' as const,
         })
       })
     })
 
-    // Adicionar contatos manuais
+    // Adicionar contatos manuais (não têm enterprise, então null)
     if (customExtensions) {
       customExtensions.forEach(contact => {
         customContacts.push({
@@ -309,6 +335,7 @@ interface ListaSetores {
           email: contact.email,
           extension: contact.extension,
           setor: contact.setor ?? 'Sem setor',
+          enterprise: null,
           type: 'Manual' as const,
         })
       })
@@ -368,7 +395,10 @@ interface ListaSetores {
       const matchesSetor = tableFilters.setorFilter === '' ||
         contact.setor?.toLowerCase().includes(tableFilters.setorFilter.toLowerCase())
 
-      return matchesName && matchesEmail && matchesExtension && matchesSetor
+      const matchesEnterprise = tableFilters.enterpriseFilter === '' ||
+        (contact.enterprise !== null && contact.enterprise === tableFilters.enterpriseFilter)
+
+      return matchesName && matchesEmail && matchesExtension && matchesSetor && matchesEnterprise
     })
 
     // Ordenação
@@ -877,7 +907,7 @@ interface ListaSetores {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   {/* Filtro por Nome */}
                   <div>
                     <Label htmlFor="table-name-filter">Nome</Label>
@@ -953,25 +983,47 @@ interface ListaSetores {
                   {/* Filtro por Setor */}
                   <div>
                     <Label htmlFor="table-setor-filter">Setor</Label>
-                    <div className="relative">
-                      <Input
-                        id="table-setor-filter"
-                        placeholder="Filtrar por setor..."
-                        value={tableFilters.setorFilter}
-                        onChange={(e) => setTableFilters(prev => ({ ...prev, setorFilter: e.target.value }))}
-                        className="pr-8"
-                      />
-                      {tableFilters.setorFilter && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1 h-6 w-6 p-0"
-                          onClick={() => setTableFilters(prev => ({ ...prev, setorFilter: '' }))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
+                    <Select
+                      value={tableFilters.setorFilter || 'all'}
+                      onValueChange={(value) =>
+                        setTableFilters(prev => ({ ...prev, setorFilter: value === 'all' ? '' : value }))
+                      }
+                    >
+                      <SelectTrigger id="table-setor-filter" className="w-full">
+                        <SelectValue placeholder="Selecione um setor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os setores</SelectItem>
+                        {availableSectors.map((sector) => (
+                          <SelectItem key={sector} value={sector}>
+                            {sector}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro por empresa */}
+                  <div>
+                    <Label htmlFor="table-enterprise-filter">Empresa</Label>
+                    <Select
+                      value={tableFilters.enterpriseFilter || 'all'}
+                      onValueChange={(value) =>
+                        setTableFilters(prev => ({ ...prev, enterpriseFilter: value === 'all' ? '' : value }))
+                      }
+                    >
+                      <SelectTrigger id="table-enterprise-filter" className="w-full">
+                        <SelectValue placeholder="Selecione uma empresa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as empresas</SelectItem>
+                        {enterprises.map((enterprise) => (
+                          <SelectItem key={enterprise} value={enterprise}>
+                            {enterprise}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -1029,6 +1081,7 @@ interface ListaSetores {
                       emailFilter: '',
                       extensionFilter: '',
                       setorFilter: '',
+                      enterpriseFilter: '',
                     })}
                     className="flex items-center gap-2"
                   >
