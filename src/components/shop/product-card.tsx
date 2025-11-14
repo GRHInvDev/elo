@@ -16,7 +16,7 @@ export default function ProductCard({ product }:{ product: Product }) {
         <>
         <Card className="overflow-hidden min-h-[24em] flex flex-col">
             <div>
-              <div className="relative h-48 w-full">
+              <div className="relative h-72 w-full">
                 {
                     product.imageUrl.map((img, i)=>(
                         <Image

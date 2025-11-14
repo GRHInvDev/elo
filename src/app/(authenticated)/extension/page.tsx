@@ -287,8 +287,6 @@ interface ListaSetores {
     return Array.from(enterpriseSet).sort()
   }, [sectorsList])
 
-
-  
   // Dados combinados para a tabela (usuários + contatos manuais)
   const allContacts = useMemo(() => {
     const users: Array<{
