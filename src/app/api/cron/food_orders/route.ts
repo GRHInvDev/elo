@@ -95,13 +95,11 @@ export async function GET() {
             restaurant.email,
             `Pedidos do Dia - ${restaurant.name}`,
             emailContent,
-            "rh@boxdistribuidor.com.br, dp@boxdistribuidor.com.br"
+            "rh@boxdistribuidor.com.br, dp@boxdistribuidor.com.br, rh01@boxdistribuidor.com.br, recursoshumanos@boxdistribuidor.com.br"
           );
-
           console.log(`| CRONJOB | Email enviado para ${restaurant.name} com ${ordersData.length} pedidos`);
         }
       }
-
       console.log(`| CRONJOB | Processamento de pedidos concluído`);
     } catch (err) {
       console.error("| CRONJOB | Erro ao processar pedidos de comida:", err);
