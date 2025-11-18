@@ -44,9 +44,10 @@ interface OrdersKanbanColumnProps {
   status: ProductOrderStatus
   orders: ProductOrderWithRelations[]
   onMarkAsRead: (orderId: string) => void
+  onOrderClick?: (order: ProductOrderWithRelations) => void
 }
 
-export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: OrdersKanbanColumnProps) {
+export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrderClick }: OrdersKanbanColumnProps) {
   const getStatusColor = (status: ProductOrderStatus) => {
     switch (status) {
       case "SOLICITADO":
@@ -67,17 +68,34 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: Orde
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className="flex min-h-[600px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col gap-3"
+            className="flex min-h-[600px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col"
+            style={{ gap: "0.75rem" }}
           >
             {orders.map((order, index) => (
               <Draggable key={order.id} draggableId={order.id} index={index}>
-                {(provided) => (
+                {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
+                    style={{
+                      ...provided.draggableProps.style,
+                      ...(snapshot.isDragging && {
+                        // Garantir que durante o drag, o elemento fique exatamente onde o cursor está
+                        pointerEvents: "none",
+                      }),
+                    }}
+                    className={snapshot.isDragging ? "opacity-80 z-50" : ""}
                   >
-                    <Card className={`bg-muted shadow-sm ${!order.read ? "ring-2 ring-primary" : ""}`}>
+                    <Card 
+                      className={`bg-muted shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${snapshot.isDragging ? "shadow-lg" : ""} ${!order.read ? "ring-2 ring-primary" : ""}`}
+                      onClick={(e) => {
+                        if (!snapshot.isDragging) {
+                          onOrderClick?.(order)
+                        }
+                      }}
+                      style={snapshot.isDragging ? { pointerEvents: "none" } : undefined}
+                    >
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base font-medium">
@@ -152,6 +170,17 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: Orde
                             Marcar como lido
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onOrderClick?.(order)
+                          }}
+                        >
+                          Ver Detalhes
+                        </Button>
                       </CardFooter>
                     </Card>
                   </div>

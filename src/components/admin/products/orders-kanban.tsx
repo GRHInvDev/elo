@@ -5,11 +5,15 @@ import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd"
 import { Loader2 } from "lucide-react"
 import { api } from "@/trpc/react"
 import { OrdersKanbanColumn, type ProductOrderWithRelations, type ProductOrderStatus } from "./orders-kanban-column"
+import { OrderDetailsModal } from "./order-details-modal"
 import type { RouterOutputs } from "@/trpc/react"
+
 type KanbanOrders = RouterOutputs["productOrder"]["listKanban"]
 
 export function OrdersKanban() {
   const [localOrders, setLocalOrders] = useState<ProductOrderWithRelations[]>([])
+  const [selectedOrder, setSelectedOrder] = useState<ProductOrderWithRelations | null>(null)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
   const ordersQuery = api.productOrder.listKanban.useQuery(undefined, {
     enabled: true,
@@ -81,6 +85,11 @@ export function OrdersKanban() {
     markAsReadMutation.mutate({ id: orderId })
   }
 
+  const handleOrderClick = (order: ProductOrderWithRelations) => {
+    setSelectedOrder(order)
+    setIsDetailsModalOpen(true)
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -117,22 +126,31 @@ export function OrdersKanban() {
   }
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OrdersKanbanColumn
-          title="Solicitado"
-          status="SOLICITADO"
-          orders={columns.SOLICITADO}
-          onMarkAsRead={handleMarkAsRead}
-        />
-        <OrdersKanbanColumn
-          title="Em Andamento"
-          status="EM_ANDAMENTO"
-          orders={columns.EM_ANDAMENTO}
-          onMarkAsRead={handleMarkAsRead}
-        />
-      </div>
-    </DragDropContext>
+    <>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <OrdersKanbanColumn
+            title="Solicitado"
+            status="SOLICITADO"
+            orders={columns.SOLICITADO}
+            onMarkAsRead={handleMarkAsRead}
+            onOrderClick={handleOrderClick}
+          />
+          <OrdersKanbanColumn
+            title="Em Andamento"
+            status="EM_ANDAMENTO"
+            orders={columns.EM_ANDAMENTO}
+            onMarkAsRead={handleMarkAsRead}
+            onOrderClick={handleOrderClick}
+          />
+        </div>
+      </DragDropContext>
+      <OrderDetailsModal
+        order={selectedOrder}
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+      />
+    </>
   )
 }
 
