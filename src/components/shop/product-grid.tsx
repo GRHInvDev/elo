@@ -29,10 +29,10 @@ export default function ProductGrid() {
     }
     
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 items-stretch">
             {
                 produtos.map((p) => (
-                    <div key={p.id} className="col-span-1">
+                    <div key={p.id} className="col-span-1 h-full">
                         <ProductCard product={p}/>
                     </div>
                 ))

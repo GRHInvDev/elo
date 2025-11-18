@@ -53,22 +53,10 @@ export function MyOrdersList() {
             Solicitado
           </Badge>
         )
-      case "EM_COMPRA":
+      case "EM_ANDAMENTO":
         return (
           <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-            Em Compra
-          </Badge>
-        )
-      case "EM_RETIRADA":
-        return (
-          <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">
-            Em Retirada
-          </Badge>
-        )
-      case "ENTREGUE":
-        return (
-          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-            Entregue
+            Em Andamento
           </Badge>
         )
       default:

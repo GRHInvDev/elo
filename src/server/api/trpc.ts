@@ -48,6 +48,13 @@ export const createTRPCContext = async (opts: { headers: Headers }): Promise<TRP
   
   try {
     user = await currentUser();
+    if (user?.id) {
+      console.log('[TRPC Context] Usuário logado:', {
+        userId: user.id,
+        email: user.emailAddresses?.[0]?.emailAddress
+      });
+    }
+
   } catch (error) {
     console.error('[TRPC Context] Erro ao obter usuário atual:', error);
     

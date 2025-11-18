@@ -12,8 +12,10 @@ import { api } from "@/trpc/react"
 import { ProductForm } from "@/components/admin/products/product-form"
 import { ProductListTable } from "@/components/admin/products/product-list-table"
 import { OrdersKanban } from "@/components/admin/products/orders-kanban"
-import { Plus, AlertTriangle, Loader2, ShoppingBag, Package } from "lucide-react"
+import { Plus, AlertTriangle, Loader2, ShoppingBag, Package, Users } from "lucide-react"
 import type { Product } from "@prisma/client"
+import { EnterpriseManagers } from "@/components/admin/products/enterprise-managers"
+import { ShopNotificationSettings } from "@/components/admin/products/shop-notification-settings"
 
 export default function AdminProductsPage() {
   const { hasAdminAccess, isLoading: isLoadingAccess, canManageProducts, isSudo } = useAccessControl()
@@ -124,6 +126,10 @@ export default function AdminProductsPage() {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="managers" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Responsáveis
+            </TabsTrigger>
           </TabsList>
 
           {/* Tab de Produtos */}
@@ -188,6 +194,12 @@ export default function AdminProductsPage() {
                 <OrdersKanban />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Tab de Responsáveis */}
+          <TabsContent value="managers" className="space-y-4">
+            <ShopNotificationSettings />
+            <EnterpriseManagers />
           </TabsContent>
         </Tabs>
       </div>

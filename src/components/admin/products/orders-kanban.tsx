@@ -42,9 +42,7 @@ export function OrdersKanban() {
   // Group orders by status
   const columns = {
     SOLICITADO: localOrders.filter((order) => order.status === "SOLICITADO"),
-    EM_COMPRA: localOrders.filter((order) => order.status === "EM_COMPRA"),
-    EM_RETIRADA: localOrders.filter((order) => order.status === "EM_RETIRADA"),
-    ENTREGUE: localOrders.filter((order) => order.status === "ENTREGUE"),
+    EM_ANDAMENTO: localOrders.filter((order) => order.status === "EM_ANDAMENTO"),
   }
 
   // Handle drag end
@@ -120,7 +118,7 @@ export function OrdersKanban() {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <OrdersKanbanColumn
           title="Solicitado"
           status="SOLICITADO"
@@ -128,21 +126,9 @@ export function OrdersKanban() {
           onMarkAsRead={handleMarkAsRead}
         />
         <OrdersKanbanColumn
-          title="Em Compra"
-          status="EM_COMPRA"
-          orders={columns.EM_COMPRA}
-          onMarkAsRead={handleMarkAsRead}
-        />
-        <OrdersKanbanColumn
-          title="Em Retirada"
-          status="EM_RETIRADA"
-          orders={columns.EM_RETIRADA}
-          onMarkAsRead={handleMarkAsRead}
-        />
-        <OrdersKanbanColumn
-          title="Entregue"
-          status="ENTREGUE"
-          orders={columns.ENTREGUE}
+          title="Em Andamento"
+          status="EM_ANDAMENTO"
+          orders={columns.EM_ANDAMENTO}
           onMarkAsRead={handleMarkAsRead}
         />
       </div>

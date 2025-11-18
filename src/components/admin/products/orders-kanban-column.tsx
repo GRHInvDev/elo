@@ -10,7 +10,7 @@ import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import Image from "next/image"
 
-export type ProductOrderStatus = "SOLICITADO" | "EM_COMPRA" | "EM_RETIRADA" | "ENTREGUE"
+export type ProductOrderStatus = "SOLICITADO" | "EM_ANDAMENTO"
 
 export interface ProductOrderWithRelations {
   id: string
@@ -51,12 +51,8 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: Orde
     switch (status) {
       case "SOLICITADO":
         return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-300/50 dark:text-blue-100"
-      case "EM_COMPRA":
+      case "EM_ANDAMENTO":
         return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-300/50 dark:text-yellow-100"
-      case "EM_RETIRADA":
-        return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-300/50 dark:text-orange-100"
-      case "ENTREGUE":
-        return "bg-green-100 text-green-800 border-green-200 dark:bg-green-300/50 dark:text-green-100"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
     }
