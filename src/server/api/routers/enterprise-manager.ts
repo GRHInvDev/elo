@@ -2,7 +2,6 @@ import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "@/server/api/trpc"
 import { Enterprise } from "@prisma/client"
-import type { RolesConfig } from "@/types/role-config"
 
 export const enterpriseManagerRouter = createTRPCRouter({
     // Listar responsáveis por empresa

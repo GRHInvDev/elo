@@ -193,8 +193,19 @@ export const productOrderRouter = createTRPCRouter({
                     })
 
                     enterpriseManagers.forEach(manager => {
-                        if (manager.user?.email && !notificationEmails.includes(manager.user.email)) {
-                            notificationEmails.push(manager.user.email)
+                        // Adicionar email de usuário interno se existir
+                        if (manager.user?.email) {
+                            const userEmail = manager.user.email
+                            if (!notificationEmails.includes(userEmail)) {
+                                notificationEmails.push(userEmail)
+                            }
+                        }
+                        // Adicionar email externo se existir
+                        if (manager.externalEmail) {
+                            const externalEmail = manager.externalEmail as string
+                            if (!notificationEmails.includes(externalEmail)) {
+                                notificationEmails.push(externalEmail)
+                            }
                         }
                     })
 
