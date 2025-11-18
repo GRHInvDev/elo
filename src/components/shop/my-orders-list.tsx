@@ -10,6 +10,7 @@ import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { ProductOrderStatus } from "@/components/admin/products/orders-kanban-column"
 import type { RouterOutputs } from "@/trpc/react"
+import Image from "next/image"
 
 type MyOrder = RouterOutputs["productOrder"]["listMyOrders"][number]
 
@@ -114,7 +115,6 @@ function OrderCard({
   markAsReadMutation: ReturnType<typeof api.productOrder.markMyOrderAsRead.useMutation>
   getStatusBadge: (status: ProductOrderStatus) => JSX.Element
 }) {
-  const [imageError, setImageError] = useState(false)
   const imageUrl = order.product.imageUrl
   const firstImage = Array.isArray(imageUrl) && imageUrl.length > 0 ? imageUrl[0] : null
 
@@ -135,13 +135,15 @@ function OrderCard({
         <div className="flex gap-4">
           {/* Imagem do produto */}
           <div className="relative h-24 w-24 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
-            {firstImage && typeof firstImage === "string" && firstImage.trim() !== "" && !imageError ? (
-              <img
-                src={`/api/image-proxy?url=${encodeURIComponent(firstImage)}`}
+            {firstImage && typeof firstImage === "string" && firstImage.trim() !== "" ? (
+              <Image
+                src={firstImage}
                 alt={order.product.name}
-                className="absolute inset-0 w-full h-full object-cover"
+                fill
+                className="object-cover"
+                sizes="96px"
                 onError={() => {
-                  setImageError(true)
+                  // Fallback será tratado pelo Image do Next.js
                 }}
               />
             ) : (

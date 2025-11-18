@@ -9,46 +9,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import Image from "next/image"
+import type { RouterOutputs } from "@/trpc/react"
 
 export type ProductOrderStatus = "SOLICITADO" | "EM_ANDAMENTO"
 
-export interface ProductOrderWithRelations {
-  id: string
-  userId: string
-  productId: string
-  quantity: number
-  status: ProductOrderStatus
-  read: boolean
-  readAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-  user: {
-    id: string
-    firstName: string | null
-    lastName: string | null
-    email: string
-    imageUrl: string | null
-  }
-  product: {
-    id: string
-    name: string
-    description: string
-    price: number
-    imageUrl: string[]
-    enterprise: string
-  }
-}
+type KanbanOrder = RouterOutputs["productOrder"]["listKanban"][number]
+
+export type ProductOrderWithRelations = KanbanOrder
 
 interface OrdersKanbanColumnProps {
   title: string
   status: ProductOrderStatus
-  orders: ProductOrderWithRelations[]
+  orders: KanbanOrder[]
   onMarkAsRead: (orderId: string) => void
+  onOrderSlotClick?: (order: KanbanOrder) => void
 }
 
-export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: OrdersKanbanColumnProps) {
-  const getStatusColor = (status: ProductOrderStatus) => {
-    switch (status) {
+export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrderSlotClick }: OrdersKanbanColumnProps) {
+  const getStatusCurrentColor = (s: ProductOrderStatus) => {
+    switch (s) {
       case "SOLICITADO":
         return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-300/50 dark:text-blue-100"
       case "EM_ANDAMENTO":
@@ -59,23 +38,25 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: Orde
   }
 
   return (
-    <div className={`rounded-lg border p-4 ${getStatusColor(status)}`}>
-      <h2 className="mb-4 text-xl font-semibold">{title} ({orders.length})</h2>
+    <div className={`rounded-lg border p-4 ${getStatusCurrentColor(status)}`}>
+      <h2 className="mb-2 text-xl font-semibold">{title} ({orders.length})</h2>
 
       <Droppable droppableId={status}>
         {(provided) => (
           <div
             ref={provided.innerRef}
-            {...provided.droppableProps}
-            className="flex min-h-[600px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col gap-3"
+            {...({ ...provided.droppableProps } as React.HTMLAttributes<HTMLDivElement>)}
+            className="flex min-h-[600px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col"
+            style={{ gap: "0.75rem" }}
           >
             {orders.map((order, index) => (
               <Draggable key={order.id} draggableId={order.id} index={index}>
-                {(provided) => (
+                {(dragProvided, snapshot) => (
                   <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.dragHandleProps}
+                    {...dragProvided.draggableProps}
+                    style={{ ...dragProvided.draggableProps.style, ...(snapshot.isDragging ? { pointerEvents: "none", zIndex: 50 } : {}) }}
                   >
                     <Card className={`bg-muted shadow-sm ${!order.read ? "ring-2 ring-primary" : ""}`}>
                       <CardHeader className="pb-2">
@@ -109,13 +90,11 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: Orde
                             <Avatar className="h-6 w-6">
                               <AvatarImage src={order.user.imageUrl ?? ""} />
                               <AvatarFallback>
-                                {order.user.firstName?.[0] ?? order.user.email[0]}
+                                {(order.user.firstName ? order.user.firstName[0] : order.user.email?.[0])?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                             <span className="truncate">
-                              {order.user.firstName
-                                ? `${order.user.firstName} ${order.user.lastName ?? ""}`
-                                : order.user.email}
+                              {order.user.firstName ? `${order.user.firstName} ${order.user.lastName ?? ""}` : order.user.email}
                             </span>
                           </div>
                         </div>
@@ -128,6 +107,7 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: Orde
 
                         {/* Data */}
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CardTitle className="sr-only">Data</CardTitle>
                           <Calendar className="h-4 w-4" />
                           <span>
                             {formatDistanceToNow(new Date(order.createdAt), {
@@ -152,6 +132,17 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead }: Orde
                             Marcar como lido
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onOrderSlotClick?.(order)
+                          }}
+                        >
+                          Ver Detalhes
+                        </Button>
                       </CardFooter>
                     </Card>
                   </div>

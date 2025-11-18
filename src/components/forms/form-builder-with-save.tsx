@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { FormBuilder } from "@/components/forms/form-builder"
 import type { Field } from "@/lib/form-types"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,29 @@ interface FormBuilderWithSaveProps {
   initialOwnerIds?: string[]
 }
 
+// Função auxiliar para comparar arrays de strings
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  const sortedA = [...a].sort()
+  const sortedB = [...b].sort()
+  return sortedA.every((val, index) => val === sortedB[index])
+}
+
+// Função auxiliar para comparar arrays de objetos (campos) usando JSON
+function fieldsEqual(a: Field[], b: Field[]): boolean {
+  if (a.length !== b.length) return false
+  try {
+    return JSON.stringify(a) === JSON.stringify(b)
+  } catch {
+    return a.every((fieldA, index) => {
+      const fieldB = b[index]
+      return fieldA?.id === fieldB?.id && 
+             fieldA?.type === fieldB?.type &&
+             fieldA?.label === fieldB?.label
+    })
+  }
+}
+
 export function FormBuilderWithSave({
   mode,
   formId,
@@ -51,16 +74,55 @@ export function FormBuilderWithSave({
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
+  
+  // Usar refs para rastrear valores anteriores e evitar loops infinitos
+  const prevInitialsRef = useRef({
+    initialTitle,
+    initialDescription,
+    initialFields,
+    initialIsPrivate,
+    initialAllowedUsers,
+    initialAllowedSectors,
+    initialOwnerIds,
+  })
 
   // Atualizar estado quando os props iniciais mudarem (especialmente ao editar)
   useEffect(() => {
-    setTitle(initialTitle)
-    setDescription(initialDescription)
-    setFields(initialFields)
-    setIsPrivate(initialIsPrivate)
-    setAllowedUsers(initialAllowedUsers)
-    setAllowedSectors(initialAllowedSectors)
-    setOwnerIds(initialOwnerIds)
+    const prev = prevInitialsRef.current
+    
+    // Só atualizar se os valores realmente mudaram
+    if (prev.initialTitle !== initialTitle) {
+      setTitle(initialTitle)
+    }
+    if (prev.initialDescription !== initialDescription) {
+      setDescription(initialDescription)
+    }
+    if (!fieldsEqual(prev.initialFields, initialFields)) {
+      setFields(initialFields)
+    }
+    if (prev.initialIsPrivate !== initialIsPrivate) {
+      setIsPrivate(initialIsPrivate)
+    }
+    if (!arraysEqual(prev.initialAllowedUsers, initialAllowedUsers)) {
+      setAllowedUsers(initialAllowedUsers)
+    }
+    if (!arraysEqual(prev.initialAllowedSectors, initialAllowedSectors)) {
+      setAllowedSectors(initialAllowedSectors)
+    }
+    if (!arraysEqual(prev.initialOwnerIds, initialOwnerIds)) {
+      setOwnerIds(initialOwnerIds)
+    }
+    
+    // Atualizar refs
+    prevInitialsRef.current = {
+      initialTitle,
+      initialDescription,
+      initialFields,
+      initialIsPrivate,
+      initialAllowedUsers,
+      initialAllowedSectors,
+      initialOwnerIds,
+    }
   }, [initialTitle, initialDescription, initialFields, initialIsPrivate, initialAllowedUsers, initialAllowedSectors, initialOwnerIds])
 
   // Buscar usuários e setores para o filtro

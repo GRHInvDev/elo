@@ -48,13 +48,6 @@ export const createTRPCContext = async (opts: { headers: Headers }): Promise<TRP
   
   try {
     user = await currentUser();
-    if (user?.id) {
-      console.log('[TRPC Context] Usuário logado:', {
-        userId: user.id,
-        email: user.emailAddresses?.[0]?.emailAddress
-      });
-    }
-
   } catch (error) {
     console.error('[TRPC Context] Erro ao obter usuário atual:', error);
     
@@ -66,9 +59,6 @@ export const createTRPCContext = async (opts: { headers: Headers }): Promise<TRP
         headers: Object.fromEntries(opts.headers.entries())
       });
     }
-    
-    // Em caso de erro, continuamos com user = null
-    // Isso permitirá que procedures públicas funcionem
   }
 
   return {
