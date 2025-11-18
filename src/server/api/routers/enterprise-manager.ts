@@ -20,40 +20,67 @@ export const enterpriseManagerRouter = createTRPCRouter({
                         }
                     }
                 },
-                orderBy: {
-                    enterprise: "asc"
-                }
+                orderBy: [
+                    { enterprise: "asc" },
+                    { createdAt: "asc" }
+                ]
             })
         }),
 
     // Adicionar responsável por empresa
     create: adminProcedure
         .input(z.object({
-            userId: z.string().min(1, "ID de usuário é obrigatório"),
-            enterprise: z.nativeEnum(Enterprise)
-        }))
+            userId: z.string().optional(),
+            enterprise: z.nativeEnum(Enterprise),
+            externalName: z.string().min(1, "Nome é obrigatório para emails externos").optional(),
+            externalEmail: z.string().email("Email inválido").optional(),
+        }).refine(
+            (data) => data.userId || (data.externalName && data.externalEmail),
+            {
+                message: "É necessário fornecer um userId ou externalName e externalEmail",
+            }
+        ))
         .mutation(async ({ ctx, input }) => {
-            // Verificar se já existe
-            const existing = await ctx.db.enterpriseManager.findUnique({
-                where: {
-                    userId_enterprise: {
+            // Se for usuário interno, verificar se já existe
+            if (input.userId) {
+                const existing = await ctx.db.enterpriseManager.findFirst({
+                    where: {
                         userId: input.userId,
                         enterprise: input.enterprise
                     }
-                }
-            })
-
-            if (existing) {
-                throw new TRPCError({
-                    code: "CONFLICT",
-                    message: "Este usuário já é responsável por esta empresa"
                 })
+
+                if (existing) {
+                    throw new TRPCError({
+                        code: "CONFLICT",
+                        message: "Este usuário já é responsável por esta empresa"
+                    })
+                }
+            }
+
+            // Se for email externo, verificar se já existe
+            if (input.externalEmail) {
+                const existing = await ctx.db.enterpriseManager.findFirst({
+                    where: {
+                        externalEmail: input.externalEmail,
+                        enterprise: input.enterprise
+                    }
+                })
+
+                if (existing) {
+                    throw new TRPCError({
+                        code: "CONFLICT",
+                        message: "Este email já é responsável por esta empresa"
+                    })
+                }
             }
 
             return await ctx.db.enterpriseManager.create({
                 data: {
-                    userId: input.userId,
-                    enterprise: input.enterprise
+                    userId: input.userId ?? null,
+                    enterprise: input.enterprise,
+                    externalName: input.externalName ?? null,
+                    externalEmail: input.externalEmail ?? null,
                 },
                 include: {
                     user: {
