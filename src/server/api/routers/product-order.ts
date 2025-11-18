@@ -193,7 +193,7 @@ export const productOrderRouter = createTRPCRouter({
                     })
 
                     enterpriseManagers.forEach(manager => {
-                        if (manager.user.email && !notificationEmails.includes(manager.user.email)) {
+                        if (manager.user?.email && !notificationEmails.includes(manager.user.email)) {
                             notificationEmails.push(manager.user.email)
                         }
                     })

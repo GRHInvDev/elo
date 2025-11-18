@@ -35,7 +35,7 @@ export const enterpriseManagerRouter = createTRPCRouter({
             externalName: z.string().min(1, "Nome é obrigatório para emails externos").optional(),
             externalEmail: z.string().email("Email inválido").optional(),
         }).refine(
-            (data) => data.userId || (data.externalName && data.externalEmail),
+            (data) => data.userId ?? (data.externalName && data.externalEmail),
             {
                 message: "É necessário fornecer um userId ou externalName e externalEmail",
             }
