@@ -4,13 +4,29 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { User, Phone, Mail, MapPin, MessageCircle, Calendar, Package, CreditCard, Building2 } from "lucide-react"
+import { User, Phone, Mail, MapPin, MessageCircle, Calendar, Package, Building2 } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import type { ProductOrderWithRelations } from "./orders-kanban-column"
+import type { RouterOutputs } from "@/trpc/react"
 import { api } from "@/trpc/react"
 import { Loader2 } from "lucide-react"
 import Image from "next/image"
+import { Enterprise } from "@prisma/client"
+import type { PaymentMethod } from "@prisma/client"
+
+type ProductOrderWithRelations = RouterOutputs["productOrder"]["listKanban"][number]
+type PurchaseRegistration = RouterOutputs["purchaseRegistration"]["getByUserIdAndEnterprise"]
+
+function isPurchaseRegistration(value: unknown): value is PurchaseRegistration {
+  if (!value || typeof value !== "object") return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.fullName === "string" &&
+    typeof v.phone === "string" &&
+    typeof v.email === "string" &&
+    typeof v.address === "string"
+  )
+}
 
 interface OrderDetailsModalProps {
   order: ProductOrderWithRelations | null
@@ -20,19 +36,21 @@ interface OrderDetailsModalProps {
 
 export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsModalProps) {
   // Buscar dados de cadastro de compras do usuário do pedido
-  const { data: purchaseRegistration, isLoading: isLoadingRegistration } = api.purchaseRegistration.getByUserIdAndEnterprise.useQuery(
-    {
-      userId: order?.userId ?? "",
-      enterprise: (order?.product.enterprise ?? "NA") as any
-    },
-    {
-      enabled: open && !!order && !!order.userId,
-    }
+  const enterprise: Enterprise = order?.product.enterprise ?? Enterprise.NA
+  
+  const userId: string = order?.userId ?? ""
+  const enabled: boolean = open && !!order && !!order.userId
+  const {
+    data: purchaseRegistration,
+    isLoading: isLoadingRegistration,
+  } = api.purchaseRegistration.getByUserIdAndEnterprise.useQuery(
+    { userId, enterprise },
+    { enabled }
   )
 
   if (!order) return null
 
-  const paymentMethodLabels: Record<string, string> = {
+  const paymentMethodLabels: Record<PaymentMethod, string> = {
     BOLETO: "Boleto",
     PIX: "PIX",
   }
@@ -123,7 +141,9 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Forma de Pagamento:</span>
                 <span className="text-sm font-medium">
-                  {order.paymentMethod ? paymentMethodLabels[order.paymentMethod] ?? order.paymentMethod : "Não informado"}
+                  {order.paymentMethod && order.paymentMethod in paymentMethodLabels 
+                    ? paymentMethodLabels[order.paymentMethod] 
+                    : order.paymentMethod ?? "Não informado"}
                 </span>
               </div>
               <Separator />
@@ -139,7 +159,13 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Confirmado em:</span>
                     <span className="text-sm font-medium">
-                      {format(new Date(order.orderTimestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {format(
+                        order.orderTimestamp instanceof Date 
+                          ? order.orderTimestamp 
+                          : new Date(order.orderTimestamp as string | number),
+                        "dd/MM/yyyy 'às' HH:mm", 
+                        { locale: ptBR }
+                      )}
                     </span>
                   </div>
                 </>
@@ -182,7 +208,7 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                 </div>
               </CardContent>
             </Card>
-          ) : purchaseRegistration ? (
+          ) : isPurchaseRegistration(purchaseRegistration) ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -198,7 +224,7 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   <User className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">Nome Completo</p>
-                    <p className="font-medium">{purchaseRegistration.fullName}</p>
+                    <p className="font-medium">{purchaseRegistration?.fullName}</p>
                   </div>
                 </div>
                 <Separator />
@@ -206,7 +232,7 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="font-medium">{purchaseRegistration.phone}</p>
+                    <p className="font-medium">{purchaseRegistration?.phone}</p>
                   </div>
                 </div>
                 <Separator />
@@ -214,7 +240,7 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="font-medium">{purchaseRegistration.email}</p>
+                    <p className="font-medium">{purchaseRegistration?.email}</p>
                   </div>
                 </div>
                 <Separator />
@@ -222,17 +248,17 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">Endereço</p>
-                    <p className="font-medium">{purchaseRegistration.address}</p>
+                    <p className="font-medium">{purchaseRegistration?.address}</p>
                   </div>
                 </div>
-                {purchaseRegistration.whatsapp && (
+                {purchaseRegistration?.whatsapp && (
                   <>
                     <Separator />
                     <div className="flex items-start gap-3">
                       <MessageCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div className="flex-1">
                         <p className="text-xs text-muted-foreground">WhatsApp</p>
-                        <p className="font-medium">{purchaseRegistration.whatsapp}</p>
+                        <p className="font-medium">{purchaseRegistration?.whatsapp}</p>
                       </div>
                     </div>
                   </>
@@ -243,7 +269,7 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">Cadastrado em</p>
                     <p className="font-medium">
-                      {format(new Date(purchaseRegistration.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {format(new Date(purchaseRegistration?.createdAt ?? ""), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </p>
                   </div>
                 </div>

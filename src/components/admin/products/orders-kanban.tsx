@@ -1,14 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd"
 import { Loader2 } from "lucide-react"
 import { api } from "@/trpc/react"
 import { OrdersKanbanColumn, type ProductOrderWithRelations, type ProductOrderStatus } from "./orders-kanban-column"
 import { OrderDetailsModal } from "./order-details-modal"
-import type { RouterOutputs } from "@/trpc/react"
-
-type KanbanOrders = RouterOutputs["productOrder"]["listKanban"]
+// import type { RouterOutputs } from "@/trpc/react"
 
 export function OrdersKanban() {
   const [localOrders, setLocalOrders] = useState<ProductOrderWithRelations[]>([])
@@ -18,7 +16,10 @@ export function OrdersKanban() {
   const ordersQuery = api.productOrder.listKanban.useQuery(undefined, {
     enabled: true,
   })
-  const orders = ordersQuery.data as ProductOrderWithRelations[]
+  const orders: ProductOrderWithRelations[] = useMemo(
+    () => (Array.isArray(ordersQuery.data) ? ordersQuery.data : []),
+    [ordersQuery.data]
+  )
   const isLoading = ordersQuery.isLoading
   const refetch = ordersQuery.refetch
 
@@ -134,14 +135,14 @@ export function OrdersKanban() {
             status="SOLICITADO"
             orders={columns.SOLICITADO}
             onMarkAsRead={handleMarkAsRead}
-            onOrderClick={handleOrderClick}
+            onOrderSlotClick={handleOrderClick}
           />
           <OrdersKanbanColumn
             title="Em Andamento"
             status="EM_ANDAMENTO"
             orders={columns.EM_ANDAMENTO}
             onMarkAsRead={handleMarkAsRead}
-            onOrderClick={handleOrderClick}
+            onOrderSlotClick={handleOrderClick}
           />
         </div>
       </DragDropContext>
