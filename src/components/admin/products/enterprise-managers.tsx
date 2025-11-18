@@ -23,7 +23,7 @@ import {
 import { Loader2, Plus, Trash2, Users, AlertCircle } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
-import { Enterprise } from "@prisma/client"
+import type { Enterprise } from "@prisma/client"
 import type { RouterOutputs } from "@/trpc/react"
 import { Input } from "@/components/ui/input"
 
@@ -42,18 +42,26 @@ export function EnterpriseManagers() {
     { enabled: dialogOpen && searchQuery.length > 2 }
   )
 
-  const createManager = api.enterpriseManager.create.useMutation({
-    onSuccess: () => {
-      toast.success("Responsável adicionado com sucesso!")
-      setDialogOpen(false)
+  // Resetar estado quando dialog fecha
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open)
+    if (!open) {
+      // Resetar tudo quando fechar
       setSelectedUserId("")
       setSelectedUser(null)
       setSelectedEnterprise("")
       setSearchQuery("")
+    }
+  }
+
+  const createManager = api.enterpriseManager.create.useMutation({
+    onSuccess: () => {
+      toast.success("Responsável adicionado com sucesso!")
+      handleDialogOpenChange(false)
       void refetch()
     },
-    onError: (error) => {
-      toast.error(`Erro ao adicionar responsável: ${error.message}`)
+    onError: (error: { message?: string }) => {
+      toast.error(`Erro ao adicionar responsável: ${error.message ?? "Erro desconhecido"}`)
     },
   })
 
@@ -62,8 +70,8 @@ export function EnterpriseManagers() {
       toast.success("Responsável removido com sucesso!")
       void refetch()
     },
-    onError: (error) => {
-      toast.error(`Erro ao remover responsável: ${error.message}`)
+    onError: (error: { message?: string }) => {
+      toast.error(`Erro ao remover responsável: ${error.message ?? "Erro desconhecido"}`)
     },
   })
 
@@ -75,7 +83,7 @@ export function EnterpriseManagers() {
 
     createManager.mutate({
       userId: selectedUserId,
-      enterprise: selectedEnterprise as Enterprise,
+      enterprise: selectedEnterprise,
     })
   }
 
@@ -87,10 +95,11 @@ export function EnterpriseManagers() {
 
   // Agrupar responsáveis por empresa
   const managersByEnterprise = managers?.reduce((acc, manager) => {
-    if (!acc[manager.enterprise]) {
-      acc[manager.enterprise] = []
+    const enterprise = manager.enterprise
+    if (!acc[enterprise]) {
+      acc[enterprise] = []
     }
-    acc[manager.enterprise]!.push(manager)
+    acc[enterprise].push(manager)
     return acc
   }, {} as Record<Enterprise, EnterpriseManager[]>) ?? {}
 
@@ -100,6 +109,7 @@ export function EnterpriseManagers() {
     RHenz: "RHenz",
     Cristallux: "Cristallux",
     Box_Filial: "Box Filial",
+    Cristallux_Filial: "Cristallux Filial"
   }
 
   return (
@@ -115,7 +125,7 @@ export function EnterpriseManagers() {
               Designe responsáveis para gerenciar pedidos de cada empresa
             </CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -222,18 +232,17 @@ export function EnterpriseManagers() {
                         ))}
                     </SelectContent>
                   </Select>
+                  {selectedEnterprise && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Empresa selecionada: {enterpriseLabels[selectedEnterprise]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex gap-2 justify-end">
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setDialogOpen(false)
-                      setSelectedUserId("")
-                      setSelectedUser(null)
-                      setSelectedEnterprise("")
-                      setSearchQuery("")
-                    }}
+                    onClick={() => handleDialogOpenChange(false)}
                   >
                     Cancelar
                   </Button>
@@ -263,39 +272,42 @@ export function EnterpriseManagers() {
           </div>
         ) : managers && managers.length > 0 ? (
           <div className="space-y-6">
-            {Object.entries(managersByEnterprise).map(([enterprise, enterpriseManagers]) => (
-              <div key={enterprise} className="space-y-2">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  {enterpriseLabels[enterprise as Enterprise]}
-                  <Badge variant="secondary">{enterpriseManagers.length}</Badge>
-                </h3>
-                <div className="grid gap-2">
-                  {enterpriseManagers.map((manager) => (
-                    <div
-                      key={manager.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div>
-                        <div className="font-medium">
-                          {manager.user.firstName} {manager.user.lastName}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {manager.user.email}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteManager(manager.id)}
-                        disabled={deleteManager.isPending}
+            {Object.entries(managersByEnterprise).map(([enterprise, enterpriseManagers]) => {
+              const managersList = enterpriseManagers as EnterpriseManager[]
+              return (
+                <div key={enterprise} className="space-y-2">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    {enterpriseLabels[enterprise as Enterprise]}
+                    <Badge variant="secondary">{managersList.length}</Badge>
+                  </h3>
+                  <div className="grid gap-2">
+                    {managersList.map((manager) => (
+                      <div
+                        key={manager.id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div>
+                          <div className="font-medium">
+                            {manager.user.firstName} {manager.user.lastName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {manager.user.email}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteManager(manager.id)}
+                          disabled={deleteManager.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <Alert>
