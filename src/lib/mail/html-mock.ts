@@ -712,6 +712,343 @@ export const mockEmailNotificacaoSugestao = (
     return groups;
   }
       
+export const mockEmailPedidoProduto = (
+  nomeUsuario: string,
+  nomeProduto: string,
+  quantidade: number,
+  precoUnitario: number,
+  precoTotal: number,
+  empresa: string,
+  dataPedido: string,
+) => (`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #f7f7f7;
+          margin: 0;
+          padding: 0;
+          color: #333;
+        }
+        .container {
+          background-color: #ffffff;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          margin: 20px auto;
+          max-width: 600px;
+          overflow: hidden;
+        }
+        .header {
+          background-color: #007bff;
+          color: #fff;
+          padding: 24px 20px;
+          text-align: center;
+          border-top-left-radius: 8px;
+          border-top-right-radius: 8px;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 2rem;
+          line-height: 1.2;
+        }
+        .content-section {
+          padding: 30px;
+        }
+        .info-box {
+          background-color: #e9f7ff;
+          border-left: 5px solid #007bff;
+          padding: 20px;
+          margin-bottom: 25px;
+          border-radius: 4px;
+        }
+        .info-box h2 {
+          margin: 0 0 15px;
+          color: #007bff;
+          font-size: 1.3rem;
+        }
+        .order-details {
+          background-color: #f8f9fa;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          padding: 20px;
+          margin-bottom: 20px;
+        }
+        .order-details table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .order-details td {
+          padding: 8px 0;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        .order-details td:first-child {
+          font-weight: bold;
+          color: #555;
+          width: 40%;
+        }
+        .order-details tr:last-child td {
+          border-bottom: none;
+        }
+        .total-box {
+          background-color: #007bff;
+          color: #fff;
+          padding: 15px 20px;
+          border-radius: 6px;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .total-box .label {
+          font-size: 0.9rem;
+          opacity: 0.9;
+        }
+        .total-box .value {
+          font-size: 1.8rem;
+          font-weight: bold;
+          margin-top: 5px;
+        }
+        .instructions {
+          background-color: #fff3cd;
+          border-left: 5px solid #ffc107;
+          padding: 20px;
+          margin-bottom: 20px;
+          border-radius: 4px;
+        }
+        .instructions h3 {
+          margin: 0 0 10px;
+          color: #856404;
+          font-size: 1.1rem;
+        }
+        .instructions p {
+          margin: 8px 0;
+          color: #856404;
+          line-height: 1.6;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #e9ecef;
+          font-size: 0.9rem;
+          color: #666;
+          text-align: center;
+        }
+        .footer p {
+          margin: 5px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Pedido Recebido!</h1>
+        </div>
+        <div class="content-section">
+          <div class="info-box">
+            <h2>Olá, ${nomeUsuario}!</h2>
+            <p>Seu pedido foi recebido com sucesso e está sendo processado.</p>
+          </div>
+
+          <div class="order-details">
+            <table>
+              <tr>
+                <td>Produto:</td>
+                <td>${nomeProduto}</td>
+              </tr>
+              <tr>
+                <td>Empresa:</td>
+                <td>${empresa}</td>
+              </tr>
+              <tr>
+                <td>Quantidade:</td>
+                <td>${quantidade} unidade${quantidade > 1 ? 's' : ''}</td>
+              </tr>
+              <tr>
+                <td>Preço Unitário:</td>
+                <td>R$ ${precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              </tr>
+              <tr>
+                <td>Data do Pedido:</td>
+                <td>${dataPedido}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="total-box">
+            <div class="label">Total do Pedido</div>
+            <div class="value">R$ ${precoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          </div>
+
+          <div class="instructions">
+            <h3>📦 Instruções para Retirada</h3>
+            <p><strong>Local:</strong> Expedição na Matriz em SCS</p>
+            <p><strong>Prazo:</strong> 24h a partir de agora</p>
+            <p><strong>Exemplo:</strong> Se agora for 14h, retirar a partir de 14h de amanhã.</p>
+            <p><strong>Importante:</strong> Caso você não seja de SCS, a equipe entrará em contato para combinar a retirada.</p>
+          </div>
+
+          <div class="footer">
+            <p>Atenciosamente,</p>
+            <p>Equipe de Suporte</p>
+            <p>elo - Sistema de Intranet</p>
+          </div>
+        </div>
+      </div>
+    </body>
+  </html>
+`)
+
+export const mockEmailNotificacaoPedidoProduto = (
+  nomeUsuario: string,
+  emailUsuario: string,
+  nomeProduto: string,
+  quantidade: number,
+  precoTotal: number,
+  empresa: string,
+  dataPedido: string,
+) => (`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #f7f7f7;
+          margin: 0;
+          padding: 0;
+          color: #333;
+        }
+        .container {
+          background-color: #ffffff;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          margin: 20px auto;
+          max-width: 600px;
+          overflow: hidden;
+        }
+        .header {
+          background-color: #28a745;
+          color: #fff;
+          padding: 24px 20px;
+          text-align: center;
+          border-top-left-radius: 8px;
+          border-top-right-radius: 8px;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 2rem;
+          line-height: 1.2;
+        }
+        .content-section {
+          padding: 30px;
+        }
+        .alert-box {
+          background-color: #d4edda;
+          border-left: 5px solid #28a745;
+          padding: 20px;
+          margin-bottom: 25px;
+          border-radius: 4px;
+        }
+        .alert-box h2 {
+          margin: 0 0 10px;
+          color: #155724;
+          font-size: 1.3rem;
+        }
+        .order-details {
+          background-color: #f8f9fa;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          padding: 20px;
+          margin-bottom: 20px;
+        }
+        .order-details table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .order-details td {
+          padding: 8px 0;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        .order-details td:first-child {
+          font-weight: bold;
+          color: #555;
+          width: 40%;
+        }
+        .order-details tr:last-child td {
+          border-bottom: none;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #e9ecef;
+          font-size: 0.9rem;
+          color: #666;
+          text-align: center;
+        }
+        .footer p {
+          margin: 5px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Novo Pedido Recebido</h1>
+        </div>
+        <div class="content-section">
+          <div class="alert-box">
+            <h2>⚠️ Novo Pedido de Produto</h2>
+            <p style="margin: 0; color: #155724;">Um novo pedido foi realizado e requer atenção.</p>
+          </div>
+
+          <div class="order-details">
+            <table>
+              <tr>
+                <td>Cliente:</td>
+                <td>${nomeUsuario}</td>
+              </tr>
+              <tr>
+                <td>Email:</td>
+                <td>${emailUsuario}</td>
+              </tr>
+              <tr>
+                <td>Produto:</td>
+                <td>${nomeProduto}</td>
+              </tr>
+              <tr>
+                <td>Empresa:</td>
+                <td>${empresa}</td>
+              </tr>
+              <tr>
+                <td>Quantidade:</td>
+                <td>${quantidade} unidade${quantidade > 1 ? 's' : ''}</td>
+              </tr>
+              <tr>
+                <td>Valor Total:</td>
+                <td>R$ ${precoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              </tr>
+              <tr>
+                <td>Data do Pedido:</td>
+                <td>${dataPedido}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="footer">
+            <p>Atenciosamente,</p>
+            <p>Sistema de Notificações</p>
+            <p>elo - Sistema de Intranet</p>
+          </div>
+        </div>
+      </div>
+    </body>
+  </html>
+`)
+
   export const emailPedidosRestauranteAgrupado = (
     nomeRestaurante: string,
     dataPedidos: string,

@@ -7,10 +7,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Loader2, Plus, Minus, ShoppingCart } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import type { Product } from "@prisma/client"
+import { PurchaseRegistrationModal } from "./purchase-registration-modal"
 
 interface CreateOrderModalProps {
   product: Product
@@ -21,14 +29,30 @@ interface CreateOrderModalProps {
 
 export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: CreateOrderModalProps) {
   const [quantity, setQuantity] = useState(1)
+  const [paymentMethod, setPaymentMethod] = useState<"BOLETO" | "PIX" | "">("")
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const utils = api.useUtils()
+
+  // Buscar grupos de pedidos pendentes para validar regra de empresa
+  const { data: pendingGroups } = api.productOrder.listMyPendingGroups.useQuery(undefined, {
+    enabled: open
+  })
+
+  // Verificar se usuário tem cadastro para compras na empresa
+  const { data: registrationCheck, refetch: refetchRegistration } = api.purchaseRegistration.checkRegistration.useQuery(
+    { enterprise: product.enterprise },
+    { enabled: open }
+  )
 
   const createOrder = api.productOrder.create.useMutation({
     onSuccess: () => {
-      toast.success("Pedido criado com sucesso!")
       setQuantity(1)
+      setPaymentMethod("")
       onOpenChange(false)
+      setShowSuccessModal(true)
       void utils.productOrder.listMyOrders.invalidate()
+      void utils.productOrder.listMyPendingGroups.invalidate()
       void utils.product.getAll.invalidate() // Atualizar lista de produtos para refletir novo estoque
       onSuccess?.()
     },
@@ -36,6 +60,28 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       toast.error(`Erro ao criar pedido: ${error.message}`)
     },
   })
+
+  const handleRegistrationSuccess = () => {
+    void refetchRegistration()
+    setShowRegistrationModal(false)
+    // Após cadastro bem-sucedido, tentar criar o pedido novamente
+    if (paymentMethod && quantity > 0) {
+      createOrder.mutate({
+        productId: product.id,
+        quantity,
+        paymentMethod: paymentMethod as "BOLETO" | "PIX",
+      } as { productId: string; quantity: number; paymentMethod: "BOLETO" | "PIX" })
+    }
+  }
+
+  // Verificar se existe pedido pendente de outra empresa
+  const hasPendingOrderFromOtherEnterprise = pendingGroups?.some(group => 
+    group.enterprise !== product.enterprise
+  ) ?? false
+
+  const otherEnterpriseName = pendingGroups?.find(group => 
+    group.enterprise !== product.enterprise
+  )?.enterprise
 
   const handleIncrement = () => {
     if (quantity < product.stock) {
@@ -64,10 +110,28 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       return
     }
 
+    if (!paymentMethod) {
+      toast.error("Selecione a forma de pagamento")
+      return
+    }
+
+    // Validar regra de negócio: não pode pedir produtos de empresas diferentes
+    if (hasPendingOrderFromOtherEnterprise) {
+      toast.error(`Você já possui um pedido pendente da empresa ${otherEnterpriseName}. Finalize ou cancele esse pedido antes de fazer um pedido da empresa ${product.enterprise}.`)
+      return
+    }
+
+    // Verificar se tem cadastro para compras
+    if (!registrationCheck?.hasRegistration) {
+      setShowRegistrationModal(true)
+      return
+    }
+
     createOrder.mutate({
       productId: product.id,
       quantity,
-    })
+      paymentMethod: paymentMethod as "BOLETO" | "PIX",
+    } as { productId: string; quantity: number; paymentMethod: "BOLETO" | "PIX" })
   }
 
   const totalPrice = product.price * quantity
@@ -151,12 +215,51 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
             </p>
           </div>
 
+          {/* Forma de pagamento */}
+          <div className="space-y-2">
+            <Label htmlFor="paymentMethod">
+              Forma de Pagamento <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={paymentMethod}
+              onValueChange={(value) => setPaymentMethod(value as "BOLETO" | "PIX")}
+              disabled={isOutOfStock}
+            >
+              <SelectTrigger id="paymentMethod">
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BOLETO">Boleto</SelectItem>
+                <SelectItem value="PIX">PIX</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Preço total */}
           <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border-2 border-primary/20">
             <span className="font-semibold text-lg">Total:</span>
             <span className="font-bold text-xl text-primary">
               R$ {totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
+          </div>
+
+          {/* Aviso sobre pedido de outra empresa */}
+          {hasPendingOrderFromOtherEnterprise && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive font-medium">
+                Você já possui um pedido pendente da empresa {otherEnterpriseName}.
+              </p>
+              <p className="text-xs text-destructive/80 mt-1">
+                Finalize ou cancele esse pedido antes de fazer um pedido da empresa {product.enterprise}.
+              </p>
+            </div>
+          )}
+
+          {/* Aviso sobre contato do setor responsável */}
+          <div className="p-2 bg-muted/50 rounded-lg border border-muted">
+            <p className="text-xs text-muted-foreground italic">
+              *O setor responsável poderá entrar em contato para obter mais informações necessárias.
+            </p>
           </div>
 
           {/* Botões */}
@@ -174,7 +277,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
               type="button"
               onClick={handleSubmit}
               className="flex-1"
-              disabled={isOutOfStock || createOrder.isPending}
+              disabled={isOutOfStock || createOrder.isPending || hasPendingOrderFromOtherEnterprise || !paymentMethod}
             >
               {createOrder.isPending ? (
                 <>
@@ -191,6 +294,50 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
           </div>
         </div>
       </DialogContent>
+
+      {/* Modal de sucesso */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Pedido Recebido com Sucesso!</DialogTitle>
+            <DialogDescription>
+              Seu pedido foi registrado e está sendo processado.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <h3 className="font-semibold mb-2">Instruções para retirada:</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                Seu pedido poderá ser retirado diretamente na Expedição na Matriz em SCS, no prazo de 24h a partir de agora.
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                <strong>Exemplo:</strong> Se agora for 14h, retirar a partir de 14h de amanhã.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Caso você não seja de SCS, a equipe entrará em contato para combinar a retirada.
+              </p>
+            </div>
+
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false)
+              }}
+              className="w-full"
+            >
+              Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de cadastro de compras */}
+      <PurchaseRegistrationModal
+        enterprise={product.enterprise}
+        open={showRegistrationModal}
+        onOpenChange={setShowRegistrationModal}
+        onSuccess={handleRegistrationSuccess}
+      />
     </Dialog>
   )
 }

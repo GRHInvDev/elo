@@ -59,13 +59,17 @@ model User {
 
   // Pedidos de produtos
   productOrders ProductOrder[]
+  orderGroups OrderGroup[]
+  enterpriseManagers EnterpriseManager[]
+  purchaseRegistrations PurchaseRegistration[]
 
   @@map("users")
 }
 
 model GlobalConfig {
-  id          String @unique @default(cuid())
-  shopWebhook String
+  id                 String @unique @default(cuid())
+  shopWebhook        String
+  shopNotificationEmail String?
 }
 
 model Room {
@@ -272,20 +276,67 @@ model Sell {
   @@map("sells")
 }
 
-model ProductOrder {
-  id          String              @id @default(cuid())
+model OrderGroup {
+  id          String        @id @default(cuid())
   userId      String
-  productId   String
-  quantity    Int                 @default(1)
-  status      ProductOrderStatus  @default(SOLICITADO)
-  read        Boolean             @default(false)
-  readAt      DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  enterprise  Enterprise
+  status      ProductOrderStatus @default(SOLICITADO)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      ProductOrder[]
+
+  @@map("order_groups")
+}
+
+model PurchaseRegistration {
+  id          String      @id @default(cuid())
+  userId      String
+  enterprise  Enterprise
+  fullName    String
+  phone       String
+  email       String
+  address     String
+  whatsapp    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, enterprise])
+  @@map("purchase_registrations")
+}
+
+model ProductOrder {
+  id                          String              @id @default(cuid())
+  userId                      String
+  productId                   String
+  orderGroupId               String?
+  quantity                    Int                 @default(1)
+  paymentMethod               PaymentMethod?
+  status                      ProductOrderStatus  @default(SOLICITADO)
+  read                        Boolean             @default(false)
+  readAt                      DateTime?
+  orderTimestamp              DateTime?
+  purchaseRegistrationTimestamp DateTime?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+  user                        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product                     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderGroup                  OrderGroup?         @relation(fields: [orderGroupId], references: [id], onDelete: SetNull)
 
   @@map("product_orders")
+}
+
+model EnterpriseManager {
+  id          String      @id @default(cuid())
+  userId      String
+  enterprise  Enterprise
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, enterprise])
+  @@map("enterprise_managers")
 }
 
 model Form {
@@ -486,9 +537,12 @@ enum OrderStatus {
 
 enum ProductOrderStatus {
   SOLICITADO
-  EM_COMPRA
-  EM_RETIRADA
-  ENTREGUE
+  EM_ANDAMENTO
+}
+
+enum PaymentMethod {
+  BOLETO
+  PIX
 }
 
 enum SuggestionStatus {

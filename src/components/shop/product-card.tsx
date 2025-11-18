@@ -14,7 +14,7 @@ export default function ProductCard({ product }:{ product: Product }) {
 
     return (
         <>
-        <Card className="overflow-hidden min-h-[24em] flex flex-col">
+        <Card className="overflow-hidden h-full flex flex-col">
             <div>
               <div className="relative h-72 w-full">
                 {
@@ -48,8 +48,12 @@ export default function ProductCard({ product }:{ product: Product }) {
                   </div>
                   <div className="flex flex-col gap-2 items-end">
                     <Badge>{product.enterprise}</Badge>
-                    {/* <CardDescription className="text-xl">R${product.price.toLocaleString()}</CardDescription> */}
                   </div>
+                </div>
+                <div className="mt-2">
+                  <p className="text-2xl font-bold text-primary">
+                    R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
                 </div>
               </CardHeader>
               <CardContent className="pb-2 flex-1">
