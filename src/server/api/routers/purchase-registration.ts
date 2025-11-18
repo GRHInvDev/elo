@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createPurchaseRegistrationSchema } from "@/schemas/product-order.schema"
 import { Enterprise } from "@prisma/client"
@@ -24,7 +23,7 @@ export const purchaseRegistrationRouter = createTRPCRouter({
 
             return {
                 hasRegistration: !!registration,
-                registration: registration || null
+                registration: registration ?? null
             }
         }),
 
@@ -53,7 +52,7 @@ export const purchaseRegistrationRouter = createTRPCRouter({
                         phone: input.phone,
                         email: input.email,
                         address: input.address,
-                        whatsapp: input.whatsapp || null,
+                        whatsapp: input.whatsapp ?? null,
                     }
                 })
             } else {
@@ -66,7 +65,7 @@ export const purchaseRegistrationRouter = createTRPCRouter({
                         phone: input.phone,
                         email: input.email,
                         address: input.address,
-                        whatsapp: input.whatsapp || null,
+                        whatsapp: input.whatsapp ?? null,
                     }
                 })
             }

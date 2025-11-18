@@ -69,8 +69,8 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       createOrder.mutate({
         productId: product.id,
         quantity,
-        paymentMethod: paymentMethod as "BOLETO" | "PIX",
-      } as { productId: string; quantity: number; paymentMethod: "BOLETO" | "PIX" })
+        paymentMethod: paymentMethod,
+      })
     }
   }
 
@@ -130,8 +130,8 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
     createOrder.mutate({
       productId: product.id,
       quantity,
-      paymentMethod: paymentMethod as "BOLETO" | "PIX",
-    } as { productId: string; quantity: number; paymentMethod: "BOLETO" | "PIX" })
+      paymentMethod: paymentMethod,
+    })
   }
 
   const totalPrice = product.price * quantity

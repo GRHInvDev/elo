@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertCircle } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
-import { Enterprise } from "@prisma/client"
+import type { Enterprise } from "@prisma/client"
 
 interface PurchaseRegistrationModalProps {
   enterprise: Enterprise
@@ -36,15 +36,16 @@ export function PurchaseRegistrationModal({
   // Preencher campos com dados do usuário quando modal abrir
   useEffect(() => {
     if (open && systemUser) {
-      const firstName = systemUser.firstName || ""
-      const lastName = systemUser.lastName || ""
-      const fullNameFromSystem = `${firstName} ${lastName}`.trim() || systemUser.email || ""
+      const firstName = systemUser.firstName ?? ""
+      const lastName = systemUser.lastName ?? ""
+      const trimmedName = `${firstName} ${lastName}`.trim()
+      const fullNameFromSystem = trimmedName || (systemUser.email ?? "")
       
       if (!fullName) {
         setFullName(fullNameFromSystem)
       }
       if (!email) {
-        setEmail(systemUser.email || "")
+        setEmail(systemUser.email ?? "")
       }
     }
   }, [open, systemUser, fullName, email])

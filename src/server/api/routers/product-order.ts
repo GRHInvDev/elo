@@ -1,4 +1,3 @@
-import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { 
@@ -9,7 +8,6 @@ import {
 import type { RolesConfig } from "@/types/role-config"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailPedidoProduto, mockEmailNotificacaoPedidoProduto } from "@/lib/mail/html-mock"
-import type { Enterprise } from "@prisma/client"
 
 export const productOrderRouter = createTRPCRouter({
     // Criar pedido (usuário)
@@ -136,7 +134,7 @@ export const productOrderRouter = createTRPCRouter({
                 try {
                     const userName = order.user.firstName && order.user.lastName
                         ? `${order.user.firstName} ${order.user.lastName}`
-                        : order.user.firstName || order.user.email || "Usuário"
+                        : (order.user.firstName ?? order.user.email ?? "Usuário")
                     
                     const userEmail = order.user.email
                     const dataPedido = new Date().toLocaleString('pt-BR', {
@@ -171,7 +169,7 @@ export const productOrderRouter = createTRPCRouter({
                     }
 
                     // Buscar email de notificação (configurado ou responsáveis pela empresa)
-                    let notificationEmails: string[] = []
+                    const notificationEmails: string[] = []
 
                     // Buscar email configurado globalmente
                     const globalConfig = await ctx.db.globalConfig.findFirst({
@@ -204,7 +202,7 @@ export const productOrderRouter = createTRPCRouter({
                     if (notificationEmails.length > 0) {
                         const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                             userName,
-                            userEmail || "N/A",
+                            userEmail ?? "N/A",
                             order.product.name,
                             order.quantity,
                             precoTotal,

@@ -32,7 +32,8 @@ export function ShopNotificationSettings() {
   }, [config?.shopNotificationEmail])
 
   const handleSave = () => {
-    if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (email && !emailRegex.exec(email)) {
       toast.error("Por favor, insira um email válido")
       return
     }

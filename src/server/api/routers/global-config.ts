@@ -1,25 +1,20 @@
 import { z } from "zod"
-import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, adminProcedure } from "@/server/api/trpc"
 
 export const globalConfigRouter = createTRPCRouter({
     // Obter configuração global
     get: adminProcedure
         .query(async ({ ctx }) => {
-            let config = await ctx.db.globalConfig.findFirst({
-                where: { id: "default" }
+            // Usar upsert para garantir que sempre existe uma configuração
+            const config = await ctx.db.globalConfig.upsert({
+                where: { id: "default" },
+                update: {},
+                create: {
+                    id: "default",
+                    shopWebhook: "",
+                    shopNotificationEmail: null
+                }
             })
-
-            // Se não existe, criar com valores padrão
-            if (!config) {
-                config = await ctx.db.globalConfig.create({
-                    data: {
-                        id: "default",
-                        shopWebhook: "",
-                        shopNotificationEmail: null
-                    }
-                })
-            }
 
             return config
         }),
