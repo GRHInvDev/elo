@@ -57,7 +57,7 @@ export default function ShopPage() {
         </div>
 
         <Tabs defaultValue="products" className="space-y-4">
-          <TabsList className="flex overflow-x-auto">
+          <TabsList className="flex overflow-x-auto justify-center sm:justify-start">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
               Produtos
