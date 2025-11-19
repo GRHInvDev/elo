@@ -9,14 +9,21 @@ import { LucideBadgeInfo, LucideShoppingCart } from "lucide-react";
 import { Button } from "../ui/button";
 import { CreateOrderModal } from "./create-order-modal";
 
-export default function ProductCard({ product }:{ product: Product }) {
+interface ProductCardProps {
+  product: Product
+  size?: "sm" | "md"
+}
+
+export default function ProductCard({ product, size = "md" }: ProductCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false)
+
+    const imageHeightClass = size === "sm" ? "h-48" : "h-72"
 
     return (
         <>
         <Card className="overflow-hidden h-full flex flex-col">
             <div>
-              <div className="relative h-72 w-full">
+              <div className={`relative ${imageHeightClass} w-full`}>
                 {
                     product.imageUrl.map((img, i)=>(
                         <Image

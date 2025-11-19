@@ -2,8 +2,14 @@
 
 import { api } from "@/trpc/react";
 import ProductCard from "./product-card";
+import type { Enterprise } from "@prisma/client";
 
-export default function ProductGrid() {
+interface ProductGridProps {
+  size?: "sm" | "md"
+  enterpriseFilter?: Enterprise | "ALL"
+}
+
+export default function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: ProductGridProps) {
     const { data: produtos, isLoading } = api.product.getAll.useQuery();
     
     if (isLoading) {
@@ -12,9 +18,9 @@ export default function ProductGrid() {
             skeletonItems.push(i)
         }
         return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {skeletonItems.map((i) => (
-                    <div key={i} className="col-span-1 h-64 bg-muted animate-pulse rounded-lg" />
+                    <div key={i} className="col-span-1 h-56 bg-muted animate-pulse rounded-lg" />
                 ))}
             </div>
         );
@@ -28,12 +34,16 @@ export default function ProductGrid() {
         );
     }
     
+    const filtered = enterpriseFilter === "ALL"
+      ? produtos
+      : produtos.filter((p) => p.enterprise === enterpriseFilter)
+
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch">
             {
-                produtos.map((p) => (
+                filtered.map((p) => (
                     <div key={p.id} className="col-span-1 h-full">
-                        <ProductCard product={p}/>
+                        <ProductCard product={p} size={size}/>
                     </div>
                 ))
             }
