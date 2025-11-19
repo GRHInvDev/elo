@@ -202,7 +202,7 @@ export const productOrderRouter = createTRPCRouter({
                         }
                         // Adicionar email externo se existir
                         if (manager.externalEmail) {
-                            const externalEmail = manager.externalEmail as string
+                            const externalEmail = manager.externalEmail
                             if (!notificationEmails.includes(externalEmail)) {
                                 notificationEmails.push(externalEmail)
                             }
