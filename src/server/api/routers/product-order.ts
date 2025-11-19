@@ -8,6 +8,7 @@ import {
 import type { RolesConfig } from "@/types/role-config"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailPedidoProduto, mockEmailNotificacaoPedidoProduto } from "@/lib/mail/html-mock"
+import { getProductOrderChatSchema, sendProductOrderChatMessageSchema } from "@/schemas/product-order-chat.schema"
 
 export const productOrderRouter = createTRPCRouter({
     // Criar pedido (usuário)
@@ -571,6 +572,261 @@ export const productOrderRouter = createTRPCRouter({
                     readAt: new Date(),
                 }
             })
+        }),
+
+    // Chat: listar mensagens de um pedido (usuário, gestor ou responsável)
+    getChat: protectedProcedure
+        .input(getProductOrderChatSchema)
+        .query(async ({ ctx, input }) => {
+            const currentUserId = ctx.auth.userId
+            // Tipagem segura para acessar cliente ShopChat mesmo antes do generate
+            type ShopChatClient = {
+              findMany: (args: {
+                where: { productOrderId: string }
+                include: {
+                  user: {
+                    select: {
+                      id: true
+                      firstName: true
+                      lastName: true
+                      email: true
+                      imageUrl: true
+                    }
+                  }
+                }
+                orderBy: { createdAt: "asc" }
+              }) => Promise<Array<{
+                id: string
+                message: string
+                imageUrl: string | null
+                createdAt: Date
+                updatedAt: Date
+                user: {
+                  id: string
+                  firstName: string | null
+                  lastName: string | null
+                  email: string | null
+                  imageUrl: string | null
+                }
+              }>>
+            }
+
+            // Buscar pedido e empresa
+            const order = await ctx.db.productOrder.findUnique({
+                where: { id: input.orderId },
+                include: {
+                    product: { select: { enterprise: true, name: true } },
+                    user: { select: { id: true } },
+                },
+            })
+
+            if (!order) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" })
+            }
+
+            // Carregar role_config do usuário
+            const user = await ctx.db.user.findUnique({
+                where: { id: currentUserId },
+                select: { role_config: true },
+            })
+            const roleConfig = user?.role_config as RolesConfig | null
+            const isManager = (roleConfig?.sudo === true) || (roleConfig?.can_manage_produtos === true)
+
+            // Empresas gerenciadas
+            const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
+                where: { userId: currentUserId },
+                select: { enterprise: true },
+            })
+            const managedEnterprises = enterpriseManagers.map((em) => em.enterprise)
+
+            const canAccess =
+                order.userId === currentUserId ||
+                isManager ||
+                managedEnterprises.includes(order.product.enterprise)
+
+            if (!canAccess) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para visualizar este chat" })
+            }
+
+            const shopChatClient: ShopChatClient = (ctx.db as unknown as { shopChat: ShopChatClient }).shopChat
+            return await shopChatClient.findMany({
+                where: { productOrderId: input.orderId },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            imageUrl: true,
+                        },
+                    },
+                },
+                orderBy: { createdAt: "asc" },
+            })
+        }),
+
+    // Chat: enviar mensagem (usuário, gestor ou responsável)
+    sendChatMessage: protectedProcedure
+        .input(sendProductOrderChatMessageSchema)
+        .mutation(async ({ ctx, input }) => {
+            const currentUserId = ctx.auth.userId
+            type ShopChatCreateReturn = {
+              id: string
+              message: string
+              imageUrl: string | null
+              createdAt: Date
+              updatedAt: Date
+              user: {
+                id: string
+                firstName: string | null
+                lastName: string | null
+                email: string | null
+                imageUrl: string | null
+              }
+            }
+            type ShopChatClient = {
+              create: (args: {
+                data: {
+                  productOrderId: string
+                  userId: string
+                  message: string
+                  imageUrl?: string
+                }
+                include: {
+                  user: {
+                    select: {
+                      id: true
+                      firstName: true
+                      lastName: true
+                      email: true
+                      imageUrl: true
+                    }
+                  }
+                }
+              }) => Promise<ShopChatCreateReturn>
+            }
+
+            // Buscar pedido e empresa
+            const order = await ctx.db.productOrder.findUnique({
+                where: { id: input.orderId },
+                include: {
+                    product: { select: { enterprise: true } },
+                },
+            })
+
+            if (!order) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado" })
+            }
+
+            // Carregar role_config do usuário
+            const user = await ctx.db.user.findUnique({
+                where: { id: currentUserId },
+                select: { role_config: true },
+            })
+            const roleConfig = user?.role_config as RolesConfig | null
+            const isManager = (roleConfig?.sudo === true) || (roleConfig?.can_manage_produtos === true)
+
+            // Empresas gerenciadas
+            const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
+                where: { userId: currentUserId },
+                select: { enterprise: true },
+            })
+            const managedEnterprises = enterpriseManagers.map((em) => em.enterprise)
+
+            const canAccess =
+                order.userId === currentUserId ||
+                isManager ||
+                managedEnterprises.includes(order.product.enterprise)
+
+            if (!canAccess) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para enviar mensagens neste chat" })
+            }
+
+            const shopChatClient: ShopChatClient = (ctx.db as unknown as { shopChat: ShopChatClient }).shopChat
+            const newMessage = await shopChatClient.create({
+                data: {
+                    productOrderId: input.orderId,
+                    userId: currentUserId,
+                    message: input.message,
+                    imageUrl: input.imageUrl,
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            imageUrl: true,
+                        },
+                    },
+                },
+            })
+
+            // Criar notificações para a outra parte (comprador ou responsáveis)
+            try {
+              const now = new Date()
+              if (order.userId === currentUserId) {
+                // Remetente é o comprador: notificar responsáveis internos pela empresa
+                const managers = await ctx.db.enterpriseManager.findMany({
+                  where: { enterprise: order.product.enterprise, userId: { not: null } },
+                  select: { userId: true }
+                })
+                const recipientUserIds = managers.map(m => m.userId!).filter(Boolean)
+                if (recipientUserIds.length > 0) {
+                  await ctx.db.notification.createMany({
+                    data: recipientUserIds.map(userId => ({
+                      title: "Nova mensagem no pedido",
+                      message: "Você recebeu uma mensagem no chat do pedido",
+                      type: "CHAT_MESSAGE",
+                      channel: "IN_APP",
+                      userId,
+                      entityId: input.orderId,
+                      entityType: "product_order_chat",
+                      actionUrl: "/admin/products",
+                      createdAt: now,
+                      updatedAt: now,
+                    }))
+                  })
+                }
+              } else {
+                // Remetente é admin/gestor/responsável: notificar comprador
+                await ctx.db.notification.create({
+                  data: {
+                    title: "Nova mensagem no seu pedido",
+                    message: "Você recebeu uma mensagem no chat do seu pedido",
+                    type: "CHAT_MESSAGE",
+                    channel: "IN_APP",
+                    userId: order.userId,
+                    entityId: input.orderId,
+                    entityType: "product_order_chat",
+                    actionUrl: "/shop",
+                  }
+                })
+              }
+            } catch (notificationError) {
+              console.error("[ProductOrder] Erro ao criar notificação de chat:", notificationError)
+            }
+
+            return newMessage
+        }),
+    
+    // Marcar notificações de chat do pedido como lidas para o usuário atual
+    markChatNotificationsAsRead: protectedProcedure
+        .input(getProductOrderChatSchema)
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.auth.userId
+            await ctx.db.notification.updateMany({
+                where: {
+                    userId,
+                    entityType: "product_order_chat",
+                    entityId: input.orderId,
+                    isRead: false,
+                },
+                data: { isRead: true }
+            })
+            return { success: true }
         }),
 })
 

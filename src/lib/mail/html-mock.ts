@@ -883,10 +883,10 @@ export const mockEmailPedidoProduto = (
 
           <div class="instructions">
             <h3>📦 Instruções para Retirada</h3>
-            <p><strong>Local:</strong> Expedição na Matriz em SCS</p>
-            <p><strong>Prazo:</strong> 24h a partir de agora</p>
-            <p><strong>Exemplo:</strong> Se agora for 14h, retirar a partir de 14h de amanhã.</p>
-            <p><strong>Importante:</strong> Caso você não seja de SCS, a equipe entrará em contato para combinar a retirada.</p>
+            <p><strong>Local e prazo:</strong>Seu pedido estará disponível para retirada na Expedição em Santa Cruz do Sul em 24 horas após a confirmação.</p>
+            <p><strong>Exemplo:</strong>Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil. </p>
+            <p><strong>Importante:</strong>Equipe de outras unidades receberão contato da equipe interna para agendar retirada ou envio.</p>
+            <p>Dúvidas? Use o chat na opção Shop → Meus Pedidos no Elo | Intranet.</p>
           </div>
 
           <div class="footer">

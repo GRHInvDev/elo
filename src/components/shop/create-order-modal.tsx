@@ -43,7 +43,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
     onSuccess: () => {
       setQuantity(1)
       setPaymentMethod("")
-      setLastSubmittedWhatsapp(whatsapp.trim() || null)
+      setLastSubmittedWhatsapp(whatsapp.replace(/\D/g, "") || null)
       setWhatsapp("")
       onOpenChange(false)
       setShowSuccessModal(true)
@@ -98,8 +98,9 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       return
     }
 
-    if (!whatsapp.trim()) {
-      toast.error("Informe um WhatsApp para contato")
+    const whatsappDigits = whatsapp.replace(/\D/g, "")
+    if (!whatsappDigits || whatsappDigits.length < 10) {
+      toast.error("Informe um WhatsApp válido (mínimo 10 dígitos)")
       return
     }
 
@@ -113,7 +114,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       productId: product.id,
       quantity,
       paymentMethod: paymentMethod,
-      contactWhatsapp: whatsapp.trim() || undefined,
+      contactWhatsapp: whatsappDigits || undefined,
     })
   }
 
@@ -221,8 +222,14 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
               id="order-whatsapp"
               type="tel"
               placeholder="(00) 00000-0000"
+              maxLength={15}
               value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "")
+                if (value.length <= 11) {
+                  setWhatsapp(value)
+                }
+              }}
               disabled={isOutOfStock}
             />
             <p className="text-xs text-muted-foreground">
@@ -253,7 +260,8 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
           {/* Aviso sobre contato do setor responsável */}
           <div className="p-2 bg-muted/50 rounded-lg border border-muted">
             <p className="text-xs text-muted-foreground italic">
-              *O setor responsável poderá entrar em contato para obter mais informações necessárias.
+            *Olá! Caso necessário, o setor responsável poderá entrar em contato para obter mais informações. <br /> 
+            <strong>Para isso, mencione seu contato de WhatsApp acima! </strong>
             </p>
           </div>
 
@@ -272,7 +280,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
               type="button"
               onClick={handleSubmit}
               className="flex-1"
-              disabled={isOutOfStock || createOrder.isPending || hasPendingOrderFromOtherEnterprise || !paymentMethod || !whatsapp.trim()}
+              disabled={isOutOfStock || createOrder.isPending || hasPendingOrderFromOtherEnterprise || !paymentMethod || !whatsapp.replace(/\D/g, "") || whatsapp.replace(/\D/g, "").length < 10}
             >
               {createOrder.isPending ? (
                 <>
@@ -304,21 +312,16 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
             <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
               <h3 className="font-semibold mb-2">Instruções para retirada:</h3>
               <p className="text-sm text-muted-foreground mb-2">
-                Seu pedido poderá ser retirado diretamente na Expedição na Matriz em SCS, no prazo de 24h a partir de agora.
+                Seu pedido estará disponível para retirada na Expedição em Santa Cruz do Sul em 24 horas após a confirmação.
               </p>
               <p className="text-sm text-muted-foreground mb-2">
-                <strong>Exemplo:</strong> Se agora for 14h, retirar a partir de 14h de amanhã.
+                <strong>Exemplo:</strong> Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil.
               </p>
               <p className="text-sm text-muted-foreground">
-                Caso você não seja de SCS, a equipe entrará em contato para combinar a retirada.
+                Equipe de outras unidades receberão contato da equipe interna para agendar retirada ou envio.
               </p>
-              {lastSubmittedWhatsapp && (
-                <p className="text-sm text-muted-foreground mt-3">
-                  <strong>WhatsApp informado:</strong> {lastSubmittedWhatsapp}
-                </p>
-              )}
+              <p> Dúvidas? Use o chat na opção Shop → Meus Pedidos no <strong> Elo | Intranet. </strong></p>
             </div>
-
             <Button
               onClick={() => {
                 setShowSuccessModal(false)

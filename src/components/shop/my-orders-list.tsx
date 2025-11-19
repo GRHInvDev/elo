@@ -11,6 +11,7 @@ import { ptBR } from "date-fns/locale"
 import type { ProductOrderStatus } from "@/components/admin/products/orders-kanban-column"
 import type { RouterOutputs } from "@/trpc/react"
 import Image from "next/image"
+import { OrderChat } from "@/components/shop/order-chat"
 
 type MyOrder = RouterOutputs["productOrder"]["listMyOrders"][number]
 
@@ -25,7 +26,7 @@ function isMyOrder(order: unknown): order is MyOrder {
   )
 }
 
-export function MyOrdersList() {
+export function MyOrdersList({ filter }: { filter?: string }) {
   const ordersQuery = api.productOrder.listMyOrders.useQuery()
   const isLoading = ordersQuery.isLoading
   const refetch = ordersQuery.refetch
@@ -42,9 +43,14 @@ export function MyOrdersList() {
 
   // Type-safe orders extraction
   const rawOrders = ordersQuery.data
-  const orders: MyOrder[] = Array.isArray(rawOrders) 
-    ? rawOrders.filter(isMyOrder) 
-    : []
+  const orders: MyOrder[] = Array.isArray(rawOrders)
+    ? rawOrders.filter(isMyOrder).filter((o) => {
+      if (filter && filter !== "ALL") {
+        return o.status === filter;
+      }
+      return true;
+    })
+    : [];
 
   const getStatusBadge = (status: ProductOrderStatus) => {
     switch (status) {
@@ -66,11 +72,21 @@ export function MyOrdersList() {
   }
 
   if (isLoading) {
+    const skeletonItems = Array.from({ length: 4 });
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-4">
+        {skeletonItems.map((_, i) => (
+          <Card key={i} className="animate-pulse w-full">
+            <CardHeader>
+              <div className="h-4 w-1/3 bg-muted rounded mb-2" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-48 w-full bg-muted rounded" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
-    )
+    );
   }
 
   if (orders.length === 0) {
@@ -84,17 +100,17 @@ export function MyOrdersList() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-y-auto w-full">
       {orders.map((order) => {
         const isUnread = order.read === false
         return (
-          <OrderCard 
-            key={order.id} 
-            order={order} 
-            isUnread={isUnread} 
-            onMarkAsRead={handleMarkAsRead} 
-            markAsReadMutation={markAsReadMutation} 
-            getStatusBadge={getStatusBadge} 
+          <OrderCard
+            key={order.id}
+            order={order}
+            isUnread={isUnread}
+            onMarkAsRead={handleMarkAsRead}
+            markAsReadMutation={markAsReadMutation}
+            getStatusBadge={getStatusBadge}
           />
         )
       })}
@@ -102,24 +118,25 @@ export function MyOrdersList() {
   )
 }
 
-function OrderCard({ 
-  order, 
-  isUnread, 
-  onMarkAsRead, 
+function OrderCard({
+  order,
+  isUnread,
+  onMarkAsRead,
   markAsReadMutation,
-  getStatusBadge 
-}: { 
+  getStatusBadge
+}: {
   order: MyOrder
   isUnread: boolean
   onMarkAsRead: (id: string) => void
   markAsReadMutation: ReturnType<typeof api.productOrder.markMyOrderAsRead.useMutation>
   getStatusBadge: (status: ProductOrderStatus) => JSX.Element
 }) {
+  const [showChat, setShowChat] = useState(false)
   const imageUrl = order.product.imageUrl
   const firstImage = Array.isArray(imageUrl) && imageUrl.length > 0 ? imageUrl[0] : null
 
   return (
-    <Card className={isUnread ? "ring-2 ring-primary" : ""}>
+    <Card className={`${isUnread ? "ring-2 ring-primary" : ""} w-full`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -132,16 +149,16 @@ function OrderCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-4">
-          {/* Imagem do produto */}
-          <div className="relative h-24 w-24 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
+        <div className="flex flex-col gap-4">
+          {/* Imagem do produto (expansiva) */}
+          <div className="relative h-48 w-full sm:h-24 sm:w-24 mb-4 sm:mb-0 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
             {firstImage && typeof firstImage === "string" && firstImage.trim() !== "" ? (
               <Image
                 src={firstImage}
                 alt={order.product.name}
                 fill
                 className="object-cover"
-                sizes="96px"
+                sizes="100%"
                 onError={() => {
                   // Fallback será tratado pelo Image do Next.js
                 }}
@@ -198,6 +215,18 @@ function OrderCard({
           </div>
         </div>
       </CardContent>
+      <div className="px-6 pb-4">
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={() => setShowChat((v) => !v)}>
+            {showChat ? "Fechar chat" : "Chat com atendimento"}
+          </Button>
+        </div>
+        {showChat && (
+          <div className="mt-3">
+            <OrderChat orderId={order.id} />
+          </div>
+        )}
+      </div>
     </Card>
   )
 }

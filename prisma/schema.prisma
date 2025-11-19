@@ -50,6 +50,8 @@ model User {
   createdChatGroups    chat_group[]        @relation("ChatGroupCreator")
   chatGroupMemberships chat_group_member[] @relation("ChatGroupMembers")
   addedGroupMembers    chat_group_member[] @relation("ChatGroupMemberAdder")
+  // Chat de pedidos (Shop)
+  shopChats            ShopChat[]
 
   // Ramais personalizados
   customExtensions custom_extension[]
@@ -323,8 +325,28 @@ model ProductOrder {
   user                        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   product                     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderGroup                  OrderGroup?         @relation(fields: [orderGroupId], references: [id], onDelete: SetNull)
+  // Chat relacionado a este pedido
+  shopChats                   ShopChat[]
 
   @@map("product_orders")
+}
+
+model ShopChat {
+  id              String        @id @default(cuid())
+  userId          String
+  productOrderId  String
+  message         String
+  imageUrl        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relações
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productOrder  ProductOrder  @relation(fields: [productOrderId], references: [id], onDelete: Cascade)
+
+  @@index([productOrderId, createdAt])
+  @@index([userId, createdAt])
+  @@map("chat_shop")
 }
 
 model EnterpriseManager {

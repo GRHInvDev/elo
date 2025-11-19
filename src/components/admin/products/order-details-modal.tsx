@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react"
 import Image from "next/image"
 import { Enterprise } from "@prisma/client"
 import type { PaymentMethod } from "@prisma/client"
+import { OrderChat } from "@/components/shop/order-chat"
 
 type ProductOrderWithRelations = RouterOutputs["productOrder"]["listKanban"][number]
 type PurchaseRegistration = RouterOutputs["purchaseRegistration"]["getByUserIdAndEnterprise"]
@@ -198,92 +199,18 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
             </CardContent>
           </Card>
 
-          {/* Dados de Cadastro para Compras */}
-          {isLoadingRegistration ? (
-            <Card>
-              <CardContent className="py-6">
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Carregando dados de cadastro...</span>
-                </div>
-              </CardContent>
-            </Card>
-          ) : isPurchaseRegistration(purchaseRegistration) ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Dados de Cadastro para Compras
-                </CardTitle>
-                <CardDescription>
-                  Informações fornecidas pelo cliente no cadastro de compras
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Nome Completo</p>
-                    <p className="font-medium">{purchaseRegistration?.fullName}</p>
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex items-start gap-3">
-                  <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="font-medium">{purchaseRegistration?.phone}</p>
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="font-medium">{purchaseRegistration?.email}</p>
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Endereço</p>
-                    <p className="font-medium">{purchaseRegistration?.address}</p>
-                  </div>
-                </div>
-                {purchaseRegistration?.whatsapp && (
-                  <>
-                    <Separator />
-                    <div className="flex items-start gap-3">
-                      <MessageCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-xs text-muted-foreground">WhatsApp</p>
-                        <p className="font-medium">{purchaseRegistration?.whatsapp}</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-                <Separator />
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Cadastrado em</p>
-                    <p className="font-medium">
-                      {format(new Date(purchaseRegistration?.createdAt ?? ""), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="py-6">
-                <p className="text-sm text-muted-foreground text-center">
-                  Cliente não possui cadastro de compras registrado para esta empresa.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Chat com o cliente */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Chat com o cliente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OrderChat orderId={order.id} />
+            </CardContent>
+          </Card>
         </div>
       </DialogContent>
     </Dialog>
