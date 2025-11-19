@@ -193,21 +193,33 @@ export const productOrderRouter = createTRPCRouter({
                     })
 
                     enterpriseManagers.forEach(manager => {
-                        if (manager.user.email && !notificationEmails.includes(manager.user.email)) {
-                            notificationEmails.push(manager.user.email)
+                        // Adicionar email de usuário interno se existir
+                        if (manager.user?.email) {
+                            const userEmail = manager.user.email
+                            if (!notificationEmails.includes(userEmail)) {
+                                notificationEmails.push(userEmail)
+                            }
+                        }
+                        // Adicionar email externo se existir
+                        if (manager.externalEmail) {
+                            const externalEmail = manager.externalEmail
+                            if (!notificationEmails.includes(externalEmail)) {
+                                notificationEmails.push(externalEmail)
+                            }
                         }
                     })
 
                     // Enviar email de notificação para responsáveis
                     if (notificationEmails.length > 0) {
-                        const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
+                    const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                             userName,
                             userEmail ?? "N/A",
                             order.product.name,
                             order.quantity,
                             precoTotal,
                             order.product.enterprise,
-                            dataPedido
+                        dataPedido,
+                        input.contactWhatsapp
                         )
 
                         // Enviar para todos os emails de notificação

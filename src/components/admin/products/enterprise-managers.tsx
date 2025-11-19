@@ -20,21 +20,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Plus, Trash2, Users, AlertCircle } from "lucide-react"
+import { Loader2, Plus, Trash2, Users, AlertCircle, Mail } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import type { Enterprise } from "@prisma/client"
 import type { RouterOutputs } from "@/trpc/react"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type EnterpriseManager = RouterOutputs["enterpriseManager"]["list"][number]
 
 export function EnterpriseManagers() {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [managerType, setManagerType] = useState<"internal" | "external">("internal")
   const [selectedUserId, setSelectedUserId] = useState<string>("")
   const [selectedUser, setSelectedUser] = useState<{ id: string; firstName: string | null; lastName: string | null; email: string } | null>(null)
   const [selectedEnterprise, setSelectedEnterprise] = useState<Enterprise | "">("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [externalName, setExternalName] = useState("")
+  const [externalEmail, setExternalEmail] = useState("")
 
   const { data: managers, isLoading, refetch } = api.enterpriseManager.list.useQuery()
   const { data: users, isLoading: isLoadingUsers } = api.user.searchMinimal.useQuery(
@@ -47,10 +52,13 @@ export function EnterpriseManagers() {
     setDialogOpen(open)
     if (!open) {
       // Resetar tudo quando fechar
+      setManagerType("internal")
       setSelectedUserId("")
       setSelectedUser(null)
       setSelectedEnterprise("")
       setSearchQuery("")
+      setExternalName("")
+      setExternalEmail("")
     }
   }
 
@@ -76,15 +84,31 @@ export function EnterpriseManagers() {
   })
 
   const handleAddManager = () => {
-    if (!selectedUserId || !selectedEnterprise) {
-      toast.error("Selecione um usuário e uma empresa")
+    if (!selectedEnterprise) {
+      toast.error("Selecione uma empresa")
       return
     }
 
-    createManager.mutate({
-      userId: selectedUserId,
-      enterprise: selectedEnterprise,
-    })
+    if (managerType === "internal") {
+      if (!selectedUserId) {
+        toast.error("Selecione um usuário")
+        return
+      }
+      createManager.mutate({
+        userId: selectedUserId,
+        enterprise: selectedEnterprise,
+      })
+    } else {
+      if (!externalName.trim() || !externalEmail.trim()) {
+        toast.error("Preencha o nome e email do responsável externo")
+        return
+      }
+      createManager.mutate({
+        externalName: externalName.trim(),
+        externalEmail: externalEmail.trim(),
+        enterprise: selectedEnterprise,
+      })
+    }
   }
 
   const handleDeleteManager = (id: string) => {
@@ -132,18 +156,31 @@ export function EnterpriseManagers() {
                 Adicionar Responsável
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Adicionar Responsável</DialogTitle>
                 <DialogDescription>
-                  Selecione um usuário e uma empresa para designá-lo como responsável
+                  Adicione um usuário da Intranet ou um email externo como responsável
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Buscar Usuário
-                  </label>
+                <Tabs value={managerType} onValueChange={(value) => setManagerType(value as "internal" | "external")}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="internal">
+                      <Users className="h-4 w-4 mr-2" />
+                      Usuário Interno
+                    </TabsTrigger>
+                    <TabsTrigger value="external">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Email Externo
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="internal" className="space-y-4 mt-4">
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">
+                        Buscar Usuário
+                      </Label>
                   {selectedUser ? (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between p-3 border rounded-lg bg-primary/5">
@@ -209,12 +246,41 @@ export function EnterpriseManagers() {
                       )}
                     </>
                   )}
-                </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="external" className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="externalName" className="text-sm font-medium mb-2 block">
+                        Nome do Responsável
+                      </Label>
+                      <Input
+                        id="externalName"
+                        type="text"
+                        placeholder="Digite o nome completo..."
+                        value={externalName}
+                        onChange={(e) => setExternalName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="externalEmail" className="text-sm font-medium mb-2 block">
+                        Email
+                      </Label>
+                      <Input
+                        id="externalEmail"
+                        type="email"
+                        placeholder="email@exemplo.com"
+                        value={externalEmail}
+                        onChange={(e) => setExternalEmail(e.target.value)}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">
+                  <Label className="text-sm font-medium mb-2 block">
                     Empresa
-                  </label>
+                  </Label>
                   <Select
                     value={selectedEnterprise}
                     onValueChange={(value) => setSelectedEnterprise(value as Enterprise)}
@@ -248,7 +314,12 @@ export function EnterpriseManagers() {
                   </Button>
                   <Button
                     onClick={handleAddManager}
-                    disabled={!selectedUserId || !selectedEnterprise || createManager.isPending}
+                    disabled={
+                      createManager.isPending ||
+                      !selectedEnterprise ||
+                      (managerType === "internal" && !selectedUserId) ||
+                      (managerType === "external" && (!externalName.trim() || !externalEmail.trim()))
+                    }
                   >
                     {createManager.isPending ? (
                       <>
@@ -281,29 +352,47 @@ export function EnterpriseManagers() {
                     <Badge variant="secondary">{managersList.length}</Badge>
                   </h3>
                   <div className="grid gap-2">
-                    {managersList.map((manager) => (
-                      <div
-                        key={manager.id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div>
-                          <div className="font-medium">
-                            {manager.user.firstName} {manager.user.lastName}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {manager.user.email}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteManager(manager.id)}
-                          disabled={deleteManager.isPending}
+                    {managersList.map((manager) => {
+                      const isExternal = !manager.user && manager.externalEmail
+                      const displayName = isExternal 
+                        ? manager.externalName ?? "Sem nome"
+                        : `${manager.user?.firstName ?? ""} ${manager.user?.lastName ?? ""}`.trim() || "Sem nome"
+                      const displayEmail = isExternal 
+                        ? manager.externalEmail ?? ""
+                        : manager.user?.email ?? ""
+                      
+                      return (
+                        <div
+                          key={manager.id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-2">
+                            {isExternal && (
+                              <Badge variant="outline" className="text-xs">
+                                <Mail className="h-3 w-3 mr-1" />
+                                Externo
+                              </Badge>
+                            )}
+                            <div>
+                              <div className="font-medium">
+                                {displayName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {displayEmail}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteManager(manager.id)}
+                            disabled={deleteManager.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )

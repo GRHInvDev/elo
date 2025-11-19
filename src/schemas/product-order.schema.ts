@@ -7,6 +7,7 @@ export const createProductOrderSchema = z.object({
     paymentMethod: z.enum(["BOLETO", "PIX"], {
         errorMap: () => ({ message: "Forma de pagamento deve ser BOLETO ou PIX" })
     }).optional(),
+    contactWhatsapp: z.string().min(8, "Informe um WhatsApp válido").optional(),
 })
 
 export const createPurchaseRegistrationSchema = z.object({
