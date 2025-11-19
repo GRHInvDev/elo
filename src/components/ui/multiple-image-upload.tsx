@@ -179,6 +179,7 @@ export function MultipleImageUpload({
                   <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {/* Botão de remover */}
                     <Button
+                      type="button"
                       variant="destructive"
                       size="sm"
                       className="h-6 w-6 p-0"

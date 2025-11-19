@@ -18,7 +18,6 @@ import { Loader2, Plus, Minus, ShoppingCart } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import type { Product } from "@prisma/client"
-import { PurchaseRegistrationModal } from "./purchase-registration-modal"
 
 interface CreateOrderModalProps {
   product: Product
@@ -31,7 +30,8 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
   const [quantity, setQuantity] = useState(1)
   const [paymentMethod, setPaymentMethod] = useState<"BOLETO" | "PIX" | "">("")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [whatsapp, setWhatsapp] = useState("")
+  const [lastSubmittedWhatsapp, setLastSubmittedWhatsapp] = useState<string | null>(null)
   const utils = api.useUtils()
 
   // Buscar grupos de pedidos pendentes para validar regra de empresa
@@ -39,16 +39,12 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
     enabled: open
   })
 
-  // Verificar se usuário tem cadastro para compras na empresa
-  const { data: registrationCheck, refetch: refetchRegistration } = api.purchaseRegistration.checkRegistration.useQuery(
-    { enterprise: product.enterprise },
-    { enabled: open }
-  )
-
   const createOrder = api.productOrder.create.useMutation({
     onSuccess: () => {
       setQuantity(1)
       setPaymentMethod("")
+      setLastSubmittedWhatsapp(whatsapp.trim() || null)
+      setWhatsapp("")
       onOpenChange(false)
       setShowSuccessModal(true)
       void utils.productOrder.listMyOrders.invalidate()
@@ -60,19 +56,6 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       toast.error(`Erro ao criar pedido: ${error.message}`)
     },
   })
-
-  const handleRegistrationSuccess = () => {
-    void refetchRegistration()
-    setShowRegistrationModal(false)
-    // Após cadastro bem-sucedido, tentar criar o pedido novamente
-    if (paymentMethod && quantity > 0) {
-      createOrder.mutate({
-        productId: product.id,
-        quantity,
-        paymentMethod: paymentMethod,
-      })
-    }
-  }
 
   // Verificar se existe pedido pendente de outra empresa
   const hasPendingOrderFromOtherEnterprise = pendingGroups?.some(group => 
@@ -115,15 +98,14 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       return
     }
 
-    // Validar regra de negócio: não pode pedir produtos de empresas diferentes
-    if (hasPendingOrderFromOtherEnterprise) {
-      toast.error(`Você já possui um pedido pendente da empresa ${otherEnterpriseName}. Finalize ou cancele esse pedido antes de fazer um pedido da empresa ${product.enterprise}.`)
+    if (!whatsapp.trim()) {
+      toast.error("Informe um WhatsApp para contato")
       return
     }
 
-    // Verificar se tem cadastro para compras
-    if (!registrationCheck?.hasRegistration) {
-      setShowRegistrationModal(true)
+    // Validar regra de negócio: não pode pedir produtos de empresas diferentes
+    if (hasPendingOrderFromOtherEnterprise) {
+      toast.error(`Você já possui um pedido pendente da empresa ${otherEnterpriseName}. Finalize ou cancele esse pedido antes de fazer um pedido da empresa ${product.enterprise}.`)
       return
     }
 
@@ -131,6 +113,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
       productId: product.id,
       quantity,
       paymentMethod: paymentMethod,
+      contactWhatsapp: whatsapp.trim() || undefined,
     })
   }
 
@@ -208,11 +191,6 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {isOutOfStock 
-                ? "Produto indisponível" 
-                : `Estoque disponível: ${product.stock} unidade${product.stock !== 1 ? "s" : ""}`}
-            </p>
           </div>
 
           {/* Forma de pagamento */}
@@ -229,10 +207,27 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
                 <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="BOLETO">Boleto</SelectItem>
+                <SelectItem value="BOLETO">Boleto - 28 dias</SelectItem>
                 <SelectItem value="PIX">PIX</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="order-whatsapp">
+              WhatsApp para contato <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="order-whatsapp"
+              type="tel"
+              placeholder="(00) 00000-0000"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              disabled={isOutOfStock}
+            />
+            <p className="text-xs text-muted-foreground">
+              Usaremos este número para falar sobre o pedido, caso necessário.
+            </p>
           </div>
 
           {/* Preço total */}
@@ -277,7 +272,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
               type="button"
               onClick={handleSubmit}
               className="flex-1"
-              disabled={isOutOfStock || createOrder.isPending || hasPendingOrderFromOtherEnterprise || !paymentMethod}
+              disabled={isOutOfStock || createOrder.isPending || hasPendingOrderFromOtherEnterprise || !paymentMethod || !whatsapp.trim()}
             >
               {createOrder.isPending ? (
                 <>
@@ -317,6 +312,11 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
               <p className="text-sm text-muted-foreground">
                 Caso você não seja de SCS, a equipe entrará em contato para combinar a retirada.
               </p>
+              {lastSubmittedWhatsapp && (
+                <p className="text-sm text-muted-foreground mt-3">
+                  <strong>WhatsApp informado:</strong> {lastSubmittedWhatsapp}
+                </p>
+              )}
             </div>
 
             <Button
@@ -331,13 +331,6 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
         </DialogContent>
       </Dialog>
 
-      {/* Modal de cadastro de compras */}
-      <PurchaseRegistrationModal
-        enterprise={product.enterprise}
-        open={showRegistrationModal}
-        onOpenChange={setShowRegistrationModal}
-        onSuccess={handleRegistrationSuccess}
-      />
     </Dialog>
   )
 }

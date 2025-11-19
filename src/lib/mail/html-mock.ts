@@ -908,6 +908,7 @@ export const mockEmailNotificacaoPedidoProduto = (
   precoTotal: number,
   empresa: string,
   dataPedido: string,
+  contactWhatsapp?: string,
 ) => (`
   <!DOCTYPE html>
   <html lang="pt-BR">
@@ -1015,6 +1016,11 @@ export const mockEmailNotificacaoPedidoProduto = (
                 <td>Email:</td>
                 <td>${emailUsuario}</td>
               </tr>
+              ${contactWhatsapp ? `
+              <tr>
+                <td>WhatsApp:</td>
+                <td>${contactWhatsapp}</td>
+              </tr>` : ""}
               <tr>
                 <td>Produto:</td>
                 <td>${nomeProduto}</td>

@@ -211,14 +211,15 @@ export const productOrderRouter = createTRPCRouter({
 
                     // Enviar email de notificação para responsáveis
                     if (notificationEmails.length > 0) {
-                        const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
+                    const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                             userName,
                             userEmail ?? "N/A",
                             order.product.name,
                             order.quantity,
                             precoTotal,
                             order.product.enterprise,
-                            dataPedido
+                        dataPedido,
+                        input.contactWhatsapp
                         )
 
                         // Enviar para todos os emails de notificação
