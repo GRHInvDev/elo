@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import type { Field } from "@/lib/form-types"
 import { Separator } from "@/components/ui/separator"
 
@@ -15,6 +16,21 @@ export function ResponseDetails({ responseData, formFields }: ResponseDetailsPro
 
   // Obter o primeiro objeto de resposta (normalmente só há um)
   const responseObj = responseData[0]
+
+  // Função auxiliar para converter \n em quebras de linha
+  const renderTextWithLineBreaks = (text: string) => {
+    const parts = text.split("\n")
+    return (
+      <>
+        {parts.map((part, index) => (
+          <React.Fragment key={index}>
+            {part}
+            {index < parts.length - 1 && <br />}
+          </React.Fragment>
+        ))}
+      </>
+    )
+  }
 
   // Função para renderizar o valor de acordo com o tipo de campo
   const renderValue = (fieldName: string, fieldType: string, value: string | number | File[] | null | undefined | string[]) => {
@@ -45,7 +61,18 @@ export function ResponseDetails({ responseData, formFields }: ResponseDetailsPro
           return `${value.name as string} (${(value.size as number / 1024).toFixed(2)} KB)`
         }
         return String(value)
+      case "textarea":
+      case "text":
+        // Para campos de texto, converter \n em quebras de linha
+        if (typeof value === "string") {
+          return renderTextWithLineBreaks(value)
+        }
+        return String(value)
       default:
+        // Para outros tipos, verificar se é string e converter \n
+        if (typeof value === "string" && value.includes("\n")) {
+          return renderTextWithLineBreaks(value)
+        }
         return JSON.stringify(value)
     }
   }
