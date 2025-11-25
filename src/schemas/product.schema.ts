@@ -8,6 +8,7 @@ export const createProductSchema = z.object({
     imageUrl: z.array(z.string().url("URL inválida.")).min(1, "Adicione pelo menos uma imagem."),
     price: z.number().gt(0, "Valor não pode ser negativo ou igual a 0."),
     stock: z.number().int().min(0, "Estoque não pode ser negativo.").default(0),
+    active: z.boolean().default(true),
 })
 
 export const updateProductSchema = z.object({
@@ -19,6 +20,7 @@ export const updateProductSchema = z.object({
     imageUrl: z.array(z.string().url("URL inválida.")).optional(),
     price: z.number().gt(0, "Valor não pode ser negativo ou igual a 0.").optional(),
     stock: z.number().int().min(0, "Estoque não pode ser negativo.").optional(),
+    active: z.boolean().optional(),
 })
 
 export const deleteProductSchema = z.object({

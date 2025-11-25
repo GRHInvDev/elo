@@ -249,6 +249,7 @@ model Product {
   sells       Sell[]     @relation("ProductToSell")
   shopCarts   ShopCart[] @relation("ProductToShopCart")
   orders      ProductOrder[]
+  active      Boolean    @default(true)
 
   @@map("products")
 }

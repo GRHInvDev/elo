@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Edit, Trash2, Loader2 } from "lucide-react"
+import { Edit, Trash2, Loader2, Eye, EyeOff } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import type { Product } from "@prisma/client"
@@ -41,6 +41,7 @@ interface ProductListTableProps {
 
 export function ProductListTable({ products, onEdit, onRefresh }: ProductListTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   const deleteProduct = api.product.delete.useMutation({
     onSuccess: () => {
@@ -51,6 +52,18 @@ export function ProductListTable({ products, onEdit, onRefresh }: ProductListTab
     onError: (error) => {
       toast.error(`Erro ao deletar produto: ${error.message}`)
       setDeletingId(null)
+    },
+  })
+
+  const toggleActive = api.product.toggleActive.useMutation({
+    onSuccess: (product) => {
+      toast.success(`Produto ${product.active ? "ativado" : "desativado"} com sucesso!`)
+      onRefresh()
+      setTogglingId(null)
+    },
+    onError: (error) => {
+      toast.error(`Erro ao alterar status do produto: ${error.message}`)
+      setTogglingId(null)
     },
   })
 
@@ -84,6 +97,7 @@ export function ProductListTable({ products, onEdit, onRefresh }: ProductListTab
             <TableHead>Empresa</TableHead>
             <TableHead className="text-right">Preço</TableHead>
             <TableHead className="text-right">Estoque</TableHead>
+            <TableHead className="text-center">Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -138,8 +152,33 @@ export function ProductListTable({ products, onEdit, onRefresh }: ProductListTab
                   )
                 })()}
               </TableCell>
+              <TableCell className="text-center">
+                <Badge variant={product.active ? "default" : "secondary"}>
+                  {product.active ? "Ativo" : "Inativo"}
+                </Badge>
+              </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setTogglingId(product.id)
+                      toggleActive.mutate({ id: product.id })
+                    }}
+                    className="h-8 w-8 p-0"
+                    disabled={togglingId === product.id}
+                    title={product.active ? "Desativar produto" : "Ativar produto"}
+                  >
+                    {togglingId === product.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : product.active ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                    <span className="sr-only">{product.active ? "Desativar produto" : "Ativar produto"}</span>
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

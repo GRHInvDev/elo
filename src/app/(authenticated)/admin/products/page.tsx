@@ -26,7 +26,7 @@ export default function AdminProductsPage() {
     data: products,
     isLoading: isLoadingProducts,
     refetch,
-  } = api.product.getAll.useQuery(undefined, {
+  } = api.product.getAllForAdmin.useQuery(undefined, {
     enabled: !isLoadingAccess && (hasAdminAccess("/admin/products") || isSudo || canManageProducts()),
   })
 
