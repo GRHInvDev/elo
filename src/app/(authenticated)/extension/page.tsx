@@ -1110,6 +1110,7 @@ interface ListaSetores {
                     <TableRow>
                       <TableHead>Setor</TableHead>
                       <TableHead>Nome</TableHead>
+                      <TableHead>Empresa</TableHead>
                       <TableHead>Ramal</TableHead>
                       <TableHead>Email</TableHead>
                       {canManageExtensions() && <TableHead className="w-20">Ações</TableHead>}
@@ -1123,6 +1124,7 @@ interface ListaSetores {
                           <TableCell className="font-medium">
                             {contact.name}
                           </TableCell>
+                          <TableCell>{contact.enterprise}</TableCell>
                           <TableCell>
                             <Badge
                               variant="default"
