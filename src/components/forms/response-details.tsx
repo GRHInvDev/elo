@@ -50,28 +50,45 @@ export function ResponseDetails({ responseData, formFields }: ResponseDetailsPro
         if (Array.isArray(value) && value.every(item => item instanceof File)) {
           return (
             <ul className="list-disc pl-5">
-              {value.map((file, i) => (
-                <li key={i}>
-                  {file.name} ({(file.size / 1024).toFixed(2)} KB)
-                </li>
-              ))}
+              {value.map((file, i) => {
+                if (file instanceof File) {
+                  return (
+                    <li key={i}>
+                      {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                    </li>
+                  )
+                }
+                return null
+              })}
             </ul>
           )
         } else if (value && typeof value === "object" && "name" in value && "size" in value) {
           return `${value.name as string} (${(value.size as number / 1024).toFixed(2)} KB)`
         }
-        return String(value)
+        // Converter de forma segura
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+          return String(value)
+        }
+        return JSON.stringify(value)
       case "textarea":
       case "text":
         // Para campos de texto, converter \n em quebras de linha
         if (typeof value === "string") {
           return renderTextWithLineBreaks(value)
         }
-        return String(value)
+        // Se não for string, converter de forma segura
+        if (typeof value === "number" || typeof value === "boolean") {
+          return String(value)
+        }
+        return JSON.stringify(value)
       default:
         // Para outros tipos, verificar se é string e converter \n
         if (typeof value === "string" && value.includes("\n")) {
           return renderTextWithLineBreaks(value)
+        }
+        // Converter de forma segura baseado no tipo
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+          return String(value)
         }
         return JSON.stringify(value)
     }
