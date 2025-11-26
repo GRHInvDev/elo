@@ -10,7 +10,14 @@ export default async function RentVehiclePage({
   params: Promise<{ id: string }>
 }) {
   const {id} = await params;
-  const user = await currentUser()
+  let user;
+  
+  try {
+    user = await currentUser();
+  } catch (error) {
+    console.warn('[RentVehiclePage] Erro ao obter usuário:', error instanceof Error ? error.message : 'Erro desconhecido');
+    redirect(`/sign-in?redirect_url=/vehicles/${id}/rent`);
+  }
 
   if (!user) {
     redirect(`/sign-in?redirect_url=/vehicles/${id}/rent`)

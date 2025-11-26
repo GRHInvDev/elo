@@ -19,7 +19,15 @@ import { redirect } from "next/navigation"
 import { currentUser } from "@clerk/nextjs/server"
 
 export default async function HomePage() {
-  const user = await currentUser()
+  let user;
+  
+  try {
+    user = await currentUser();
+  } catch (error) {
+    // Em caso de erro, tratar como não autenticado
+    user = null;
+  }
+  
   if (user) {
     redirect("/dashboard")
   } else {
