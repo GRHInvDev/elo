@@ -17,7 +17,15 @@ export const metadata = {
 }
 
 export default async function FormsPage() {
-  const user = await currentUser()
+  let user;
+  
+  try {
+    user = await currentUser();
+  } catch (error) {
+    // Se houver erro ao obter usuário do Clerk, redirecionar para login
+    console.warn('[FormsPage] Erro ao obter usuário:', error instanceof Error ? error.message : 'Erro desconhecido');
+    redirect("/sign-in?redirect_url=/forms");
+  }
 
   if (!user) {
     redirect("/sign-in?redirect_url=/forms")

@@ -14,7 +14,14 @@ export const metadata: Metadata = {
 }
 
 export default async function FlyersPage() {
-  const user = await currentUser()
+  let user;
+  
+  try {
+    user = await currentUser();
+  } catch (error) {
+    console.warn('[FlyersPage] Erro ao obter usuário:', error instanceof Error ? error.message : 'Erro desconhecido');
+    redirect("/sign-in?redirect_url=/flyers");
+  }
 
   if (!user) {
     redirect("/sign-in?redirect_url=/flyers")

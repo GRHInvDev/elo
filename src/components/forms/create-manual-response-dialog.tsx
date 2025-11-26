@@ -59,26 +59,24 @@ export function CreateManualResponseDialog({
             switch (field.type) {
                 case "text":
                 case "textarea":
-                    schema = z.string()
+                    let stringSchema = z.string()
                     if (field.required) {
-                        schema = (schema as z.ZodString).min(1, `${field.label} é obrigatório`)
-                    } else {
-                        schema = schema.optional()
+                        stringSchema = stringSchema.min(1, `${field.label} é obrigatório`)
                     }
                     if (field.maxLength) {
-                        schema = (schema as z.ZodString).max(field.maxLength, `Máximo de ${field.maxLength} caracteres`)
+                        stringSchema = stringSchema.max(field.maxLength, `Máximo de ${field.maxLength} caracteres`)
                     }
+                    schema = field.required ? stringSchema : stringSchema.optional()
                     break
                 case "number":
-                    schema = z.number()
+                    let numberSchema = z.number()
                     if (field.required) {
-                        schema = (schema as z.ZodNumber).min(field.min ?? 0)
-                    } else {
-                        schema = schema.optional()
+                        numberSchema = numberSchema.min(field.min ?? 0)
                     }
                     if (field.max) {
-                        schema = (schema as z.ZodNumber).max(field.max)
+                        numberSchema = numberSchema.max(field.max)
                     }
+                    schema = field.required ? numberSchema : numberSchema.optional()
                     break
                 case "checkbox":
                     schema = z.boolean()

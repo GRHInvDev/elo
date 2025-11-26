@@ -49,16 +49,19 @@ export const createTRPCContext = async (opts: { headers: Headers }): Promise<TRP
   try {
     user = await currentUser();
   } catch (error) {
-    console.error('[TRPC Context] Erro ao obter usuário atual:', error);
-    
-    // Verificar se o erro está relacionado a configurações específicas
-    if (error instanceof Error) {
-      console.error('[TRPC Context] Detalhes do erro:', {
-        message: error.message,
-        stack: error.stack,
-        headers: Object.fromEntries(opts.headers.entries())
-      });
+    // Erro do Clerk - não logar em produção para evitar spam
+    // Apenas silenciosamente tratar como usuário não autenticado
+    if (process.env.NODE_ENV === 'development') {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const clerkError = error && typeof error === 'object' && 'clerkError' in error;
+      
+      // Só logar se não for um erro comum do Clerk (como sessão inválida)
+      if (!clerkError || errorMessage) {
+        console.warn('[TRPC Context] Erro ao obter usuário atual:', errorMessage || 'Erro desconhecido do Clerk');
+      }
     }
+    // Continuar sem usuário - o protectedProcedure vai tratar a autenticação
+    user = null;
   }
 
   return {
