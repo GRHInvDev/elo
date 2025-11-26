@@ -101,7 +101,7 @@ export default async function FormPage({ params }: FormPageProps) {
             <Link href={`/forms/${form.id}/respond`}>
               <Button className="col-span-1 w-full">
                 <FileText className="mr-2 h-4 w-4" />
-                Responder
+                Abrir nova solicitação
               </Button>
             </Link>
           </div>

@@ -10,7 +10,7 @@ import { FormDescription } from "@/components/forms/form-description"
 import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
-  title: "Responder Formulário",
+  title: "Abrir nova solicitação",
   description: "Responda a um formulário",
 }
 

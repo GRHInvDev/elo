@@ -39,6 +39,33 @@ interface CommandOption {
 }
 
 export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialogProps) {
+    // Chave única para o cache baseada no responseId
+    const cacheKey = `chat-message-${responseId}`
+    
+    // Função para obter mensagem do cache
+    const getCachedMessage = useCallback((): string => {
+        if (typeof window === "undefined") return ""
+        try {
+            return localStorage.getItem(cacheKey) ?? ""
+        } catch {
+            return ""
+        }
+    }, [cacheKey])
+
+    // Função para salvar mensagem no cache
+    const saveCachedMessage = useCallback((msg: string) => {
+        if (typeof window === "undefined") return
+        try {
+            if (msg.trim()) {
+                localStorage.setItem(cacheKey, msg)
+            } else {
+                localStorage.removeItem(cacheKey)
+            }
+        } catch {
+            // Ignorar erros de localStorage (ex: modo privado)
+        }
+    }, [cacheKey])
+
     const [message, setMessage] = useState("")
     const [showAutocomplete, setShowAutocomplete] = useState(false)
     const [selectedIndex, setSelectedIndex] = useState(0)
@@ -60,24 +87,35 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
 
     // Comandos disponíveis para autocomplete
     const getAvailableCommands = useCallback((): CommandOption[] => {
-        if (!currentUser) return []
-        
-        return [
+        const commands: CommandOption[] = [
             {
-                key: "email",
-                label: "Email",
-                value: currentUser.email ?? "",
-                description: "Seu email",
-            },
-            {
-                key: "nome",
-                label: "Nome",
-                value: currentUser.firstName
-                    ? `${currentUser.firstName}${currentUser.lastName ? ` ${currentUser.lastName}` : ""}`.trim()
-                    : (currentUser.email ?? ""),
-                description: "Seu nome completo",
+                key: "ola",
+                label: "Olá",
+                value: "Olá, tudo bem?",
+                description: "Saudação padrão",
             },
         ]
+        
+        if (currentUser) {
+            commands.push(
+                {
+                    key: "email",
+                    label: "Email",
+                    value: currentUser.email ?? "",
+                    description: "Seu email",
+                },
+                {
+                    key: "nome",
+                    label: "Nome",
+                    value: currentUser.firstName
+                        ? `${currentUser.firstName}${currentUser.lastName ? ` ${currentUser.lastName}` : ""}`.trim()
+                        : (currentUser.email ?? ""),
+                    description: "Seu nome completo",
+                }
+            )
+        }
+        
+        return commands
     }, [currentUser])
 
     const availableCommands = getAvailableCommands()
@@ -93,6 +131,14 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
     const sendMessageMutation = api.formResponse.sendChatMessage.useMutation({
         onSuccess: () => {
             setMessage("")
+            // Limpar cache quando mensagem for enviada com sucesso
+            if (typeof window !== "undefined") {
+                try {
+                    localStorage.removeItem(cacheKey)
+                } catch {
+                    // Ignorar erros
+                }
+            }
             void refetchChat()
       // Atualizar lista do Kanban para refletir possíveis mudanças
       void trpcContext.formResponse.listKanBan.invalidate()
@@ -109,9 +155,24 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
   useEffect(() => {
     if (open && responseId) {
       markViewed.mutate({ responseId })
+      // Carregar mensagem do cache quando abrir o diálogo
+      const cachedMessage = getCachedMessage()
+      if (cachedMessage) {
+        setMessage(cachedMessage)
+      } else {
+        // Se não há cache, limpar mensagem do estado
+        setMessage("")
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, responseId])
+
+  // Salvar mensagem no cache sempre que ela mudar (apenas quando diálogo estiver aberto)
+  useEffect(() => {
+    if (open && responseId && message !== undefined) {
+      saveCachedMessage(message)
+    }
+  }, [message, open, responseId, saveCachedMessage])
 
     // Scroll to bottom of chat when new messages arrive
     useEffect(() => {
@@ -120,14 +181,14 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
         }
     }, [chatMessages])
 
-    // Resetar autocomplete quando o diálogo fechar
+    // Resetar autocomplete quando o diálogo fechar (mas manter mensagem no cache)
     useEffect(() => {
         if (!open) {
             setShowAutocomplete(false)
             setSlashPosition(null)
             setSearchQuery("")
             setSelectedIndex(0)
-            setMessage("")
+            // Não resetar mensagem aqui - ela será mantida no cache para recuperação
         }
     }, [open])
 
@@ -276,6 +337,7 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
                 )
                 break
             case "Enter":
+            case "Tab":
                 e.preventDefault()
                 if (selectedIndex >= 0 && selectedIndex < filteredCommands.length) {
                     const selectedCommand = filteredCommands[selectedIndex]

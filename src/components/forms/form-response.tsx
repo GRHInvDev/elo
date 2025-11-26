@@ -180,7 +180,7 @@ export function FormResponseComponent({
               router.refresh()
             }}
           >
-            Responder novamente
+            Abrir nova solicitação
           </Button>
         </div>
       </div>

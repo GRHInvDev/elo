@@ -55,7 +55,7 @@ export function ResponsesList({ formId }: { formId: string }) {
             <Link href={`/forms/${formId}/respond`}>
               <Button>
                 <FileText className="mr-2 h-4 w-4" />
-                Responder Formulário
+                Abrir nova solicitação
               </Button>
             </Link>
           )}
