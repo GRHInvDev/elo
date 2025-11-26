@@ -1,15 +1,14 @@
 "use client"
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { User, Phone, Mail, MapPin, MessageCircle, Calendar, Package, Building2 } from "lucide-react"
+import { User, MessageCircle, Calendar, Package } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { RouterOutputs } from "@/trpc/react"
 import { api } from "@/trpc/react"
-import { Loader2 } from "lucide-react"
 import Image from "next/image"
 import { Enterprise } from "@prisma/client"
 import type { PaymentMethod } from "@prisma/client"
@@ -18,6 +17,7 @@ import { OrderChat } from "@/components/shop/order-chat"
 type ProductOrderWithRelations = RouterOutputs["productOrder"]["listKanban"][number]
 type PurchaseRegistration = RouterOutputs["purchaseRegistration"]["getByUserIdAndEnterprise"]
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isPurchaseRegistration(value: unknown): value is PurchaseRegistration {
   if (!value || typeof value !== "object") return false
   const v = value as Record<string, unknown>
@@ -42,7 +42,9 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
   const userId: string = order?.userId ?? ""
   const enabled: boolean = open && !!order && !!order.userId
   const {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     data: purchaseRegistration,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     isLoading: isLoadingRegistration,
   } = api.purchaseRegistration.getByUserIdAndEnterprise.useQuery(
     { userId, enterprise },

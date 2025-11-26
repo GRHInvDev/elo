@@ -31,6 +31,7 @@ export function CreateOrderModal({ product, open, onOpenChange, onSuccess }: Cre
   const [paymentMethod, setPaymentMethod] = useState<"BOLETO" | "PIX" | "">("")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [whatsapp, setWhatsapp] = useState("")
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [lastSubmittedWhatsapp, setLastSubmittedWhatsapp] = useState<string | null>(null)
   const utils = api.useUtils()
 

@@ -83,7 +83,7 @@ export async function FormsList() {
             <Link href={`/forms/${form.id}/respond`}>
               <Button size="sm">
                 <FileText className="h-4 w-4 mr-1" />
-                Responder
+                Abrir nova solicitação
               </Button>
             </Link>
           </CardFooter>

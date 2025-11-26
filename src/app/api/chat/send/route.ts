@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { PrismaClient, NotificationType } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -37,8 +37,8 @@ interface SenderUser {
 
 // Função auxiliar para criar notificações de mensagem
 async function createMessageNotifications(message: PrismaMessage, senderUser: SenderUser, senderClerkId: string) {
-  const { roomId, id: messageId } = message
-  const senderId = senderUser.id
+  const { roomId } = message
+  // const senderId = senderUser.id
 
   let recipientUserIds: string[] = []
 
@@ -78,15 +78,15 @@ async function createMessageNotifications(message: PrismaMessage, senderUser: Se
       },
       select: { id: true }
     })
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     recipientUserIds = allUsers.map(u => u.id)
   }
 
   // Buscar email do remetente para criar notificações
-  const senderWithEmail = await prisma.user.findUnique({
-    where: { id: senderId },
-    select: { email: true }
-  })
-
+  // const senderWithEmail = await prisma.user.findUnique({
+  //   where: { id: senderId },
+  //   select: { email: true }
+  // })
   // Criar notificações em lote
   // TEMPORARIAMENTE DESATIVADO - Notificações de chat desabilitadas
   /*

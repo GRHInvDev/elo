@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { UPLTButton } from "@/components/ui/uplt-button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { addDays } from "date-fns"
 import { useForm } from "react-hook-form"
@@ -32,15 +32,6 @@ interface Birthday {
 interface BirthdayFormProps {
   birthday?: Birthday | null
   onSuccess?: () => void
-}
-
-function formatDateForInput(date: Date): string {
-  // Format: YYYY-MM-DD
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-
-  return `${year}-${month}-${day}`
 }
 
 export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
@@ -78,7 +69,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     if (currentName && currentName !== nameInputValue) {
       setNameInputValue(currentName)
     }
-  }, [watch("name"), nameInputValue])
+  }, [nameInputValue, watch])
 
   // Atualizar o campo imageUrl quando uma nova imagem for enviada
   useEffect(() => {
@@ -194,8 +185,9 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
           imageUrl: data.imageUrl,
         })
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      // Error handling is already done in the mutation hooks
+      // O erro já é tratado no hook de mutação -- pq? como? sla <gambiarra />
     }
   }
 

@@ -5,7 +5,6 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/hooks/use-toast"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { MessageSquare, Users, Plus, Settings } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -15,7 +14,6 @@ import { CreateGroupDialog } from "./_components/create-group-dialog"
 
 export default function ChatGroupsAdminPage() {
   const { hasAdminAccess, isLoading, isSudo } = useAccessControl()
-  const { toast } = useToast()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
   // Verificar acesso à página

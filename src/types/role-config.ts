@@ -9,6 +9,7 @@ export type RolesConfig = {
   can_create_flyer: boolean;   // Pode criar encartes
   can_create_booking: boolean; // Pode fazer agendamentos de salas
   can_locate_cars: boolean;    // Pode fazer agendamentos de carros
+  can_create_solicitacoes: boolean; // Pode criar chamados/solicitações manualmente
 
   // Controle de visibilidade de formulários
   visible_forms?: string[];    // IDs dos formulários que o usuário pode ver (vazio = todos públicos)

@@ -33,6 +33,7 @@ type ExtendedRolesConfig = RolesConfig & {
   can_manage_extensions?: boolean
   can_manage_dados_basicos_users?: boolean
   can_manage_produtos?: boolean
+  can_create_solicitacoes?: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
 
@@ -234,6 +235,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       can_view_dre_report: (user.role_config as ExtendedRolesConfig)?.can_view_dre_report ?? false,
       can_manage_extensions: (user.role_config as ExtendedRolesConfig)?.can_manage_extensions ?? false,
       can_manage_dados_basicos_users: (user.role_config as ExtendedRolesConfig)?.can_manage_dados_basicos_users ?? false,
+      can_create_solicitacoes: (user.role_config as ExtendedRolesConfig)?.can_create_solicitacoes ?? false,
       can_manage_produtos: (user.role_config as ExtendedRolesConfig)?.can_manage_produtos ?? false,
       isTotem: (user.role_config as ExtendedRolesConfig)?.isTotem ?? false,
       visible_forms: (user.role_config as ExtendedRolesConfig)?.visible_forms,
@@ -250,7 +252,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     if (JSON.stringify(adminRoutesData) !== JSON.stringify(newAdminPages)) {
       setAdminRoutesData(newAdminPages)
     }
-  }, [permissionsData.admin_pages])
+  }, [adminRoutesData, permissionsData.admin_pages])
 
   // Sincronizar can_manage_produtos com admin_pages
   useEffect(() => {
