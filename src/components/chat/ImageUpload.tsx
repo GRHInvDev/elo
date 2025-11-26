@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useUploadThing } from "@/components/uploadthing"
 import { type ClientUploadedFileData } from "uploadthing/types"
-import { ImageIcon, Loader2, X, FileIcon } from "lucide-react"
+import { ImageIcon, Loader2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ImageUploadProps {
@@ -51,6 +51,7 @@ export function ImageUpload({ onImageUploaded, onRemove, className, disabled }: 
   if (uploadedImageUrl) {
     return (
       <div className={cn("relative inline-block", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={uploadedImageUrl}
           alt="Imagem anexada"

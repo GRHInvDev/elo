@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Car, Calendar, LucideFileVideo, User2Icon, MapPin, PlusCircle, Clock } from "lucide-react"
+import { Car, Calendar, LucideFileVideo, User2Icon, MapPin, PlusCircle } from "lucide-react"
 import { api } from "@/trpc/react"
 import type { VehicleRent, Vehicle } from "@prisma/client"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

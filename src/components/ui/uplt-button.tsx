@@ -146,6 +146,7 @@ export function UPLTButton({
         {/* Preview da imagem */}
         {fileUrl && (
           <div className="mt-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={fileUrl}
               alt="Preview"

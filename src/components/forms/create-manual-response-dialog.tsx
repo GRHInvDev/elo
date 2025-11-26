@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -61,7 +61,7 @@ export function CreateManualResponseDialog({
                 case "textarea":
                     schema = z.string()
                     if (field.required) {
-                        schema = schema.min(1, `${field.label} é obrigatório`)
+                        schema = (schema as z.ZodString).min(1, `${field.label} é obrigatório`)
                     } else {
                         schema = schema.optional()
                     }
@@ -72,7 +72,7 @@ export function CreateManualResponseDialog({
                 case "number":
                     schema = z.number()
                     if (field.required) {
-                        schema = schema.min(field.min ?? 0)
+                        schema = (schema as z.ZodNumber).min(field.min ?? 0)
                     } else {
                         schema = schema.optional()
                     }
@@ -90,14 +90,14 @@ export function CreateManualResponseDialog({
                     if (field.multiple) {
                         schema = z.array(z.string())
                         if (field.required) {
-                            schema = schema.min(1, "Selecione pelo menos uma opção")
+                            schema = (schema as z.ZodArray<z.ZodString>).min(1, "Selecione pelo menos uma opção")
                         } else {
                             schema = schema.optional()
                         }
                     } else {
                         schema = z.string()
                         if (field.required) {
-                            schema = schema.min(1, "Selecione uma opção")
+                            schema = (schema as z.ZodString).min(1, "Selecione uma opção")
                         } else {
                             schema = schema.optional()
                         }
@@ -164,7 +164,7 @@ export function CreateManualResponseDialog({
         return (
             fullName.includes(search) ||
             user.email.toLowerCase().includes(search) ||
-            (user.setor && user.setor.toLowerCase().includes(search))
+            (user.setor?.toLowerCase().includes(search))
         )
     })
 

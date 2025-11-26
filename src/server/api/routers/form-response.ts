@@ -70,7 +70,8 @@ export const formResponseRouter = createTRPCRouter({
         select: { role_config: true },
       })
 
-      const roleConfig = (currentUser?.role_config ?? {}) as import("@/types/role-config").RolesConfig
+      // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+      const roleConfig = (currentUser?.role_config ?? {}) as import("@/types/role-config").RolesConfig // não questione, just aceite
       
       // Verificar se é sudo ou tem permissão can_create_solicitacoes
       if (!roleConfig.sudo && !(roleConfig.can_create_solicitacoes ?? false)) {

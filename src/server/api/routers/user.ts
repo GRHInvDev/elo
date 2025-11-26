@@ -37,7 +37,8 @@ export const userRouter = createTRPCRouter({
         can_locate_cars: false,
         can_view_dre_report: false,
         can_manage_extensions: false,
-        isTotem: false
+        can_create_solicitacoes: false,
+        isTotem: false,
       };
 
       // Se existe role_config customizado, usar; senão usar default
@@ -77,6 +78,7 @@ export const userRouter = createTRPCRouter({
         can_locate_cars: false,
         can_view_dre_report: false,
         can_manage_extensions: false,
+        can_create_solicitacoes: false,
         isTotem: true // Modo seguro - assumir que é Totem
       };
 

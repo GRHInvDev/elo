@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Download, FileIcon } from "lucide-react"
+import { Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface FileMessageProps {

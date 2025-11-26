@@ -13,7 +13,7 @@ interface CreateManualResponseButtonWrapperProps {
 export function CreateManualResponseButtonWrapper({ formId, formFields }: CreateManualResponseButtonWrapperProps) {
     const { data: userData } = api.user.me.useQuery()
 
-    if (!canCreateSolicitacoes(userData?.role_config)) {
+    if (!canCreateSolicitacoes(userData?.role_config ?? null)) {
         return null
     }
 

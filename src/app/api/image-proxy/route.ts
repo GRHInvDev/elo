@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server"
 
-const ALLOWED_HOSTS = ["ufs.sh"]
-
 function isAllowed(url: URL): boolean {
 	const host = url.hostname.toLowerCase()
 	return host === "ufs.sh" || host.endsWith(".ufs.sh")
@@ -53,6 +51,7 @@ export async function GET(request: Request) {
 		headers.set("Access-Control-Allow-Origin", "*")
 
 		return new NextResponse(upstream.body, { status: 200, headers })
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	} catch (err) {
 		return NextResponse.json({ error: "Unexpected error" }, { status: 500 })
 	}
