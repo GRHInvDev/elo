@@ -10,6 +10,7 @@ import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { auth } from "@clerk/nextjs/server"
 import { FormDescription } from "@/components/forms/form-description"
+import { CreateManualResponseButtonWrapper } from "@/components/forms/create-manual-response-button-wrapper"
 
 export const metadata = {
   title: "Visualizar Formulário",
@@ -104,6 +105,7 @@ export default async function FormPage({ params }: FormPageProps) {
                 Abrir nova solicitação
               </Button>
             </Link>
+            <CreateManualResponseButtonWrapper formId={form.id} formFields={form.fields as unknown as Field[]} />
           </div>
         </div>
       </div>

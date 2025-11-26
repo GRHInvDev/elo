@@ -54,6 +54,93 @@ export const formResponseRouter = createTRPCRouter({
       return created
     }),
 
+  // Criar chamado manualmente (apenas admins com permissão)
+  createManual: protectedProcedure
+    .input(
+      z.object({
+        formId: z.string(),
+        userId: z.string(), // Usuário para quem o chamado será criado
+        responses: z.array(z.record(z.string(), z.any())),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verificar permissão
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = (currentUser?.role_config ?? {}) as import("@/types/role-config").RolesConfig
+      
+      // Verificar se é sudo ou tem permissão can_create_solicitacoes
+      if (!roleConfig.sudo && !(roleConfig.can_create_solicitacoes ?? false)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para criar chamados manualmente",
+        })
+      }
+
+      // Verificar se o usuário alvo existe
+      const targetUser = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+      })
+
+      if (!targetUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado",
+        })
+      }
+
+      // Verificar se o formulário existe
+      const form = await ctx.db.form.findUnique({
+        where: { id: input.formId },
+      })
+
+      if (!form) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Formulário não encontrado",
+        })
+      }
+
+      // Criar o chamado vinculado ao usuário especificado
+      const created = await ctx.db.formResponse.create({
+        data: {
+          userId: input.userId, // Usuário alvo, não o criador
+          formId: input.formId,
+          responses: input.responses as unknown as InputJsonValue[],
+          status: "NOT_STARTED",
+        },
+      })
+
+      // Criar notificações
+      try {
+        const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== input.userId)
+        if (recipients.length > 0) {
+          const now = new Date()
+          await ctx.db.notification.createMany({
+            data: recipients.map(userId => ({
+              title: `Nova resposta no formulário`,
+              message: form.title ?? 'Formulário',
+              type: 'INFO',
+              channel: 'IN_APP',
+              userId,
+              entityId: created.id,
+              entityType: 'form_response',
+              actionUrl: `/forms/${form.id}`,
+              createdAt: now,
+              updatedAt: now,
+            }))
+          })
+        }
+      } catch (notificationError) {
+        console.error('Erro ao criar notificações de resposta de formulário:', notificationError)
+      }
+
+      return created
+    }),
+
   listByForm: protectedProcedure
     .input(
       z.object({

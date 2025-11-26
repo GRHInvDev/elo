@@ -61,6 +61,16 @@ export function canLocateCars(roleConfig: RolesConfig | null): boolean {
   return roleConfig.can_locate_cars;
 }
 
+export function canCreateSolicitacoes(roleConfig: RolesConfig | null): boolean {
+  if (!roleConfig) return false;
+
+  // Se é sudo, pode criar solicitações
+  if (roleConfig.sudo) return true;
+
+  // Verifica permissão específica
+  return roleConfig.can_create_solicitacoes ?? false;
+}
+
 // SISTEMA SIMPLIFICADO: Todos podem visualizar tudo
 export function canViewShop(): boolean {
   return true;
