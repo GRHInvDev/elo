@@ -29,6 +29,7 @@ import { adminChatGroupsRouter } from "./routers/admin-chat-groups";
 import { enterpriseManagerRouter } from "./routers/enterprise-manager";
 import { globalConfigRouter } from "./routers/global-config";
 import { purchaseRegistrationRouter } from "./routers/purchase-registration";
+import { qualityDocumentRouter } from "./routers/quality-document";
 
 /**
  * This is the primary router for your server.
@@ -65,6 +66,7 @@ export const appRouter = createTRPCRouter({
   enterpriseManager: enterpriseManagerRouter,
   globalConfig: globalConfigRouter,
   purchaseRegistration: purchaseRegistrationRouter,
+  qualityDocument: qualityDocumentRouter,
 });
 
 // export type definition of API

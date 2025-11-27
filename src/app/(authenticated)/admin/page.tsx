@@ -13,11 +13,12 @@ export default async function Page() {
         
         // Para usuários normais, verificar permissões
         if (!db_user.role_config?.sudo) {
-            // Verificar acesso via admin_pages e can_manage_produtos
+            // Verificar acesso via admin_pages e permissões específicas
             return hasAccessToAdminRoute(
                 db_user.role_config?.admin_pages || [], 
                 route.id,
-                db_user.role_config?.can_manage_produtos === true
+                db_user.role_config?.can_manage_produtos === true,
+                db_user.role_config?.can_manage_quality_management === true
             );
         }
         

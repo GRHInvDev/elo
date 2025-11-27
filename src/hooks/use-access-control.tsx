@@ -163,6 +163,41 @@ export function useAccessControl() {
     return db_user.role_config.can_manage_produtos ?? false;
   };
 
+  const canManageQualityManagement = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, pode gerenciar qualidade
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica para gerenciar qualidade
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return db_user.role_config.can_manage_quality_management ?? false;
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, tem todas as permissões
+    if (db_user.role_config.sudo) return true;
+
+    // Verificar permissões específicas
+    switch (permission) {
+      case "can_manage_quality_management":
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return db_user.role_config.can_manage_quality_management ?? false;
+      case "can_manage_produtos":
+        return db_user.role_config.can_manage_produtos ?? false;
+      case "can_manage_extensions":
+        return db_user.role_config.can_manage_extensions ?? false;
+      case "can_manage_dados_basicos_users":
+        return db_user.role_config.can_manage_dados_basicos_users ?? false;
+      case "can_view_dre_report":
+        return db_user.role_config.can_view_dre_report ?? false;
+      default:
+        return false;
+    }
+  };
+
   return {
     db_user,
     hasAdminAccess,
@@ -182,7 +217,9 @@ export function useAccessControl() {
     canManageExtensions,
     canManageBasicUserData,
     canManageProducts,
+    canManageQualityManagement,
     canAccessChat,
+    hasPermission,
     isLoading: !db_user,
     isSudo: db_user?.role_config?.sudo ?? false,
   };
