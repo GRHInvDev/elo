@@ -15,7 +15,7 @@ export const createQualityDocumentSchema = z.object({
   docResponsibleId: z.string().optional(),
   docApprovedManagerId: z.string().optional(),
   docRevPeriod: DocRevPeriodEnum,
-  docAvailability: z.string().min(1, "Disponibilidade é obrigatória"),
+  docAvailability: z.string().optional(),
 })
 
 export const updateQualityDocumentSchema = createQualityDocumentSchema.extend({
@@ -58,7 +58,7 @@ export const qualityDocumentFormSchema = z.object({
   docResponsibleId: z.string().optional(),
   docApprovedManagerId: z.string().optional(),
   docRevPeriod: DocRevPeriodEnum,
-  docAvailability: z.string().min(1, "Disponibilidade é obrigatória"),
+  docAvailability: z.string().optional(),
 })
 
 // Tipos inferidos

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X } from "lucide-react"
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Eye } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { api } from "@/trpc/react"
@@ -13,7 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
@@ -21,7 +20,6 @@ import { useAccessControl } from "@/hooks/use-access-control"
 import { QualityDocumentForm } from "@/components/admin/quality/quality-document-form"
 import type { Enterprise } from "@prisma/client"
 import type { QualityDocumentListItem } from "@/types/quality-document"
-type DocRevPeriod = "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL"
 
 export default function QualityManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -29,6 +27,8 @@ export default function QualityManagementPage() {
   const [selectedDocument, setSelectedDocument] = useState<QualityDocumentListItem | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [detailsDocument, setDetailsDocument] = useState<QualityDocumentListItem | null>(null)
   
   // Filtros
   const [enterpriseFilter, setEnterpriseFilter] = useState<Enterprise | "all">("all")
@@ -42,12 +42,9 @@ export default function QualityManagementPage() {
   const { canManageQualityManagement } = useAccessControl()
   const canManage = canManageQualityManagement()
 
-  // Buscar usuários para filtros e seleção
-  const { data: users } = api.user.searchMinimal.useQuery({ query: "" }, { enabled: canManage })
-
   // Buscar documentos
   const { data: documentsData, isLoading, refetch } = api.qualityDocument.list.useQuery({
-    limit: 1000,
+    limit: 100,
     enterprise: enterpriseFilter !== "all" ? enterpriseFilter : undefined,
     setor: setorFilter !== "all" ? setorFilter : undefined,
     docResponsibleId: responsibleFilter !== "all" ? responsibleFilter : undefined,
@@ -57,6 +54,7 @@ export default function QualityManagementPage() {
     searchColumn: searchColumn,
   })
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const documents: QualityDocumentListItem[] = documentsData?.items ?? []
 
   // Mutations
@@ -94,7 +92,7 @@ export default function QualityManagementPage() {
     const responsibles = new Map<string, { id: string; name: string }>()
     for (const doc of documents) {
       if (doc.docResponsible) {
-        const name = `${doc.docResponsible.firstName || ""} ${doc.docResponsible.lastName || ""}`.trim() || doc.docResponsible.email
+        const name = `${doc.docResponsible.firstName ?? ""} ${doc.docResponsible.lastName ?? ""}`.trim() || doc.docResponsible.email
         responsibles.set(doc.docResponsible.id, { id: doc.docResponsible.id, name })
       }
     }
@@ -103,7 +101,7 @@ export default function QualityManagementPage() {
 
   const formatUserName = (user: { firstName: string | null; lastName: string | null; email: string } | null) => {
     if (!user) return "-"
-    const name = `${user.firstName || ""} ${user.lastName || ""}`.trim()
+    const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
     return name || user.email
   }
 
@@ -119,16 +117,22 @@ export default function QualityManagementPage() {
       SEMESTRAL: "Semestral",
       ANUAL: "Anual",
     }
-    return periods[period] || period
+    return periods[period] ?? period
   }
 
   const getEnterpriseFromDocument = (doc: QualityDocumentListItem): Enterprise => {
-    return doc.docResponsible?.enterprise || doc.docApprovedManager?.enterprise || "NA"
+    return doc.docResponsible?.enterprise 
+      ?? doc.docApprovedManager?.enterprise 
+      ?? "NA"
   }
+  
 
   const getSetorFromDocument = (doc: QualityDocumentListItem): string => {
-    return doc.docResponsible?.setor || doc.docApprovedManager?.setor || "-"
+    return doc.docResponsible?.setor 
+      ?? doc.docApprovedManager?.setor 
+      ?? "-"
   }
+  
 
   if (!canManage) {
     return (
@@ -211,7 +215,15 @@ export default function QualityManagementPage() {
                   className="pl-8"
                 />
               </div>
-              <Select value={searchColumn || "all"} onValueChange={(value) => setSearchColumn(value === "all" ? undefined : value as any)}>
+                <Select value={searchColumn ?? "all"} onValueChange={(value) => {
+                  if (value === "all") {
+                    setSearchColumn(undefined);
+                  } else if (["docName", "docDesc", "docProcess", "docCod", "docTypeArc", "docAvailability"].includes(value)) {
+                    setSearchColumn(value as "docName" | "docDesc" | "docProcess" | "docCod" | "docTypeArc" | "docAvailability");
+                  } else {
+                    setSearchColumn(undefined);
+                  }
+                }}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Buscar em..." />
                 </SelectTrigger>
@@ -374,12 +386,22 @@ export default function QualityManagementPage() {
                       <TableCell>{doc.docAvailability}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {(doc.docURL || doc.docLink) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDetailsDocument(doc)
+                              setIsDetailsDialogOpen(true)
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {(doc.docURL ?? doc.docLink) && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                const url = doc.docURL || doc.docLink
+                                const url = doc.docURL ?? doc.docLink
                                 if (url) window.open(url, "_blank")
                               }}
                             >
@@ -431,7 +453,7 @@ export default function QualityManagementPage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Excluir Documento</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o documento "{doc.docName}"? Esta ação não pode ser desfeita.
+                                  Tem certeza que deseja excluir o documento &quot;{doc.docName}&quot;? Esta ação não pode ser desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -455,6 +477,99 @@ export default function QualityManagementPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Detalhes */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Documento</DialogTitle>
+          </DialogHeader>
+          {detailsDocument && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Empresa</Label>
+                  <p className="text-sm text-muted-foreground">{formatEnterprise(getEnterpriseFromDocument(detailsDocument))}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Departamento</Label>
+                  <p className="text-sm text-muted-foreground">{getSetorFromDocument(detailsDocument)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Processo</Label>
+                  <p className="text-sm text-muted-foreground">{detailsDocument.docProcess}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Código</Label>
+                  <p className="text-sm text-muted-foreground">{detailsDocument.docCod}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Tipo de Arquivo</Label>
+                  <p className="text-sm text-muted-foreground">{detailsDocument.docTypeArc}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Periodicidade</Label>
+                  <p className="text-sm text-muted-foreground">{formatRevPeriod(detailsDocument.docRevPeriod)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Última Revisão</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(detailsDocument.docLastEdit), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Disponibilidade</Label>
+                  <p className="text-sm text-muted-foreground">{detailsDocument.docAvailability}</p>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Descrição</Label>
+                <p className="text-sm text-muted-foreground mt-1">{detailsDocument.docDesc}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Responsável</Label>
+                  <p className="text-sm text-muted-foreground">{formatUserName(detailsDocument.docResponsible)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Aprovador por Gestor</Label>
+                  <p className="text-sm text-muted-foreground">{formatUserName(detailsDocument.docApprovedManager)}</p>
+                </div>
+              </div>
+
+              {(detailsDocument.docURL ?? detailsDocument.docLink) && (
+                <div>
+                  <Label className="text-sm font-medium">Links</Label>
+                  <div className="flex gap-2 mt-1">
+                    {detailsDocument.docURL && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(detailsDocument.docURL!, "_blank")}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        URL do Documento
+                      </Button>
+                    )}
+                    {detailsDocument.docLink && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(detailsDocument.docLink!, "_blank")}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Link Adicional
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

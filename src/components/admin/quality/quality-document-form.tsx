@@ -12,16 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { qualityDocumentFormSchema, type QualityDocumentFormInput } from "@/schemas/quality-document.schema"
-import type { QualityDocumentWithRelations, QualityDocumentForForm } from "@/types/quality-document"
-import type { RouterOutputs } from "@/trpc/react"
-
-type QualityDocumentFromAPI = RouterOutputs["qualityDocument"]["getById"]
-
-interface QualityDocumentFormProps {
-  documentId?: string
-  onSuccess: () => void
-  onCancel: () => void
-}
+import type { QualityDocumentForForm } from "@/types/quality-document"
+import type { QualityDocumentFromAPI, QualityDocumentFormProps } from "@/types/quality-document"
 
 // Helper para converter data para string no formato YYYY-MM-DD
 const formatDateToString = (date: Date | string): string => {
@@ -38,7 +30,7 @@ const formatDateToString = (date: Date | string): string => {
 
 // Helper function para converter documento do router para formato do formulário
 function documentToFormValues(document: QualityDocumentFromAPI): QualityDocumentFormInput {
-  const doc: QualityDocumentForForm = document
+  const doc = document as QualityDocumentForForm
 
   const docLastEditValue: string = doc.docLastEdit
     ? formatDateToString(doc.docLastEdit)
@@ -55,7 +47,7 @@ function documentToFormValues(document: QualityDocumentFromAPI): QualityDocument
     docTypeArc: String(doc.docTypeArc ?? ""),
     docResponsibleId: doc.docResponsibleId ?? "",
     docApprovedManagerId: doc.docApprovedManagerId ?? "",
-    docRevPeriod: (doc.docRevPeriod ?? "ANUAL") as "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL",
+    docRevPeriod: doc.docRevPeriod ?? "ANUAL",
     docAvailability: String(doc.docAvailability ?? ""),
   }
 }
@@ -147,10 +139,10 @@ export function QualityDocumentForm({ documentId, onSuccess, onCancel }: Quality
       const submitData = {
         ...data,
         docLastEdit: new Date(data.docLastEdit),
-        docURL: data.docURL || undefined,
-        docLink: data.docLink || undefined,
-        docResponsibleId: selectedResponsible?.id || undefined,
-        docApprovedManagerId: selectedApprovedManager?.id || undefined,
+        docURL: data.docURL ?? "",
+        docLink: data.docLink ?? "",
+        docResponsibleId: selectedResponsible?.id ?? "",
+        docApprovedManagerId: selectedApprovedManager?.id ?? "",
       }
 
       if (qualityDocument) {
@@ -165,13 +157,14 @@ export function QualityDocumentForm({ documentId, onSuccess, onCancel }: Quality
       }
 
       onSuccess()
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao salvar documento")
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar documento";
+      toast.error(errorMessage);
     }
   }
 
   const formatUserName = (user: { firstName: string | null; lastName: string | null; email: string }) => {
-    const name = `${user.firstName || ""} ${user.lastName || ""}`.trim()
+    const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
     return name || user.email
   }
 

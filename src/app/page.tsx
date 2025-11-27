@@ -23,6 +23,7 @@ export default async function HomePage() {
   
   try {
     user = await currentUser();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     // Em caso de erro, tratar como não autenticado
     user = null;

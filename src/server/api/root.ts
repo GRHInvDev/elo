@@ -30,6 +30,8 @@ import { enterpriseManagerRouter } from "./routers/enterprise-manager";
 import { globalConfigRouter } from "./routers/global-config";
 import { purchaseRegistrationRouter } from "./routers/purchase-registration";
 import { qualityDocumentRouter } from "./routers/quality-document";
+import { qualityEnumRouter } from "./routers/quality-enum";
+import { qualityAccessRouter } from "./routers/quality-access";
 
 /**
  * This is the primary router for your server.
@@ -67,6 +69,8 @@ export const appRouter = createTRPCRouter({
   globalConfig: globalConfigRouter,
   purchaseRegistration: purchaseRegistrationRouter,
   qualityDocument: qualityDocumentRouter,
+  qualityEnum: qualityEnumRouter,
+  qualityAccess: qualityAccessRouter,
 });
 
 // export type definition of API

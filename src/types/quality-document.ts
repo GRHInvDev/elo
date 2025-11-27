@@ -20,3 +20,38 @@ export interface QualityDocumentForForm {
 
 export type QualityDocumentWithRelations = QualityDocument
 
+export const enumTypeLabels = {
+  PROCESS: "Processo",
+  FILE_TYPE: "Tipo de Arquivo",
+  DEPARTMENT: "Departamento",
+  ENTERPRISE: "Empresa",
+}
+
+
+export type EnumType = "PROCESS" | "FILE_TYPE" | "DEPARTMENT" | "ENTERPRISE"
+export type QualityEnumListItem = RouterOutputs["qualityEnum"]["list"][number]
+
+export interface EnumFormData {
+  type: EnumType
+  name: string
+  description: string
+  active: boolean
+}
+
+export interface UpdateEnumFormData {
+  id: string
+  name?: string
+  description?: string
+  active?: boolean
+}
+
+export type EnumSubmitData = EnumFormData | UpdateEnumFormData
+
+
+export type QualityDocumentFromAPI = RouterOutputs["qualityDocument"]["getById"]
+
+export interface QualityDocumentFormProps {
+  documentId?: string
+  onSuccess: () => void
+  onCancel: () => void
+}

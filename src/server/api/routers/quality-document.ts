@@ -1,13 +1,14 @@
 import "server-only";
-import { TRPCError } from "@trpc/server"
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
-import type { RolesConfig } from "@/types/role-config"
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import type { RolesConfig } from "@/types/role-config";
 import {
   createQualityDocumentSchema,
   updateQualityDocumentSchema,
   qualityDocumentIdSchema,
   listQualityDocumentsSchema,
-} from "@/schemas/quality-document.schema"
+} from "@/schemas/quality-document.schema";
+import { type Prisma } from "@prisma/client";
 
 // Função auxiliar para verificar permissão
 function checkQualityManagementPermission(roleConfig: RolesConfig | null | undefined): void {
@@ -15,119 +16,103 @@ function checkQualityManagementPermission(roleConfig: RolesConfig | null | undef
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Você não tem permissão para gerenciar documentos de qualidade",
-    })
+    });
   }
 
-  if (roleConfig.sudo) {
-    return // Sudo tem acesso total
-  }
+  if (roleConfig.sudo) return;
 
   if (roleConfig.can_manage_quality_management !== true) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Você não tem permissão para gerenciar documentos de qualidade",
-    })
+    });
   }
 }
 
 export const qualityDocumentRouter = createTRPCRouter({
-  // Listar documentos com filtros e busca
+  // LISTAR DOCUMENTOS
   list: protectedProcedure
     .input(listQualityDocumentsSchema)
     .query(async ({ ctx, input }) => {
-      const limit = input.limit ?? 50
-      const { cursor, enterprise, setor, docLastEditFrom, docLastEditTo, docResponsibleId, search, searchColumn } = input
+      const limit = input.limit ?? 50;
+      const {
+        cursor,
+        enterprise,
+        setor,
+        docLastEditFrom,
+        docLastEditTo,
+        docResponsibleId,
+        search,
+        searchColumn,
+      } = input;
 
-      // Construir filtros
-      const where: any = {}
-      const orConditions: any[] = []
-
-      // Filtro por empresa (via usuário responsável ou aprovador)
+      // Construção de filtros
+      const andFilters: Prisma.QualityDocumentWhereInput[] = [];
+      const orFilters: Prisma.QualityDocumentWhereInput[] = [];
+      
+      // Empresa / Setor (OR entre usuários responsáveis e aprovadores)
       if (enterprise) {
-        orConditions.push(
-          {
-            docResponsible: {
-              enterprise: enterprise,
-            },
-          },
-          {
-            docApprovedManager: {
-              enterprise: enterprise,
-            },
-          },
-        )
+        orFilters.push(
+          { docResponsible: { enterprise } },
+          { docApprovedManager: { enterprise } }
+        );
       }
 
-      // Filtro por setor (via usuário responsável ou aprovador)
       if (setor) {
-        orConditions.push(
-          {
-            docResponsible: {
-              setor: setor,
-            },
-          },
-          {
-            docApprovedManager: {
-              setor: setor,
-            },
-          },
-        )
+        orFilters.push(
+          { docResponsible: { setor } },
+          { docApprovedManager: { setor } }
+        );
       }
 
-      if (orConditions.length > 0) {
-        where.OR = orConditions
+      if (orFilters.length > 0) {
+        andFilters.push({ OR: orFilters });
       }
 
-      // Filtro por responsável
+      // Responsável
       if (docResponsibleId) {
-        where.docResponsibleId = docResponsibleId
+        andFilters.push({ docResponsibleId });
       }
 
-      // Filtro por data da última revisão
+      // Filtro por data
       if (docLastEditFrom || docLastEditTo) {
-        where.docLastEdit = {}
-        if (docLastEditFrom) {
-          where.docLastEdit.gte = docLastEditFrom
-        }
-        if (docLastEditTo) {
-          where.docLastEdit.lte = docLastEditTo
-        }
+        const dateFilter: Prisma.DateTimeFilter = {
+          gte: docLastEditFrom,
+          lte: docLastEditTo,
+        };
+        if (docLastEditFrom) dateFilter.gte = docLastEditFrom;
+        if (docLastEditTo) dateFilter.lte = docLastEditTo;
+
+        andFilters.push({ docLastEdit: dateFilter });
       }
 
       // Busca por texto
       if (search) {
         if (searchColumn) {
           // Busca em coluna específica
-          where[searchColumn] = {
-            contains: search,
-            mode: "insensitive",
-          }
+          andFilters.push({
+            [searchColumn]: {
+              contains: search,
+              mode: "insensitive",
+            },
+          });
         } else {
-          // Busca em múltiplas colunas - combinar com filtros existentes usando AND
-          const searchConditions = [
-            { docName: { contains: search, mode: "insensitive" } },
-            { docDesc: { contains: search, mode: "insensitive" } },
-            { docProcess: { contains: search, mode: "insensitive" } },
-            { docCod: { contains: search, mode: "insensitive" } },
-            { docTypeArc: { contains: search, mode: "insensitive" } },
-            { docAvailability: { contains: search, mode: "insensitive" } },
-          ]
-
-          // Se já temos filtros OR, precisamos combinar com AND
-          if (orConditions.length > 0 || Object.keys(where).length > 0) {
-            where.AND = [
-              ...(orConditions.length > 0 ? [{ OR: orConditions }] : []),
-              { OR: searchConditions },
-            ]
-            // Remover OR do nível superior se foi movido para AND
-            if (where.OR) {
-              delete where.OR
-            }
-          } else {
-            where.OR = searchConditions
-          }
+          // Busca em múltiplas colunas
+          andFilters.push({
+            OR: [
+              { docName: { contains: search, mode: "insensitive" } },
+              { docDesc: { contains: search, mode: "insensitive" } },
+              { docProcess: { contains: search, mode: "insensitive" } },
+              { docCod: { contains: search, mode: "insensitive" } },
+              { docTypeArc: { contains: search, mode: "insensitive" } },
+              { docAvailability: { contains: search, mode: "insensitive" } },
+            ],
+          });
         }
       }
+
+      // Montagem final do WHERE
+      const where = andFilters.length > 0 ? { AND: andFilters } : {};
 
       const documents = await ctx.db.qualityDocument.findMany({
         take: limit + 1,
@@ -158,21 +143,21 @@ export const qualityDocumentRouter = createTRPCRouter({
             },
           },
         },
-      })
+      });
 
-      let nextCursor: string | undefined = undefined
+      let nextCursor: string | undefined = undefined;
       if (documents.length > limit) {
-        const nextItem = documents.pop()
-        nextCursor = nextItem?.id
+        const nextItem = documents.pop();
+        nextCursor = nextItem?.id;
       }
 
       return {
         items: documents,
         nextCursor,
-      }
+      };
     }),
 
-  // Buscar documento por ID
+  // BUSCAR POR ID
   getById: protectedProcedure
     .input(qualityDocumentIdSchema)
     .query(async ({ ctx, input }) => {
@@ -200,55 +185,53 @@ export const qualityDocumentRouter = createTRPCRouter({
             },
           },
         },
-      })
+      });
 
       if (!document) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Documento não encontrado",
-        })
+        });
       }
 
-      return document
+      return document;
     }),
 
-  // Criar documento
+  // CRIAR DOCUMENTO
   create: protectedProcedure
     .input(createQualityDocumentSchema)
     .mutation(async ({ ctx, input }) => {
-      // Verificar permissão
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
-      })
+      });
 
-      const roleConfig = currentUser?.role_config as RolesConfig | null
-      checkQualityManagementPermission(roleConfig)
+      const roleConfig = currentUser?.role_config as RolesConfig | null;
+      checkQualityManagementPermission(roleConfig);
 
-      // Verificar se código já existe
       const existingDoc = await ctx.db.qualityDocument.findFirst({
         where: { docCod: input.docCod },
-      })
+      });
 
       if (existingDoc) {
         throw new TRPCError({
           code: "CONFLICT",
           message: "Já existe um documento com este código",
-        })
+        });
       }
 
       const document = await ctx.db.qualityDocument.create({
         data: {
           docName: input.docName,
           docDesc: input.docDesc,
-          docURL: input.docURL || null,
-          docLink: input.docLink || null,
+          docURL: !!input.docURL ? input.docURL : null,
+          docLink: !!input.docLink ? input.docLink : null,
           docProcess: input.docProcess,
           docCod: input.docCod,
           docLastEdit: input.docLastEdit,
           docTypeArc: input.docTypeArc,
-          docResponsibleId: input.docResponsibleId || null,
-          docApprovedManagerId: input.docApprovedManagerId || null,
+          docResponsibleId: !!input.docResponsibleId ? input.docResponsibleId : null,
+          docApprovedManagerId: !!input.docApprovedManagerId ? input.docApprovedManagerId : null,
           docRevPeriod: input.docRevPeriod,
           docAvailability: input.docAvailability,
         },
@@ -274,40 +257,38 @@ export const qualityDocumentRouter = createTRPCRouter({
             },
           },
         },
-      })
+      });
 
-      return document
+      return document;
     }),
 
-  // Atualizar documento
+  // ATUALIZAR DOCUMENTO
   update: protectedProcedure
     .input(updateQualityDocumentSchema)
     .mutation(async ({ ctx, input }) => {
-      // Verificar permissão
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
-      })
+      });
 
-      const roleConfig = currentUser?.role_config as RolesConfig | null
-      checkQualityManagementPermission(roleConfig)
+      const roleConfig = currentUser?.role_config as RolesConfig | null;
+      checkQualityManagementPermission(roleConfig);
 
-      const { id, ...data } = input
+      const { id, ...data } = input;
 
-      // Verificar se código já existe em outro documento
       if (data.docCod) {
         const existingDoc = await ctx.db.qualityDocument.findFirst({
           where: {
             docCod: data.docCod,
             id: { not: id },
           },
-        })
+        });
 
         if (existingDoc) {
           throw new TRPCError({
             code: "CONFLICT",
             message: "Já existe outro documento com este código",
-          })
+          });
         }
       }
 
@@ -315,10 +296,10 @@ export const qualityDocumentRouter = createTRPCRouter({
         where: { id },
         data: {
           ...data,
-          docURL: data.docURL || null,
-          docLink: data.docLink || null,
-          docResponsibleId: data.docResponsibleId || null,
-          docApprovedManagerId: data.docApprovedManagerId || null,
+          docURL: data.docURL ?? null,
+          docLink: data.docLink ?? null,
+          docResponsibleId: data.docResponsibleId ?? null,
+          docApprovedManagerId: data.docApprovedManagerId ?? null,
         },
         include: {
           docResponsible: {
@@ -342,29 +323,27 @@ export const qualityDocumentRouter = createTRPCRouter({
             },
           },
         },
-      })
+      });
 
-      return document
+      return document;
     }),
 
-  // Deletar documento
+  // DELETAR DOCUMENTO
   delete: protectedProcedure
     .input(qualityDocumentIdSchema)
     .mutation(async ({ ctx, input }) => {
-      // Verificar permissão
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
-      })
+      });
 
-      const roleConfig = currentUser?.role_config as RolesConfig | null
-      checkQualityManagementPermission(roleConfig)
+      const roleConfig = currentUser?.role_config as RolesConfig | null;
+      checkQualityManagementPermission(roleConfig);
 
       await ctx.db.qualityDocument.delete({
         where: { id: input.id },
-      })
+      });
 
-      return { success: true }
+      return { success: true };
     }),
-})
-
+});
