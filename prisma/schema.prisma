@@ -31,7 +31,7 @@ model User {
   FormResponseView    FormResponseView[]
   posts               Post[]
   sells               Sell?
-  LojinhaCart            LojinhaCart?
+  shopCart            ShopCart?
   vehicleRents        VehicleRent[]
   authoredSuggestions Suggestion[]       @relation("SuggestionAuthor")
   analyzedSuggestions Suggestion[]       @relation("SuggestionAnalyst")
@@ -50,8 +50,8 @@ model User {
   createdChatGroups    chat_group[]        @relation("ChatGroupCreator")
   chatGroupMemberships chat_group_member[] @relation("ChatGroupMembers")
   addedGroupMembers    chat_group_member[] @relation("ChatGroupMemberAdder")
-  // Chat de pedidos (Lojinha)
-  LojinhaChats            LojinhaChat[]
+  // Chat de pedidos (Shop)
+  shopChats            ShopChat[]
 
   // Ramais personalizados
   customExtensions custom_extension[]
@@ -65,18 +65,22 @@ model User {
   enterpriseManagers EnterpriseManager[]
   purchaseRegistrations PurchaseRegistration[]
 
+  // Gestão de Qualidade
+  qualityDocumentsResponsible QualityDocument[] @relation("QualityDocumentResponsible")
+  qualityDocumentsApprovedManager QualityDocument[] @relation("QualityDocumentApprovedManager")
+
   @@map("users")
 }
 
 model GlobalConfig {
   id                 String @unique @default(cuid())
-  LojinhaWebhook        String
-  LojinhaNotificationEmail String?
+  shopWebhook        String
+  shopNotificationEmail String?
 }
 
 model Room {
-  Lojinha        String    @id @default(cuid())
-  Lojinha        String
+  id          String    @id @default(cuid())
+  name        String
   description String?
   capacity    Int
   floor       Int
@@ -247,28 +251,28 @@ model Product {
   enterprise  Enterprise
   imageUrl    String[]
   sells       Sell[]     @relation("ProductToSell")
-  LojinhaCarts   LojinhaCart[] @relation("ProductToLojinhaCart")
+  shopCarts   ShopCart[] @relation("ProductToShopCart")
   orders      ProductOrder[]
   active      Boolean    @default(true)
 
   @@map("products")
-}LojinhaLojinhaLojinha
+}
 
-model LojinhaCart {
+model ShopCart {
   id         String    @id @default(cuid())
   userId     String    @unique
   totalPrice Float
   createdAt  DateTime  @default(now())
-  updaLojinhat  DateTime  @updatedAt
+  updatedAt  DateTime  @updatedAt
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products   Product[] @relation("ProductToLojinhaCart")
+  products   Product[] @relation("ProductToShopCart")
 
-  @@map("Lojinha_cart")
+  @@map("shop_cart")
 }
 
-model Sell {Lojinha
+model Sell {
   id         String    @id @default(cuid())
-  userId LojinhaString    @unique
+  userId     String    @unique
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   totalPrice Float
@@ -327,17 +331,17 @@ model ProductOrder {
   product                     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderGroup                  OrderGroup?         @relation(fields: [orderGroupId], references: [id], onDelete: SetNull)
   // Chat relacionado a este pedido
-  LojinhaChats                   LojinhaChat[]
+  shopChats                   ShopChat[]
 
   @@map("product_orders")
 }
 
-moLojinhaLojinhaChat {Lojinha
+model ShopChat {
   id              String        @id @default(cuid())
   userId          String
   productOrderId  String
   message         String
-  imagLojinha        String?
+  imageUrl        String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -347,12 +351,12 @@ moLojinhaLojinhaChat {Lojinha
 
   @@index([productOrderId, createdAt])
   @@index([userId, createdAt])
-  @@map("chat_Lojinha")
+  @@map("chat_shop")
 }
 
 model EnterpriseManager {
   id            String      @id @default(cuid())
-  userId      Lojinharing?
+  userId        String?
   enterprise    Enterprise
   externalName  String?
   externalEmail String?
@@ -850,4 +854,41 @@ model NewCollaborator {
   @@index([userId])
   @@index([isNew])
   @@map("new_collaborators")
+}
+
+// Model para Gestão de Qualidade - Lista Mestra de Documentos
+model QualityDocument {
+  id                  String              @id @default(cuid())
+  docName             String
+  docDesc             String
+  docURL              String?
+  docLink             String?
+  docProcess          String
+  docCod              String
+  docLastEdit         DateTime
+  docTypeArc          String
+  docResponsibleId    String?
+  docApprovedManagerId String?
+  docRevPeriod        DocRevPeriod        @default(ANUAL)
+  docAvailability     String
+  
+  // Relações com User (empresa e setor vêm do User)
+  docResponsible      User?               @relation("QualityDocumentResponsible", fields: [docResponsibleId], references: [id], onDelete: SetNull)
+  docApprovedManager  User?               @relation("QualityDocumentApprovedManager", fields: [docApprovedManagerId], references: [id], onDelete: SetNull)
+  
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([docResponsibleId])
+  @@index([docApprovedManagerId])
+  @@index([docCod])
+  @@index([docProcess])
+  @@map("quality_documents")
+}
+
+enum DocRevPeriod {
+  MENSAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
 }
