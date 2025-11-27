@@ -140,7 +140,7 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
       ],
     },
     {
-      title: "Shop",
+      title: "Lojinha",
       icon: LucideShoppingCart,
       describe: "Página para comprar itens personalizados com as logos da BOX e da Cristallux",
       href: "/shop",

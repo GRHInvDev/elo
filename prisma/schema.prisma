@@ -31,7 +31,7 @@ model User {
   FormResponseView    FormResponseView[]
   posts               Post[]
   sells               Sell?
-  shopCart            ShopCart?
+  LojinhaCart            LojinhaCart?
   vehicleRents        VehicleRent[]
   authoredSuggestions Suggestion[]       @relation("SuggestionAuthor")
   analyzedSuggestions Suggestion[]       @relation("SuggestionAnalyst")
@@ -50,8 +50,8 @@ model User {
   createdChatGroups    chat_group[]        @relation("ChatGroupCreator")
   chatGroupMemberships chat_group_member[] @relation("ChatGroupMembers")
   addedGroupMembers    chat_group_member[] @relation("ChatGroupMemberAdder")
-  // Chat de pedidos (Shop)
-  shopChats            ShopChat[]
+  // Chat de pedidos (Lojinha)
+  LojinhaChats            LojinhaChat[]
 
   // Ramais personalizados
   customExtensions custom_extension[]
@@ -65,23 +65,18 @@ model User {
   enterpriseManagers EnterpriseManager[]
   purchaseRegistrations PurchaseRegistration[]
 
-  // Gestão de Qualidade
-  qualityDocumentsResponsible QualityDocument[] @relation("QualityDocumentResponsible")
-  qualityDocumentsApprovedManager QualityDocument[] @relation("QualityDocumentApprovedManager")
-  qualityDocumentAccess QualityDocumentAccess[]
-
   @@map("users")
 }
 
 model GlobalConfig {
   id                 String @unique @default(cuid())
-  shopWebhook        String
-  shopNotificationEmail String?
+  LojinhaWebhook        String
+  LojinhaNotificationEmail String?
 }
 
 model Room {
-  id          String    @id @default(cuid())
-  name        String
+  Lojinha        String    @id @default(cuid())
+  Lojinha        String
   description String?
   capacity    Int
   floor       Int
@@ -252,28 +247,28 @@ model Product {
   enterprise  Enterprise
   imageUrl    String[]
   sells       Sell[]     @relation("ProductToSell")
-  shopCarts   ShopCart[] @relation("ProductToShopCart")
+  LojinhaCarts   LojinhaCart[] @relation("ProductToLojinhaCart")
   orders      ProductOrder[]
   active      Boolean    @default(true)
 
   @@map("products")
-}
+}LojinhaLojinhaLojinha
 
-model ShopCart {
+model LojinhaCart {
   id         String    @id @default(cuid())
   userId     String    @unique
   totalPrice Float
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  updaLojinhat  DateTime  @updatedAt
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products   Product[] @relation("ProductToShopCart")
+  products   Product[] @relation("ProductToLojinhaCart")
 
-  @@map("shop_cart")
+  @@map("Lojinha_cart")
 }
 
-model Sell {
+model Sell {Lojinha
   id         String    @id @default(cuid())
-  userId     String    @unique
+  userId LojinhaString    @unique
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   totalPrice Float
@@ -332,17 +327,17 @@ model ProductOrder {
   product                     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderGroup                  OrderGroup?         @relation(fields: [orderGroupId], references: [id], onDelete: SetNull)
   // Chat relacionado a este pedido
-  shopChats                   ShopChat[]
+  LojinhaChats                   LojinhaChat[]
 
   @@map("product_orders")
 }
 
-model ShopChat {
+moLojinhaLojinhaChat {Lojinha
   id              String        @id @default(cuid())
   userId          String
   productOrderId  String
   message         String
-  imageUrl        String?
+  imagLojinha        String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -352,12 +347,12 @@ model ShopChat {
 
   @@index([productOrderId, createdAt])
   @@index([userId, createdAt])
-  @@map("chat_shop")
+  @@map("chat_Lojinha")
 }
 
 model EnterpriseManager {
   id            String      @id @default(cuid())
-  userId        String?
+  userId      Lojinharing?
   enterprise    Enterprise
   externalName  String?
   externalEmail String?
@@ -855,85 +850,4 @@ model NewCollaborator {
   @@index([userId])
   @@index([isNew])
   @@map("new_collaborators")
-}
-
-// Enums personalizáveis para Gestão de Qualidade
-model QualityEnum {
-  id          String   @id @default(cuid())
-  type        EnumType
-  name        String
-  description String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([type, name])
-  @@map("quality_enums")
-}
-
-// Tipos de enum disponíveis
-enum EnumType {
-  PROCESS
-  FILE_TYPE
-  DEPARTMENT
-  ENTERPRISE
-}
-
-// Listas privadas - controle de acesso por documento
-model QualityDocumentAccess {
-  id             String          @id @default(cuid())
-  documentId     String
-  userId         String
-  canView        Boolean         @default(true)
-  canEdit        Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  document       QualityDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([documentId, userId])
-  @@map("quality_document_access")
-}
-
-// Model para Gestão de Qualidade - Lista Mestra de Documentos
-model QualityDocument {
-  id                  String                    @id @default(cuid())
-  docName             String
-  docDesc             String
-  docURL              String?
-  docLink             String?
-  docProcess          String
-  docCod              String
-  docLastEdit         DateTime
-  docTypeArc          String
-  docResponsibleId    String?
-  docApprovedManagerId String?
-  docRevPeriod        DocRevPeriod              @default(ANUAL)
-  docAvailability     String?
-  isPrivate           Boolean                   @default(false)
-
-  // Relações com User (empresa e setor vêm do User)
-  docResponsible      User?                     @relation("QualityDocumentResponsible", fields: [docResponsibleId], references: [id], onDelete: SetNull)
-  docApprovedManager  User?                     @relation("QualityDocumentApprovedManager", fields: [docApprovedManagerId], references: [id], onDelete: SetNull)
-
-  // Controle de acesso privado
-  accessList          QualityDocumentAccess[]
-
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
-
-  @@index([docResponsibleId])
-  @@index([docApprovedManagerId])
-  @@index([docCod])
-  @@index([docProcess])
-  @@index([isPrivate])
-  @@map("quality_documents")
-}
-
-enum DocRevPeriod {
-  MENSAL
-  TRIMESTRAL
-  SEMESTRAL
-  ANUAL
 }

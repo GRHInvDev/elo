@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
-import { 
-    createProductOrderSchema, 
-    updateProductOrderStatusSchema, 
-    markProductOrderAsReadSchema 
+import {
+    createProductOrderSchema,
+    createMultipleProductOrdersSchema,
+    updateProductOrderStatusSchema,
+    markProductOrderAsReadSchema
 } from "@/schemas/product-order.schema"
 import type { RolesConfig } from "@/types/role-config"
 import { sendEmail } from "@/lib/mail/email-utils"
@@ -240,6 +241,244 @@ export const productOrderRouter = createTRPCRouter({
                 }
 
                 return order
+            })
+        }),
+
+    // Criar múltiplos pedidos (carrinho)
+    createMultiple: protectedProcedure
+        .input(createMultipleProductOrdersSchema)
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.auth.userId
+
+            // Validar se todos os produtos existem e têm estoque suficiente
+            const productIds = input.orders.map(order => order.productId)
+            const products = await ctx.db.product.findMany({
+                where: { id: { in: productIds } }
+            })
+
+            if (products.length !== productIds.length) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Um ou mais produtos não foram encontrados"
+                })
+            }
+
+            // Verificar se todos os produtos são da mesma empresa
+            const enterprises = [...new Set(products.map(p => p.enterprise))]
+            if (enterprises.length === 0) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Nenhum produto encontrado"
+                })
+            }
+            if (enterprises.length > 1) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Todos os produtos devem ser da mesma empresa"
+                })
+            }
+
+            const enterprise = enterprises[0]!
+
+            // Verificar estoque para cada produto
+            const productMap = new Map(products.map(p => [p.id, p]))
+            for (const order of input.orders) {
+                const product = productMap.get(order.productId)
+                if (!product || product.stock < order.quantity) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: `Estoque insuficiente para ${product?.name}. Disponível: ${product?.stock} unidades`
+                    })
+                }
+            }
+
+            // Criar pedidos e atualizar estoque em uma transação
+            return await ctx.db.$transaction(async (tx) => {
+                let orderGroupId: string | null = null
+                let purchaseRegistration: { createdAt: Date } | null = null
+
+                // Criar novo grupo de pedidos para este carrinho
+                try {
+                    const newGroup = await tx.orderGroup.create({
+                        data: {
+                            userId,
+                            enterprise,
+                            status: "SOLICITADO"
+                        }
+                    })
+                    orderGroupId = newGroup.id
+                } catch (error) {
+                    // Tabela order_groups pode não existir ainda
+                    console.warn('[ProductOrder] Tabela order_groups não encontrada, continuando sem grupo:', error)
+                    orderGroupId = null
+                }
+
+                // Tentar verificar cadastro de compras
+                try {
+                    purchaseRegistration = await tx.purchaseRegistration.findUnique({
+                        where: {
+                            userId_enterprise: {
+                                userId,
+                                enterprise
+                            }
+                        }
+                    })
+                } catch (error) {
+                    // Tabela purchase_registrations pode não existir ainda
+                    console.warn('[ProductOrder] Tabela purchase_registrations não encontrada:', error)
+                    purchaseRegistration = null
+                }
+
+                // Criar todos os pedidos
+                const createdOrders = []
+                for (const orderInput of input.orders) {
+                    const order = await tx.productOrder.create({
+                        data: {
+                            userId,
+                            productId: orderInput.productId,
+                            orderGroupId,
+                            quantity: orderInput.quantity,
+                            paymentMethod: input.paymentMethod,
+                            status: "SOLICITADO",
+                            read: false,
+                            orderTimestamp: new Date(),
+                            purchaseRegistrationTimestamp: purchaseRegistration ? purchaseRegistration.createdAt : null,
+                        },
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    imageUrl: true,
+                                }
+                            },
+                            product: true,
+                            orderGroup: true,
+                        }
+                    })
+                    createdOrders.push(order)
+
+                    // Atualizar estoque do produto
+                    await tx.product.update({
+                        where: { id: orderInput.productId },
+                        data: {
+                            stock: {
+                                decrement: orderInput.quantity
+                            }
+                        }
+                    })
+                }
+
+                return createdOrders
+            }).then(async (orders) => {
+                // Enviar emails após a criação dos pedidos (fora da transação)
+                try {
+                    if (orders.length > 0) {
+                        const firstOrder = orders[0]
+                        const userName = firstOrder?.user.firstName && firstOrder?.user.lastName
+                            ? `${firstOrder.user.firstName} ${firstOrder.user.lastName}`
+                            : (firstOrder?.user.firstName ?? firstOrder?.user.email ?? "Usuário")
+
+                        const userEmail = firstOrder?.user.email
+                        const dataPedido = new Date().toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })
+
+                        // Calcular total de todos os pedidos
+                        const totalGeral = orders.reduce((total, order) => {
+                            return total + (order.product.price * order.quantity)
+                        }, 0)
+
+                        // Enviar email para o usuário
+                        const emailContent = mockEmailPedidoProduto(
+                            userName,
+                            orders.map(order => `${order.product.name} (${order.quantity}x)`).join(', '),
+                            orders.reduce((total, order) => total + order.quantity, 0), // quantidade total
+                            0, // precoUnitario não usado para múltiplos produtos
+                            totalGeral,
+                            enterprise,
+                            dataPedido
+                        )
+
+                        await sendEmail(
+                            userEmail ?? "",
+                            `Pedido Recebido - ${orders.length} ${orders.length === 1 ? 'produto' : 'produtos'} (${enterprise})`,
+                            emailContent
+                        ).catch((error) => {
+                            console.error(`[ProductOrder] Erro ao enviar email para usuário:`, error)
+                        })
+
+                        // Enviar notificações para gestores
+                        const notificationEmails: string[] = []
+
+                        // Buscar gestores da empresa através da tabela enterpriseManager
+                        const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
+                            where: {
+                                enterprise: enterprise,
+                            },
+                            include: {
+                                user: {
+                                    select: {
+                                        email: true
+                                    }
+                                }
+                            }
+                        })
+
+                        enterpriseManagers.forEach((manager) => {
+                            // Adicionar email do usuário se existir
+                            if (manager.user?.email) {
+                                const userEmail = manager.user.email
+                                if (!notificationEmails.includes(userEmail)) {
+                                    notificationEmails.push(userEmail)
+                                }
+                            }
+                            // Adicionar email externo se existir
+                            if (manager.externalEmail) {
+                                const externalEmail = manager.externalEmail
+                                if (!notificationEmails.includes(externalEmail)) {
+                                    notificationEmails.push(externalEmail)
+                                }
+                            }
+                        })
+
+                        // Enviar email de notificação para responsáveis
+                        if (notificationEmails.length > 0) {
+                            const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
+                                userName,
+                                userEmail ?? "N/A",
+                                orders.map(order => `${order.product.name} (${order.quantity}x)`).join(', '),
+                                1, // quantidade total (não usada no template)
+                                totalGeral,
+                                enterprise,
+                                dataPedido,
+                                input.contactWhatsapp
+                            )
+
+                            // Enviar para todos os emails de notificação
+                            for (const email of notificationEmails) {
+                                await sendEmail(
+                                    email,
+                                    `Novo Pedido - ${orders.length} ${orders.length === 1 ? 'produto' : 'produtos'} (${enterprise})`,
+                                    emailContentNotificacao
+                                ).catch((error) => {
+                                    console.error(`[ProductOrder] Erro ao enviar email de notificação para ${email}:`, error)
+                                })
+                            }
+                        }
+                    }
+                } catch (error) {
+                    // Não falhar a criação do pedido se o email falhar
+                    console.error('[ProductOrder] Erro ao processar envio de emails:', error)
+                }
+
+                return orders
             })
         }),
 
@@ -579,37 +818,6 @@ export const productOrderRouter = createTRPCRouter({
         .input(getProductOrderChatSchema)
         .query(async ({ ctx, input }) => {
             const currentUserId = ctx.auth.userId
-            // Tipagem segura para acessar cliente ShopChat mesmo antes do generate
-            type ShopChatClient = {
-              findMany: (args: {
-                where: { productOrderId: string }
-                include: {
-                  user: {
-                    select: {
-                      id: true
-                      firstName: true
-                      lastName: true
-                      email: true
-                      imageUrl: true
-                    }
-                  }
-                }
-                orderBy: { createdAt: "asc" }
-              }) => Promise<Array<{
-                id: string
-                message: string
-                imageUrl: string | null
-                createdAt: Date
-                updatedAt: Date
-                user: {
-                  id: string
-                  firstName: string | null
-                  lastName: string | null
-                  email: string | null
-                  imageUrl: string | null
-                }
-              }>>
-            }
 
             // Buscar pedido e empresa
             const order = await ctx.db.productOrder.findUnique({
@@ -648,7 +856,37 @@ export const productOrderRouter = createTRPCRouter({
                 throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para visualizar este chat" })
             }
 
-            const shopChatClient: ShopChatClient = (ctx.db as unknown as { shopChat: ShopChatClient }).shopChat
+            // @ts-expect-error - Tabela shopChat pode não existir durante desenvolvimento
+            const shopChatClient = ctx.db.shopChat as {
+              findMany: (args: {
+                where: { productOrderId: string }
+                include: {
+                  user: {
+                    select: {
+                      id: true
+                      firstName: true
+                      lastName: true
+                      email: true
+                      imageUrl: true
+                    }
+                  }
+                }
+                orderBy: { createdAt: "asc" }
+              }) => Promise<Array<{
+                id: string
+                message: string
+                imageUrl: string | null
+                createdAt: Date
+                updatedAt: Date
+                user: {
+                  id: string
+                  firstName: string | null
+                  lastName: string | null
+                  email: string | null
+                  imageUrl: string | null
+                }
+              }>>
+            }
             return await shopChatClient.findMany({
                 where: { productOrderId: input.orderId },
                 include: {
@@ -684,27 +922,6 @@ export const productOrderRouter = createTRPCRouter({
                 email: string | null
                 imageUrl: string | null
               }
-            }
-            type ShopChatClient = {
-              create: (args: {
-                data: {
-                  productOrderId: string
-                  userId: string
-                  message: string
-                  imageUrl?: string
-                }
-                include: {
-                  user: {
-                    select: {
-                      id: true
-                      firstName: true
-                      lastName: true
-                      email: true
-                      imageUrl: true
-                    }
-                  }
-                }
-              }) => Promise<ShopChatCreateReturn>
             }
 
             // Buscar pedido e empresa
@@ -743,7 +960,28 @@ export const productOrderRouter = createTRPCRouter({
                 throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para enviar mensagens neste chat" })
             }
 
-            const shopChatClient: ShopChatClient = (ctx.db as unknown as { shopChat: ShopChatClient }).shopChat
+            // @ts-expect-error - Tabela shopChat pode não existir durante desenvolvimento
+            const shopChatClient = ctx.db.shopChat as {
+              create: (args: {
+                data: {
+                  productOrderId: string
+                  userId: string
+                  message: string
+                  imageUrl?: string
+                }
+                include: {
+                  user: {
+                    select: {
+                      id: true
+                      firstName: true
+                      lastName: true
+                      email: true
+                      imageUrl: true
+                    }
+                  }
+                }
+              }) => Promise<ShopChatCreateReturn>
+            }
             const newMessage = await shopChatClient.create({
                 data: {
                     productOrderId: input.orderId,
