@@ -1,13 +1,12 @@
 "use client"
 
-import { useState } from "react"
 import type {Product} from "@prisma/client"
 import Image from "next/image"
 import { Card, CardContent, /*CardDescription,*/ CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { LucideBadgeInfo, LucideShoppingCart } from "lucide-react";
 import { Button } from "../ui/button";
-import { CreateOrderModal } from "./create-order-modal";
+import { useCart } from "@/hooks/use-cart";
 
 interface ProductCardProps {
   product: Product
@@ -15,12 +14,15 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, size = "md" }: ProductCardProps) {
-    const [isModalOpen, setIsModalOpen] = useState(false)
+    const { addItem } = useCart()
 
     const imageHeightClass = size === "sm" ? "h-48" : "h-72"
 
+    const handleAddToCart = () => {
+        addItem(product, 1)
+    }
+
     return (
-        <>
         <Card className="overflow-hidden h-full flex flex-col">
             <div>
               <div className={`relative ${imageHeightClass} w-full`}>
@@ -70,23 +72,16 @@ export default function ProductCard({ product, size = "md" }: ProductCardProps) 
                 </div>
               </CardContent>
               <CardFooter>
-                <Button 
-                  disabled={product.stock <= 0} 
-                  className="w-full" 
+                <Button
+                  disabled={product.stock <= 0}
+                  className="w-full"
                   size="sm"
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={handleAddToCart}
                 >
                   <LucideShoppingCart/>
                   {product.stock <= 0 ? "Indisponível" : "Adicionar ao Carrinho"}
                 </Button>
               </CardFooter>
             </Card>
-
-            <CreateOrderModal
-              product={product}
-              open={isModalOpen}
-              onOpenChange={setIsModalOpen}
-            />
-        </>
     );
 }

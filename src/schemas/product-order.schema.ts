@@ -10,6 +10,17 @@ export const createProductOrderSchema = z.object({
     contactWhatsapp: z.string().min(8, "Informe um WhatsApp válido").optional(),
 })
 
+export const createMultipleProductOrdersSchema = z.object({
+    orders: z.array(z.object({
+        productId: z.string().cuid("ID do produto inválido"),
+        quantity: z.number().int().min(1, "Quantidade deve ser pelo menos 1"),
+    })),
+    paymentMethod: z.enum(["BOLETO", "PIX"], {
+        errorMap: () => ({ message: "Forma de pagamento deve ser BOLETO ou PIX" })
+    }),
+    contactWhatsapp: z.string().min(8, "Informe um WhatsApp válido"),
+})
+
 export const createPurchaseRegistrationSchema = z.object({
     enterprise: z.nativeEnum(Enterprise),
     fullName: z.string().min(3, "Nome completo deve ter pelo menos 3 caracteres"),

@@ -46,7 +46,7 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
           <div
             ref={provided.innerRef}
             {...({ ...provided.droppableProps } as React.HTMLAttributes<HTMLDivElement>)}
-            className="flex min-h-[600px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col"
+            className="flex min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col"
             style={{ gap: "0.75rem" }}
           >
             {orders.map((order, index) => (
@@ -58,10 +58,10 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
                     {...dragProvided.draggableProps}
                     style={{ ...dragProvided.draggableProps.style, ...(snapshot.isDragging ? { pointerEvents: "none", zIndex: 50 } : {}) }}
                   >
-                    <Card className={`bg-muted shadow-sm ${!order.read ? "ring-2 ring-primary" : ""}`}>
-                      <CardHeader className="pb-2">
+                    <Card className={`bg-muted shadow-sm max-w-xs ${!order.read ? "ring-2 ring-primary" : ""}`}>
+                      <CardHeader className="pb-1">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-base font-medium">
+                          <CardTitle className="text-sm font-medium leading-tight">
                             {order.product.name}
                           </CardTitle>
                           {!order.read && (
@@ -69,46 +69,46 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
                           )}
                         </div>
                       </CardHeader>
-                      <CardContent className="pb-2 space-y-2">
+                      <CardContent className="pb-1 space-y-1">
                         {/* Imagem do produto */}
                         {order.product.imageUrl && order.product.imageUrl.length > 0 && (
-                          <div className="relative h-24 w-full rounded-md overflow-hidden border">
+                          <div className="relative h-16 w-16 mx-auto rounded-md overflow-hidden border">
                             <Image
                               src={order.product.imageUrl[0] ?? "/placeholder.svg"}
                               alt={order.product.name}
                               fill
                               className="object-cover"
-                              sizes="(max-width: 768px) 100vw, 200px"
+                              sizes="64px"
                             />
                           </div>
                         )}
 
                         {/* Informações do usuário */}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="h-4 w-4" />
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          <div className="flex items-center gap-1.5">
+                            <Avatar className="h-4 w-4">
                               <AvatarImage src={order.user.imageUrl ?? ""} />
-                              <AvatarFallback>
+                              <AvatarFallback className="text-xs">
                                 {(order.user.firstName ? order.user.firstName[0] : order.user.email?.[0])?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="truncate">
+                            <span className="truncate text-xs">
                               {order.user.firstName ? `${order.user.firstName} ${order.user.lastName ?? ""}` : order.user.email}
                             </span>
                           </div>
                         </div>
 
                         {/* Quantidade */}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Package className="h-4 w-4" />
-                          <span>Quantidade: {order.quantity}</span>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Package className="h-3 w-3" />
+                          <span>Qty: {order.quantity}</span>
                         </div>
 
                         {/* Data */}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           <CardTitle className="sr-only">Data</CardTitle>
-                          <Calendar className="h-4 w-4" />
+                          <Calendar className="h-3 w-3" />
                           <span>
                             {formatDistanceToNow(new Date(order.createdAt), {
                               addSuffix: true,
@@ -117,31 +117,31 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
                           </span>
                         </div>
                       </CardContent>
-                      <CardFooter className="flex gap-2">
+                      <CardFooter className="pt-1 pb-2 flex gap-1">
                         {!order.read && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1"
+                            className="flex-1 h-7 text-xs"
                             onClick={(e) => {
                               e.stopPropagation()
                               onMarkAsRead(order.id)
                             }}
                           >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Marcar como lido
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            Lido
                           </Button>
                         )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="flex-1"
+                          className="flex-1 h-7 text-xs"
                           onClick={(e) => {
                             e.stopPropagation()
                             onOrderSlotClick?.(order)
                           }}
                         >
-                          Ver Detalhes
+                          Detalhes
                         </Button>
                       </CardFooter>
                     </Card>

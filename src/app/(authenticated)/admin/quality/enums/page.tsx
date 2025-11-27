@@ -156,11 +156,11 @@ export default function QualityEnumsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enums?.map((enumItem) => (
+                {enums?.map((enumItem: QualityEnumListItem) => (
                   <TableRow key={enumItem.id}>
                     <TableCell>
                       <Badge variant="outline">
-                        {enumTypeLabels[enumItem.type]}
+                        {enumTypeLabels[enumItem.type as keyof typeof enumTypeLabels]}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{enumItem.name}</TableCell>
