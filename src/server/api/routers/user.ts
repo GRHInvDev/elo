@@ -38,6 +38,7 @@ export const userRouter = createTRPCRouter({
         can_view_dre_report: false,
         can_manage_extensions: false,
         can_create_solicitacoes: false,
+        can_manage_quality_management: false,
         isTotem: false,
       };
 
@@ -79,6 +80,7 @@ export const userRouter = createTRPCRouter({
         can_view_dre_report: false,
         can_manage_extensions: false,
         can_create_solicitacoes: false,
+        can_manage_quality_management: false,
         isTotem: true // Modo seguro - assumir que é Totem
       };
 
@@ -416,6 +418,7 @@ export const userRouter = createTRPCRouter({
         can_manage_extensions: z.boolean().optional(),
         can_manage_dados_basicos_users: z.boolean().optional(),
         can_manage_produtos: z.boolean().optional(),
+        can_manage_quality_management: z.boolean().optional(),
         isTotem: z.boolean().optional(),
         visible_forms: z.array(z.string()).optional(),
         hidden_forms: z.array(z.string()).optional(),

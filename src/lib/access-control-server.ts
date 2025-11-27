@@ -19,8 +19,9 @@ export async function checkAdminAccess(route: string) {
     const hasAdminRoute = hasAdminPages && db_user.role_config.admin_pages.includes("/admin")
     const hasAnyAdminRoute = hasAdminPages && db_user.role_config.admin_pages.some((r: string) => r.startsWith("/admin"))
     const hasCanManageProducts = db_user.role_config.can_manage_produtos === true
+    const hasCanManageQuality = db_user.role_config.can_manage_quality_management === true
     
-    const hasAccess = hasAdminRoute || hasAnyAdminRoute || hasCanManageProducts
+    const hasAccess = hasAdminRoute || hasAnyAdminRoute || hasCanManageProducts || hasCanManageQuality
     
     if (!hasAccess) {
       redirect("/dashboard");
@@ -30,12 +31,21 @@ export async function checkAdminAccess(route: string) {
   }
 
   // Para outras rotas, verifica se tem acesso à rota específica usando a função centralizada
-  // Mas também permite se tem can_manage_produtos e a rota é /admin/products
+  // Mas também permite se tem permissões específicas
   if (route === "/admin/products" && db_user.role_config.can_manage_produtos === true) {
     return db_user;
   }
 
-  if (!hasAccessToAdminRoute(db_user.role_config.admin_pages || [], route)) {
+  if (route === "/admin/quality" && db_user.role_config.can_manage_quality_management === true) {
+    return db_user;
+  }
+
+  if (!hasAccessToAdminRoute(
+    db_user.role_config.admin_pages || [], 
+    route,
+    db_user.role_config.can_manage_produtos === true,
+    db_user.role_config.can_manage_quality_management === true
+  )) {
     redirect("/dashboard");
   }
 

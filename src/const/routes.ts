@@ -119,6 +119,7 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
         },
       ],
     },
+   
     {
       title: "Formulários",
       icon: FileText,
@@ -149,7 +150,13 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
       icon: LucidePhone,
       describe: "Lista de ramais telefônicos organizados por setor",
       href: "/extension",
-    }
+    },
+    // {
+    //   title: "Qualidade",
+    //   icon: FileText,
+    //   describe: "Lista mestra de documentos de qualidade",
+    //   href: "/quality",
+    // },
   ]
   
   // Verificar acesso admin usando role_config granular

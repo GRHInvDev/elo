@@ -65,6 +65,11 @@ model User {
   enterpriseManagers EnterpriseManager[]
   purchaseRegistrations PurchaseRegistration[]
 
+  // Gestão de Qualidade
+  qualityDocumentsResponsible QualityDocument[] @relation("QualityDocumentResponsible")
+  qualityDocumentsApprovedManager QualityDocument[] @relation("QualityDocumentApprovedManager")
+  qualityDocumentAccess QualityDocumentAccess[]
+
   @@map("users")
 }
 
@@ -850,4 +855,85 @@ model NewCollaborator {
   @@index([userId])
   @@index([isNew])
   @@map("new_collaborators")
+}
+
+// Enums personalizáveis para Gestão de Qualidade
+model QualityEnum {
+  id          String   @id @default(cuid())
+  type        EnumType
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([type, name])
+  @@map("quality_enums")
+}
+
+// Tipos de enum disponíveis
+enum EnumType {
+  PROCESS
+  FILE_TYPE
+  DEPARTMENT
+  ENTERPRISE
+}
+
+// Listas privadas - controle de acesso por documento
+model QualityDocumentAccess {
+  id             String          @id @default(cuid())
+  documentId     String
+  userId         String
+  canView        Boolean         @default(true)
+  canEdit        Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  document       QualityDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, userId])
+  @@map("quality_document_access")
+}
+
+// Model para Gestão de Qualidade - Lista Mestra de Documentos
+model QualityDocument {
+  id                  String                    @id @default(cuid())
+  docName             String
+  docDesc             String
+  docURL              String?
+  docLink             String?
+  docProcess          String
+  docCod              String
+  docLastEdit         DateTime
+  docTypeArc          String
+  docResponsibleId    String?
+  docApprovedManagerId String?
+  docRevPeriod        DocRevPeriod              @default(ANUAL)
+  docAvailability     String?
+  isPrivate           Boolean                   @default(false)
+
+  // Relações com User (empresa e setor vêm do User)
+  docResponsible      User?                     @relation("QualityDocumentResponsible", fields: [docResponsibleId], references: [id], onDelete: SetNull)
+  docApprovedManager  User?                     @relation("QualityDocumentApprovedManager", fields: [docApprovedManagerId], references: [id], onDelete: SetNull)
+
+  // Controle de acesso privado
+  accessList          QualityDocumentAccess[]
+
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  @@index([docResponsibleId])
+  @@index([docApprovedManagerId])
+  @@index([docCod])
+  @@index([docProcess])
+  @@index([isPrivate])
+  @@map("quality_documents")
+}
+
+enum DocRevPeriod {
+  MENSAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
 }

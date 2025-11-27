@@ -1,4 +1,4 @@
-import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag } from "lucide-react"
+import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck } from "lucide-react"
 
 export interface AdminRoute {
   id: string
@@ -82,6 +82,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     path: "/admin/products",
     requiresBasicAdmin: true,
   },
+  {
+    id: "/admin/quality",
+    title: "Gestão de Qualidade",
+    description: "Lista Mestra de Documentos",
+    icon: FileCheck,
+    path: "/admin/quality",
+    requiresBasicAdmin: true,
+  },
   // {
   //   id: "/admin/chat",
   //   title: "Gerenciar Chat",
@@ -109,7 +117,7 @@ export function getAccessibleAdminRoutes(adminPages: string[]): AdminRoute[] {
   })
 }
 
-export function hasAccessToAdminRoute(adminPages: string[], routeId: string, canManageProducts?: boolean): boolean {
+export function hasAccessToAdminRoute(adminPages: string[], routeId: string, canManageProducts?: boolean, canManageQuality?: boolean): boolean {
   // Se é a rota base, verificar se tem qualquer acesso admin
   if (routeId === "/admin") {
     // Tem acesso se tem /admin na lista OU tem qualquer rota que comece com /admin
@@ -121,11 +129,20 @@ export function hasAccessToAdminRoute(adminPages: string[], routeId: string, can
     return true
   }
 
+  // Para /admin/quality, verificar também can_manage_quality_management se fornecido
+  if (routeId === "/admin/quality" && canManageQuality === true) {
+    return true
+  }
+
   // Se não tem acesso ao /admin básico, não pode acessar outras rotas
-  // EXCETO se tem a rota específica e can_manage_produtos (para /admin/products)
+  // EXCETO se tem a rota específica e permissão específica
   if (!adminPages.includes("/admin")) {
     // Permitir se tem can_manage_produtos e a rota é /admin/products
     if (routeId === "/admin/products" && canManageProducts === true) {
+      return true
+    }
+    // Permitir se tem can_manage_quality_management e a rota é /admin/quality
+    if (routeId === "/admin/quality" && canManageQuality === true) {
       return true
     }
     return false
