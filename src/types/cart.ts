@@ -12,7 +12,7 @@ export interface CartContextType {
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
-  getTotalItems: () => number
-  getTotalPrice: () => number
-  isEmpty: () => boolean
+  totalItems: number
+  totalPrice: number
+  isEmpty: boolean
 }

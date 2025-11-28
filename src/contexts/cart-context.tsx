@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useReducer, type ReactNode } from "react"
+import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react"
 import type { Product } from "@prisma/client"
 import type { CartItem, CartContextType } from "@/types/cart"
 import { toast } from "sonner"
@@ -95,46 +95,46 @@ interface CartProviderProps {
 export function CartProvider({ children }: CartProviderProps) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
 
-  const addItem = (product: Product, quantity?: number) => {
+  const addItem = useCallback((product: Product, quantity?: number) => {
     dispatch({ type: "ADD_ITEM", product, quantity: quantity ?? 1 })
     toast.success(`"${product.name}" adicionado ao carrinho!`)
-  }
+  }, [])
 
-  const removeItem = (productId: string) => {
+  const removeItem = useCallback((productId: string) => {
     dispatch({ type: "REMOVE_ITEM", productId })
-  }
+  }, [])
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     dispatch({ type: "UPDATE_QUANTITY", productId, quantity })
-  }
+  }, [])
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     dispatch({ type: "CLEAR_CART" })
-  }
+  }, [])
 
-  const getTotalItems = () => {
+  const totalItems = useMemo(() => {
     return state.items.reduce((total, item) => total + item.quantity, 0)
-  }
+  }, [state.items])
 
-  const getTotalPrice = () => {
+  const totalPrice = useMemo(() => {
     return state.items.reduce((total, item) => total + (item.product.price * item.quantity), 0)
-  }
+  }, [state.items])
 
-  const isEmpty = () => {
+  const isEmpty = useMemo(() => {
     return state.items.length === 0
-  }
+  }, [state.items])
 
-  const contextValue: CartContextType = {
+  const contextValue: CartContextType = useMemo(() => ({
     items: state.items,
     enterprise: state.enterprise,
     addItem,
     removeItem,
     updateQuantity,
     clearCart,
-    getTotalItems,
-    getTotalPrice,
+    totalItems,
+    totalPrice,
     isEmpty
-  }
+  }), [state.items, state.enterprise, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isEmpty])
 
   return (
     <CartContext.Provider value={contextValue}>

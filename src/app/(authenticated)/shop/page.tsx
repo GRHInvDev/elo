@@ -3,7 +3,7 @@
 import { DashboardShell } from "@/components/dashboard-shell"
 import ProductGrid from "@/components/shop/product-grid"
 import { MyOrdersList } from "@/components/shop/my-orders-list"
-import { ShoppingCart } from "@/components/shop/shopping-cart"
+import ShoppingCart from "@/components/shop/shopping-cart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon } from "lucide-react"
@@ -40,23 +40,25 @@ function getUnreadCount(orders: unknown): number {
 
 function ShopPageContent() {
   // Contar pedidos não lidos do usuário
-  const ordersQuery = api.productOrder.listMyOrders.useQuery()
+  const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
+  })
   const myOrders = ordersQuery.data
-  const { enterprise: cartEnterprise, getTotalItems } = useCart()
+  const { enterprise: cartEnterprise, totalItems } = useCart()
 
   // Se há itens no carrinho, filtrar apenas produtos da mesma empresa
   const [enterprise, setEnterprise] = useState<"ALL" | "Box" | "RHenz" | "Cristallux" | "Box_Filial" | "Cristallux_Filial">("ALL");
   const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO" | "CONCLUIDO">("ALL");
 
   const unreadCount = getUnreadCount(myOrders)
-  const cartItemCount = getTotalItems()
+  const cartItemCount = totalItems
 
   // Atualizar filtro quando empresa do carrinho muda
   React.useEffect(() => {
-    if (cartEnterprise && cartEnterprise !== enterprise) {
+    if (cartEnterprise) {
       setEnterprise(cartEnterprise as typeof enterprise)
     }
-  }, [cartEnterprise, enterprise])
+  }, [cartEnterprise])
 
   return (
     <DashboardShell>
@@ -77,6 +79,7 @@ function ShopPageContent() {
               <ShoppingBag className="h-4 w-4" />
               Produtos
             </TabsTrigger>
+
             <TabsTrigger value="cart" className="flex items-center gap-2">
               <ShoppingCartIcon className="h-4 w-4" />
               Carrinho
@@ -86,6 +89,7 @@ function ShopPageContent() {
                 </Badge>
               )}
             </TabsTrigger>
+
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Meus Pedidos

@@ -1,5 +1,6 @@
 "use client"
 
+import { memo, useMemo } from "react"
 import { api } from "@/trpc/react";
 import ProductCard from "./product-card";
 import type { Enterprise } from "@prisma/client";
@@ -9,8 +10,10 @@ interface ProductGridProps {
   enterpriseFilter?: Enterprise | "ALL"
 }
 
-export default function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: ProductGridProps) {
-    const { data: produtos, isLoading } = api.product.getAll.useQuery();
+function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: ProductGridProps) {
+    const { data: produtos, isLoading } = api.product.getAll.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000, // 5 minutos
+    });
     
     if (isLoading) {
         const skeletonItems: number[] = []
@@ -34,9 +37,9 @@ export default function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: P
         );
     }
     
-    const filtered = enterpriseFilter === "ALL"
-      ? produtos
-      : produtos.filter((p) => p.enterprise === enterpriseFilter)
+    const filtered = produtos?.filter((p) =>
+      enterpriseFilter === "ALL" || p.enterprise === enterpriseFilter
+    ) || []
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch">
@@ -50,3 +53,5 @@ export default function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: P
         </div>
     );
 }
+
+export default memo(ProductGrid)
