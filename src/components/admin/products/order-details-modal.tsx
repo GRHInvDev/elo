@@ -92,19 +92,63 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                {order.orderGroupId && order.orderGroup?.orders ? `Produtos (${order.orderGroup.orders.length} ${order.orderGroup.orders.length === 1 ? 'item' : 'itens'})` : 'Produto'}
+                {(() => {
+                  const groupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: typeof order[] })._groupOrders ?? []
+                  const isGrouped = order.orderGroupId ?? groupOrders.length > 0
+                  if (isGrouped && groupOrders.length > 0) {
+                    return `Produtos (${groupOrders.length} ${groupOrders.length === 1 ? 'item' : 'itens'})`
+                  }
+                  return 'Produto'
+                })()}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Se tem orderGroup, mostrar todos os produtos do grupo */}
-              {order.orderGroupId && order.orderGroup?.orders ? (
-                order.orderGroup.orders.map((groupOrder) => (
-                  <div key={groupOrder.id} className="flex gap-4 pb-4 border-b last:border-b-0 last:pb-0">
-                    {groupOrder.product.imageUrl && groupOrder.product.imageUrl.length > 0 && (
+              {/* Se tem orderGroup ou _groupOrders, mostrar todos os produtos do grupo */}
+              {(() => {
+                const groupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: typeof order[] })._groupOrders ?? []
+                const isGrouped = order.orderGroupId ?? groupOrders.length > 0
+                
+                if (isGrouped && groupOrders.length > 0) {
+                  return groupOrders.map((groupOrder) => (
+                    <div key={groupOrder.id} className="flex gap-4 pb-4 border-b last:border-b-0 last:pb-0">
+                      {groupOrder.product.imageUrl && groupOrder.product.imageUrl.length > 0 && (
+                        <div className="relative h-32 w-32 rounded-md overflow-hidden border flex-shrink-0">
+                          <Image
+                            src={groupOrder.product.imageUrl[0] ?? "/placeholder.svg"}
+                            alt={groupOrder.product.name}
+                            fill
+                            className="object-cover"
+                            sizes="128px"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 space-y-2">
+                        <div>
+                          <h3 className="font-semibold text-lg">{groupOrder.product.name}</h3>
+                          <p className="text-sm text-muted-foreground">{groupOrder.product.description}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{enterpriseLabels[groupOrder.product.enterprise] ?? groupOrder.product.enterprise}</Badge>
+                          <span className="text-sm text-muted-foreground">
+                            Quantidade: <strong>{groupOrder.quantity}</strong>
+                          </span>
+                        </div>
+                        <div className="text-lg font-semibold text-primary">
+                          R$ {(groupOrder.product.price * groupOrder.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                }
+                
+                // Pedido único (sem grupo)
+                return (
+                  <div className="flex gap-4">
+                    {order.product.imageUrl && order.product.imageUrl.length > 0 && (
                       <div className="relative h-32 w-32 rounded-md overflow-hidden border flex-shrink-0">
                         <Image
-                          src={groupOrder.product.imageUrl[0] ?? "/placeholder.svg"}
-                          alt={groupOrder.product.name}
+                          src={order.product.imageUrl[0] ?? "/placeholder.svg"}
+                          alt={order.product.name}
                           fill
                           className="object-cover"
                           sizes="128px"
@@ -113,52 +157,22 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                     )}
                     <div className="flex-1 space-y-2">
                       <div>
-                        <h3 className="font-semibold text-lg">{groupOrder.product.name}</h3>
-                        <p className="text-sm text-muted-foreground">{groupOrder.product.description}</p>
+                        <h3 className="font-semibold text-lg">{order.product.name}</h3>
+                        <p className="text-sm text-muted-foreground">{order.product.description}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">{enterpriseLabels[groupOrder.product.enterprise] ?? groupOrder.product.enterprise}</Badge>
+                        <Badge variant="outline">{enterpriseLabels[order.product.enterprise] ?? order.product.enterprise}</Badge>
                         <span className="text-sm text-muted-foreground">
-                          Quantidade: <strong>{groupOrder.quantity}</strong>
+                          Quantidade: <strong>{order.quantity}</strong>
                         </span>
                       </div>
                       <div className="text-lg font-semibold text-primary">
-                        R$ {(groupOrder.product.price * groupOrder.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        R$ {(order.product.price * order.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                // Pedido único (sem grupo)
-                <div className="flex gap-4">
-                  {order.product.imageUrl && order.product.imageUrl.length > 0 && (
-                    <div className="relative h-32 w-32 rounded-md overflow-hidden border flex-shrink-0">
-                      <Image
-                        src={order.product.imageUrl[0] ?? "/placeholder.svg"}
-                        alt={order.product.name}
-                        fill
-                        className="object-cover"
-                        sizes="128px"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1 space-y-2">
-                    <div>
-                      <h3 className="font-semibold text-lg">{order.product.name}</h3>
-                      <p className="text-sm text-muted-foreground">{order.product.description}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{enterpriseLabels[order.product.enterprise] ?? order.product.enterprise}</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        Quantidade: <strong>{order.quantity}</strong>
-                      </span>
-                    </div>
-                    <div className="text-lg font-semibold text-primary">
-                      R$ {(order.product.price * order.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                </div>
-              )}
+                )
+              })()}
             </CardContent>
           </Card>
 
@@ -200,17 +214,25 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   {format(new Date(order.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </span>
               </div>
-              {order.orderGroupId && order.orderGroup?.orders && (
-                <>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total do Pedido:</span>
-                    <span className="text-sm font-semibold text-primary">
-                      R$ {order.orderGroup.orders.reduce((total, o) => total + (o.product.price * o.quantity), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </>
-              )}
+              {(() => {
+                const groupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: typeof order[] })._groupOrders ?? []
+                const isGrouped = order.orderGroupId ?? groupOrders.length > 0
+                
+                if (isGrouped && groupOrders.length > 0) {
+                  return (
+                    <>
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Total do Pedido:</span>
+                        <span className="text-sm font-semibold text-primary">
+                          R$ {groupOrders.reduce((total, o) => total + (o.product.price * o.quantity), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </>
+                  )
+                }
+                return null
+              })()}
               {order.orderTimestamp && (
                 <>
                   <Separator />

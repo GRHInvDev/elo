@@ -62,26 +62,32 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
                       <CardHeader className="pb-1">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium leading-tight">
-                            {order.orderGroupId ? "Pedido" : order.product.name}
+                            {(order.orderGroupId || (order as { _groupOrders?: typeof order[] })._groupOrders) ? "Pedido" : order.product.name}
                           </CardTitle>
                           {!order.read && (
                             <Badge variant="destructive" className="text-xs">Novo</Badge>
                           )}
                         </div>
-                        {order.orderGroupId && (
+                        {(order.orderGroupId || (order as { _groupOrders?: typeof order[] })._groupOrders) && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            {order.orderGroup?.orders?.length ?? 1} {order.orderGroup?.orders?.length === 1 ? 'item' : 'itens'}
+                            {(() => {
+                              const groupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: typeof order[] })._groupOrders ?? []
+                              const count = groupOrders.length
+                              return `${count} ${count === 1 ? 'item' : 'itens'}`
+                            })()}
                           </p>
                         )}
                       </CardHeader>
                       <CardContent className="pb-1 space-y-1">
                         {/* Imagem do produto - se for pedido agrupado, mostrar primeira imagem do primeiro produto do grupo */}
                         {(() => {
-                          const imageUrl = order.orderGroupId && order.orderGroup?.orders?.[0]?.product?.imageUrl
-                            ? order.orderGroup.orders[0].product.imageUrl
+                          const groupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: typeof order[] })._groupOrders ?? []
+                          const isGrouped = order.orderGroupId || groupOrders.length > 0
+                          const imageUrl = isGrouped && groupOrders[0]?.product?.imageUrl
+                            ? groupOrders[0].product.imageUrl
                             : order.product.imageUrl
-                          const productName = order.orderGroupId && order.orderGroup?.orders?.[0]?.product?.name
-                            ? order.orderGroup.orders[0].product.name
+                          const productName = isGrouped && groupOrders[0]?.product?.name
+                            ? groupOrders[0].product.name
                             : order.product.name
                           
                           return imageUrl && imageUrl.length > 0 ? (
