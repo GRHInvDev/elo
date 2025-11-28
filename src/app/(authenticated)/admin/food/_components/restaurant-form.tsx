@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { createRestaurantSchema, updateRestaurantSchema } from "@/schemas/restaurant.schema"
-import type { z } from "zod"
+import { z } from "zod"
 import type { Restaurant } from "@prisma/client"
 
 interface RestaurantFormProps {
@@ -23,9 +23,14 @@ interface RestaurantFormProps {
 type FormData = z.infer<typeof createRestaurantSchema>
 
 export default function RestaurantForm({ restaurant, onSuccess }: RestaurantFormProps) {
-  const utils = api.useUtils()
+  console.log("[RestaurantForm] Componente renderizado:", { 
+    hasRestaurant: !!restaurant, 
+    restaurantId: restaurant?.id, 
+    restaurantName: restaurant?.name,
+    hasOnSuccess: !!onSuccess 
+  })
   
-  const schema = restaurant ? updateRestaurantSchema : createRestaurantSchema
+  const utils = api.useUtils()
   
   const {
     register,
@@ -35,7 +40,9 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
     watch,
     setValue,
   } = useForm<FormData>({
-    resolver: zodResolver(schema as z.ZodType<FormData>),
+    // Sempre usar createRestaurantSchema para validação do formulário
+    // O id será adicionado no submit quando necessário
+    resolver: zodResolver(createRestaurantSchema),
     defaultValues: {
       name: restaurant?.name ?? "",
       description: restaurant?.description ?? "",
@@ -50,9 +57,14 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
   const activeValue = watch("active")
 
   const createRestaurant = api.restaurant.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Restaurante criado com sucesso!")
-      void utils.restaurant.list.invalidate()
+      
+      // Invalidar e refetch a lista de restaurantes
+      await utils.restaurant.list.invalidate()
+      await utils.restaurant.list.refetch()
+      
+      console.log("[RestaurantForm] Lista de restaurantes atualizada")
       reset()
       onSuccess?.()
     },
@@ -62,24 +74,53 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
   })
 
   const updateRestaurant = api.restaurant.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      console.log("[RestaurantForm] updateRestaurant.onSuccess:", data)
       toast.success("Restaurante atualizado com sucesso!")
-      void utils.restaurant.list.invalidate()
+      
+      // Invalidar e refetch a lista de restaurantes
+      await utils.restaurant.list.invalidate()
+      await utils.restaurant.list.refetch()
+      
+      console.log("[RestaurantForm] Lista de restaurantes atualizada")
+      console.log("[RestaurantForm] Chamando onSuccess callback")
       onSuccess?.()
     },
     onError: (error) => {
+      console.error("[RestaurantForm] updateRestaurant.onError:", error)
       toast.error(`Erro ao atualizar restaurante: ${error.message}`)
     },
   })
 
   const onSubmit = async (data: FormData) => {
-    if (restaurant) {
-      await updateRestaurant.mutateAsync({
-        id: restaurant.id,
-        ...data,
-      } as z.infer<typeof updateRestaurantSchema>)
-    } else {
-      await createRestaurant.mutateAsync(data)
+    console.log("[RestaurantForm] onSubmit chamado:", { 
+      hasRestaurant: !!restaurant, 
+      restaurantId: restaurant?.id,
+      formData: data 
+    })
+    
+    try {
+      if (restaurant) {
+        // Validar os dados com o schema de update antes de enviar
+        const updateData = updateRestaurantSchema.parse({
+          id: restaurant.id,
+          ...data,
+        })
+        console.log("[RestaurantForm] Chamando updateRestaurant.mutateAsync com:", updateData)
+        await updateRestaurant.mutateAsync(updateData)
+        console.log("[RestaurantForm] updateRestaurant.mutateAsync concluído")
+      } else {
+        console.log("[RestaurantForm] Chamando createRestaurant.mutateAsync com:", data)
+        await createRestaurant.mutateAsync(data)
+        console.log("[RestaurantForm] createRestaurant.mutateAsync concluído")
+      }
+    } catch (error) {
+      console.error("[RestaurantForm] Erro no onSubmit:", error)
+      if (error instanceof z.ZodError) {
+        console.error("[RestaurantForm] Erros de validação Zod:", error.errors)
+        toast.error("Erro de validação. Verifique os campos do formulário.")
+      }
+      throw error
     }
   }
 
@@ -98,8 +139,19 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
     }
   }, [restaurant, reset])
 
+  const handleFormSubmit = handleSubmit(
+    (data) => {
+      console.log("[RestaurantForm] handleSubmit chamado com dados válidos:", data)
+      void onSubmit(data)
+    },
+    (errors) => {
+      console.error("[RestaurantForm] Erros de validação:", errors)
+      toast.error("Por favor, corrija os erros no formulário")
+    }
+  )
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleFormSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Nome</Label>
         <Input
@@ -202,7 +254,18 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
         <Label htmlFor="active">Ativo</Label>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={isSubmitting}
+        onClick={() => {
+          console.log("[RestaurantForm] Botão submit clicado:", {
+            isSubmitting,
+            hasRestaurant: !!restaurant,
+            errors: Object.keys(errors).length > 0 ? errors : "nenhum erro"
+          })
+        }}
+      >
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
