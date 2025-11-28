@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, ShoppingCart } from "lucide-react"
+import { Loader2, ShoppingCart, CheckCircle2 } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import type { Product } from "@prisma/client"
@@ -48,6 +49,24 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
 
   const createOrder = api.productOrder.create.useMutation({
     onSuccess: () => {
+      // Toast animado de sucesso
+      toast.success("🎉 Pedido criado com sucesso!", {
+        description: "Seu pedido foi registrado e está sendo processado. Você receberá uma confirmação em breve!",
+        icon: <CheckCircle2 className="h-6 w-6 text-green-500 animate-in zoom-in-50 duration-500" />,
+        duration: 6000,
+        className: "border-green-500/50 shadow-lg",
+        action: {
+          label: "Ver pedidos",
+          onClick: () => {
+            // Scroll para a aba de pedidos se necessário
+            const ordersTab = document.querySelector('[value="orders"]')
+            if (ordersTab) {
+              (ordersTab as HTMLElement).click()
+            }
+          },
+        },
+      })
+      
       setPaymentMethod("")
       setLastSubmittedWhatsapp(whatsapp.replace(/\D/g, "") || null)
       setWhatsapp("")
@@ -65,6 +84,24 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
 
   const createMultipleOrders = api.productOrder.createMultiple.useMutation({
     onSuccess: () => {
+      // Toast animado de sucesso
+      toast.success(`🎉 ${items.length} pedidos criados com sucesso!`, {
+        description: `Todos os seus pedidos foram registrados e estão sendo processados. Você receberá confirmações em breve!`,
+        icon: <CheckCircle2 className="h-6 w-6 text-green-500 animate-in zoom-in-50 duration-500" />,
+        duration: 6000,
+        className: "border-green-500/50 shadow-lg",
+        action: {
+          label: "Ver pedidos",
+          onClick: () => {
+            // Scroll para a aba de pedidos se necessário
+            const ordersTab = document.querySelector('[value="orders"]')
+            if (ordersTab) {
+              (ordersTab as HTMLElement).click()
+            }
+          },
+        },
+      })
+      
       setPaymentMethod("")
       setLastSubmittedWhatsapp(whatsapp.replace(/\D/g, "") ?? null)
       setWhatsapp("")
@@ -134,17 +171,18 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Criar Pedido</DialogTitle>
           <DialogDescription>
             Confirme os detalhes do seu pedido
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <ScrollArea className="flex-1 pr-4">
+          <div className="space-y-4">
           {/* Produtos no carrinho */}
-          <div className="space-y-3 max-h-60 overflow-y-auto">
+          <div className="space-y-3">
             {items.map((item) => (
               <div key={item.product.id} className="flex gap-4 p-3 border rounded-lg">
                 {item.product.imageUrl && item.product.imageUrl.length > 0 && (
@@ -251,9 +289,11 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
             <strong>Para isso, mencione seu contato de WhatsApp acima! </strong>
             </p>
           </div>
+          </div>
+        </ScrollArea>
 
-          {/* Botões */}
-          <div className="flex gap-2 pt-2">
+        {/* Botões - fixos no final */}
+        <div className="flex gap-2 pt-4 border-t flex-shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -290,7 +330,6 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
               )}
             </Button>
           </div>
-        </div>
       </DialogContent>
 
       {/* Modal de sucesso */}

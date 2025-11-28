@@ -17,9 +17,10 @@ import { useAccessControl } from "@/hooks/use-access-control"
 interface SidebarProps {
   className?: string
   collapsed?: boolean
+  onLinkClick?: () => void
 }
 
-export function Sidebar({ className, collapsed = false }: SidebarProps) {
+export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname()
   const { db_user } = useAccessControl()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
@@ -122,6 +123,12 @@ export function Sidebar({ className, collapsed = false }: SidebarProps) {
         <Link
           key={href}
           href={href}
+          onClick={() => {
+            // Fechar sidebar no mobile ao clicar em um link
+            if (onLinkClick) {
+              onLinkClick()
+            }
+          }}
           className={cn(
             "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted hover:text-primary",
             isActive
@@ -170,6 +177,10 @@ export function Sidebar({ className, collapsed = false }: SidebarProps) {
 export function MainNav() {
   const [isOpen, setIsOpen] = useState(false)
 
+  const handleCloseSidebar = () => {
+    setIsOpen(false)
+  }
+
   return (
     <>
       {/* Mobile navigation */}
@@ -182,7 +193,7 @@ export function MainNav() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-[240px] sm:w-[300px] p-0">
-          <Sidebar />
+          <Sidebar onLinkClick={handleCloseSidebar} />
         </SheetContent>
       </Sheet>
 
