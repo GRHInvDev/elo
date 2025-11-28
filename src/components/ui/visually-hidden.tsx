@@ -9,7 +9,9 @@ const VisuallyHidden = React.forwardRef<
 >(({ ...props }, ref) => (
   <VisuallyHiddenPrimitive.Root ref={ref} {...props} />
 ))
-VisuallyHidden.displayName = VisuallyHiddenPrimitive.Root.displayName
+
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+VisuallyHidden.displayName = (VisuallyHiddenPrimitive.Root as { displayName?: string }).displayName ?? "VisuallyHidden"
 
 export { VisuallyHidden }
 
