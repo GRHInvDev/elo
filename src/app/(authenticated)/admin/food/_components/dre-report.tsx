@@ -174,14 +174,14 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
       for (let R = range.s.r + 1; R <= range.e.r; ++R) {
         monetaryColumns.forEach(colIndex => {
           const cellAddress = XLSX.utils.encode_cell({ c: colIndex, r: R })
-          const cell = ws[cellAddress]
+          const rawCell = ws[cellAddress] as unknown
+          const cell = rawCell as XLSX.CellObject | undefined
           if (cell) {
             // Forçar o tipo como string para manter a formatação com vírgula
             cell.t = 's' // 's' = string type
             // Garantir que o valor seja uma string
-            if (typeof cell.v !== 'string') {
-              cell.v = String(cell.v)
-            }
+            const cellValue: string | number | boolean | Date | undefined = cell.v
+            cell.v = typeof cellValue === 'string' ? cellValue : (cellValue != null ? String(cellValue) : '')
           }
         })
       }
