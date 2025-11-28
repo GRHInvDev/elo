@@ -160,11 +160,32 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
         "Total de Pedidos": item.totalOrders,
         "Valor Total (R$)": item.totalValue.toFixed(2).replace('.', ','),
         "Representatividade (%)": item.representativeness.toFixed(2).replace('.', ','),
-        "Valor da Nota (R$)": invoiceValue ? parseFloat(invoiceValue).toFixed(2).replace('.', ',') : "0",
-        "Rateio Centro de Custo (R$)": item.costCenterRateio?.toFixed(2).replace('.', ',') ?? "0",
+        "Valor da Nota (R$)": invoiceValue ? parseFloat(invoiceValue).toFixed(2).replace('.', ',') : "0,00",
+        "Rateio Centro de Custo (R$)": item.costCenterRateio?.toFixed(2).replace('.', ',') ?? "0,00",
       }))
 
       const ws = XLSX.utils.json_to_sheet(exportData)
+      
+      // Garantir que as colunas monetárias sejam tratadas como texto para manter a vírgula
+      const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1')
+      // Colunas: A=Empresa, B=Setor, C=Pedidos, D=Valor Total, E=Representatividade, F=Valor Nota, G=Rateio
+      const monetaryColumns = [3, 4, 5, 6] // Índices das colunas D, E, F, G (0-indexed)
+      
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        monetaryColumns.forEach(colIndex => {
+          const cellAddress = XLSX.utils.encode_cell({ c: colIndex, r: R })
+          const rawCell = ws[cellAddress] as unknown
+          const cell = rawCell as XLSX.CellObject | undefined
+          if (cell) {
+            // Forçar o tipo como string para manter a formatação com vírgula
+            cell.t = 's' // 's' = string type
+            // Garantir que o valor seja uma string
+            const cellValue: string | number | boolean | Date | undefined = cell.v
+            cell.v = typeof cellValue === 'string' ? cellValue : (cellValue != null ? String(cellValue) : '')
+          }
+        })
+      }
+      
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "DRE_Report")
 
