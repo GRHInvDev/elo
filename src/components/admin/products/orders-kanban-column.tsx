@@ -62,26 +62,40 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
                       <CardHeader className="pb-1">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium leading-tight">
-                            {order.product.name}
+                            {order.orderGroupId ? "Pedido" : order.product.name}
                           </CardTitle>
                           {!order.read && (
                             <Badge variant="destructive" className="text-xs">Novo</Badge>
                           )}
                         </div>
+                        {order.orderGroupId && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {order.orderGroup?.orders?.length ?? 1} {order.orderGroup?.orders?.length === 1 ? 'item' : 'itens'}
+                          </p>
+                        )}
                       </CardHeader>
                       <CardContent className="pb-1 space-y-1">
-                        {/* Imagem do produto */}
-                        {order.product.imageUrl && order.product.imageUrl.length > 0 && (
-                          <div className="relative h-16 w-16 mx-auto rounded-md overflow-hidden border">
-                            <Image
-                              src={order.product.imageUrl[0] ?? "/placeholder.svg"}
-                              alt={order.product.name}
-                              fill
-                              className="object-cover"
-                              sizes="64px"
-                            />
-                          </div>
-                        )}
+                        {/* Imagem do produto - se for pedido agrupado, mostrar primeira imagem do primeiro produto do grupo */}
+                        {(() => {
+                          const imageUrl = order.orderGroupId && order.orderGroup?.orders?.[0]?.product?.imageUrl
+                            ? order.orderGroup.orders[0].product.imageUrl
+                            : order.product.imageUrl
+                          const productName = order.orderGroupId && order.orderGroup?.orders?.[0]?.product?.name
+                            ? order.orderGroup.orders[0].product.name
+                            : order.product.name
+                          
+                          return imageUrl && imageUrl.length > 0 ? (
+                            <div className="relative h-16 w-16 mx-auto rounded-md overflow-hidden border">
+                              <Image
+                                src={Array.isArray(imageUrl) ? imageUrl[0] ?? "/placeholder.svg" : "/placeholder.svg"}
+                                alt={productName}
+                                fill
+                                className="object-cover"
+                                sizes="64px"
+                              />
+                            </div>
+                          ) : null
+                        })()}
 
                         {/* Informações do usuário */}
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

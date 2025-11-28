@@ -228,10 +228,10 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
               disabled={isOutOfStock}
             >
               <SelectTrigger id="paymentMethod">
-                <SelectValue placeholder={totalPrice >= 100 ? "Selecione a forma de pagamento" : "PIX"} />
+                <SelectValue placeholder={totalPrice >= 200 ? "Selecione a forma de pagamento" : "PIX"} />
               </SelectTrigger>
               <SelectContent>
-                {totalPrice >= 100 && (
+                {totalPrice >= 200 && (
                   <SelectItem value="BOLETO">Boleto - 28 dias</SelectItem>
                 )}
                 <SelectItem value="PIX">PIX</SelectItem>

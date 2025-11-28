@@ -14,4 +14,3 @@ const VisuallyHidden = React.forwardRef<
 VisuallyHidden.displayName = (VisuallyHiddenPrimitive.Root as { displayName?: string }).displayName ?? "VisuallyHidden"
 
 export { VisuallyHidden }
-

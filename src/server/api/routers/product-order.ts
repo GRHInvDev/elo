@@ -8,7 +8,7 @@ import {
 } from "@/schemas/product-order.schema"
 import type { RolesConfig } from "@/types/role-config"
 import { sendEmail } from "@/lib/mail/email-utils"
-import { mockEmailPedidoProduto, mockEmailNotificacaoPedidoProduto } from "@/lib/mail/html-mock"
+import { mockEmailPedidoProduto, mockEmailNotificacaoPedidoProduto, mockEmailChatMensagemPedido } from "@/lib/mail/html-mock"
 import { getProductOrderChatSchema, sendProductOrderChatMessageSchema } from "@/schemas/product-order-chat.schema"
 
 export const productOrderRouter = createTRPCRouter({
@@ -117,7 +117,15 @@ export const productOrderRouter = createTRPCRouter({
                             }
                         },
                         product: true,
-                        orderGroup: true,
+                        orderGroup: {
+                            include: {
+                                orders: {
+                                    include: {
+                                        product: true
+                                    }
+                                }
+                            }
+                        },
                     }
                 })
 
@@ -214,15 +222,37 @@ export const productOrderRouter = createTRPCRouter({
 
                     // Enviar email de notificação para responsáveis
                     if (notificationEmails.length > 0) {
-                    const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
+                        // Buscar todos os pedidos do grupo se existir
+                        let orderItems: Array<{ nome: string; quantidade: number; precoUnitario: number; subtotal: number }> = []
+                        
+                        if (order.orderGroupId && order.orderGroup?.orders) {
+                            // Pedido agrupado - incluir todos os itens
+                            orderItems = order.orderGroup.orders.map(o => ({
+                                nome: o.product.name,
+                                quantidade: o.quantity,
+                                precoUnitario: o.product.price,
+                                subtotal: o.product.price * o.quantity
+                            }))
+                        } else {
+                            // Pedido único
+                            orderItems = [{
+                                nome: order.product.name,
+                                quantidade: order.quantity,
+                                precoUnitario: order.product.price,
+                                subtotal: precoTotal
+                            }]
+                        }
+
+                        const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                             userName,
                             userEmail ?? "N/A",
                             order.product.name,
                             order.quantity,
                             precoTotal,
                             order.user.enterprise ?? "N/A",
-                        dataPedido,
-                        input.contactWhatsapp
+                            dataPedido,
+                            input.contactWhatsapp,
+                            orderItems
                         )
 
                         // Enviar para todos os emails de notificação
@@ -454,6 +484,15 @@ export const productOrderRouter = createTRPCRouter({
                         if (notificationEmails.length > 0) {
                             // Usar a empresa do colaborador (primeiro pedido) em vez da empresa do produto
                             const userEnterprise = firstOrder?.user.enterprise ?? enterprise
+                            
+                            // Preparar lista de itens com quantidade e preço individuais
+                            const orderItems = orders.map(order => ({
+                                nome: order.product.name,
+                                quantidade: order.quantity,
+                                precoUnitario: order.product.price,
+                                subtotal: order.product.price * order.quantity
+                            }))
+
                             const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                                 userName,
                                 userEmail ?? "N/A",
@@ -462,7 +501,8 @@ export const productOrderRouter = createTRPCRouter({
                                 totalGeral,
                                 userEnterprise,
                                 dataPedido,
-                                input.contactWhatsapp
+                                input.contactWhatsapp,
+                                orderItems
                             )
 
                             // Enviar para todos os emails de notificação
@@ -535,7 +575,15 @@ export const productOrderRouter = createTRPCRouter({
                         }
                     },
                     product: true,
-                    orderGroup: true,
+                    orderGroup: {
+                        include: {
+                            orders: {
+                                include: {
+                                    product: true
+                                }
+                            }
+                        }
+                    },
                 },
                 orderBy: {
                     createdAt: "desc"
@@ -761,7 +809,27 @@ export const productOrderRouter = createTRPCRouter({
                             updatedAt: true,
                         }
                     },
-                    orderGroup: true,
+                    orderGroup: {
+                        include: {
+                            orders: {
+                                include: {
+                                    product: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            description: true,
+                                            price: true,
+                                            stock: true,
+                                            enterprise: true,
+                                            imageUrl: true,
+                                            createdAt: true,
+                                            updatedAt: true,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                 },
                 orderBy: {
                     createdAt: "desc"
@@ -928,11 +996,24 @@ export const productOrderRouter = createTRPCRouter({
               }
             }
 
-            // Buscar pedido e empresa
+            // Buscar pedido e empresa com informações completas
             const order = await ctx.db.productOrder.findUnique({
                 where: { id: input.orderId },
                 include: {
-                    product: { select: { enterprise: true } },
+                    product: { 
+                        select: { 
+                            enterprise: true,
+                            name: true
+                        } 
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                        }
+                    }
                 },
             })
 
@@ -1006,14 +1087,28 @@ export const productOrderRouter = createTRPCRouter({
                 },
             })
 
-            // Criar notificações para a outra parte (comprador ou responsáveis)
+            // Preparar informações do remetente
+            const remetenteNome = newMessage.user.firstName && newMessage.user.lastName
+                ? `${newMessage.user.firstName} ${newMessage.user.lastName}`
+                : (newMessage.user.firstName ?? newMessage.user.email ?? "Usuário")
+
+            // Criar notificações e enviar emails para a outra parte (comprador ou responsáveis)
             try {
               const now = new Date()
               if (order.userId === currentUserId) {
                 // Remetente é o comprador: notificar responsáveis internos pela empresa
                 const managers = await ctx.db.enterpriseManager.findMany({
                   where: { enterprise: order.product.enterprise, userId: { not: null } },
-                  select: { userId: true }
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                      }
+                    }
+                  }
                 })
                 const recipientUserIds = managers.map(m => m.userId!).filter(Boolean)
                 if (recipientUserIds.length > 0) {
@@ -1031,6 +1126,32 @@ export const productOrderRouter = createTRPCRouter({
                       updatedAt: now,
                     }))
                   })
+
+                  // Enviar emails para os gestores
+                  for (const manager of managers) {
+                    if (manager.user?.email) {
+                      const destinatarioNome = manager.user.firstName && manager.user.lastName
+                        ? `${manager.user.firstName} ${manager.user.lastName}`
+                        : (manager.user.firstName ?? manager.user.email ?? "Gestor")
+
+                      const emailContent = mockEmailChatMensagemPedido(
+                        destinatarioNome,
+                        remetenteNome,
+                        input.message,
+                        input.orderId,
+                        order.product.name,
+                        false // Não é comprador, é gestor
+                      )
+
+                      await sendEmail(
+                        manager.user.email,
+                        "Elo | Intranet - Você tem uma nova mensagem em Pedidos",
+                        emailContent
+                      ).catch((error) => {
+                        console.error(`[ProductOrder] Erro ao enviar email de chat para ${manager.user?.email}:`, error)
+                      })
+                    }
+                  }
                 }
               } else {
                 // Remetente é admin/gestor/responsável: notificar comprador
@@ -1046,6 +1167,30 @@ export const productOrderRouter = createTRPCRouter({
                     actionUrl: "/shop",
                   }
                 })
+
+                // Enviar email para o comprador
+                if (order.user.email) {
+                  const destinatarioNome = order.user.firstName && order.user.lastName
+                    ? `${order.user.firstName} ${order.user.lastName}`
+                    : (order.user.firstName ?? order.user.email ?? "Cliente")
+
+                  const emailContent = mockEmailChatMensagemPedido(
+                    destinatarioNome,
+                    remetenteNome,
+                    input.message,
+                    input.orderId,
+                    order.product.name,
+                    true // É comprador
+                  )
+
+                  await sendEmail(
+                    order.user.email,
+                    "Elo | Intranet - Você tem uma nova mensagem em Pedidos",
+                    emailContent
+                  ).catch((error) => {
+                    console.error(`[ProductOrder] Erro ao enviar email de chat para ${order.user.email}:`, error)
+                  })
+                }
               }
             } catch (notificationError) {
               console.error("[ProductOrder] Erro ao criar notificação de chat:", notificationError)
