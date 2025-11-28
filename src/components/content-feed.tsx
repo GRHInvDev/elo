@@ -31,6 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -359,6 +360,9 @@ export function ContentFeed({
                                 </div>
                               </DialogTrigger>
                               <DialogContent className="block h-full w-full max-w-none p-0 sm:h-[95vh] sm:w-auto sm:max-w-7xl sm:rounded-lg">
+                                <VisuallyHidden>
+                                  <DialogTitle>Encarte: {flyer.title}</DialogTitle>
+                                </VisuallyHidden>
                                 <div className="w-full h-full">
                                   <LazyIframe
                                     src={flyer.iframe}

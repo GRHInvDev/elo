@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Button } from "@/components/ui/button"
 import {
   ZoomIn,
@@ -110,6 +111,9 @@ export function ImageViewer({
           className="max-w-none w-screen h-screen p-0 bg-black/95"
           onKeyDown={handleKeyDown}
         >
+          <VisuallyHidden>
+            <DialogTitle>Visualizador de Imagem - {alt}</DialogTitle>
+          </VisuallyHidden>
           <div
             className="relative w-full h-full flex items-center justify-center overflow-hidden"
             onClick={() => setIsOpen(false)}

@@ -2,7 +2,8 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Button } from "@/components/ui/button"
 import { Download, Expand } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -102,6 +103,9 @@ export function ImageMessage({
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+              <VisuallyHidden>
+                <DialogTitle>{alt}</DialogTitle>
+              </VisuallyHidden>
               <div className="relative flex items-center justify-center min-h-[200px]">
                 <img
                   src={imageUrl}
