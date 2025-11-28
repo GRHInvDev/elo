@@ -91,8 +91,14 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
             {
                 key: "ola",
                 label: "Olá",
-                value: "Olá, tudo bem?",
+                value: "Olá, tudo bem?\n",
                 description: "Saudação padrão",
+            },
+            {
+                key: "chamado-concluido",
+                label: "Chamado Concluído",
+                value: "Chamado concluído com sucesso!",
+                description: "Mensagem padrão para chamado concluído",
             },
         ]
         
@@ -114,9 +120,23 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
                 }
             )
         }
+
+        // Adicionar comando com nome do usuário remetente (autor da resposta)
+        if (response?.user) {
+            const remetenteNome = response.user.firstName
+                ? `${response.user.firstName}${response.user.lastName ? ` ${response.user.lastName}` : ""}`.trim()
+                : (response.user.email ?? "")
+            
+            commands.push({
+                key: "remetente",
+                label: "Remetente",
+                value: remetenteNome,
+                description: "Nome do remetente (autor da resposta)",
+            })
+        }
         
         return commands
-    }, [currentUser])
+    }, [currentUser, response])
 
     const availableCommands = getAvailableCommands()
 
