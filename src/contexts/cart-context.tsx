@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react"
+import { createContext, useContext, useReducer, useCallback, type ReactNode } from "react"
 import type { Product } from "@prisma/client"
 import type { CartItem, CartContextType } from "@/types/cart"
 import { toast } from "sonner"
@@ -112,19 +112,11 @@ export function CartProvider({ children }: CartProviderProps) {
     dispatch({ type: "CLEAR_CART" })
   }, [])
 
-  const totalItems = useMemo(() => {
-    return state.items.reduce((total, item) => total + item.quantity, 0)
-  }, [state.items])
+  const totalItems = state.items.reduce((total, item) => total + item.quantity, 0)
+  const totalPrice = state.items.reduce((total, item) => total + (item.product.price * item.quantity), 0)
+  const isEmpty = state.items.length === 0
 
-  const totalPrice = useMemo(() => {
-    return state.items.reduce((total, item) => total + (item.product.price * item.quantity), 0)
-  }, [state.items])
-
-  const isEmpty = useMemo(() => {
-    return state.items.length === 0
-  }, [state.items])
-
-  const contextValue: CartContextType = useMemo(() => ({
+  const contextValue: CartContextType = {
     items: state.items,
     enterprise: state.enterprise,
     addItem,
@@ -134,7 +126,7 @@ export function CartProvider({ children }: CartProviderProps) {
     totalItems,
     totalPrice,
     isEmpty
-  }), [state.items, state.enterprise, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, isEmpty])
+  }
 
   return (
     <CartContext.Provider value={contextValue}>

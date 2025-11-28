@@ -17,6 +17,12 @@ import { OrderChat } from "@/components/shop/order-chat"
 type ProductOrderWithRelations = RouterOutputs["productOrder"]["listKanban"][number]
 type PurchaseRegistration = RouterOutputs["purchaseRegistration"]["getByUserIdAndEnterprise"]
 
+function hasProductAndUser(order: unknown): order is ProductOrderWithRelations & { product: NonNullable<ProductOrderWithRelations["product"]>, user: NonNullable<ProductOrderWithRelations["user"]> } {
+  if (!order || typeof order !== "object") return false
+  const o = order as Record<string, unknown>
+  return "product" in o && "user" in o && o.product !== null && o.user !== null
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isPurchaseRegistration(value: unknown): value is PurchaseRegistration {
   if (!value || typeof value !== "object") return false
@@ -36,10 +42,15 @@ interface OrderDetailsModalProps {
 }
 
 export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsModalProps) {
+  if (!order || !hasProductAndUser(order)) return null
+
+  // Type assertion para incluir contactWhatsapp
+  const orderWithWhatsapp = order as typeof order & { contactWhatsapp?: string | null }
+
   // Buscar dados de cadastro de compras do usuário do pedido
-  const enterprise: Enterprise = order?.product.enterprise ?? Enterprise.NA
+  const enterprise: Enterprise = order.product.enterprise ?? Enterprise.NA
   
-  const userId: string = order?.userId ?? ""
+  const userId: string = order.userId ?? ""
   const enabled: boolean = open && !!order && !!order.userId
   const {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -50,8 +61,6 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
     { userId, enterprise },
     { enabled }
   )
-
-  if (!order) return null
 
   const paymentMethodLabels: Record<PaymentMethod, string> = {
     BOLETO: "Boleto",
@@ -196,6 +205,11 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                       : order.user.email}
                   </p>
                   <p className="text-sm text-muted-foreground">{order.user.email}</p>
+                  {orderWithWhatsapp.contactWhatsapp && (
+                    <p className="text-sm text-muted-foreground">
+                      WhatsApp: ({orderWithWhatsapp.contactWhatsapp.slice(0, 2)}) {orderWithWhatsapp.contactWhatsapp.slice(2, 7)}-{orderWithWhatsapp.contactWhatsapp.slice(7)}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
