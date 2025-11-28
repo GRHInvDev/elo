@@ -242,6 +242,10 @@ export const userRouter = createTRPCRouter({
     .input(z.object({
       sector: z.string().optional(),
       search: z.string().optional(),
+      enterprise: z.nativeEnum(Enterprise).optional(),
+      isAdmin: z.boolean().optional(),
+      limit: z.number().min(1).max(100).default(10),
+      offset: z.number().min(0).default(0),
     }))
     .query(async ({ ctx, input }) => {
       // Verificar se o usuário tem permissão
@@ -270,6 +274,14 @@ export const userRouter = createTRPCRouter({
         }
       }
 
+      // Filtro por empresa
+      if (input.enterprise) {
+        where.enterprise = input.enterprise
+      }
+
+      // Filtro por admin (sudo) - será aplicado após buscar os dados
+      // devido à complexidade de filtrar JSON no Prisma
+
       // Busca por nome ou email
       if (input.search) {
         where.OR = [
@@ -294,7 +306,8 @@ export const userRouter = createTRPCRouter({
         ]
       }
 
-      return ctx.db.user.findMany({
+      // Buscar todos os usuários que atendem aos filtros básicos
+      const allUsers = await ctx.db.user.findMany({
         where,
         select: {
           id: true,
@@ -313,6 +326,26 @@ export const userRouter = createTRPCRouter({
           firstName: 'asc',
         },
       })
+
+      // Aplicar filtro de admin se necessário (filtro em memória para JSON)
+      let filteredUsers = allUsers
+      if (input.isAdmin !== undefined) {
+        filteredUsers = allUsers.filter(user => {
+          const roleConfig = user.role_config as RolesConfig | null
+          const isSudo = roleConfig?.sudo === true
+          return input.isAdmin ? isSudo : !isSudo
+        })
+      }
+
+      // Aplicar paginação
+      const total = filteredUsers.length
+      const paginatedUsers = filteredUsers.slice(input.offset, input.offset + input.limit)
+
+      return {
+        users: paginatedUsers,
+        total,
+        hasMore: input.offset + input.limit < total,
+      }
     }),
 
   searchMinimal: protectedProcedure
