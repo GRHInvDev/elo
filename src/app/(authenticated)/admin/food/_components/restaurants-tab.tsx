@@ -48,13 +48,18 @@ export default function RestaurantsTab() {
     setDeletingId(restaurantId)
     try {
       await deleteRestaurant.mutateAsync({ id: restaurantId })
-    } catch (error) {
+    } catch {
       // Erro já tratado no onError
     }
   }
 
   const handleEditDialogOpen = (restaurantId: string, open: boolean) => {
-    setEditDialogOpen((prev) => ({ ...prev, [restaurantId]: open }))
+    console.log("[RestaurantsTab] handleEditDialogOpen:", { restaurantId, open })
+    setEditDialogOpen((prev) => {
+      const newState = { ...prev, [restaurantId]: open }
+      console.log("[RestaurantsTab] Estado do dialog atualizado:", newState)
+      return newState
+    })
   }
 
   return (
@@ -126,16 +131,24 @@ export default function RestaurantsTab() {
                         </p>
                       </div>
                       <div className="flex space-x-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            console.log("[RestaurantsTab] Botão editar clicado para restaurante:", restaurant.id, restaurant.name)
+                            handleEditDialogOpen(restaurant.id, true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Editar restaurante</span>
+                        </Button>
                         <Dialog
                           open={editDialogOpen[restaurant.id] ?? false}
-                          onOpenChange={(open) => handleEditDialogOpen(restaurant.id, open)}
+                          onOpenChange={(open) => {
+                            console.log("[RestaurantsTab] Dialog onOpenChange:", { restaurantId: restaurant.id, open, currentState: editDialogOpen[restaurant.id] })
+                            handleEditDialogOpen(restaurant.id, open)
+                          }}
                         >
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Editar restaurante</span>
-                            </Button>
-                          </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Editar Restaurante</DialogTitle>
@@ -145,7 +158,10 @@ export default function RestaurantsTab() {
                             </DialogHeader>
                             <RestaurantForm
                               restaurant={restaurant}
-                              onSuccess={() => handleEditDialogOpen(restaurant.id, false)}
+                              onSuccess={() => {
+                                console.log("[RestaurantsTab] onSuccess callback chamado para restaurante:", restaurant.id)
+                                handleEditDialogOpen(restaurant.id, false)
+                              }}
                             />
                           </DialogContent>
                         </Dialog>
