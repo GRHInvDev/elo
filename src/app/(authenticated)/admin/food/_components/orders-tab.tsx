@@ -225,7 +225,7 @@ export default function OrdersTab({
         "Empresa": usuario.empresa ?? "",
         "Setor": usuario.setor ?? "",
         "Total de Pedidos": usuario.totalPedidos,
-        "Valor Total (R$)": usuario.valorTotal.toFixed(2),
+        "Valor Total (R$)": usuario.valorTotal.toFixed(2).replace('.', ','),
       }))
       // Gerar a planilha
       const ws = XLSX.utils.json_to_sheet(dataToExport)
