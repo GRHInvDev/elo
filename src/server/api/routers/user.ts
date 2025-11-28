@@ -1,5 +1,6 @@
 import "server-only";
-import type { Prisma, Enterprise } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+import { Enterprise } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
 import { z } from "zod"
 import { type RolesConfig } from "@/types/role-config"
