@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
@@ -21,11 +21,19 @@ import {
   Shield, 
   Edit3, 
   Key, 
-  ChevronDown, 
   X,
-  Save
+  Save,
+  User,
+  Lock,
+  Route,
+  FileText,
+  Building2,
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
+import type { Enterprise } from "@prisma/client"
 
 // Extensão temporária do tipo RolesConfig para incluir as novas propriedades
 type ExtendedRolesConfig = RolesConfig & {
@@ -58,30 +66,48 @@ const AVAILABLE_SETORES = [
 ]
 
 
+const ENTERPRISE_OPTIONS: { value: Enterprise | "all"; label: string }[] = [
+  { value: "all", label: "Todas as empresas" },
+  { value: "NA", label: "N/A" },
+  { value: "Box", label: "Box" },
+  { value: "RHenz", label: "RHenz" },
+  { value: "Cristallux", label: "Cristallux" },
+  { value: "Box_Filial", label: "Box Filial" },
+  { value: "Cristallux_Filial", label: "Cristallux Filial" },
+]
+
 export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedSector, setSelectedSector] = useState<string>("all")
+  const [selectedEnterprise, setSelectedEnterprise] = useState<Enterprise | "all">("all")
+  const [isAdminFilter, setIsAdminFilter] = useState<boolean | "all">("all")
+  const [offset, setOffset] = useState(0)
+  const limit = 10
 
   const { isSudo, hasAdminAccess, canManageBasicUserData } = useAccessControl()
 
   // Verificar se tem acesso à página de usuários
   const hasAccess = isSudo || hasAdminAccess("/admin/users") || canManageBasicUserData()
 
-  const { data: users, isLoading, refetch } = api.user.listUsers.useQuery({
+  const { data: usersData, isLoading, refetch } = api.user.listUsers.useQuery({
     search: searchTerm || undefined,
+    sector: selectedSector !== "all" ? selectedSector : undefined,
+    enterprise: selectedEnterprise !== "all" ? selectedEnterprise : undefined,
+    isAdmin: isAdminFilter !== "all" ? isAdminFilter : undefined,
+    limit,
+    offset,
   })
 
   const { data: allForms } = api.form.list.useQuery()
 
-  const filteredUsers = useMemo(() => {
-    if (!users) return []
-    return users.filter(user => 
-      !searchTerm ||
-      !!user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      !!user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.setor?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [users, searchTerm])
+  const users = usersData?.users ?? []
+  const total = usersData?.total ?? 0
+  const hasMore = usersData?.hasMore ?? false
+
+  // Reset offset quando filtros mudarem
+  useEffect(() => {
+    setOffset(0)
+  }, [searchTerm, selectedSector, selectedEnterprise, isAdminFilter])
 
   // Verificar se tem acesso
   if (!hasAccess) {
@@ -110,32 +136,102 @@ export default function UsersManagementPage() {
           </p>
         </div>
 
-        {/* Campo de busca */}
+        {/* Barra de pesquisa e filtros */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Buscar Usuários
+              <Filter className="h-5 w-5" />
+              Buscar e Filtrar Usuários
             </CardTitle>
             <CardDescription>
-              Digite o nome, email ou setor para filtrar usuários
+              Use os filtros abaixo para encontrar usuários específicos
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search">Busca</Label>
-                <Input
-                  id="search"
-                  placeholder="Digite o nome, email ou setor..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button variant="outline" onClick={() => setSearchTerm("")}>
-                  Limpar
+          <CardContent className="space-y-4">
+            {/* Barra de pesquisa */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search"
+                placeholder="Buscar por nome ou email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+              {searchTerm && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
                 </Button>
+              )}
+            </div>
+
+            {/* Filtros */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Filtro de Setor */}
+              <div>
+                <Label htmlFor="sector">Setor</Label>
+                <Select
+                  value={selectedSector}
+                  onValueChange={setSelectedSector}
+                >
+                  <SelectTrigger id="sector">
+                    <SelectValue placeholder="Selecione um setor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os setores</SelectItem>
+                    {AVAILABLE_SETORES.filter(s => s.value !== "none").map((setor) => (
+                      <SelectItem key={setor.value} value={setor.value}>
+                        {setor.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro de Empresa */}
+              <div>
+                <Label htmlFor="enterprise">Empresa</Label>
+                <Select
+                  value={selectedEnterprise}
+                  onValueChange={(value) => setSelectedEnterprise(value as Enterprise | "all")}
+                >
+                  <SelectTrigger id="enterprise">
+                    <SelectValue placeholder="Selecione uma empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ENTERPRISE_OPTIONS.map((enterprise) => (
+                      <SelectItem key={enterprise.value} value={enterprise.value}>
+                        {enterprise.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro de Admin */}
+              <div>
+                <Label htmlFor="admin">Tipo de Usuário</Label>
+                <Select
+                  value={isAdminFilter === "all" ? "all" : isAdminFilter ? "admin" : "user"}
+                  onValueChange={(value) => {
+                    if (value === "all") setIsAdminFilter("all")
+                    else setIsAdminFilter(value === "admin")
+                  }}
+                >
+                  <SelectTrigger id="admin">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="admin">Apenas Admins</SelectItem>
+                    <SelectItem value="user">Apenas Usuários</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -144,13 +240,19 @@ export default function UsersManagementPage() {
         {/* Lista de usuários */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Usuários ({filteredUsers.length})
-            </CardTitle>
-            <CardDescription>
-              {isLoading ? "Carregando usuários..." : `${filteredUsers.length} usuário(s) encontrado(s)`}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Usuários ({total})
+                </CardTitle>
+                <CardDescription>
+                  {isLoading 
+                    ? "Carregando usuários..." 
+                    : `${total} usuário(s) encontrado(s)${offset > 0 ? ` (mostrando ${offset + 1}-${Math.min(offset + limit, total)})` : ""}`}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -158,23 +260,54 @@ export default function UsersManagementPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                 <p className="text-muted-foreground mt-2">Carregando usuários...</p>
               </div>
-            ) : filteredUsers.length > 0 ? (
-              <div className="space-y-4">
-                {filteredUsers.map((user) => (
-                  <UserManagementCard 
-                    key={user.id} 
-                    user={{
-                      ...user,
-                      role_config: user.role_config as RolesConfig
-                    }}
-                    allForms={allForms ?? []}
-                    onUserUpdate={() => refetch()}
-                  />
-                ))}
-              </div>
+            ) : users.length > 0 ? (
+              <>
+                <div className="space-y-4">
+                  {users.map((user) => (
+                    <UserManagementCard 
+                      key={user.id} 
+                      user={{
+                        ...user,
+                        role_config: user.role_config as RolesConfig
+                      }}
+                      allForms={allForms ?? []}
+                      onUserUpdate={() => refetch()}
+                    />
+                  ))}
+                </div>
+                
+                {/* Paginação */}
+                {(offset > 0 || hasMore) && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOffset(Math.max(0, offset - limit))}
+                      disabled={offset === 0 || isLoading}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Página {Math.floor(offset / limit) + 1} de {Math.ceil(total / limit)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOffset(offset + limit)}
+                      disabled={!hasMore || isLoading}
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm ? "Nenhum usuário encontrado para este filtro." : "Nenhum usuário encontrado."}
+                {searchTerm || selectedSector !== "all" || selectedEnterprise !== "all" || isAdminFilter !== "all"
+                  ? "Nenhum usuário encontrado para estes filtros." 
+                  : "Nenhum usuário encontrado."}
               </div>
             )}
           </CardContent>
@@ -201,9 +334,12 @@ interface UserManagementCardProps {
 }
 
 function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCardProps) {
-  const [isEditingBasic, setIsEditingBasic] = useState(false)
-  const [isEditingPermissions, setIsEditingPermissions] = useState(false)
-  const [isEditingAdminRoutes, setIsEditingAdminRoutes] = useState(false)
+  const [activeTab, setActiveTab] = useState("basic")
+  const [isEditing, setIsEditing] = useState(false)
+  const [permissionSearch, setPermissionSearch] = useState("")
+  const [formSearch, setFormSearch] = useState("")
+  const [showPermissionAutocomplete, setShowPermissionAutocomplete] = useState(false)
+  const [showFormAutocomplete, setShowFormAutocomplete] = useState(false)
   
   const { isSudo, canManageBasicUserData } = useAccessControl()
   const canEditBasicOnly = canManageBasicUserData() && !isSudo
@@ -294,7 +430,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         title: "Dados atualizados",
         description: "Os dados básicos do usuário foram atualizados com sucesso.",
       })
-      setIsEditingBasic(false)
+      setIsEditing(false)
       onUserUpdate()
     },
     onError: (error) => {
@@ -312,7 +448,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         title: "Permissões atualizadas",
         description: "As permissões do usuário foram atualizadas com sucesso.",
       })
-      setIsEditingPermissions(false)
+      setIsEditing(false)
       onUserUpdate()
     },
     onError: (error) => {
@@ -399,29 +535,21 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         hidden_forms: permissionsData.hidden_forms,
       } as RolesConfig,
     })
+    setIsEditing(false)
   }
 
   const handleToggleAdminRoute = (routeId: string) => {
-    console.log("🔄 Toggle admin route:", {
-      routeId,
-      currentAdminRoutes: adminRoutesData,
-      includes: adminRoutesData.includes(routeId)
-    })
-
     if (adminRoutesData.includes(routeId)) {
       // Se está removendo /admin, remover todas as outras rotas também
       if (routeId === "/admin") {
-        console.log("🔄 Removing /admin, clearing all routes")
         setAdminRoutesData([])
         setPermissionsData({
           ...permissionsData,
           admin_pages: []
         })
       } else {
-        console.log("🔄 Removing route:", routeId)
         setAdminRoutesData(prev => {
           const newRoutes = prev.filter(id => id !== routeId)
-          console.log("🔄 New routes after removal:", newRoutes)
           const updatedPermissions = {
             ...permissionsData,
             admin_pages: newRoutes
@@ -439,10 +567,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     } else {
       // Se está adicionando uma rota que não seja /admin, garantir que /admin esteja incluído
       if (routeId !== "/admin" && !adminRoutesData.includes("/admin")) {
-        console.log("🔄 Adding route with /admin:", routeId)
         setAdminRoutesData(prev => {
           const newRoutes = ["/admin", ...prev, routeId]
-          console.log("🔄 New routes after adding with /admin:", newRoutes)
           const updatedPermissions = {
             ...permissionsData,
             admin_pages: newRoutes
@@ -457,10 +583,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
           return newRoutes
         })
       } else {
-        console.log("🔄 Adding route:", routeId)
         setAdminRoutesData(prev => {
           const newRoutes = [...prev, routeId]
-          console.log("🔄 New routes after adding:", newRoutes)
           const updatedPermissions = {
             ...permissionsData,
             admin_pages: newRoutes
@@ -478,48 +602,81 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     }
   }
 
-  // SISTEMA SIMPLIFICADO: Funções de gerenciamento removidas
-  // Todos podem visualizar, apenas alguns podem criar
-
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">
-              {user.firstName} {user.lastName}
-            </CardTitle>
-            <CardDescription>
-              {user.email}
-              {user.setor && <span className="ml-2">• {getSetorLabel(user.setor)}</span>}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            {user.role_config?.sudo && (
-              <Badge variant="default" className="bg-red-100 text-red-800">
-                SUPER ADMIN
-              </Badge>
-            )}
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">
+                  {user.firstName} {user.lastName}
+                </CardTitle>
+                <CardDescription className="mt-0.5">
+                  {user.email}
+                </CardDescription>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {user.setor && (
+                <Badge variant="outline" className="text-xs">
+                  {getSetorLabel(user.setor)}
+                </Badge>
+              )}
+              {user.role_config?.sudo && (
+                <Badge variant="default" className="bg-red-500/10 text-red-700 hover:bg-red-500/20">
+                  <Shield className="mr-1 h-3 w-3" />
+                  Super Admin
+                </Badge>
+              )}
+              {permissionsData.isTotem && (
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                  TOTEM
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        
-        {/* Seção de Dados Básicos */}
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <div className="flex items-center gap-2">
-                <Edit3 className="h-4 w-4" />
-                Editar Dados Básicos
-              </div>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 mt-4">
-            {isEditingBasic ? (
-              <div className="space-y-4 p-4 border rounded-lg">
-                <div className="grid grid-cols-2 gap-4">
+      <CardContent className="pt-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="flex w-full">
+            <TabsTrigger value="basic" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Dados Básicos</span>
+              <span className="sm:hidden">Dados</span>
+            </TabsTrigger>
+            {!canEditBasicOnly && (
+              <TabsTrigger value="permissions" className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                <span className="hidden sm:inline">Permissões</span>
+                <span className="sm:hidden">Perm.</span>
+              </TabsTrigger>
+            )}
+            {!canEditBasicOnly && !permissionsData.isTotem && (
+              <TabsTrigger value="routes" className="flex items-center gap-2">
+                <Route className="h-4 w-4" />
+                <span className="hidden sm:inline">Rotas Admin</span>
+                <span className="sm:hidden">Rotas</span>
+              </TabsTrigger>
+            )}
+            {!canEditBasicOnly && !permissionsData.sudo && !permissionsData.isTotem && (
+              <TabsTrigger value="forms" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Solicitações</span>
+                <span className="sm:hidden">Solic.</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          {/* Tab: Dados Básicos */}
+          <TabsContent value="basic" className="mt-4 space-y-4">
+            {isEditing ? (
+              <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">Nome</Label>
                     <Input
@@ -584,11 +741,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       onChange={(e) => setBasicData({ ...basicData, emailExtension: e.target.value })}
                       placeholder="email@exemplo.com"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Email personalizado exibido na lista de ramais (deixe vazio para usar o email padrão)
-                    </p>
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
                     <Label htmlFor="matricula">Matrícula</Label>
                     <Input
                       id="matricula"
@@ -598,388 +752,425 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       placeholder="Digite a matrícula"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Matrícula do usuário utilizada para exportação de pedidos
+                      Utilizada para exportação de pedidos
                     </p>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsEditingBasic(false)}>
-                    <X className="h-4 w-4 mr-2" />
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>
                     Cancelar
                   </Button>
                   <Button onClick={handleSaveBasicInfo} disabled={updateBasicInfo.isPending}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {updateBasicInfo.isPending ? "Salvando..." : "Salvar"}
+                    {updateBasicInfo.isPending ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Salvar
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="p-4 border rounded-lg">
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label className="text-sm font-medium">Nome Completo</Label>
-                    <p className="text-sm text-muted-foreground">{user.firstName} {user.lastName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Email</Label>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Setor</Label>
-                    <p className="text-sm text-muted-foreground">{getSetorLabel(user.setor)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Ramal</Label>
-                    <p className="text-sm text-muted-foreground">{user.extension && user.extension > 0n ? user.extension : 'Não definido'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Email para Ramal</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {user.emailExtension ?? 'Usa email padrão'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Matrícula</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {user.matricula ?? 'Não informado'}
-                    </p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Nome Completo</Label>
+                  <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
                 </div>
-                <Button onClick={() => setIsEditingBasic(true)} size="sm">
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <p className="text-sm font-medium">{user.email}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Setor</Label>
+                  <p className="text-sm font-medium">{getSetorLabel(user.setor)}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Ramal</Label>
+                  <p className="text-sm font-medium">{user.extension && user.extension > 0n ? user.extension : 'Não definido'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email para Ramal</Label>
+                  <p className="text-sm font-medium">{user.emailExtension ?? 'Usa email padrão'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Matrícula</Label>
+                  <p className="text-sm font-medium">{user.matricula ?? 'Não informado'}</p>
+                </div>
+                <div className="md:col-span-2 pt-2">
+                  <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Editar Dados
+                  </Button>
+                </div>
               </div>
             )}
-          </CollapsibleContent>
-        </Collapsible>
+          </TabsContent>
 
-        <Separator />
-
-        {/* Seção de Permissões Avançadas */}
-        {!canEditBasicOnly && (
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <div className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                Permissões Avançadas
-              </div>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 mt-4">
-            {isEditingPermissions ? (
-              <div className="space-y-6 p-4 border rounded-lg">
-                
-                {/* Seção de Admin */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Shield className="h-4 w-4" />
-                    <Label className="text-base font-semibold">Administração</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Configure se o usuário é administrador do sistema.
-                  </p>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 p-2 bg-red-50 rounded">
-                      <Checkbox
-                        id="sudo"
-                        checked={permissionsData.sudo}
-                        onCheckedChange={(checked) => {
-                          setPermissionsData({ 
-                            ...permissionsData, 
-                            sudo: checked === true,
-                            admin_pages: checked === true ? ["/admin", "/food", "/rooms", "/ideas", "/birthday"] : []
-                          });
-                        }}
-                      />
-                      <Label htmlFor="sudo" className="font-medium text-red-700">
-                        Super Admin (Acesso Total)
-                      </Label>
+          {/* Tab: Permissões */}
+          {!canEditBasicOnly && (
+            <TabsContent value="permissions" className="mt-4 space-y-4">
+              {isEditing ? (
+                <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+                  {/* Seção de Admin */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-semibold">Tipo de Usuário</Label>
                     </div>
-                    
-                    <div className="flex items-center space-x-2 p-2 bg-yellow-50 rounded">
-                      <Checkbox
-                        id="isTotem"
-                        checked={permissionsData.isTotem ?? false}
-                        onCheckedChange={(checked) => {
-                          setPermissionsData({ 
-                            ...permissionsData, 
-                            isTotem: checked === true
-                          });
-                        }}
-                      />
-                      <Label htmlFor="isTotem" className="font-medium text-yellow-700">
-                        Usuário TOTEM (Acesso Limitado)
-                      </Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
+                        <Checkbox
+                          id="sudo"
+                          checked={permissionsData.sudo}
+                          onCheckedChange={(checked) => {
+                            setPermissionsData({ 
+                              ...permissionsData, 
+                              sudo: checked === true,
+                              admin_pages: checked === true ? ["/admin", "/food", "/rooms", "/ideas", "/birthday"] : []
+                            });
+                          }}
+                        />
+                        <Label htmlFor="sudo" className="font-medium text-red-700 dark:text-red-400 cursor-pointer">
+                          Super Admin (Acesso Total)
+                        </Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
+                        <Checkbox
+                          id="isTotem"
+                          checked={permissionsData.isTotem ?? false}
+                          onCheckedChange={(checked) => {
+                            setPermissionsData({ 
+                              ...permissionsData, 
+                              isTotem: checked === true
+                            });
+                          }}
+                        />
+                        <Label htmlFor="isTotem" className="font-medium text-yellow-700 dark:text-yellow-400 cursor-pointer">
+                          Usuário TOTEM (Acesso Limitado)
+                        </Label>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <Separator />
-
-                {/* Seção de Permissões de Criação */}
-                {!permissionsData.sudo && !permissionsData.isTotem && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Key className="h-4 w-4" />
-                      <Label className="text-base font-semibold">Permissões de Criação</Label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="create_form"
-                            checked={permissionsData.can_create_form}
-                            onCheckedChange={(checked) => {
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_create_form: checked === true
-                              });
-                            }}
-                          />
-                          <Label htmlFor="create_form">Criar Solicitações</Label>
+                  {/* Seção de Permissões de Criação */}
+                  {!permissionsData.sudo && !permissionsData.isTotem && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Key className="h-4 w-4 text-muted-foreground" />
+                          <Label className="text-sm font-semibold">Permissões de Criação</Label>
                         </div>
                         
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="create_event"
-                            checked={permissionsData.can_create_event}
-                            onCheckedChange={(checked) => {
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_create_event: checked === true
-                              });
+                        {/* Barra de pesquisa com autocomplete */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                          <Input
+                            placeholder="Buscar permissão..."
+                            value={permissionSearch}
+                            onChange={(e) => {
+                              setPermissionSearch(e.target.value)
+                              setShowPermissionAutocomplete(e.target.value.length > 0)
                             }}
+                            onFocus={() => setShowPermissionAutocomplete(permissionSearch.length > 0)}
+                            onBlur={() => setTimeout(() => setShowPermissionAutocomplete(false), 200)}
+                            className="pl-10"
                           />
-                          <Label htmlFor="create_event">Criar Eventos</Label>
+                          {permissionSearch && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 z-10"
+                              onClick={() => {
+                                setPermissionSearch("")
+                                setShowPermissionAutocomplete(false)
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Autocomplete */}
+                          {showPermissionAutocomplete && permissionSearch && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
+                              {[
+                                "Criar Solicitações",
+                                "Criar Eventos",
+                                "Criar Encartes",
+                                "Agendar Salas",
+                                "Agendar Carros",
+                                "Visualizar Relatório DRE",
+                                "Alterar ramal de usuários",
+                                "Gerenciar produtos da loja"
+                              ]
+                                .filter(permission => 
+                                  permission.toLowerCase().includes(permissionSearch.toLowerCase())
+                                )
+                                .slice(0, 5)
+                                .map((suggestion, index) => (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    className="w-full px-3 py-2 text-left hover:bg-muted text-sm transition-colors"
+                                    onClick={() => {
+                                      setPermissionSearch(suggestion)
+                                      setShowPermissionAutocomplete(false)
+                                    }}
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              {[
+                                "Criar Solicitações",
+                                "Criar Eventos",
+                                "Criar Encartes",
+                                "Agendar Salas",
+                                "Agendar Carros",
+                                "Visualizar Relatório DRE",
+                                "Alterar ramal de usuários",
+                                "Gerenciar produtos da loja"
+                              ].filter(permission => 
+                                permission.toLowerCase().includes(permissionSearch.toLowerCase())
+                              ).length === 0 && (
+                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                                  Nenhuma sugestão encontrada
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
 
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="create_flyer"
-                            checked={permissionsData.can_create_flyer}
-                            onCheckedChange={(checked) => {
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_create_flyer: checked === true
-                              });
-                            }}
-                          />
-                          <Label htmlFor="create_flyer">Criar Encartes</Label>
+                        {/* Lista de permissões - mostra 4 itens, scrollável */}
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 border rounded-md p-2">
+                          {[
+                            {
+                              id: "create_form",
+                              label: "Criar Solicitações",
+                              checked: permissionsData.can_create_form,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_create_form: checked
+                                });
+                              }
+                            },
+                            {
+                              id: "create_event",
+                              label: "Criar Eventos",
+                              checked: permissionsData.can_create_event,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_create_event: checked
+                                });
+                              }
+                            },
+                            {
+                              id: "create_flyer",
+                              label: "Criar Encartes",
+                              checked: permissionsData.can_create_flyer,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_create_flyer: checked
+                                });
+                              }
+                            },
+                            {
+                              id: "create_booking",
+                              label: "Agendar Salas",
+                              checked: permissionsData.can_create_booking,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_create_booking: checked
+                                });
+                              }
+                            },
+                            {
+                              id: "locate_cars",
+                              label: "Agendar Carros",
+                              checked: permissionsData.can_locate_cars,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_locate_cars: checked
+                                });
+                              }
+                            },
+                            {
+                              id: "view_dre_report",
+                              label: "Visualizar Relatório DRE",
+                              checked: permissionsData.can_view_dre_report,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_view_dre_report: checked,
+                                  admin_pages: checked
+                                    ? [...(permissionsData.admin_pages || []), "/admin", "/admin/food"]
+                                      .filter((page, index, arr) => arr.indexOf(page) === index)
+                                    : permissionsData.admin_pages || []
+                                });
+                              }
+                            },
+                            {
+                              id: "manage_extensions",
+                              label: "Alterar ramal de usuários",
+                              checked: permissionsData.can_manage_extensions,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_manage_extensions: checked
+                                });
+                              }
+                            },
+                            {
+                              id: "manage_produtos",
+                              label: "Gerenciar produtos da loja",
+                              checked: permissionsData.can_manage_produtos,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_manage_produtos: checked
+                                });
+                              }
+                            }
+                          ]
+                            .filter(permission => 
+                              !permissionSearch || 
+                              permission.label.toLowerCase().includes(permissionSearch.toLowerCase())
+                            )
+                            .map((permission) => (
+                              <div 
+                                key={permission.id}
+                                className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                              >
+                                <Checkbox
+                                  id={permission.id}
+                                  checked={permission.checked}
+                                  onCheckedChange={(checked) => permission.onChange(checked === true)}
+                                />
+                                <Label htmlFor={permission.id} className="cursor-pointer flex-1">
+                                  {permission.label}
+                                </Label>
+                              </div>
+                            ))}
                         </div>
                       </div>
+                    </>
+                  )}
 
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="create_booking"
-                            checked={permissionsData.can_create_booking}
-                            onCheckedChange={(checked) => {
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_create_booking: checked === true
-                              });
-                            }}
-                          />
-                          <Label htmlFor="create_booking">Agendar Salas</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="locate_cars"
-                            checked={permissionsData.can_locate_cars}
-                            onCheckedChange={(checked) => {
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_locate_cars: checked === true
-                              });
-                            }}
-                          />
-                          <Label htmlFor="locate_cars">Agendar Carros</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="view_dre_report"
-                            checked={permissionsData.can_view_dre_report}
-                            onCheckedChange={(checked) => {
-                              const isChecked = checked === true;
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_view_dre_report: isChecked,
-                                // Quando habilita DRE, automaticamente concede acesso ao painel admin
-                                // Ao desabilitar DRE, mantém o acesso às rotas (apenas oculta funcionalidade específica)
-                                admin_pages: isChecked
-                                  ? [...(permissionsData.admin_pages || []), "/admin", "/admin/food"]
-                                    .filter((page, index, arr) => arr.indexOf(page) === index) // Remove duplicatas
-                                  : permissionsData.admin_pages || [] // Não remove nenhuma rota ao desmarcar DRE
-                              });
-                            }}
-                          />
-                          <Label htmlFor="view_dre_report">Visualizar Relatório DRE</Label>
-                          <span className="text-xs text-muted-foreground">
-                            (concede acesso automático ao painel admin e alimentos)
-                          </span>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="manage_extensions"
-                            checked={permissionsData.can_manage_extensions}
-                            onCheckedChange={(checked) => {
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_manage_extensions: checked === true
-                              });
-                            }}
-                          />
-                          <Label htmlFor="manage_extensions">Alterar ramal de usuários</Label>
-                          <span className="text-xs text-muted-foreground">
-                            (permite editar ramais de outros usuários)
-                          </span>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="manage_produtos"
-                            checked={permissionsData.can_manage_produtos}
-                            onCheckedChange={(checked) => {
-                              setPermissionsData({
-                                ...permissionsData,
-                                can_manage_produtos: checked === true
-                              });
-                            }}
-                          />
-                          <Label htmlFor="manage_produtos">Gerenciar produtos da loja</Label>
-                          <span className="text-xs text-muted-foreground">
-                            (permite criar, editar e deletar produtos)
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSavePermissions} disabled={updateRoleConfig.isPending}>
+                      {updateRoleConfig.isPending ? (
+                        <>
+                          <span className="animate-spin mr-2">⏳</span>
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Salvar Permissões
+                        </>
+                      )}
+                    </Button>
                   </div>
-                )}
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setIsEditingPermissions(false)}>
-                    <X className="h-4 w-4 mr-2" />
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSavePermissions}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar Permissões
-                  </Button>
                 </div>
-              </div>
-            ) : (
-              <div className="p-4 border rounded-lg space-y-4">
-                <div>
-                  <Label className="text-sm font-medium">Tipo de Usuário</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {permissionsData.sudo ? "Super Admin (Acesso Total)" : 
-                     permissionsData.isTotem ? "Usuário TOTEM (Acesso Limitado)" :
-                     "Usuário Padrão (Pode visualizar tudo)"}
-                  </p>
-                </div>
-                
-                {!permissionsData.sudo && !permissionsData.isTotem && (
+              ) : (
+                <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
                   <div>
-                    <Label className="text-sm font-medium">Permissões de Criação</Label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {permissionsData.can_create_form && (
-                        <Badge variant="secondary">Criar Solicitações</Badge>
-                      )}
-                      {permissionsData.can_create_event && (
-                        <Badge variant="secondary">Criar Eventos</Badge>
-                      )}
-                      {permissionsData.can_create_flyer && (
-                        <Badge variant="secondary">Criar Encartes</Badge>
-                      )}
-                      {permissionsData.can_create_booking && (
-                        <Badge variant="secondary">Agendar Salas</Badge>
-                      )}
-                      {permissionsData.can_locate_cars && (
-                        <Badge variant="secondary">Agendar Carros</Badge>
-                      )}
-                      {permissionsData.can_view_dre_report && (
-                        <Badge variant="secondary">Visualizar DRE</Badge>
-                      )}
-                      {permissionsData.can_manage_extensions && (
-                        <Badge variant="secondary">Alterar Ramais</Badge>
-                      )}
-                      {permissionsData.can_manage_produtos && (
-                        <Badge variant="secondary">Gerenciar Produtos</Badge>
-                      )}
-                      {!permissionsData.can_create_form &&
-                       !permissionsData.can_create_event &&
-                       !permissionsData.can_create_flyer &&
-                       !permissionsData.can_create_booking &&
-                       !permissionsData.can_locate_cars &&
-                       !permissionsData.can_view_dre_report &&
-                       !permissionsData.can_manage_extensions &&
-                       !permissionsData.can_manage_produtos && (
-                        <span className="text-sm text-muted-foreground">Apenas visualização</span>
-                      )}
-                    </div>
+                    <Label className="text-xs text-muted-foreground">Tipo de Usuário</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {permissionsData.sudo ? "Super Admin (Acesso Total)" : 
+                       permissionsData.isTotem ? "Usuário TOTEM (Acesso Limitado)" :
+                       "Usuário Padrão (Pode visualizar tudo)"}
+                    </p>
                   </div>
-                )}
+                  
+                  {!permissionsData.sudo && !permissionsData.isTotem && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Permissões de Criação</Label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {permissionsData.can_create_form && (
+                          <Badge variant="secondary">Criar Solicitações</Badge>
+                        )}
+                        {permissionsData.can_create_event && (
+                          <Badge variant="secondary">Criar Eventos</Badge>
+                        )}
+                        {permissionsData.can_create_flyer && (
+                          <Badge variant="secondary">Criar Encartes</Badge>
+                        )}
+                        {permissionsData.can_create_booking && (
+                          <Badge variant="secondary">Agendar Salas</Badge>
+                        )}
+                        {permissionsData.can_locate_cars && (
+                          <Badge variant="secondary">Agendar Carros</Badge>
+                        )}
+                        {permissionsData.can_view_dre_report && (
+                          <Badge variant="secondary">Visualizar DRE</Badge>
+                        )}
+                        {permissionsData.can_manage_extensions && (
+                          <Badge variant="secondary">Alterar Ramais</Badge>
+                        )}
+                        {permissionsData.can_manage_produtos && (
+                          <Badge variant="secondary">Gerenciar Produtos</Badge>
+                        )}
+                        {!permissionsData.can_create_form &&
+                         !permissionsData.can_create_event &&
+                         !permissionsData.can_create_flyer &&
+                         !permissionsData.can_create_booking &&
+                         !permissionsData.can_locate_cars &&
+                         !permissionsData.can_view_dre_report &&
+                         !permissionsData.can_manage_extensions &&
+                         !permissionsData.can_manage_produtos && (
+                          <span className="text-sm text-muted-foreground">Apenas visualização</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                <Button onClick={() => setIsEditingPermissions(true)} size="sm">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Editar Permissões
-                </Button>
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-        )}
-
-        <Separator />
-
-        {/* Seção de Rotas Admin */}
-        {!canEditBasicOnly && !permissionsData.isTotem && (
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Acesso a Rotas Admin
+                  <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Editar Permissões
+                  </Button>
                 </div>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4 mt-4">
-              {isEditingAdminRoutes ? (
-                <div className="space-y-4 p-4 border rounded-lg">
-                  <div className="mb-4">
-                    <Label className="text-sm font-medium">Configurar Acesso às Páginas Admin</Label>
-                    <p className="text-xs text-muted-foreground">
+              )}
+            </TabsContent>
+          )}
+
+          {/* Tab: Rotas Admin */}
+          {!canEditBasicOnly && !permissionsData.isTotem && (
+            <TabsContent value="routes" className="mt-4 space-y-4">
+              {isEditing ? (
+                <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+                  <div>
+                    <Label className="text-sm font-semibold">Configurar Acesso às Páginas Admin</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
                       Selecione quais páginas administrativas o usuário pode acessar. 
                       <strong> /admin é obrigatório para acessar qualquer outra página.</strong>
                     </p>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {ADMIN_ROUTES.map((route) => {
                       const hasAccess = adminRoutesData.includes(route.id)
                       const isDisabled = route.id !== "/admin" && route.requiresBasicAdmin && !adminRoutesData.includes("/admin")
                       const IconComponent = route.icon
 
-                      console.log(`🔄 Route ${route.id}:`, {
-                        hasAccess,
-                        isDisabled,
-                        adminRoutesData,
-                        requiresBasicAdmin: route.requiresBasicAdmin
-                      })
-
                       return (
                         <div 
                           key={route.id} 
-                          className={`flex items-start space-x-3 p-3 border rounded-lg ${
-                            isDisabled ? 'opacity-50 bg-gray-50' : ''
+                          className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${
+                            isDisabled ? 'opacity-50 bg-muted/30' : hasAccess ? 'bg-primary/5 border-primary/20' : 'hover:bg-muted/50'
                           }`}
                         >
                           <Checkbox
@@ -987,13 +1178,14 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                             checked={hasAccess}
                             disabled={isDisabled}
                             onCheckedChange={() => handleToggleAdminRoute(route.id)}
+                            className="mt-1"
                           />
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
-                              <IconComponent className="h-4 w-4" />
+                              <IconComponent className="h-4 w-4 text-muted-foreground" />
                               <Label 
                                 htmlFor={`route_${route.id}`} 
-                                className={`font-medium ${isDisabled ? 'text-gray-500' : ''}`}
+                                className={`font-medium cursor-pointer ${isDisabled ? 'text-muted-foreground' : ''}`}
                               >
                                 {route.title}
                               </Label>
@@ -1003,10 +1195,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                                 </Badge>
                               )}
                             </div>
-                            <p className={`text-xs ${isDisabled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+                            <p className={`text-xs ${isDisabled ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
                               {route.description}
                             </p>
-                            <p className={`text-xs font-mono ${isDisabled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+                            <p className={`text-xs font-mono ${isDisabled ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
                               {route.path}
                             </p>
                           </div>
@@ -1015,29 +1207,35 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     })}
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-4">
+                  <div className="flex justify-end gap-2 pt-4 border-t">
                     <Button 
                       variant="outline" 
                       onClick={() => {
-                        setIsEditingAdminRoutes(false)
+                        setIsEditing(false)
                         setAdminRoutesData((user.role_config as ExtendedRolesConfig)?.admin_pages || [])
                       }}
                     >
-                      <X className="h-4 w-4 mr-2" />
                       Cancelar
                     </Button>
-                    <Button
-                      onClick={handleSaveAdminRoutes}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar Rotas
+                    <Button onClick={handleSaveAdminRoutes} disabled={updateRoleConfig.isPending}>
+                      {updateRoleConfig.isPending ? (
+                        <>
+                          <span className="animate-spin mr-2">⏳</span>
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Salvar Rotas
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="p-4 border rounded-lg space-y-4">
+                <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
                   <div>
-                    <Label className="text-sm font-medium">Rotas Admin Permitidas</Label>
+                    <Label className="text-xs text-muted-foreground">Rotas Admin Permitidas</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {adminRoutesData.length > 0 ? (
                         adminRoutesData.map((routeId) => {
@@ -1058,63 +1256,112 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     </div>
                   </div>
 
-                  <Button
-                    onClick={() => {
-                      console.log("🔄 Edit admin routes button clicked")
-                      setIsEditingAdminRoutes(true)
-                    }}
-                    size="sm"
-                  >
+                  <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
                     <Settings className="h-4 w-4 mr-2" />
                     Editar Rotas Admin
                   </Button>
                 </div>
               )}
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+            </TabsContent>
+          )}
 
-        <Separator />
-
-        {/* Seção de Visibilidade de Solicitações */}
-        {!canEditBasicOnly && !permissionsData.sudo && !permissionsData.isTotem && (
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <div className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Visibilidade de Solicitações
-                </div>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4 mt-4">
-              <div className="p-4 border rounded-lg">
+          {/* Tab: Visibilidade de Solicitações */}
+          {!canEditBasicOnly && !permissionsData.sudo && !permissionsData.isTotem && (
+            <TabsContent value="forms" className="mt-4 space-y-4">
+              <div className="p-4 bg-muted/30 rounded-lg border">
                 <div className="mb-4">
-                  <Label className="text-sm font-medium">Controle de Solicitações</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Por padrão, todos os usuários podem ver todos as solicitações. Use as opções abaixo para restringir acesso.
+                  <Label className="text-sm font-semibold">Controle de Solicitações</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Por padrão, todos os usuários podem ver todas as solicitações. Use as opções abaixo para restringir acesso.
                   </p>
                 </div>
 
-                <div className="space-y-3">
-                  {allForms.map((form) => {
+                {/* Barra de pesquisa com autocomplete */}
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                  <Input
+                    placeholder="Buscar solicitação..."
+                    value={formSearch}
+                    onChange={(e) => {
+                      setFormSearch(e.target.value)
+                      setShowFormAutocomplete(e.target.value.length > 0)
+                    }}
+                    onFocus={() => setShowFormAutocomplete(formSearch.length > 0)}
+                    onBlur={() => setTimeout(() => setShowFormAutocomplete(false), 200)}
+                    className="pl-10"
+                  />
+                  {formSearch && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 z-10"
+                      onClick={() => {
+                        setFormSearch("")
+                        setShowFormAutocomplete(false)
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  
+                  {/* Autocomplete */}
+                  {showFormAutocomplete && formSearch && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
+                      {allForms
+                        .filter(form => 
+                          form.title.toLowerCase().includes(formSearch.toLowerCase())
+                        )
+                        .slice(0, 5)
+                        .map((form) => (
+                          <button
+                            key={form.id}
+                            type="button"
+                            className="w-full px-3 py-2 text-left hover:bg-muted text-sm transition-colors"
+                            onClick={() => {
+                              setFormSearch(form.title)
+                              setShowFormAutocomplete(false)
+                            }}
+                          >
+                            {form.title}
+                          </button>
+                        ))}
+                      {allForms.filter(form => 
+                        form.title.toLowerCase().includes(formSearch.toLowerCase())
+                      ).length === 0 && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          Nenhuma solicitação encontrada
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2 max-h-[400px] overflow-y-auto border rounded-md p-2">
+                  {allForms
+                    .filter(form => 
+                      !formSearch || 
+                      form.title.toLowerCase().includes(formSearch.toLowerCase())
+                    )
+                    .map((form) => {
                     const isHidden = (user.role_config as ExtendedRolesConfig)?.hidden_forms?.includes(form.id) ?? false
                     const isInVisibleList = (user.role_config as ExtendedRolesConfig)?.visible_forms?.includes(form.id) ?? false
                     const hasRestrictiveList = ((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0
 
                     let status = "Visível"
+                    let statusColor = "text-green-600"
                     if (isHidden) {
                       status = "Oculto"
+                      statusColor = "text-red-600"
                     } else if (hasRestrictiveList && !isInVisibleList) {
                       status = "Restrito"
+                      statusColor = "text-yellow-600"
                     }
 
                     return (
-                      <div key={form.id} className="flex items-center justify-between p-2 border rounded">
+                      <div key={form.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                         <div className="flex-1">
                           <div className="font-medium text-sm">{form.title}</div>
-                          <div className="text-xs text-muted-foreground">Status: {status}</div>
+                          <div className={`text-xs font-medium ${statusColor}`}>Status: {status}</div>
                         </div>
                         <div className="flex items-center gap-2">
                           {status !== "Visível" && (
@@ -1144,30 +1391,30 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 </div>
 
                 {((user.role_config as ExtendedRolesConfig)?.hidden_forms?.length ?? 0) > 0 && (
-                  <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
-                    <div className="text-sm font-medium text-red-800">
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
+                    <div className="text-sm font-medium text-red-800 dark:text-red-400">
                       Solicitações Ocultas: {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length}
                     </div>
-                    <div className="text-xs text-red-600">
+                    <div className="text-xs text-red-600 dark:text-red-500">
                       Este usuário não pode ver {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length} formulário(s)
                     </div>
                   </div>
                 )}
 
                 {((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0 && (
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-sm font-medium text-blue-800">
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                    <div className="text-sm font-medium text-blue-800 dark:text-blue-400">
                       Lista Restritiva Ativa: {(user.role_config as ExtendedRolesConfig)?.visible_forms?.length} solicitação(ões)
                     </div>
-                    <div className="text-xs text-blue-600">
+                    <div className="text-xs text-blue-600 dark:text-blue-500">
                       Este usuário só pode ver solicitações específicas da lista
                     </div>
                   </div>
                 )}
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+            </TabsContent>
+          )}
+        </Tabs>
       </CardContent>
     </Card>
   )
