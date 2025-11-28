@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -44,9 +44,9 @@ export function MyOrdersList({ filter }: { filter?: string }) {
     markAsReadMutation.mutate({ id: orderId })
   }
 
-  // Type-safe orders extraction
+  // Type-safe orders extraction e agrupamento por orderGroupId
   const rawOrders = ordersQuery.data
-  const orders: MyOrder[] = Array.isArray(rawOrders)
+  const allOrders: MyOrder[] = Array.isArray(rawOrders)
     ? rawOrders.filter(isMyOrder).filter((o) => {
       if (filter && filter !== "ALL") {
         return o.status === filter;
@@ -54,6 +54,32 @@ export function MyOrdersList({ filter }: { filter?: string }) {
       return true;
     })
     : [];
+
+  // Agrupar pedidos por orderGroupId - pedidos do mesmo grupo são exibidos como um único pedido
+  const groupedOrders = useMemo(() => {
+    const groups = new Map<string | null, MyOrder[]>()
+    
+    // Agrupar pedidos por orderGroupId
+    allOrders.forEach((order) => {
+      const groupId = order.orderGroupId ?? `single-${order.id}`
+      if (!groups.has(groupId)) {
+        groups.set(groupId, [])
+      }
+      groups.get(groupId)!.push(order)
+    })
+    
+    // Retornar apenas o primeiro pedido de cada grupo como representante
+    // (os outros pedidos do grupo serão exibidos nos detalhes)
+    return Array.from(groups.values()).map((groupOrders) => {
+      // Ordenar por data de criação e pegar o primeiro
+      const sorted = [...groupOrders].sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+      return sorted[0]!
+    })
+  }, [allOrders])
+
+  const orders = groupedOrders
 
   const getStatusBadge = (status: ProductOrderStatus) => {
     switch (status) {
@@ -138,13 +164,30 @@ function OrderCard({
   const imageUrl = order.product.imageUrl
   const firstImage = Array.isArray(imageUrl) && imageUrl.length > 0 ? imageUrl[0] : null
 
+  // Verificar se é um pedido agrupado
+  const isGroupedOrder = !!order.orderGroupId
+  const orderGroupOrders = order.orderGroup?.orders ?? []
+
   return (
     <Card className={`${isUnread ? "ring-2 ring-primary" : ""} w-full`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg">{order.product.name}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">{order.product.description}</p>
+            <CardTitle className="text-lg">
+              {isGroupedOrder ? `Pedido (${orderGroupOrders.length} ${orderGroupOrders.length === 1 ? 'item' : 'itens'})` : order.product.name}
+            </CardTitle>
+            {!isGroupedOrder && (
+              <p className="text-sm text-muted-foreground mt-1">{order.product.description}</p>
+            )}
+            {isGroupedOrder && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {orderGroupOrders.map((o, idx) => (
+                  <span key={o.id}>
+                    {o.product.name} ({o.quantity}x){idx < orderGroupOrders.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </p>
+            )}
           </div>
           {isUnread && (
             <Badge variant="destructive" className="ml-2">Novo</Badge>
@@ -176,10 +219,18 @@ function OrderCard({
           {/* Informações do pedido */}
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
-                <span>Quantidade: {order.quantity}</span>
-              </div>
+              {!isGroupedOrder && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Package className="h-4 w-4" />
+                  <span>Quantidade: {order.quantity}</span>
+                </div>
+              )}
+              {isGroupedOrder && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Package className="h-4 w-4" />
+                  <span>Total: {orderGroupOrders.reduce((sum, o) => sum + o.quantity, 0)} itens</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 <span>
@@ -187,6 +238,11 @@ function OrderCard({
                 </span>
               </div>
             </div>
+            {isGroupedOrder && (
+              <div className="text-sm font-semibold text-primary">
+                Total: R$ {orderGroupOrders.reduce((total, o) => total + (o.product.price * o.quantity), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <div>

@@ -44,10 +44,34 @@ export function OrdersKanban() {
     },
   })
 
+  // Group orders by orderGroupId - pedidos do mesmo grupo são exibidos como um único pedido
+  const groupedOrders = useMemo(() => {
+    const groups = new Map<string | null, ProductOrderWithRelations[]>()
+    
+    // Agrupar pedidos por orderGroupId
+    localOrders.forEach((order) => {
+      const groupId = order.orderGroupId ?? `single-${order.id}`
+      if (!groups.has(groupId)) {
+        groups.set(groupId, [])
+      }
+      groups.get(groupId)!.push(order)
+    })
+    
+    // Retornar apenas o primeiro pedido de cada grupo como representante
+    // (os outros pedidos do grupo serão exibidos nos detalhes)
+    return Array.from(groups.values()).map((groupOrders) => {
+      // Ordenar por data de criação e pegar o primeiro
+      const sorted = [...groupOrders].sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+      return sorted[0]!
+    })
+  }, [localOrders])
+
   // Group orders by status
   const columns = {
-    SOLICITADO: localOrders.filter((order) => order.status === "SOLICITADO"),
-    EM_ANDAMENTO: localOrders.filter((order) => order.status === "EM_ANDAMENTO"),
+    SOLICITADO: groupedOrders.filter((order) => order.status === "SOLICITADO"),
+    EM_ANDAMENTO: groupedOrders.filter((order) => order.status === "EM_ANDAMENTO"),
   }
 
   // Handle drag end

@@ -900,6 +900,14 @@ export const mockEmailPedidoProduto = (
   </html>
 `)
 
+// Tipo para item do pedido
+export interface OrderItem {
+  nome: string
+  quantidade: number
+  precoUnitario: number
+  subtotal: number
+}
+
 export const mockEmailNotificacaoPedidoProduto = (
   nomeUsuario: string,
   emailUsuario: string,
@@ -909,7 +917,41 @@ export const mockEmailNotificacaoPedidoProduto = (
   empresa: string,
   dataPedido: string,
   contactWhatsapp?: string,
-) => (`
+  itens?: OrderItem[], // Lista de itens para pedidos agrupados
+) => {
+  // Se itens foi fornecido, usar a lista de itens; caso contrário, criar um item único
+  const itemsList: OrderItem[] = itens ?? [{
+    nome: nomeProduto,
+    quantidade,
+    precoUnitario: precoTotal / quantidade,
+    subtotal: precoTotal
+  }]
+
+  // Gerar HTML da tabela de itens
+  const itemsTable = itemsList.map((item, index) => {
+    const precoUnitario = item.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const subtotal = item.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return `
+    <tr style="background-color: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+        <strong>${item.nome}</strong>
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">
+        ${item.quantidade}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right;">
+        R$ ${precoUnitario}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: bold;">
+        R$ ${subtotal}
+      </td>
+    </tr>
+  `
+  }).join('')
+
+  const precoTotalFormatado = precoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  return `
   <!DOCTYPE html>
   <html lang="pt-BR">
     <head>
@@ -1022,12 +1064,45 @@ export const mockEmailNotificacaoPedidoProduto = (
                 <td>${contactWhatsapp}</td>
               </tr>` : ""}
               <tr>
-                <td>Produto:</td>
-                <td>${nomeProduto}</td>
-              </tr>
-              <tr>
                 <td>Empresa:</td>
                 <td>${empresa}</td>
+              </tr>
+              <tr>
+                <td>Data do Pedido:</td>
+                <td>${dataPedido}</td>
+              </tr>
+            </table>
+          </div>
+
+          ${itemsList.length > 0 ? `
+          <div class="order-details" style="margin-top: 20px;">
+            <h3 style="margin: 0 0 15px; color: #333; font-size: 1.1rem;">Itens do Pedido:</h3>
+            <table style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
+              <thead>
+                <tr style="background-color: #28a745; color: #fff;">
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid #1e7e34;">Produto</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid #1e7e34;">Quantidade</th>
+                  <th style="padding: 12px; text-align: right; border-bottom: 2px solid #1e7e34;">Preço Unitário</th>
+                  <th style="padding: 12px; text-align: right; border-bottom: 2px solid #1e7e34;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsTable}
+                <tr style="background-color: #28a745; color: #fff; font-weight: bold;">
+                  <td colspan="3" style="padding: 12px; text-align: right; border-top: 2px solid #1e7e34;">Total:</td>
+                  <td style="padding: 12px; text-align: right; border-top: 2px solid #1e7e34;">
+                    R$ ${precoTotalFormatado}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : `
+          <div class="order-details" style="margin-top: 20px;">
+            <table>
+              <tr>
+                <td>Produto:</td>
+                <td>${nomeProduto}</td>
               </tr>
               <tr>
                 <td>Quantidade:</td>
@@ -1035,13 +1110,161 @@ export const mockEmailNotificacaoPedidoProduto = (
               </tr>
               <tr>
                 <td>Valor Total:</td>
-                <td>R$ ${precoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-              </tr>
-              <tr>
-                <td>Data do Pedido:</td>
-                <td>${dataPedido}</td>
+                <td>R$ ${precoTotalFormatado}</td>
               </tr>
             </table>
+          </div>
+          `}
+
+          <div class="footer">
+            <p>Atenciosamente,</p>
+            <p>Sistema de Notificações</p>
+            <p>elo - Sistema de Intranet</p>
+          </div>
+        </div>
+      </div>
+    </body>
+  </html>
+`
+}
+
+export const mockEmailChatMensagemPedido = (
+  nomeDestinatario: string,
+  nomeRemetente: string,
+  mensagem: string,
+  orderId: string,
+  produtoNome?: string,
+  isComprador?: boolean, // Se true, o destinatário é o comprador (link para /shop)
+) => (`
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #f7f7f7;
+          margin: 0;
+          padding: 0;
+          color: #333;
+        }
+        .container {
+          background-color: #ffffff;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          margin: 20px auto;
+          max-width: 600px;
+          overflow: hidden;
+        }
+        .header {
+          background-color: #007bff;
+          color: #fff;
+          padding: 24px 20px;
+          text-align: center;
+          border-top-left-radius: 8px;
+          border-top-right-radius: 8px;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 1.8rem;
+          line-height: 1.2;
+        }
+        .content-section {
+          padding: 30px;
+        }
+        .info-box {
+          background-color: #e9f7ff;
+          border-left: 5px solid #007bff;
+          padding: 20px;
+          margin-bottom: 25px;
+          border-radius: 4px;
+        }
+        .info-box h2 {
+          margin: 0 0 10px;
+          color: #007bff;
+          font-size: 1.2rem;
+        }
+        .message-box {
+          background-color: #f8f9fa;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          padding: 20px;
+          margin-bottom: 20px;
+        }
+        .message-box .sender {
+          font-weight: bold;
+          color: #007bff;
+          margin-bottom: 10px;
+        }
+        .message-box .message {
+          color: #333;
+          line-height: 1.6;
+          white-space: pre-wrap;
+        }
+        .order-info {
+          background-color: #fff3cd;
+          border-left: 5px solid #ffc107;
+          padding: 15px;
+          margin-bottom: 20px;
+          border-radius: 4px;
+        }
+        .order-info p {
+          margin: 5px 0;
+          color: #856404;
+        }
+        .button {
+          display: inline-block;
+          background-color: #007bff;
+          color: #fff;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 6px;
+          margin-top: 20px;
+          font-weight: bold;
+        }
+        .button:hover {
+          background-color: #0056b3;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #e9ecef;
+          font-size: 0.9rem;
+          color: #666;
+          text-align: center;
+        }
+        .footer p {
+          margin: 5px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>💬 Nova Mensagem em Pedidos</h1>
+        </div>
+        <div class="content-section">
+          <div class="info-box">
+            <h2>Olá, ${nomeDestinatario}!</h2>
+            <p>Você recebeu uma nova mensagem no chat de um pedido.</p>
+          </div>
+
+          ${produtoNome ? `
+          <div class="order-info">
+            <p><strong>Pedido relacionado:</strong> ${produtoNome}</p>
+          </div>
+          ` : ''}
+
+          <div class="message-box">
+            <div class="sender">De: ${nomeRemetente}</div>
+            <div class="message">${mensagem}</div>
+          </div>
+
+          <div style="text-align: center;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://intranet.boxdistribuidor.com.br'}${isComprador ? '/shop' : '/admin/products'}" class="button" style="color: #fff; text-decoration: none;">
+              Ver Mensagem
+            </a>
           </div>
 
           <div class="footer">
