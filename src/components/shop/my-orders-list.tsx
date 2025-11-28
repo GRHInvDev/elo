@@ -27,7 +27,10 @@ function isMyOrder(order: unknown): order is MyOrder {
 }
 
 export function MyOrdersList({ filter }: { filter?: string }) {
-  const ordersQuery = api.productOrder.listMyOrders.useQuery()
+  const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
+    gcTime: 5 * 60 * 1000, // 5 minutos
+  })
   const isLoading = ordersQuery.isLoading
   const refetch = ordersQuery.refetch
 

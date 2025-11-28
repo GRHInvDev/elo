@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo, useCallback } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Minus, Plus, Trash2, CreditCard } from "lucide-react"
+import { Minus, Plus, Trash2, CreditCard, ShoppingCart as ShoppingCartIcon } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import { CreateOrderModal } from "./create-order-modal"
 
@@ -15,25 +15,40 @@ interface ShoppingCartProps {
   className?: string
 }
 
-export function ShoppingCart({ className }: ShoppingCartProps) {
-  const { items, enterprise, removeItem, updateQuantity, getTotalItems, getTotalPrice, clearCart } = useCart()
+const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps) {
+  const { items, enterprise, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
 
-  const totalItems = getTotalItems()
-  const totalPrice = getTotalPrice()
+
+  const handleClearCart = useCallback(() => {
+    clearCart()
+  }, [clearCart])
+
+  const handleCheckout = useCallback(() => {
+    setIsCheckoutOpen(true)
+  }, [])
+
+  const handleCheckoutClose = useCallback(() => {
+    setIsCheckoutOpen(false)
+  }, [])
+
+  const handleCheckoutSuccess = useCallback(() => {
+    clearCart()
+    setIsCheckoutOpen(false)
+  }, [clearCart])
 
   if (totalItems === 0) {
     return (
       <Card className={className}>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
+            <ShoppingCartIcon className="h-5 w-5" />
             Carrinho
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <ShoppingCartIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>Seu carrinho está vazio</p>
             <p className="text-sm mt-1">Adicione produtos para começar</p>
           </div>
@@ -41,21 +56,20 @@ export function ShoppingCart({ className }: ShoppingCartProps) {
       </Card>
     )
   }
-
   return (
     <>
       <Card className={className}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCartIcon className="h-5 w-5" />
               Carrinho
               {enterprise && <Badge variant="outline">{enterprise}</Badge>}
             </CardTitle>
             <Button
               variant="ghost"
               size="sm"
-              onClick={clearCart}
+              onClick={handleClearCart}
               className="text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
@@ -136,7 +150,7 @@ export function ShoppingCart({ className }: ShoppingCartProps) {
             </div>
 
             <Button
-              onClick={() => setIsCheckoutOpen(true)}
+              onClick={handleCheckout}
               className="w-full"
               size="lg"
             >
@@ -151,12 +165,11 @@ export function ShoppingCart({ className }: ShoppingCartProps) {
         cartItems={items}
         enterprise={enterprise}
         open={isCheckoutOpen}
-        onOpenChange={setIsCheckoutOpen}
-        onSuccess={() => {
-          clearCart()
-          setIsCheckoutOpen(false)
-        }}
+        onOpenChange={handleCheckoutClose}
+        onSuccess={handleCheckoutSuccess}
       />
     </>
   )
-}
+})
+
+export default ShoppingCart
