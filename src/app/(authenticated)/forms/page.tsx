@@ -82,7 +82,7 @@ export default async function FormsPage() {
           <Link href="/forms/my-responses">
             <Button variant="outline" className="w-full">
               <FileText className="mr-2 h-4 w-4" />
-              Minhas respostas
+              Minhas solicitações
             </Button>
           </Link>
           {userCanCreateForm && (

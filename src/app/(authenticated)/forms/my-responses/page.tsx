@@ -7,7 +7,7 @@ import { ResponsesSkeleton } from "@/components/forms/responses-skeleton"
 import { DashboardShell } from "@/components/dashboard-shell"
 
 export const metadata = {
-  title: "Minhas Respostas",
+  title: "Minhas solicitações",
   description: "Visualize suas respostas a solicitações",
 }
 
@@ -23,7 +23,7 @@ export default async function MyResponsesPage() {
         </Link>
 
         <div className="mt-4">
-          <h1 className="text-3xl font-bold tracking-tight">Minhas Respostas</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Minhas solicitações</h1>
           <p className="text-muted-foreground mt-2">
             Visualize e acompanhe o status de todas as suas respostas a solicitações.
           </p>
