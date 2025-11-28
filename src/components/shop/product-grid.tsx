@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useMemo } from "react"
+import { memo } from "react"
 import { api } from "@/trpc/react";
 import ProductCard from "./product-card";
 import type { Enterprise } from "@prisma/client";

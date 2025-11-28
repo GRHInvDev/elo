@@ -51,7 +51,7 @@ function ShopPageContent() {
   const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO" | "CONCLUIDO">("ALL");
 
   const unreadCount = getUnreadCount(myOrders)
-  const cartItemCount = totalItems
+  const cartItemCount = totalItems ?? 0
 
   // Atualizar filtro quando empresa do carrinho muda
   React.useEffect(() => {
@@ -130,7 +130,7 @@ function ShopPageContent() {
           </TabsContent>
 
           <TabsContent value="cart" className="flex justify-center">
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-lg">
               <ShoppingCart />
             </div>
           </TabsContent>
