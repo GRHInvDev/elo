@@ -113,6 +113,7 @@ export const productOrderRouter = createTRPCRouter({
                                 lastName: true,
                                 email: true,
                                 imageUrl: true,
+                                enterprise: true,
                             }
                         },
                         product: true,
@@ -219,7 +220,7 @@ export const productOrderRouter = createTRPCRouter({
                             order.product.name,
                             order.quantity,
                             precoTotal,
-                            order.product.enterprise,
+                            order.user.enterprise ?? "N/A",
                         dataPedido,
                         input.contactWhatsapp
                         )
@@ -228,7 +229,7 @@ export const productOrderRouter = createTRPCRouter({
                         for (const email of notificationEmails) {
                             await sendEmail(
                                 email,
-                                `Novo Pedido - ${order.product.name} (${order.product.enterprise})`,
+                                `Novo Pedido - ${order.product.name} (${order.user.enterprise ?? "N/A"})`,
                                 emailContentNotificacao
                             ).catch((error) => {
                                 console.error(`[ProductOrder] Erro ao enviar email de notificação para ${email}:`, error)
@@ -352,6 +353,7 @@ export const productOrderRouter = createTRPCRouter({
                                     lastName: true,
                                     email: true,
                                     imageUrl: true,
+                                    enterprise: true,
                                 }
                             },
                             product: true,
@@ -450,13 +452,15 @@ export const productOrderRouter = createTRPCRouter({
 
                         // Enviar email de notificação para responsáveis
                         if (notificationEmails.length > 0) {
+                            // Usar a empresa do colaborador (primeiro pedido) em vez da empresa do produto
+                            const userEnterprise = firstOrder?.user.enterprise ?? enterprise
                             const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                                 userName,
                                 userEmail ?? "N/A",
                                 orders.map(order => `${order.product.name} (${order.quantity}x)`).join(', '),
                                 1, // quantidade total (não usada no template)
                                 totalGeral,
-                                enterprise,
+                                userEnterprise,
                                 dataPedido,
                                 input.contactWhatsapp
                             )
@@ -465,7 +469,7 @@ export const productOrderRouter = createTRPCRouter({
                             for (const email of notificationEmails) {
                                 await sendEmail(
                                     email,
-                                    `Novo Pedido - ${orders.length} ${orders.length === 1 ? 'produto' : 'produtos'} (${enterprise})`,
+                                    `Novo Pedido - ${orders.length} ${orders.length === 1 ? 'produto' : 'produtos'} (${userEnterprise})`,
                                     emailContentNotificacao
                                 ).catch((error) => {
                                     console.error(`[ProductOrder] Erro ao enviar email de notificação para ${email}:`, error)
