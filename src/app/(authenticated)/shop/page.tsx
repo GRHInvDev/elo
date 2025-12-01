@@ -11,6 +11,8 @@ import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
 import React, { useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { CartProvider } from "@/contexts/cart-context"
 import { useCart } from "@/hooks/use-cart"
 
@@ -125,6 +127,8 @@ function ShopPageContent() {
   // Se há itens no carrinho, filtrar apenas produtos da mesma empresa
   const [enterprise, setEnterprise] = useState<"ALL" | "Box" | "RHenz" | "Cristallux" | "Box_Filial" | "Cristallux_Filial">("ALL");
   const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO">("ALL");
+  const [nameFilter, setNameFilter] = useState<string>("");
+  const [priceFilter, setPriceFilter] = useState<"ALL" | "0-50" | "50-100" | "100-200" | "200+">("ALL");
 
   const unreadCount = getUnreadCount(myOrders)
   const cartItemCount = totalItems ?? 0
@@ -178,31 +182,66 @@ function ShopPageContent() {
           </TabsList>
 
           <TabsContent value="products" className="w-full max-w-full overflow-x-hidden">
-            <div className="mb-4 flex flex-col sm:flex-row items-center gap-3 w-full max-w-full">
-              <div className="w-full sm:w-64 max-w-full">
-                <Select
-                  value={enterprise}
-                  onValueChange={(v) => setEnterprise(v as typeof enterprise)}
-                  disabled={!!cartEnterprise}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={cartEnterprise ? `Produtos de ${cartEnterprise}` : "Filtrar por empresa"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todas as empresas</SelectItem>
-                    <SelectItem value="Box">Box</SelectItem>
-                    <SelectItem value="RHenz">RHenz</SelectItem>
-                    <SelectItem value="Cristallux">Cristallux</SelectItem>
-                  </SelectContent>
-                </Select>
-                {cartEnterprise && (
-                  <p className="text-sm text-muted-foreground break-words">
-                    Filtro automático: mostrando apenas produtos de {cartEnterprise}
-                  </p>
-                )}
+            <div className="mb-4 space-y-3 w-full max-w-full">
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-full">
+                <div className="w-full sm:w-64 max-w-full">
+                  <Select
+                    value={enterprise}
+                    onValueChange={(v) => setEnterprise(v as typeof enterprise)}
+                    disabled={!!cartEnterprise}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={cartEnterprise ? `Produtos de ${cartEnterprise}` : "Filtrar por empresa"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todas as empresas</SelectItem>
+                      <SelectItem value="Box">Box</SelectItem>
+                      <SelectItem value="RHenz">RHenz</SelectItem>
+                      <SelectItem value="Cristallux">Cristallux</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {cartEnterprise && (
+                    <p className="text-sm text-muted-foreground break-words mt-1">
+                      Filtro automático: mostrando apenas produtos de {cartEnterprise}
+                    </p>
+                  )}
+                </div>
+                <div className="w-full sm:w-64 max-w-full">
+                  <Label htmlFor="name-filter" className="sr-only">Filtrar por nome</Label>
+                  <Input
+                    id="name-filter"
+                    type="text"
+                    placeholder="Buscar por nome..."
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="w-full sm:w-64 max-w-full">
+                  <Select
+                    value={priceFilter}
+                    onValueChange={(v) => setPriceFilter(v as typeof priceFilter)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por preço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todos os preços</SelectItem>
+                      <SelectItem value="0-50">Até R$ 50,00</SelectItem>
+                      <SelectItem value="50-100">R$ 50,00 - R$ 100,00</SelectItem>
+                      <SelectItem value="100-200">R$ 100,00 - R$ 200,00</SelectItem>
+                      <SelectItem value="200+">Acima de R$ 200,00</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-            <ProductGrid size="sm" enterpriseFilter={enterprise} />
+            <ProductGrid 
+              size="sm" 
+              enterpriseFilter={enterprise}
+              nameFilter={nameFilter}
+              priceFilter={priceFilter}
+            />
           </TabsContent>
 
           <TabsContent value="cart" className="flex justify-center w-full max-w-full overflow-x-hidden">

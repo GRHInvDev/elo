@@ -249,7 +249,7 @@ function OrderCard({
 }) {
   const [showChat, setShowChat] = useState(false)
   const { canManageProducts, isSudo } = useAccessControl()
-  const isAdmin = canManageProducts || isSudo
+  const isAdmin = canManageProducts() || isSudo
 
   // Verificar se é um pedido agrupado
   const isGroupedOrder = !!order.orderGroupId || !!(order as { _groupOrders?: MyOrder[] })._groupOrders

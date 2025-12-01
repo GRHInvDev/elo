@@ -1303,7 +1303,7 @@ export const productOrderRouter = createTRPCRouter({
             }
 
             const roleConfig = user.role_config as RolesConfig | null
-            const isManager = !!roleConfig?.sudo ?? roleConfig?.can_manage_produtos
+            const isManager = !!roleConfig?.sudo || !!roleConfig?.can_manage_produtos
 
             if (!isManager) {
                 throw new TRPCError({
@@ -1312,12 +1312,10 @@ export const productOrderRouter = createTRPCRouter({
                 })
             }
 
-            // Extrair e validar o id do pedido de forma segura
-            const orderId: string = String(input.id)
-
             // Buscar o pedido para verificar se existe
+            // Zod já validou que input.id é uma string através do schema deleteProductOrderSchema
             const order = await ctx.db.productOrder.findUnique({
-                where: { id: orderId },
+                where: { id: input.id },
                 include: {
                     orderGroup: {
                         include: {
@@ -1355,7 +1353,7 @@ export const productOrderRouter = createTRPCRouter({
 
                         // Deletar o pedido
                         await tx.productOrder.delete({
-                            where: { id: orderId }
+                            where: { id: order.id }
                         })
 
                         // Deletar o grupo
@@ -1378,7 +1376,7 @@ export const productOrderRouter = createTRPCRouter({
 
                         // Deletar o pedido
                         await tx.productOrder.delete({
-                            where: { id: orderId }
+                            where: { id: order.id }
                         })
                     })
                 }
@@ -1397,7 +1395,7 @@ export const productOrderRouter = createTRPCRouter({
 
                     // Deletar o pedido
                     await tx.productOrder.delete({
-                        where: { id: orderId }
+                        where: { id: order.id }
                     })
                 })
             }

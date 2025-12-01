@@ -8,9 +8,16 @@ import type { Enterprise } from "@prisma/client";
 interface ProductGridProps {
   size?: "sm" | "md"
   enterpriseFilter?: Enterprise | "ALL"
+  nameFilter?: string
+  priceFilter?: "ALL" | "0-50" | "50-100" | "100-200" | "200+"
 }
 
-function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: ProductGridProps) {
+function ProductGrid({ 
+  size = "md", 
+  enterpriseFilter = "ALL",
+  nameFilter = "",
+  priceFilter = "ALL"
+}: ProductGridProps) {
     const { data: produtos, isLoading } = api.product.getAll.useQuery(undefined, {
       staleTime: 5 * 60 * 1000, // 5 minutos
     });
@@ -37,9 +44,51 @@ function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: ProductGridProps
         );
     }
     
-    const filtered = produtos?.filter((p) =>
-      enterpriseFilter === "ALL" || p.enterprise === enterpriseFilter
-    ) || []
+    const filtered = produtos?.filter((p) => {
+      // Filtro por empresa
+      if (enterpriseFilter !== "ALL" && p.enterprise !== enterpriseFilter) {
+        return false
+      }
+
+      // Filtro por nome
+      if (nameFilter.trim() !== "") {
+        const searchTerm = nameFilter.toLowerCase().trim()
+        const productName = p.name.toLowerCase()
+        const productDescription = p.description?.toLowerCase() || ""
+        if (!productName.includes(searchTerm) && !productDescription.includes(searchTerm)) {
+          return false
+        }
+      }
+
+      // Filtro por preço
+      if (priceFilter !== "ALL") {
+        const price = p.price
+        switch (priceFilter) {
+          case "0-50":
+            if (price > 50) return false
+            break
+          case "50-100":
+            if (price <= 50 || price > 100) return false
+            break
+          case "100-200":
+            if (price <= 100 || price > 200) return false
+            break
+          case "200+":
+            if (price <= 200) return false
+            break
+        }
+      }
+
+      return true
+    }) || []
+
+    if (filtered.length === 0) {
+        return (
+            <div className="text-center py-12 text-muted-foreground">
+                <p>Nenhum produto encontrado com os filtros aplicados.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch w-full max-w-full overflow-x-hidden">

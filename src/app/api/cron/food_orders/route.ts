@@ -43,8 +43,12 @@ export async function GET() {
         },
       });
       // Agrupar pedidos por restaurante
+      // Filtrar pedidos sem restaurante (restaurante deletado) - não faz sentido enviar email
+      const ordersWithRestaurant = orders.filter((order): order is typeof order & { restaurantId: string; restaurant: Restaurant } => {
+        return order.restaurantId !== null && order.restaurant !== null;
+      });
       const ordersByRestaurant = new Map<string, { restaurant: Restaurant; orders: typeof orders }>();
-      orders.forEach((order) => {
+      ordersWithRestaurant.forEach((order) => {
         const restaurantId = order.restaurantId;
         if (!ordersByRestaurant.has(restaurantId)) {
           ordersByRestaurant.set(restaurantId, {
@@ -64,7 +68,6 @@ export async function GET() {
           const pedidosAgrupados: GroupedEmailOrder[] = ordersData.map((order, idx) => {
             const fullName = `${order.user.firstName} ${order.user?.lastName ?? ""}`.trim();
             const prato = order.menuItem?.name ?? "";
-            // Ordena por nome da opção e depois nome da escolha para garantir consistência
             const opcionais = (order.optionSelections ?? [])
               .slice()
               .sort((a, b) => {
