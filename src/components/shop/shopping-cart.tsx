@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Minus, Plus, Trash2, CreditCard, ShoppingCart as ShoppingCartIcon } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import { CreateOrderModal } from "./create-order-modal"
+import { OrderSuccessModal } from "./order-success-modal"
+import type { Product } from "@prisma/client"
 
 interface ShoppingCartProps {
   className?: string
@@ -18,6 +20,8 @@ interface ShoppingCartProps {
 const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps) {
   const { items, enterprise, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successEnterprise, setSuccessEnterprise] = useState<Product["enterprise"] | null>(null)
 
 
   const handleClearCart = useCallback(() => {
@@ -32,10 +36,22 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
     setIsCheckoutOpen(false)
   }, [])
 
+  const handleOrderCreated = useCallback((orderEnterprise: Product["enterprise"] | null) => {
+    // Quando o pedido é criado, mostrar o modal de sucesso
+    setSuccessEnterprise(orderEnterprise)
+    setShowSuccessModal(true)
+  }, [])
+
   const handleCheckoutSuccess = useCallback(() => {
     clearCart()
     setIsCheckoutOpen(false)
   }, [clearCart])
+
+  const handleSuccessModalClose = useCallback(() => {
+    setShowSuccessModal(false)
+    // Após fechar o modal de sucesso, limpar o carrinho e fechar o modal de checkout
+    handleCheckoutSuccess()
+  }, [handleCheckoutSuccess])
 
   if (totalItems === 0) {
     return (
@@ -166,7 +182,14 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
         enterprise={enterprise}
         open={isCheckoutOpen}
         onOpenChange={handleCheckoutClose}
-        onSuccess={handleCheckoutSuccess}
+        onOrderCreated={handleOrderCreated}
+      />
+
+      <OrderSuccessModal
+        open={showSuccessModal}
+        onOpenChange={setShowSuccessModal}
+        enterprise={successEnterprise}
+        onClose={handleSuccessModalClose}
       />
     </>
   )
