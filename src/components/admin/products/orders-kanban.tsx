@@ -44,27 +44,76 @@ export function OrdersKanban() {
     },
   })
 
-  // Group orders by orderGroupId - pedidos do mesmo grupo são exibidos como um único pedido
+  // Group orders - pedidos do mesmo grupo OU criados juntos (mesmo usuário, mesma empresa, mesmo timestamp) são exibidos como um único pedido
   const groupedOrders = useMemo(() => {
-    const groups = new Map<string | null, ProductOrderWithRelations[]>()
+    const groups = new Map<string, ProductOrderWithRelations[]>()
+    const TIMESTAMP_TOLERANCE = 5 * 60 * 1000 // 5 minutos de tolerância para considerar "criados juntos"
     
-    // Agrupar pedidos por orderGroupId
+    // Primeiro, agrupar por orderGroupId quando existir
     localOrders.forEach((order) => {
-      const groupId = order.orderGroupId ?? `single-${order.id}`
-      if (!groups.has(groupId)) {
-        groups.set(groupId, [])
+      if (order.orderGroupId) {
+        const groupId = `group-${order.orderGroupId}`
+        if (!groups.has(groupId)) {
+          groups.set(groupId, [])
+        }
+        groups.get(groupId)!.push(order)
       }
-      groups.get(groupId)!.push(order)
     })
     
-    // Retornar apenas o primeiro pedido de cada grupo como representante
-    // (os outros pedidos do grupo serão exibidos nos detalhes)
-    return Array.from(groups.values()).map((groupOrders) => {
+    // Depois, agrupar pedidos sem orderGroupId que foram criados juntos
+    const ungroupedOrders = localOrders.filter(o => !o.orderGroupId)
+    
+    ungroupedOrders.forEach((order) => {
+      // Tentar encontrar um grupo existente para este pedido
+      // (mesmo usuário, mesma empresa do produto, timestamp próximo)
+      let foundGroup = false
+      const orderTimestamp = new Date(order.createdAt).getTime()
+      const orderEnterprise = order.product.enterprise
+      
+      for (const [groupId, groupOrders] of groups.entries()) {
+        // Só agrupar se não for um grupo com orderGroupId
+        if (groupId.startsWith('group-')) continue
+        
+        const firstOrder = groupOrders[0]
+        if (!firstOrder) continue
+        
+        const firstTimestamp = new Date(firstOrder.createdAt).getTime()
+        const firstEnterprise = firstOrder.product.enterprise
+        const timeDiff = Math.abs(orderTimestamp - firstTimestamp)
+        
+        // Mesmo usuário, mesma empresa, criados juntos (dentro da tolerância)
+        if (
+          order.userId === firstOrder.userId &&
+          orderEnterprise === firstEnterprise &&
+          timeDiff <= TIMESTAMP_TOLERANCE
+        ) {
+          groups.get(groupId)!.push(order)
+          foundGroup = true
+          break
+        }
+      }
+      
+      // Se não encontrou grupo, criar um novo
+      if (!foundGroup) {
+        const newGroupId = `time-${new Date(order.createdAt).getTime()}-${order.userId}-${orderEnterprise}`
+        groups.set(newGroupId, [order])
+      }
+    })
+    
+    // Retornar o primeiro pedido de cada grupo como representante, mas com informação dos outros pedidos
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return Array.from(groups.entries()).map(([groupId, groupOrders]) => {
       // Ordenar por data de criação e pegar o primeiro
       const sorted = [...groupOrders].sort((a, b) => 
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
-      return sorted[0]!
+      const representative = sorted[0]!
+      
+      // Adicionar os outros pedidos do grupo como uma propriedade customizada
+      return {
+        ...representative,
+        _groupOrders: sorted // Pedidos do grupo para exibição
+      }
     })
   }, [localOrders])
 

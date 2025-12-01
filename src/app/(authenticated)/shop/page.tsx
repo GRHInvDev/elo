@@ -26,15 +26,90 @@ function isMyOrder(order: unknown): order is MyOrder {
   )
 }
 
+/**
+ * Agrupa pedidos usando a mesma lógica do MyOrdersList
+ * - Agrupa por orderGroupId quando existir
+ * - Para pedidos sem orderGroupId, agrupa por timestamp próximo (5min), mesmo usuário e mesma empresa
+ */
+function groupOrders(orders: MyOrder[]): MyOrder[][] {
+  const groups = new Map<string, MyOrder[]>()
+  const TIMESTAMP_TOLERANCE = 5 * 60 * 1000 // 5 minutos de tolerância
+
+  // Primeiro, agrupar por orderGroupId quando existir
+  orders.forEach((order) => {
+    if (order.orderGroupId) {
+      const groupId = `group-${order.orderGroupId}`
+      if (!groups.has(groupId)) {
+        groups.set(groupId, [])
+      }
+      groups.get(groupId)!.push(order)
+    }
+  })
+
+  // Depois, agrupar pedidos sem orderGroupId que foram criados juntos
+  const ungroupedOrders = orders.filter(o => !o.orderGroupId)
+
+  ungroupedOrders.forEach((order) => {
+    let foundGroup = false
+    const orderTimestamp = new Date(order.createdAt).getTime()
+    const orderEnterprise = order.product.enterprise
+
+    for (const [groupId, groupOrders] of groups.entries()) {
+      // Só agrupar se não for um grupo com orderGroupId
+      if (groupId.startsWith('group-')) continue
+
+      const firstOrder = groupOrders[0]
+      if (!firstOrder) continue
+
+      const firstTimestamp = new Date(firstOrder.createdAt).getTime()
+      const firstEnterprise = firstOrder.product.enterprise
+      const timeDiff = Math.abs(orderTimestamp - firstTimestamp)
+
+      // Mesmo usuário, mesma empresa, criados juntos (dentro da tolerância)
+      if (
+        order.userId === firstOrder.userId &&
+        orderEnterprise === firstEnterprise &&
+        timeDiff <= TIMESTAMP_TOLERANCE
+      ) {
+        groups.get(groupId)!.push(order)
+        foundGroup = true
+        break
+      }
+    }
+
+    // Se não encontrou grupo, criar um novo
+    if (!foundGroup) {
+      const newGroupId = `time-${new Date(order.createdAt).getTime()}-${order.userId}-${orderEnterprise}`
+      groups.set(newGroupId, [order])
+    }
+  })
+
+  return Array.from(groups.values())
+}
+
+/**
+ * Conta pedidos não lidos agrupados (não itens individuais)
+ * Um pedido agrupado é considerado não lido se pelo menos um item do grupo não foi lido
+ */
 function getUnreadCount(orders: unknown): number {
   if (!Array.isArray(orders)) return 0
 
+  const allOrders: MyOrder[] = orders.filter(isMyOrder)
+  if (allOrders.length === 0) return 0
+
+  // Agrupar pedidos usando a mesma lógica do MyOrdersList
+  const groupedOrders = groupOrders(allOrders)
+
+  // Contar grupos que têm pelo menos um item não lido
   let count = 0
-  for (const order of orders) {
-    if (isMyOrder(order) && order.read === false) {
+  for (const group of groupedOrders) {
+    // Se pelo menos um item do grupo não foi lido, o pedido agrupado é não lido
+    const hasUnread = group.some(order => order.read === false)
+    if (hasUnread) {
       count++
     }
   }
+
   return count
 }
 
