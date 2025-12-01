@@ -332,11 +332,14 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
           </div>
       </DialogContent>
 
-      {/* Modal de sucesso */}
+      {/* Modal de sucesso com instruções de retirada */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-green-600">Pedido Recebido com Sucesso!</DialogTitle>
+            <DialogTitle className="text-green-600 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              Pedido Recebido com Sucesso!
+            </DialogTitle>
             <DialogDescription>
               Seu pedido foi registrado e está sendo processado.
             </DialogDescription>
@@ -344,53 +347,56 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
 
           <div className="space-y-4">
             <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <h3 className="font-semibold mb-2">Instruções para retirada:</h3>
-              {targetEnterprise === "Cristallux" ? (
-                <>
-                  <p className="text-sm text-muted-foreground mb-2">
+              <h3 className="font-semibold mb-3 text-lg">Instruções para retirada</h3>
+              {targetEnterprise === "Cristallux" || targetEnterprise === "Cristallux_Filial" ? (
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
                     Seu pedido estará disponível para retirada no setor de Marketing da Cristallux em Santa Cruz do Sul, em 24 horas após a confirmação.
                   </p>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p>
                     <strong>Exemplo:</strong> Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil.
                   </p>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p>
                     Colegas de outras unidades receberão contato da equipe interna para agendar retirada ou envio, com possibilidade de custo de frete por conta do Destinatário (a ser previamente combinado).
                   </p>
-                </>
-              ) : targetEnterprise === "Box" ? (
-                <>
-                  <p className="text-sm text-muted-foreground mb-2">
+                </div>
+              ) : targetEnterprise === "Box" || targetEnterprise === "Box_Filial" ? (
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
                     Seu pedido estará disponível para retirada na Expedição em Santa Cruz do Sul em 24 horas após a confirmação.
                   </p>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p>
                     <strong>Exemplo:</strong> Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil.
                   </p>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p>
                     Colegas de outras unidades receberão contato da equipe interna para agendar retirada ou envio, com possibilidade de custo de frete por conta do Destinatário (a ser previamente combinado).
                   </p>
-                </>
+                </div>
               ) : (
-                <>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Seu pedido estará disponível para retirada na Expedição em Santa Cruz do Sul em 24 horas após a confirmação.
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    Seu pedido estará disponível para retirada em 24 horas após a confirmação.
                   </p>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p>
                     <strong>Exemplo:</strong> Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil.
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Equipe de outras unidades receberão contato da equipe interna para agendar retirada ou envio.
+                  <p>
+                    Colegas de outras unidades receberão contato da equipe interna para agendar retirada ou envio, com possibilidade de custo de frete por conta do Destinatário (a ser previamente combinado).
                   </p>
-                </>
+                </div>
               )}
-              <p className="text-sm text-muted-foreground mt-2">
-                <strong>Dúvidas?</strong> Use o chat na opção Lojinha / Meus Pedidos.
-              </p>
+              <div className="mt-4 pt-3 border-t border-primary/20">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Dúvidas?</strong> Use o chat na opção Shop / Meus Pedidos.
+                </p>
+              </div>
             </div>
             <Button
               onClick={() => {
                 setShowSuccessModal(false)
               }}
               className="w-full"
+              size="lg"
             >
               Entendi
             </Button>
