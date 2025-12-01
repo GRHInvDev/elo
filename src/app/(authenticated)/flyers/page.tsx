@@ -5,8 +5,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { FlyersList } from "@/components/flyers-list"
 import { CreateFlyerButton } from "@/components/create-flyer-button"
 import { api } from "@/trpc/server"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { canViewFlyers, canCreateFlyer } from "@/lib/access-control"
+import { canCreateFlyer } from "@/lib/access-control"
 
 export const metadata: Metadata = {
   title: "Encartes | elo",

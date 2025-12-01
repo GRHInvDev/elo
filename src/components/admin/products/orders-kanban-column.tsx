@@ -68,7 +68,7 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
                             <Badge variant="destructive" className="text-xs">Novo</Badge>
                           )}
                         </div>
-                        {(order.orderGroupId || (order as { _groupOrders?: typeof order[] })._groupOrders) && (
+                        {(order.orderGroupId ?? (order as { _groupOrders?: typeof order[] })._groupOrders) && (
                           <p className="text-xs text-muted-foreground mt-1">
                             {(() => {
                               const groupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: typeof order[] })._groupOrders ?? []
@@ -82,7 +82,7 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
                         {/* Imagem do produto - se for pedido agrupado, mostrar primeira imagem do primeiro produto do grupo */}
                         {(() => {
                           const groupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: typeof order[] })._groupOrders ?? []
-                          const isGrouped = order.orderGroupId || groupOrders.length > 0
+                          const isGrouped = order.orderGroupId ?? groupOrders.length > 0
                           const imageUrl = isGrouped && groupOrders[0]?.product?.imageUrl
                             ? groupOrders[0].product.imageUrl
                             : order.product.imageUrl

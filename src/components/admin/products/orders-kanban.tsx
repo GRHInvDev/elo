@@ -101,6 +101,7 @@ export function OrdersKanban() {
     })
     
     // Retornar o primeiro pedido de cada grupo como representante, mas com informação dos outros pedidos
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return Array.from(groups.entries()).map(([groupId, groupOrders]) => {
       // Ordenar por data de criação e pegar o primeiro
       const sorted = [...groupOrders].sort((a, b) => 
