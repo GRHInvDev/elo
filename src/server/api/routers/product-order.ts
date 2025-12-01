@@ -856,10 +856,13 @@ export const productOrderRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const userId = ctx.auth.userId
 
-            // Verificar se o pedido pertence ao usuário
+            // Verificar se o pedido pertence ao usuário e obter orderGroupId
             const order = await ctx.db.productOrder.findUnique({
                 where: { id: input.id },
-                select: { userId: true }
+                select: { 
+                    userId: true,
+                    orderGroupId: true
+                }
             })
 
             if (!order) {
@@ -876,13 +879,32 @@ export const productOrderRouter = createTRPCRouter({
                 })
             }
 
-            return await ctx.db.productOrder.update({
-                where: { id: input.id },
-                data: {
-                    read: true,
-                    readAt: new Date(),
-                }
-            })
+            const readAt = new Date()
+
+            // Se o pedido tem orderGroupId, marcar todos os pedidos do grupo como lidos
+            if (order.orderGroupId) {
+                await ctx.db.productOrder.updateMany({
+                    where: {
+                        orderGroupId: order.orderGroupId,
+                        userId: userId,
+                    },
+                    data: {
+                        read: true,
+                        readAt: readAt,
+                    }
+                })
+            } else {
+                // Se não tem grupo, marcar apenas este pedido
+                await ctx.db.productOrder.update({
+                    where: { id: input.id },
+                    data: {
+                        read: true,
+                        readAt: readAt,
+                    }
+                })
+            }
+
+            return { success: true }
         }),
 
     // Chat: listar mensagens de um pedido (usuário, gestor ou responsável)
