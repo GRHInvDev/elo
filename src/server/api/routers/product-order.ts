@@ -153,7 +153,8 @@ export const productOrderRouter = createTRPCRouter({
                         month: '2-digit',
                         year: 'numeric',
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        timeZone: 'America/Sao_Paulo' // UTC-3
                     })
 
                     const precoTotal = order.product.price * order.quantity
@@ -419,7 +420,8 @@ export const productOrderRouter = createTRPCRouter({
                             month: '2-digit',
                             year: 'numeric',
                             hour: '2-digit',
-                            minute: '2-digit'
+                            minute: '2-digit',
+                            timeZone: 'America/Sao_Paulo' // UTC-3
                         })
 
                         // Calcular total de todos os pedidos
