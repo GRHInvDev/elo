@@ -5,6 +5,7 @@ import "@/styles/globals.css"
 import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
 import { TRPCReactProvider } from "@/trpc/react"
 import { ptBR } from "@clerk/localizations"
 import { type Metadata } from "next"
@@ -36,6 +37,7 @@ export default async function RootLayout({
               <Analytics/>
               <SpeedInsights/>
               <Toaster />
+              <SonnerToaster />
               {children}
             </ThemeProvider>
           </body>
