@@ -198,10 +198,13 @@ export const productOrderRouter = createTRPCRouter({
                         notificationEmails.push(globalConfig.shopNotificationEmail)
                     }
 
-                    // Buscar emails dos responsáveis pela empresa
+                    // Buscar emails dos responsáveis pela empresa (internos e externos)
                     const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
                         where: { enterprise: order.product.enterprise },
-                        include: {
+                        select: {
+                            userId: true,
+                            externalEmail: true,
+                            externalName: true,
                             user: {
                                 select: {
                                     email: true
@@ -219,8 +222,8 @@ export const productOrderRouter = createTRPCRouter({
                             }
                         }
                         // Adicionar email externo se existir
-                        if (manager.externalEmail) {
-                            const externalEmail = manager.externalEmail
+                        if (manager.externalEmail && manager.externalEmail.trim() !== "") {
+                            const externalEmail = manager.externalEmail.trim()
                             if (!notificationEmails.includes(externalEmail)) {
                                 notificationEmails.push(externalEmail)
                             }
@@ -461,12 +464,15 @@ export const productOrderRouter = createTRPCRouter({
                         // Enviar notificações para gestores
                         const notificationEmails: string[] = []
 
-                        // Buscar gestores da empresa através da tabela enterpriseManager
+                        // Buscar gestores da empresa através da tabela enterpriseManager (internos e externos)
                         const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
                             where: {
                                 enterprise: enterprise,
                             },
-                            include: {
+                            select: {
+                                userId: true,
+                                externalEmail: true,
+                                externalName: true,
                                 user: {
                                     select: {
                                         email: true
@@ -476,7 +482,7 @@ export const productOrderRouter = createTRPCRouter({
                         })
 
                         enterpriseManagers.forEach((manager) => {
-                            // Adicionar email do usuário se existir
+                            // Adicionar email do usuário interno se existir
                             if (manager.user?.email) {
                                 const userEmail = manager.user.email
                                 if (!notificationEmails.includes(userEmail)) {
@@ -484,8 +490,8 @@ export const productOrderRouter = createTRPCRouter({
                                 }
                             }
                             // Adicionar email externo se existir
-                            if (manager.externalEmail) {
-                                const externalEmail = manager.externalEmail
+                            if (manager.externalEmail && manager.externalEmail.trim() !== "") {
+                                const externalEmail = manager.externalEmail.trim()
                                 if (!notificationEmails.includes(externalEmail)) {
                                     notificationEmails.push(externalEmail)
                                 }
@@ -1133,7 +1139,10 @@ export const productOrderRouter = createTRPCRouter({
                 // Remetente é o comprador: notificar responsáveis internos e externos pela empresa
                 const managers = await ctx.db.enterpriseManager.findMany({
                   where: { enterprise: order.product.enterprise },
-                  include: {
+                  select: {
+                    userId: true,
+                    externalEmail: true,
+                    externalName: true,
                     user: {
                       select: {
                         id: true,
@@ -1146,8 +1155,8 @@ export const productOrderRouter = createTRPCRouter({
                 })
                 
                 // Separar gestores internos (com userId) e externos (com externalEmail)
-                const internalManagers = managers.filter(m => m.userId !== null)
-                const externalManagers = managers.filter(m => m.externalEmail !== null && m.externalEmail !== "")
+                const internalManagers = managers.filter(m => m.userId !== null && m.user !== null)
+                const externalManagers = managers.filter(m => m.externalEmail !== null && m.externalEmail.trim() !== "")
 
                 // Criar notificações apenas para gestores internos (que têm userId)
                 const recipientUserIds = internalManagers.map(m => m.userId!).filter(Boolean)
@@ -1304,7 +1313,7 @@ export const productOrderRouter = createTRPCRouter({
 
             const roleConfig = user.role_config as RolesConfig | null
             const isManager = !!roleConfig?.sudo || !!roleConfig?.can_manage_produtos
-
+            
             if (!isManager) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
