@@ -39,3 +39,7 @@ export const markProductOrderAsReadSchema = z.object({
     id: z.string().cuid("ID inválido"),
 })
 
+export const deleteProductOrderSchema = z.object({
+    id: z.string().cuid("ID inválido"),
+})
+

@@ -103,7 +103,7 @@ export function CartProvider({ children }: CartProviderProps) {
     
     // Mostrar notificação apenas quando o item é realmente adicionado (não quando já existe e só incrementa)
     if (wasAdded) {
-      toast.success(`"${product.name}" adicionado ao carrinho!`)
+    toast.success(`"${product.name}" adicionado ao carrinho!`)
     }
   }, [state.items])
 

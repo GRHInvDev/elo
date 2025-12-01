@@ -570,7 +570,7 @@ export default function FoodPage() {
                     <CardContent className="pt-4">
                       <div className="flex justify-between items-start">
                         <div className="space-y-1">
-                          <p className="font-medium">{order.restaurant.name}</p>
+                          <p className="font-medium">{order.restaurant?.name}</p>
                           <p className="text-sm">{order.menuItem.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })}

@@ -4,7 +4,8 @@ import {
     createProductOrderSchema,
     createMultipleProductOrdersSchema,
     updateProductOrderStatusSchema,
-    markProductOrderAsReadSchema
+    markProductOrderAsReadSchema,
+    deleteProductOrderSchema
 } from "@/schemas/product-order.schema"
 import type { RolesConfig } from "@/types/role-config"
 import { sendEmail } from "@/lib/mail/email-utils"
@@ -1129,9 +1130,9 @@ export const productOrderRouter = createTRPCRouter({
             try {
               const now = new Date()
               if (order.userId === currentUserId) {
-                // Remetente é o comprador: notificar responsáveis internos pela empresa
+                // Remetente é o comprador: notificar responsáveis internos e externos pela empresa
                 const managers = await ctx.db.enterpriseManager.findMany({
-                  where: { enterprise: order.product.enterprise, userId: { not: null } },
+                  where: { enterprise: order.product.enterprise },
                   include: {
                     user: {
                       select: {
@@ -1143,7 +1144,13 @@ export const productOrderRouter = createTRPCRouter({
                     }
                   }
                 })
-                const recipientUserIds = managers.map(m => m.userId!).filter(Boolean)
+                
+                // Separar gestores internos (com userId) e externos (com externalEmail)
+                const internalManagers = managers.filter(m => m.userId !== null)
+                const externalManagers = managers.filter(m => m.externalEmail !== null && m.externalEmail !== "")
+
+                // Criar notificações apenas para gestores internos (que têm userId)
+                const recipientUserIds = internalManagers.map(m => m.userId!).filter(Boolean)
                 if (recipientUserIds.length > 0) {
                   await ctx.db.notification.createMany({
                     data: recipientUserIds.map(userId => ({
@@ -1159,31 +1166,55 @@ export const productOrderRouter = createTRPCRouter({
                       updatedAt: now,
                     }))
                   })
+                }
 
-                  // Enviar emails para os gestores
-                  for (const manager of managers) {
-                    if (manager.user?.email) {
-                      const destinatarioNome = manager.user.firstName && manager.user.lastName
-                        ? `${manager.user.firstName} ${manager.user.lastName}`
-                        : (manager.user.firstName ?? manager.user.email ?? "Gestor")
+                // Enviar emails para gestores internos
+                for (const manager of internalManagers) {
+                  if (manager.user?.email) {
+                    const destinatarioNome = manager.user.firstName && manager.user.lastName
+                      ? `${manager.user.firstName} ${manager.user.lastName}`
+                      : (manager.user.firstName ?? manager.user.email ?? "Gestor")
 
-                      const emailContent = mockEmailChatMensagemPedido(
-                        destinatarioNome,
-                        remetenteNome,
-                        input.message,
-                        input.orderId,
-                        order.product.name,
-                        false // Não é comprador, é gestor
-                      )
+                    const emailContent = mockEmailChatMensagemPedido(
+                      destinatarioNome,
+                      remetenteNome,
+                      input.message,
+                      input.orderId,
+                      order.product.name,
+                      false // Não é comprador, é gestor
+                    )
 
-                      await sendEmail(
-                        manager.user.email,
-                        "Elo | Intranet - Você tem uma nova mensagem em Pedidos",
-                        emailContent
-                      ).catch((error) => {
-                        console.error(`[ProductOrder] Erro ao enviar email de chat para ${manager.user?.email}:`, error)
-                      })
-                    }
+                    await sendEmail(
+                      manager.user.email,
+                      "Elo | Intranet - Você tem uma nova mensagem em Pedidos",
+                      emailContent
+                    ).catch((error) => {
+                      console.error(`[ProductOrder] Erro ao enviar email de chat para ${manager.user?.email}:`, error)
+                    })
+                  }
+                }
+
+                // Enviar emails para gestores externos
+                for (const manager of externalManagers) {
+                  if (manager.externalEmail) {
+                    const destinatarioNome = manager.externalName ?? manager.externalEmail ?? "Gestor"
+
+                    const emailContent = mockEmailChatMensagemPedido(
+                      destinatarioNome,
+                      remetenteNome,
+                      input.message,
+                      input.orderId,
+                      order.product.name,
+                      false // Não é comprador, é gestor
+                    )
+
+                    await sendEmail(
+                      manager.externalEmail,
+                      "Elo | Intranet - Você tem uma nova mensagem em Pedidos",
+                      emailContent
+                    ).catch((error) => {
+                      console.error(`[ProductOrder] Erro ao enviar email de chat para ${manager.externalEmail}:`, error)
+                    })
                   }
                 }
               } else {
@@ -1247,6 +1278,129 @@ export const productOrderRouter = createTRPCRouter({
                 data: { isRead: true }
             })
             return { success: true }
+        }),
+
+    // Deletar pedido (apenas admins com can_manage_produtos ou sudo)
+    deleteOrder: protectedProcedure
+        .input(deleteProductOrderSchema)
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.auth.userId
+
+            // Buscar usuário e verificar permissões
+            const user = await ctx.db.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    role_config: true,
+                }
+            })
+
+            if (!user) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "Usuário não encontrado"
+                })
+            }
+
+            const roleConfig = user.role_config as RolesConfig | null
+            const isManager = !!roleConfig?.sudo || !!roleConfig?.can_manage_produtos
+
+            if (!isManager) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Você não tem permissão para deletar pedidos"
+                })
+            }
+
+            // Buscar o pedido para verificar se existe
+            // Zod já validou que input.id é uma string através do schema deleteProductOrderSchema
+            const order = await ctx.db.productOrder.findUnique({
+                where: { id: input.id },
+                include: {
+                    orderGroup: {
+                        include: {
+                            orders: true
+                        }
+                    }
+                }
+            })
+
+            if (!order) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Pedido não encontrado"
+                })
+            }
+
+            // Se o pedido faz parte de um grupo, verificar se é o único pedido do grupo
+            // Se for, deletar o grupo também. Se não for, apenas deletar o pedido e atualizar estoque
+            if (order.orderGroupId && order.orderGroup) {
+                const groupOrders = order.orderGroup.orders
+                
+                // Se há apenas um pedido no grupo, deletar o grupo também
+                if (groupOrders.length === 1) {
+                    // Deletar o pedido e o grupo em uma transação
+                    await ctx.db.$transaction(async (tx) => {
+                        // Restaurar estoque
+                        await tx.product.update({
+                            where: { id: order.productId },
+                            data: {
+                                stock: {
+                                    increment: order.quantity
+                                }
+                            }
+                        })
+
+                        // Deletar o pedido
+                        await tx.productOrder.delete({
+                            where: { id: order.id }
+                        })
+
+                        // Deletar o grupo
+                        await tx.orderGroup.delete({
+                            where: { id: order.orderGroupId! }
+                        })
+                    })
+                } else {
+                    // Se há mais pedidos no grupo, apenas deletar este pedido
+                    await ctx.db.$transaction(async (tx) => {
+                        // Restaurar estoque
+                        await tx.product.update({
+                            where: { id: order.productId },
+                            data: {
+                                stock: {
+                                    increment: order.quantity
+                                }
+                            }
+                        })
+
+                        // Deletar o pedido
+                        await tx.productOrder.delete({
+                            where: { id: order.id }
+                        })
+                    })
+                }
+            } else {
+                // Pedido não agrupado, apenas deletar e restaurar estoque
+                await ctx.db.$transaction(async (tx) => {
+                    // Restaurar estoque
+                    await tx.product.update({
+                        where: { id: order.productId },
+                        data: {
+                            stock: {
+                                increment: order.quantity
+                            }
+                        }
+                    })
+
+                    // Deletar o pedido
+                    await tx.productOrder.delete({
+                        where: { id: order.id }
+                    })
+                })
+            }
+
+            return { success: true, message: "Pedido deletado com sucesso" }
         }),
 })
 

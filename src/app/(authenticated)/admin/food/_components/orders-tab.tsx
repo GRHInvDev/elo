@@ -812,7 +812,7 @@ export default function OrdersTab({
                             {order.user.firstName} {order.user.lastName}
                           </p>
                           <Badge variant="outline">{order.user.email}</Badge>
-                          <Badge variant="secondary">{order.restaurant.name}</Badge>
+                          <Badge variant="secondary">{order.restaurant?.name ?? "Restaurante excluído"}</Badge>
                         </div>
                         <p className="text-sm">{order.menuItem.name}</p>
                         <p className="text-xs text-muted-foreground">

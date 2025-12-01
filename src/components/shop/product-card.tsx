@@ -41,20 +41,20 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
           }
         </div>
         <div className="absolute -translate-y-16 w-full bg-gradient-to-t from-card/80 to-transparent h-16" />
-        <div className="absolute size-20 -translate-y-16 translate-x-2">
+        <div className="absolute size-10 -translate-y-16 translate-x-2">
           <Image
             src={product.enterprise.toLowerCase() == "box" ? "/LOGO BOX.png" : product.enterprise.toLowerCase() == "cristallux" ? "/icon_cristal.svg" : "/Logo R Henz.png"}
             alt={product.enterprise}
             fill
             className={"object-cover drop-shadow-md"}
-            sizes="(max-width: 100px) 100vw, (max-width: 200px) 50vw, 33vw"
+            sizes="(max-width: 50px) 100vw, (max-width: 100px) 50vw, 33vw"
           />
         </div>
       </div>
       <CardHeader className="pb-2 min-w-0">
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="flex-1 min-w-0">
-            <CardTitle className="break-words line-clamp-2">{product.name}</CardTitle>
+            <CardTitle className="break-words line-clamp-2 text-xl">{product.name}</CardTitle>
           </div>
           <div className="flex flex-col gap-2 items-end flex-shrink-0">
             <Badge className="whitespace-nowrap">{product.enterprise}</Badge>
