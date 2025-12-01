@@ -6,7 +6,7 @@ import { MyOrdersList } from "@/components/shop/my-orders-list"
 import ShoppingCart from "@/components/shop/shopping-cart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon } from "lucide-react"
+import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon, Inbox } from "lucide-react"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
 import React, { useState } from "react"
@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CartProvider } from "@/contexts/cart-context"
 import { useCart } from "@/hooks/use-cart"
+import { useAccessControl } from "@/hooks/use-access-control"
+import { OrdersKanban } from "@/components/admin/products/orders-kanban"
 
 type MyOrder = RouterOutputs["productOrder"]["listMyOrders"][number]
 
@@ -119,10 +121,20 @@ function ShopPageContent() {
   // Contar pedidos não lidos do usuário
   const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
     staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
-    refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
+    refetchOnWindowFocus: true,
   })
   const myOrders = ordersQuery.data
   const { enterprise: cartEnterprise, totalItems } = useCart()
+  const { canViewAnswerWithoutAdminAccess, canManageProducts, isSudo } = useAccessControl()
+
+  // Verificar se o usuário pode ver a aba de pedidos recebidos
+  const canViewReceivedOrders = canViewAnswerWithoutAdminAccess() || canManageProducts() || isSudo
+
+  // Contar pedidos não lidos (apenas para usuários com permissão)
+  const { data: unreadReceivedCount = 0 } = api.productOrder.countUnread.useQuery(undefined, {
+    enabled: canViewReceivedOrders,
+    refetchInterval: 30000, // Atualizar a cada 30 segundos
+  })
 
   // Se há itens no carrinho, filtrar apenas produtos da mesma empresa
   const [enterprise, setEnterprise] = useState<"ALL" | "Box" | "RHenz" | "Cristallux" | "Box_Filial" | "Cristallux_Filial">("ALL");
@@ -179,6 +191,17 @@ function ShopPageContent() {
                 </Badge>
               )}
             </TabsTrigger>
+            {canViewReceivedOrders && (
+              <TabsTrigger value="received-orders" className="flex items-center gap-2">
+                <Inbox className="h-4 w-4" />
+                Pedidos Recebidos
+                {unreadReceivedCount > 0 && (
+                  <Badge variant="destructive" className="ml-1">
+                    {unreadReceivedCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="products" className="w-full max-w-full overflow-x-hidden">
@@ -268,6 +291,12 @@ function ShopPageContent() {
             </div>
             <MyOrdersList filter={orderFilter} />
           </TabsContent>
+
+          {canViewReceivedOrders && (
+            <TabsContent value="received-orders" className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-200px)] p-2 md:p-0 w-full max-w-full">
+              <OrdersKanban />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </DashboardShell>
