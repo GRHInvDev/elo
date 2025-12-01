@@ -780,6 +780,14 @@ export const foodOrderRouter = createTRPCRouter({
       })
 
       // Agrupar por restaurante
+      // Filtrar pedidos sem restaurante (restaurante deletado) - não faz sentido incluir em métricas
+      const ordersWithRestaurant = orders.filter((order): order is typeof order & { 
+        restaurantId: string; 
+        restaurant: NonNullable<typeof order.restaurant> 
+      } => {
+        return order.restaurantId !== null && order.restaurant !== null;
+      });
+
       const metricsMap = new Map<string, {
         restaurantId: string
         restaurantName: string
@@ -788,7 +796,7 @@ export const foodOrderRouter = createTRPCRouter({
         totalRevenue: number
       }>()
 
-      orders.forEach((order) => {
+      ordersWithRestaurant.forEach((order) => {
         const restaurantId = order.restaurantId
         const key = restaurantId
 
@@ -866,12 +874,19 @@ export const foodOrderRouter = createTRPCRouter({
       })
 
       // Agrupar por restaurante para dados do gráfico
+      // Filtrar pedidos sem restaurante (restaurante deletado) - não faz sentido incluir em gráficos
+      const ordersWithRestaurant = orders.filter((order): order is typeof order & { 
+        restaurant: NonNullable<typeof order.restaurant> 
+      } => {
+        return order.restaurant !== null;
+      });
+
       const chartDataMap = new Map<string, {
         restaurant: string
         orders: number
       }>()
 
-      orders.forEach((order) => {
+      ordersWithRestaurant.forEach((order) => {
         const restaurantName = order.restaurant.name
         const key = restaurantName
 
