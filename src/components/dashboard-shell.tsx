@@ -8,7 +8,7 @@ export function DashboardShell({
   ...props
 }: DashboardShellProps) {
   return (
-    <div className={cn("flex-1 space-y-4 p-8 pt-6", className)} {...props}>
+    <div className={cn("flex-1 space-y-4 p-8 pt-6 w-full max-w-full overflow-x-hidden", className)} {...props}>
       {children}
     </div>
   )

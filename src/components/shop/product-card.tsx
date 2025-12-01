@@ -51,25 +51,25 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
           />
         </div>
       </div>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle>{product.name}</CardTitle>
+      <CardHeader className="pb-2 min-w-0">
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="break-words line-clamp-2">{product.name}</CardTitle>
           </div>
-          <div className="flex flex-col gap-2 items-end">
-            <Badge>{product.enterprise}</Badge>
+          <div className="flex flex-col gap-2 items-end flex-shrink-0">
+            <Badge className="whitespace-nowrap">{product.enterprise}</Badge>
           </div>
         </div>
         <div className="mt-2">
-          <p className="text-2xl font-bold text-primary">
+          <p className="text-2xl font-bold text-primary truncate">
             R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       </CardHeader>
-      <CardContent className="pb-2 flex-1">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <LucideBadgeInfo className="h-4 w-4" />
-          <span>{product.description}</span>
+      <CardContent className="pb-2 flex-1 min-w-0">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+          <LucideBadgeInfo className="h-4 w-4 flex-shrink-0" />
+          <span className="line-clamp-2 break-words">{product.description}</span>
         </div>
       </CardContent>
       <CardFooter>

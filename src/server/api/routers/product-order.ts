@@ -148,7 +148,11 @@ export const productOrderRouter = createTRPCRouter({
                         : (order.user.firstName ?? order.user.email ?? "Usuário")
                     
                     const userEmail = order.user.email
-                    const dataPedido = new Date().toLocaleString('pt-BR', {
+                    // Usar a data do pedido criado e formatar no timezone de São Paulo (UTC-3)
+                    // Garantir que estamos usando a data/hora exata do pedido
+                    const orderDate = order.orderTimestamp || order.createdAt || new Date()
+                    // Formatar a data no timezone de São Paulo usando Intl.DateTimeFormat para maior precisão
+                    const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
                         day: '2-digit',
                         month: '2-digit',
                         year: 'numeric',
@@ -156,6 +160,7 @@ export const productOrderRouter = createTRPCRouter({
                         minute: '2-digit',
                         timeZone: 'America/Sao_Paulo' // UTC-3
                     })
+                    const dataPedido = dateFormatter.format(new Date(orderDate))
 
                     const precoTotal = order.product.price * order.quantity
 
@@ -415,7 +420,10 @@ export const productOrderRouter = createTRPCRouter({
                             : (firstOrder?.user.firstName ?? firstOrder?.user.email ?? "Usuário")
 
                         const userEmail = firstOrder?.user.email
-                        const dataPedido = new Date().toLocaleString('pt-BR', {
+                        // Usar a data do primeiro pedido criado e formatar no timezone de São Paulo
+                        const orderDate = firstOrder?.orderTimestamp || firstOrder?.createdAt || new Date()
+                        // Formatar a data no timezone de São Paulo usando Intl.DateTimeFormat para maior precisão
+                        const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
                             day: '2-digit',
                             month: '2-digit',
                             year: 'numeric',
@@ -423,6 +431,7 @@ export const productOrderRouter = createTRPCRouter({
                             minute: '2-digit',
                             timeZone: 'America/Sao_Paulo' // UTC-3
                         })
+                        const dataPedido = dateFormatter.format(new Date(orderDate))
 
                         // Calcular total de todos os pedidos
                         const totalGeral = orders.reduce((total, order) => {
