@@ -41,13 +41,13 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
           }
         </div>
         <div className="absolute -translate-y-16 w-full bg-gradient-to-t from-card/80 to-transparent h-16" />
-        <div className="absolute size-20 -translate-y-16 translate-x-2">
+        <div className="absolute size-10 -translate-y-16 translate-x-2">
           <Image
             src={product.enterprise.toLowerCase() == "box" ? "/LOGO BOX.png" : product.enterprise.toLowerCase() == "cristallux" ? "/icon_cristal.svg" : "/Logo R Henz.png"}
             alt={product.enterprise}
             fill
             className={"object-cover drop-shadow-md"}
-            sizes="(max-width: 100px) 100vw, (max-width: 200px) 50vw, 33vw"
+            sizes="(max-width: 50px) 100vw, (max-width: 100px) 50vw, 33vw"
           />
         </div>
       </div>

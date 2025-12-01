@@ -42,13 +42,7 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
   const [lastSubmittedWhatsapp, setLastSubmittedWhatsapp] = useState<string | null>(null)
   const utils = api.useUtils()
 
-  // Verificar se existe pedido pendente de outra empresa
   const targetEnterprise = isCartMode ? enterprise : (product?.enterprise ?? null)
-
-  // Buscar grupos de pedidos pendentes para validar regra de empresa
-  const { data: pendingGroups } = api.productOrder.listMyPendingGroups.useQuery(undefined, {
-    enabled: open
-  })
 
   const createOrder = api.productOrder.create.useMutation({
     onSuccess: () => {
@@ -138,15 +132,6 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
     },
   })
 
-
-  const hasPendingOrderFromOtherEnterprise = targetEnterprise ? (pendingGroups?.some(group =>
-    group.enterprise !== targetEnterprise
-  ) ?? false) : false
-
-  const otherEnterpriseName = targetEnterprise ? pendingGroups?.find(group =>
-    group.enterprise !== targetEnterprise
-  )?.enterprise : undefined
-
   const handleSubmit = () => {
     if (!paymentMethod) {
       toast.error("Selecione a forma de pagamento")
@@ -156,12 +141,6 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
     const whatsappDigits = whatsapp.replace(/\D/g, "")
     if (!whatsappDigits || whatsappDigits.length < 10) {
       toast.error("Informe um WhatsApp válido (mínimo 10 dígitos)")
-      return
-    }
-
-    // Validar regra de negócio: não pode pedir produtos de empresas diferentes
-    if (hasPendingOrderFromOtherEnterprise) {
-      toast.error(`Você já possui um pedido pendente da empresa ${otherEnterpriseName}. Finalize ou cancele esse pedido antes de fazer um pedido da empresa ${targetEnterprise}.`)
       return
     }
 
@@ -291,18 +270,6 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
             </span>
           </div>
 
-          {/* Aviso sobre pedido de outra empresa */}
-          {hasPendingOrderFromOtherEnterprise && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <p className="text-sm text-destructive font-medium">
-                Você já possui um pedido pendente da empresa {otherEnterpriseName}.
-              </p>
-              <p className="text-xs text-destructive/80 mt-1">
-                Finalize ou cancele esse pedido antes de fazer um pedido da empresa {targetEnterprise}.
-              </p>
-            </div>
-          )}
-
           {/* Aviso sobre contato do setor responsável */}
           <div className="p-2 bg-muted/50 rounded-lg border border-muted">
             <p className="text-xs text-muted-foreground italic">
@@ -332,7 +299,6 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
                 isOutOfStock ||
                 createOrder.isPending ||
                 createMultipleOrders.isPending ||
-                hasPendingOrderFromOtherEnterprise ||
                 !paymentMethod ||
                 !whatsapp.replace(/\D/g, "") ||
                 whatsapp.replace(/\D/g, "").length < 10
