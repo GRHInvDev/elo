@@ -14,7 +14,7 @@ import Image from "next/image"
 import { OrderChat } from "@/components/shop/order-chat"
 
 type MyOrder = RouterOutputs["productOrder"]["listMyOrders"][number]
-
+const utils = api.useUtils()
 function isMyOrder(order: unknown): order is MyOrder {
   return (
     typeof order === "object" &&
@@ -35,7 +35,8 @@ export function MyOrdersList({ filter }: { filter?: string }) {
   const refetch = ordersQuery.refetch
 
   const markAsReadMutation = api.productOrder.markMyOrderAsRead.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.productOrder.listMyOrders.invalidate()
       void refetch()
     },
   })

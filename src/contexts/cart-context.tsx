@@ -96,9 +96,16 @@ export function CartProvider({ children }: CartProviderProps) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
 
   const addItem = useCallback((product: Product, quantity?: number) => {
+    const existingItem = state.items.find(item => item.product.id === product.id)
+    const wasAdded = !existingItem
+    
     dispatch({ type: "ADD_ITEM", product, quantity: quantity ?? 1 })
-    toast.success(`"${product.name}" adicionado ao carrinho!`)
-  }, [])
+    
+    // Mostrar notificação apenas quando o item é realmente adicionado (não quando já existe e só incrementa)
+    if (wasAdded) {
+      toast.success(`"${product.name}" adicionado ao carrinho!`)
+    }
+  }, [state.items])
 
   const removeItem = useCallback((productId: string) => {
     dispatch({ type: "REMOVE_ITEM", productId })
