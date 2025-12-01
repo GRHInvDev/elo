@@ -12,6 +12,7 @@ import { useCart } from "@/hooks/use-cart"
 import { CreateOrderModal } from "./create-order-modal"
 import { OrderSuccessModal } from "./order-success-modal"
 import type { Product } from "@prisma/client"
+import { cn } from "@/lib/utils"
 
 interface ShoppingCartProps {
   className?: string
@@ -55,18 +56,18 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
 
   if (totalItems === 0) {
     return (
-      <Card className={className}>
+      <Card className={cn("w-full max-w-full overflow-hidden", className)}>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <ShoppingCartIcon className="h-5 w-5" />
-            Carrinho
+            <ShoppingCartIcon className="h-5 w-5 flex-shrink-0" />
+            <span className="truncate">Carrinho</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="w-full max-w-full">
           <div className="text-center py-8 text-muted-foreground">
             <ShoppingCartIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Seu carrinho está vazio</p>
-            <p className="text-sm mt-1">Adicione produtos para começar</p>
+            <p className="break-words">Seu carrinho está vazio</p>
+            <p className="text-sm mt-1 break-words">Adicione produtos para começar</p>
           </div>
         </CardContent>
       </Card>
@@ -74,13 +75,13 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
   }
   return (
     <>
-      <Card className={className}>
+      <Card className={cn("w-full max-w-full overflow-hidden", className)}>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCartIcon className="h-5 w-5" />
-              Carrinho
-              {enterprise && <Badge variant="outline">{enterprise}</Badge>}
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <CardTitle className="flex items-center gap-2 min-w-0 flex-1">
+              <ShoppingCartIcon className="h-5 w-5 flex-shrink-0" />
+              <span className="truncate">Carrinho</span>
+              {enterprise && <Badge variant="outline" className="flex-shrink-0">{enterprise}</Badge>}
             </CardTitle>
             <Button
               variant="ghost"
@@ -92,11 +93,11 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="max-h-96">
-            <div className="space-y-3 p-4">
+        <CardContent className="p-0 w-full max-w-full overflow-hidden">
+          <ScrollArea className="max-h-96 w-full">
+            <div className="space-y-3 p-4 w-full max-w-full">
               {items.map((item) => (
-                <div key={item.product.id} className="flex gap-3">
+                <div key={item.product.id} className="flex gap-3 w-full max-w-full min-w-0">
                   {item.product.imageUrl && item.product.imageUrl.length > 0 && (
                     <div className="relative h-16 w-16 rounded-md overflow-hidden border flex-shrink-0">
                       <Image
@@ -109,9 +110,9 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
                     </div>
                   )}
 
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm line-clamp-2">{item.product.name}</h4>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h4 className="font-medium text-sm line-clamp-2 break-words">{item.product.name}</h4>
+                    <p className="text-sm text-muted-foreground truncate">
                       R$ {item.product.price.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
 
@@ -157,21 +158,21 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
 
           <Separator />
 
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between text-lg font-semibold">
-              <span>Total:</span>
-              <span className="text-primary">
+          <div className="p-4 space-y-4 w-full max-w-full">
+            <div className="flex items-center justify-between text-lg font-semibold gap-2 min-w-0">
+              <span className="flex-shrink-0">Total:</span>
+              <span className="text-primary truncate">
                 R$ {totalPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
             <Button
               onClick={handleCheckout}
-              className="w-full"
+              className="w-full max-w-full"
               size="lg"
             >
-              <CreditCard className="mr-2 h-4 w-4" />
-              Finalizar Pedido ({totalItems} {totalItems === 1 ? 'item' : 'itens'})
+              <CreditCard className="mr-2 h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Finalizar Pedido ({totalItems} {totalItems === 1 ? 'item' : 'itens'})</span>
             </Button>
           </div>
         </CardContent>

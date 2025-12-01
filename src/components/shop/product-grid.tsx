@@ -21,7 +21,7 @@ function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: ProductGridProps
             skeletonItems.push(i)
         }
         return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full max-w-full overflow-x-hidden">
                 {skeletonItems.map((i) => (
                     <div key={i} className="col-span-1 h-56 bg-muted animate-pulse rounded-lg" />
                 ))}
@@ -42,10 +42,10 @@ function ProductGrid({ size = "md", enterpriseFilter = "ALL" }: ProductGridProps
     ) || []
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch w-full max-w-full overflow-x-hidden">
             {
                 filtered.map((p) => (
-                    <div key={p.id} className="col-span-1 h-full">
+                    <div key={p.id} className="col-span-1 h-full w-full max-w-full">
                         <ProductCard product={p} size={size}/>
                     </div>
                 ))

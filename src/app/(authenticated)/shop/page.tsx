@@ -138,7 +138,7 @@ function ShopPageContent() {
 
   return (
     <DashboardShell>
-      <div className="space-y-6">
+      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
         <div>
           <h1 className="text-3xl font-bold">
             Lojinha RHenz
@@ -146,11 +146,11 @@ function ShopPageContent() {
           <h2 className="text-lg text-muted-foreground">
             Compre itens com as marcas do Grupo RHenz
           </h2>
-          <h4 className="text-sm text-muted-foreground">*Possibilidade de compra de brinde de ambas empresas, mas em pedidos <strong> distintos.</strong></h4>
+          <h4 className="text-sm text-muted-foreground break-words">*Possibilidade de compra de brinde de ambas empresas, mas em pedidos <strong> distintos.</strong></h4>
         </div>
 
-        <Tabs defaultValue="products" className="space-y-4">
-          <TabsList className="flex overflow-x-auto justify-center sm:justify-start">
+        <Tabs defaultValue="products" className="space-y-4 w-full max-w-full">
+          <TabsList className="flex overflow-x-auto justify-center sm:justify-start w-full max-w-full">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
               Produtos
@@ -177,9 +177,9 @@ function ShopPageContent() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="products">
-            <div className="mb-4 flex flex-col sm:flex-row items-center gap-3">
-              <div className="w-full sm:w-64">
+          <TabsContent value="products" className="w-full max-w-full overflow-x-hidden">
+            <div className="mb-4 flex flex-col sm:flex-row items-center gap-3 w-full max-w-full">
+              <div className="w-full sm:w-64 max-w-full">
                 <Select
                   value={enterprise}
                   onValueChange={(v) => setEnterprise(v as typeof enterprise)}
@@ -196,7 +196,7 @@ function ShopPageContent() {
                   </SelectContent>
                 </Select>
                 {cartEnterprise && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground break-words">
                     Filtro automático: mostrando apenas produtos de {cartEnterprise}
                   </p>
                 )}
@@ -205,16 +205,16 @@ function ShopPageContent() {
             <ProductGrid size="sm" enterpriseFilter={enterprise} />
           </TabsContent>
 
-          <TabsContent value="cart" className="flex justify-center">
-            <div className="w-full max-w-lg">
+          <TabsContent value="cart" className="flex justify-center w-full max-w-full overflow-x-hidden">
+            <div className="w-full max-w-lg px-2">
               <ShoppingCart />
             </div>
           </TabsContent>
 
-          <TabsContent value="orders" className="overflow-y-auto max-h-[calc(100vh-200px)] p-2 md:p-0">
+          <TabsContent value="orders" className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-200px)] p-2 md:p-0 w-full max-w-full">
             {/* Filtro de pedidos */}
-            <div className="mb-4 flex flex-col sm:flex-row items-center gap-3">
-              <div className="w-full sm:w-64">
+            <div className="mb-4 flex flex-col sm:flex-row items-center gap-3 w-full max-w-full">
+              <div className="w-full sm:w-64 max-w-full">
                 <Select value={orderFilter} onValueChange={(v) => setOrderFilter(v as typeof orderFilter)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filtrar por status" />
