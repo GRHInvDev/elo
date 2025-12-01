@@ -39,7 +39,7 @@ function isMyOrder(order: unknown): order is MyOrder {
   )
 }
 
-export function MyOrdersList({ filter }: { filter?: string }) {
+export function MyOrdersList({ filter, showDeleteButton = false }: { filter?: string; showDeleteButton?: boolean }) {
   const utils = api.useUtils()
   const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
     staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
@@ -223,6 +223,7 @@ export function MyOrdersList({ filter }: { filter?: string }) {
             getStatusBadge={getStatusBadge}
             onDeleteOrder={handleDeleteOrder}
             deleteOrderMutation={deleteOrderMutation}
+            showDeleteButton={showDeleteButton}
           />
         )
       })}
@@ -237,7 +238,8 @@ function OrderCard({
   markAsReadMutation,
   getStatusBadge,
   onDeleteOrder,
-  deleteOrderMutation
+  deleteOrderMutation,
+  showDeleteButton = false
 }: {
   order: MyOrder & { _groupOrders?: MyOrder[] }
   isUnread: boolean
@@ -246,6 +248,7 @@ function OrderCard({
   getStatusBadge: (status: ProductOrderStatus) => JSX.Element
   onDeleteOrder: (id: string) => void
   deleteOrderMutation: ReturnType<typeof api.productOrder.deleteOrder.useMutation>
+  showDeleteButton?: boolean
 }) {
   const [showChat, setShowChat] = useState(false)
   const { canManageProducts, isSudo } = useAccessControl()
@@ -373,7 +376,7 @@ function OrderCard({
           <Button variant="outline" size="sm" onClick={() => setShowChat((v) => !v)}>
             {showChat ? "Fechar chat" : "Chat com atendimento"}
           </Button>
-          {isAdmin && (
+          {showDeleteButton && isAdmin && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
