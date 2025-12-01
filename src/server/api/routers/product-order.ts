@@ -150,7 +150,7 @@ export const productOrderRouter = createTRPCRouter({
                     const userEmail = order.user.email
                     // Usar a data do pedido criado e formatar no timezone de São Paulo (UTC-3)
                     // Garantir que estamos usando a data/hora exata do pedido
-                    const orderDate = order.orderTimestamp || order.createdAt || new Date()
+                    const orderDate = (order.orderTimestamp ?? order.createdAt) || new Date()
                     // Formatar a data no timezone de São Paulo usando Intl.DateTimeFormat para maior precisão
                     const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
                         day: '2-digit',
@@ -421,7 +421,7 @@ export const productOrderRouter = createTRPCRouter({
 
                         const userEmail = firstOrder?.user.email
                         // Usar a data do primeiro pedido criado e formatar no timezone de São Paulo
-                        const orderDate = firstOrder?.orderTimestamp || firstOrder?.createdAt || new Date()
+                        const orderDate = firstOrder?.orderTimestamp ?? firstOrder?.createdAt ?? new Date()
                         // Formatar a data no timezone de São Paulo usando Intl.DateTimeFormat para maior precisão
                         const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
                             day: '2-digit',
