@@ -547,7 +547,7 @@ export const productOrderRouter = createTRPCRouter({
     // Listar pedidos para gestor (Kanban)
     listKanban: protectedProcedure
         .query(async ({ ctx }) => {
-            // Verificar se é gestor (sudo ou can_manage_produtos)
+            // Verificar se é gestor (sudo, can_manage_produtos ou can_view_answer_without_admin_access)
             const user = await ctx.db.user.findUnique({
                 where: { id: ctx.auth.userId },
                 select: { role_config: true }
@@ -556,6 +556,7 @@ export const productOrderRouter = createTRPCRouter({
             const roleConfig = user?.role_config as RolesConfig | null
             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
             const isManager = !!(roleConfig?.sudo || roleConfig?.can_manage_produtos)
+            const canViewAnswer = !!(roleConfig?.can_view_answer_without_admin_access)
 
             // Buscar empresas das quais o usuário é responsável
             const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
@@ -564,18 +565,19 @@ export const productOrderRouter = createTRPCRouter({
             })
             const managedEnterprises = enterpriseManagers.map(em => em.enterprise)
 
-            // Se não é gestor nem responsável por nenhuma empresa, negar acesso
-            if (!isManager && managedEnterprises.length === 0) {
+            // Se não é gestor, não tem a nova permissão e não é responsável por nenhuma empresa, negar acesso
+            if (!isManager && !canViewAnswer && managedEnterprises.length === 0) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
-                    message: "Apenas gestores ou responsáveis por empresas podem visualizar pedidos"
+                    message: "Apenas gestores, usuários com permissão de visualização ou responsáveis por empresas podem visualizar pedidos"
                 })
             }
 
             // Se é gestor, retornar todos os pedidos
+            // Se tem can_view_answer_without_admin_access, retornar todos os pedidos (mesmo comportamento de gestor)
             // Se é apenas responsável, retornar apenas pedidos das empresas que gerencia
             return await ctx.db.productOrder.findMany({
-                where: isManager ? undefined : {
+                where: (isManager || canViewAnswer) ? undefined : {
                     product: {
                         enterprise: {
                             in: managedEnterprises
@@ -620,6 +622,7 @@ export const productOrderRouter = createTRPCRouter({
 
             const roleConfig = user?.role_config as RolesConfig | null
             const isManager = !!roleConfig?.sudo || roleConfig?.can_manage_produtos
+            const canViewAnswer = !!(roleConfig?.can_view_answer_without_admin_access)
 
             // Buscar empresas das quais o usuário é responsável
             const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
@@ -628,14 +631,14 @@ export const productOrderRouter = createTRPCRouter({
             })
             const managedEnterprises = enterpriseManagers.map(em => em.enterprise)
 
-            if (!isManager && managedEnterprises.length === 0) {
+            if (!isManager && !canViewAnswer && managedEnterprises.length === 0) {
                 return 0
             }
 
             return await ctx.db.productOrder.count({
                 where: {
                     read: false,
-                    ...(isManager ? {} : {
+                    ...((isManager || canViewAnswer) ? {} : {
                         product: {
                             enterprise: {
                                 in: managedEnterprises
@@ -658,6 +661,7 @@ export const productOrderRouter = createTRPCRouter({
 
             const roleConfig = user?.role_config as RolesConfig | null
             const isManager = !!roleConfig?.sudo || roleConfig?.can_manage_produtos
+            const canViewAnswer = !!(roleConfig?.can_view_answer_without_admin_access)
 
             // Buscar empresas das quais o usuário é responsável
             const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
@@ -685,8 +689,8 @@ export const productOrderRouter = createTRPCRouter({
                 })
             }
 
-            // Verificar permissão: gestor ou responsável pela empresa do pedido
-            if (!isManager && !managedEnterprises.includes(order.product.enterprise)) {
+            // Verificar permissão: gestor, usuário com can_view_answer_without_admin_access ou responsável pela empresa do pedido
+            if (!isManager && !canViewAnswer && !managedEnterprises.includes(order.product.enterprise)) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "Você não tem permissão para atualizar este pedido"
@@ -725,6 +729,7 @@ export const productOrderRouter = createTRPCRouter({
 
             const roleConfig = user?.role_config as RolesConfig | null
             const isManager = !!roleConfig?.sudo || roleConfig?.can_manage_produtos
+            const canViewAnswer = !!(roleConfig?.can_view_answer_without_admin_access)
 
             // Buscar empresas das quais o usuário é responsável
             const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
@@ -752,8 +757,8 @@ export const productOrderRouter = createTRPCRouter({
                 })
             }
 
-            // Verificar permissão: gestor ou responsável pela empresa do pedido
-            if (!isManager && !managedEnterprises.includes(order.product.enterprise)) {
+            // Verificar permissão: gestor, usuário com can_view_answer_without_admin_access ou responsável pela empresa do pedido
+            if (!isManager && !canViewAnswer && !managedEnterprises.includes(order.product.enterprise)) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "Você não tem permissão para marcar este pedido como lido"
@@ -951,6 +956,7 @@ export const productOrderRouter = createTRPCRouter({
             })
             const roleConfig = user?.role_config as RolesConfig | null
             const isManager = (roleConfig?.sudo === true) || (roleConfig?.can_manage_produtos === true)
+            const canViewAnswer = !!(roleConfig?.can_view_answer_without_admin_access)
 
             // Empresas gerenciadas
             const enterpriseManagers = await ctx.db.enterpriseManager.findMany({
@@ -962,6 +968,7 @@ export const productOrderRouter = createTRPCRouter({
             const canAccess =
                 order.userId === currentUserId ||
                 isManager ||
+                canViewAnswer ||
                 managedEnterprises.includes(order.product.enterprise)
 
             if (!canAccess) {
@@ -1076,9 +1083,12 @@ export const productOrderRouter = createTRPCRouter({
             })
             const managedEnterprises = enterpriseManagers.map((em) => em.enterprise)
 
+            const canViewAnswer = !!(roleConfig?.can_view_answer_without_admin_access)
+
             const canAccess =
                 order.userId === currentUserId ||
                 isManager ||
+                canViewAnswer ||
                 managedEnterprises.includes(order.product.enterprise)
 
             if (!canAccess) {
@@ -1323,8 +1333,9 @@ export const productOrderRouter = createTRPCRouter({
 
             // Buscar o pedido para verificar se existe
             // Zod já validou que input.id é uma string através do schema deleteProductOrderSchema
+            const orderId = typeof input.id === 'string' ? input.id : String(input.id)
             const order = await ctx.db.productOrder.findUnique({
-                where: { id: input.id },
+                where: { id: orderId },
                 include: {
                     orderGroup: {
                         include: {

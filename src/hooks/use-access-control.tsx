@@ -174,6 +174,16 @@ export function useAccessControl() {
     return db_user.role_config.can_manage_quality_management ?? false;
   };
 
+  const canViewAnswerWithoutAdminAccess = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, tem acesso
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica
+    return db_user.role_config.can_view_answer_without_admin_access ?? false;
+  };
+
   const hasPermission = (permission: string): boolean => {
     if (!db_user?.role_config) return false;
 
@@ -218,6 +228,7 @@ export function useAccessControl() {
     canManageBasicUserData,
     canManageProducts,
     canManageQualityManagement,
+    canViewAnswerWithoutAdminAccess,
     canAccessChat,
     hasPermission,
     isLoading: !db_user,
