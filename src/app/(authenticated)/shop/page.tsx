@@ -117,6 +117,7 @@ function ShopPageContent() {
   // Contar pedidos não lidos do usuário
   const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
     staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
+    refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
   })
   const myOrders = ordersQuery.data
   const { enterprise: cartEnterprise, totalItems } = useCart()

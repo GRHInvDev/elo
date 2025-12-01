@@ -37,7 +37,20 @@ export default async function RootLayout({
               <Analytics/>
               <SpeedInsights/>
               <Toaster />
-              <SonnerToaster />
+              <SonnerToaster 
+                position="top-center"
+                expand={true}
+                richColors
+                closeButton
+                offset="16px"
+                toastOptions={{
+                  style: {
+                    maxWidth: '90vw',
+                    width: 'auto',
+                  },
+                  className: 'sonner-toast-mobile',
+                }}
+              />
               {children}
             </ThemeProvider>
           </body>
