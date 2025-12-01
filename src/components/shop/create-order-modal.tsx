@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Fragment } from "react"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -28,19 +28,22 @@ interface CreateOrderModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  onOrderCreated?: (enterprise: Product["enterprise"] | null) => void // Callback quando pedido é criado (antes de fechar)
 }
 
-export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenChange, onSuccess }: CreateOrderModalProps) {
+export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenChange, onOrderCreated }: CreateOrderModalProps) {
   // Se cartItems foi passado, estamos usando o carrinho
   const isCartMode = !!cartItems && cartItems.length > 0
   const items = isCartMode ? cartItems : (product ? [{ product, quantity: 1 }] : [])
 
   const [paymentMethod, setPaymentMethod] = useState<"BOLETO" | "PIX" | "">("")
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [whatsapp, setWhatsapp] = useState("")
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [lastSubmittedWhatsapp, setLastSubmittedWhatsapp] = useState<string | null>(null)
   const utils = api.useUtils()
+
+  // Verificar se existe pedido pendente de outra empresa
+  const targetEnterprise = isCartMode ? enterprise : (product?.enterprise ?? null)
 
   // Buscar grupos de pedidos pendentes para validar regra de empresa
   const { data: pendingGroups } = api.productOrder.listMyPendingGroups.useQuery(undefined, {
@@ -70,12 +73,21 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
       setPaymentMethod("")
       setLastSubmittedWhatsapp(whatsapp.replace(/\D/g, "") || null)
       setWhatsapp("")
-      onOpenChange(false)
-      setShowSuccessModal(true)
+      
       void utils.productOrder.listMyOrders.invalidate()
       void utils.productOrder.listMyPendingGroups.invalidate()
       void utils.product.getAll.invalidate()
-      onSuccess?.()
+      
+      // Salvar a empresa antes de fechar o modal
+      const currentEnterprise = targetEnterprise ?? null
+      
+      // Fechar o modal de criação primeiro
+      onOpenChange(false)
+      
+      // Notificar que o pedido foi criado (isso abrirá o modal de sucesso no componente pai)
+      setTimeout(() => {
+        onOrderCreated?.(currentEnterprise)
+      }, 300)
     },
     onError: (error) => {
       toast.error(`Erro ao criar pedido: ${error.message}`)
@@ -105,20 +117,28 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
       setPaymentMethod("")
       setLastSubmittedWhatsapp(whatsapp.replace(/\D/g, "") ?? null)
       setWhatsapp("")
-      onOpenChange(false)
-      setShowSuccessModal(true)
+      
       void utils.productOrder.listMyOrders.invalidate()
       void utils.productOrder.listMyPendingGroups.invalidate()
       void utils.product.getAll.invalidate()
-      onSuccess?.()
+      
+      // Salvar a empresa antes de fechar o modal
+      const currentEnterprise = targetEnterprise ?? null
+      
+      // Fechar o modal de criação primeiro
+      onOpenChange(false)
+      
+      // Notificar que o pedido foi criado (isso abrirá o modal de sucesso no componente pai)
+      setTimeout(() => {
+        onOrderCreated?.(currentEnterprise)
+      }, 300)
     },
     onError: (error) => {
       toast.error(`Erro ao criar pedidos: ${error.message}`)
     },
   })
 
-  // Verificar se existe pedido pendente de outra empresa
-  const targetEnterprise = isCartMode ? enterprise : (product?.enterprise ?? null)
+
   const hasPendingOrderFromOtherEnterprise = targetEnterprise ? (pendingGroups?.some(group =>
     group.enterprise !== targetEnterprise
   ) ?? false) : false
@@ -170,6 +190,7 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
   const isOutOfStock = items.some(item => item.product.stock < item.quantity)
 
   return (
+    <Fragment>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
@@ -331,80 +352,8 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
             </Button>
           </div>
       </DialogContent>
-
-      {/* Modal de sucesso com instruções de retirada */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-green-600 flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-              Pedido Recebido com Sucesso!
-            </DialogTitle>
-            <DialogDescription>
-              Seu pedido foi registrado e está sendo processado.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <h3 className="font-semibold mb-3 text-lg">Instruções para retirada</h3>
-              {targetEnterprise === "Cristallux" || targetEnterprise === "Cristallux_Filial" ? (
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    Seu pedido estará disponível para retirada no setor de Marketing da Cristallux em Santa Cruz do Sul, em 24 horas após a confirmação.
-                  </p>
-                  <p>
-                    <strong>Exemplo:</strong> Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil.
-                  </p>
-                  <p>
-                    Colegas de outras unidades receberão contato da equipe interna para agendar retirada ou envio, com possibilidade de custo de frete por conta do Destinatário (a ser previamente combinado).
-                  </p>
-                </div>
-              ) : targetEnterprise === "Box" || targetEnterprise === "Box_Filial" ? (
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    Seu pedido estará disponível para retirada na Expedição em Santa Cruz do Sul em 24 horas após a confirmação.
-                  </p>
-                  <p>
-                    <strong>Exemplo:</strong> Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil.
-                  </p>
-                  <p>
-                    Colegas de outras unidades receberão contato da equipe interna para agendar retirada ou envio, com possibilidade de custo de frete por conta do Destinatário (a ser previamente combinado).
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    Seu pedido estará disponível para retirada em 24 horas após a confirmação.
-                  </p>
-                  <p>
-                    <strong>Exemplo:</strong> Pedido confirmado às 14h → retirada liberada após as 14h do próximo dia útil.
-                  </p>
-                  <p>
-                    Colegas de outras unidades receberão contato da equipe interna para agendar retirada ou envio, com possibilidade de custo de frete por conta do Destinatário (a ser previamente combinado).
-                  </p>
-                </div>
-              )}
-              <div className="mt-4 pt-3 border-t border-primary/20">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Dúvidas?</strong> Use o chat na opção Shop / Meus Pedidos.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => {
-                setShowSuccessModal(false)
-              }}
-              className="w-full"
-              size="lg"
-            >
-              Entendi
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
     </Dialog>
+    </Fragment>
   )
 }
 
