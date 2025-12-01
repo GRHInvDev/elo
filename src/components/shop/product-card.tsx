@@ -54,7 +54,7 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
       <CardHeader className="pb-2 min-w-0">
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="flex-1 min-w-0">
-            <CardTitle className="break-words line-clamp-2">{product.name}</CardTitle>
+            <CardTitle className="break-words line-clamp-2 text-xl">{product.name}</CardTitle>
           </div>
           <div className="flex flex-col gap-2 items-end flex-shrink-0">
             <Badge className="whitespace-nowrap">{product.enterprise}</Badge>

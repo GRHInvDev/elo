@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, Package, CheckCircle2, Calendar } from "lucide-react"
+import { Loader2, Package, CheckCircle2, Calendar, Trash2 } from "lucide-react"
 import { api } from "@/trpc/react"
 import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -12,6 +12,19 @@ import type { ProductOrderStatus } from "@/components/admin/products/orders-kanb
 import type { RouterOutputs } from "@/trpc/react"
 import Image from "next/image"
 import { OrderChat } from "@/components/shop/order-chat"
+import { useAccessControl } from "@/hooks/use-access-control"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 
 type MyOrder = RouterOutputs["productOrder"]["listMyOrders"][number]
 
@@ -42,22 +55,39 @@ export function MyOrdersList({ filter }: { filter?: string }) {
     },
   })
 
+  const deleteOrderMutation = api.productOrder.deleteOrder.useMutation({
+    onSuccess: async () => {
+      await utils.productOrder.listMyOrders.invalidate()
+      await utils.productOrder.listMyPendingGroups.invalidate()
+      await utils.product.getAll.invalidate()
+      void refetch()
+      toast.success("Pedido deletado com sucesso")
+    },
+    onError: (error) => {
+      toast.error(`Erro ao deletar pedido: ${error.message}`)
+    },
+  })
+
   const handleMarkAsRead = (orderId: string) => {
     markAsReadMutation.mutate({ id: orderId })
+  }
+
+  const handleDeleteOrder = (orderId: string) => {
+    deleteOrderMutation.mutate({ id: orderId })
   }
 
   // Agrupar pedidos - pedidos do mesmo grupo OU criados juntos (mesmo usuário, mesma empresa, mesmo timestamp) são exibidos como um único pedido
   const groupedOrders = useMemo(() => {
     // Type-safe orders extraction e filtragem
-    const rawOrders = ordersQuery.data
-    const allOrders: MyOrder[] = Array.isArray(rawOrders)
-      ? rawOrders.filter(isMyOrder).filter((o) => {
-        if (filter && filter !== "ALL") {
-          return o.status === filter;
-        }
-        return true;
-      })
-      : [];
+  const rawOrders = ordersQuery.data
+  const allOrders: MyOrder[] = Array.isArray(rawOrders)
+    ? rawOrders.filter(isMyOrder).filter((o) => {
+      if (filter && filter !== "ALL") {
+        return o.status === filter;
+      }
+      return true;
+    })
+    : [];
 
     const groups = new Map<string, MyOrder[]>()
     const TIMESTAMP_TOLERANCE = 5 * 60 * 1000 // 5 minutos de tolerância para considerar "criados juntos"
@@ -66,10 +96,10 @@ export function MyOrdersList({ filter }: { filter?: string }) {
     allOrders.forEach((order) => {
       if (order.orderGroupId) {
         const groupId = `group-${order.orderGroupId}`
-        if (!groups.has(groupId)) {
-          groups.set(groupId, [])
-        }
-        groups.get(groupId)!.push(order)
+      if (!groups.has(groupId)) {
+        groups.set(groupId, [])
+      }
+      groups.get(groupId)!.push(order)
       }
     })
     
@@ -191,6 +221,8 @@ export function MyOrdersList({ filter }: { filter?: string }) {
             onMarkAsRead={handleMarkAsRead}
             markAsReadMutation={markAsReadMutation}
             getStatusBadge={getStatusBadge}
+            onDeleteOrder={handleDeleteOrder}
+            deleteOrderMutation={deleteOrderMutation}
           />
         )
       })}
@@ -203,16 +235,22 @@ function OrderCard({
   isUnread,
   onMarkAsRead,
   markAsReadMutation,
-  getStatusBadge
+  getStatusBadge,
+  onDeleteOrder,
+  deleteOrderMutation
 }: {
   order: MyOrder & { _groupOrders?: MyOrder[] }
   isUnread: boolean
   onMarkAsRead: (id: string) => void
   markAsReadMutation: ReturnType<typeof api.productOrder.markMyOrderAsRead.useMutation>
   getStatusBadge: (status: ProductOrderStatus) => JSX.Element
+  onDeleteOrder: (id: string) => void
+  deleteOrderMutation: ReturnType<typeof api.productOrder.deleteOrder.useMutation>
 }) {
   const [showChat, setShowChat] = useState(false)
-  
+  const { canManageProducts, isSudo } = useAccessControl()
+  const isAdmin = canManageProducts || isSudo
+
   // Verificar se é um pedido agrupado
   const isGroupedOrder = !!order.orderGroupId || !!(order as { _groupOrders?: MyOrder[] })._groupOrders
   const orderGroupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: MyOrder[] })._groupOrders ?? []
@@ -229,7 +267,7 @@ function OrderCard({
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg">
+            <CardTitle className="text-sm">
               {isGroupedOrder ? `Pedido (${orderGroupOrders.length} ${orderGroupOrders.length === 1 ? 'item' : 'itens'})` : order.product.name}
             </CardTitle>
             {!isGroupedOrder && (
@@ -331,10 +369,57 @@ function OrderCard({
         </div>
       </CardContent>
       <div className="px-6 pb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowChat((v) => !v)}>
             {showChat ? "Fechar chat" : "Chat com atendimento"}
           </Button>
+          {isAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleteOrderMutation.isPending}
+                >
+                  {deleteOrderMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Deletar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja deletar este pedido? Esta ação não pode ser desfeita.
+                    {order.orderGroupId && (
+                      <span className="block mt-2 font-semibold text-destructive">
+                        Atenção: Este pedido faz parte de um grupo. O estoque será restaurado.
+                      </span>
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDeleteOrder(order.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleteOrderMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deletando...
+                      </>
+                    ) : (
+                      "Deletar"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
         {showChat && (
           <div className="mt-3">

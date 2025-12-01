@@ -124,7 +124,7 @@ function ShopPageContent() {
 
   // Se há itens no carrinho, filtrar apenas produtos da mesma empresa
   const [enterprise, setEnterprise] = useState<"ALL" | "Box" | "RHenz" | "Cristallux" | "Box_Filial" | "Cristallux_Filial">("ALL");
-  const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO" | "CONCLUIDO">("ALL");
+  const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO">("ALL");
 
   const unreadCount = getUnreadCount(myOrders)
   const cartItemCount = totalItems ?? 0
@@ -223,7 +223,6 @@ function ShopPageContent() {
                     <SelectItem value="ALL">Todos</SelectItem>
                     <SelectItem value="SOLICITADO">Solicitado</SelectItem>
                     <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-                    <SelectItem value="CONCLUIDO">Concluído</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -589,8 +589,8 @@ export const foodOrderRouter = createTRPCRouter({
           },
         },
         orderBy: [
-          { restaurant: { name: "asc" } },
           { user: { firstName: "asc" } },
+          { orderDate: "asc" },
         ],
       })
 

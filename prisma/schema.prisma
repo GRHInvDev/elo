@@ -501,7 +501,7 @@ model MenuItemOptionChoice {
 model FoodOrder {
   id               String                 @id @default(cuid())
   userId           String
-  restaurantId     String
+  restaurantId     String?
   menuItemId       String
   orderDate        DateTime
   orderTime        DateTime
@@ -510,7 +510,7 @@ model FoodOrder {
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   menuItem         MenuItem               @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  restaurant       Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurant       Restaurant?            @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
   user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   optionSelections OrderOptionSelection[]
 
