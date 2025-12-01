@@ -90,10 +90,15 @@ function ProductGrid({
         );
     }
 
+    // Ordenar produtos filtrados alfabeticamente por nome
+    const sorted = [...filtered].sort((a, b) => {
+        return a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" })
+    })
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch w-full max-w-full overflow-x-hidden">
             {
-                filtered.map((p) => (
+                sorted.map((p) => (
                     <div key={p.id} className="col-span-1 h-full w-full max-w-full">
                         <ProductCard product={p} size={size}/>
                     </div>

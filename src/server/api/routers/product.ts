@@ -75,13 +75,13 @@ export const productRouter = createTRPCRouter({
 
     getAll: protectedProcedure
         .query(async ({ ctx }) => {
-            // Retornar apenas produtos ativos para usuários finais
+            // Retornar apenas produtos ativos para usuários finais, ordenados alfabeticamente por nome
             return await ctx.db.product.findMany({
                 where: {
                     active: true
                 },
                 orderBy: {
-                    createdAt: "desc"
+                    name: "asc"
                 }
             })
         }),
