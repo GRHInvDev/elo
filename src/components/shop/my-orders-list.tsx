@@ -14,7 +14,7 @@ import Image from "next/image"
 import { OrderChat } from "@/components/shop/order-chat"
 
 type MyOrder = RouterOutputs["productOrder"]["listMyOrders"][number]
-const utils = api.useUtils()
+
 function isMyOrder(order: unknown): order is MyOrder {
   return (
     typeof order === "object" &&
@@ -27,6 +27,7 @@ function isMyOrder(order: unknown): order is MyOrder {
 }
 
 export function MyOrdersList({ filter }: { filter?: string }) {
+  const utils = api.useUtils()
   const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
     staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
     gcTime: 5 * 60 * 1000, // 5 minutos
