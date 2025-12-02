@@ -6,7 +6,7 @@ import { MyOrdersList } from "@/components/shop/my-orders-list"
 import ShoppingCart from "@/components/shop/shopping-cart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon, Inbox, FileDown } from "lucide-react"
+import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon, Inbox, FileDown, RefreshCw } from "lucide-react"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
 import React, { useState } from "react"
@@ -119,6 +119,8 @@ function getUnreadCount(orders: unknown): number {
 }
 
 function ShopPageContent() {
+  const utils = api.useUtils()
+  
   // Contar pedidos não lidos do usuário
   const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
     staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
@@ -157,17 +159,40 @@ function ShopPageContent() {
     window.print()
   }
 
+  const handleRefresh = async () => {
+    // Recarregar todas as queries principais da página
+    await Promise.all([
+      utils.productOrder.listMyOrders.invalidate(),
+      utils.productOrder.countUnread.invalidate(),
+      utils.product.getAll.invalidate(),
+      ordersQuery.refetch(),
+    ])
+  }
+
   return (
     <DashboardShell className="print:p-4">
       <div className="space-y-6 w-full max-w-full overflow-x-hidden">
         <div className="print:hidden">
-          <h1 className="text-3xl font-bold">
-            Lojinha RHenz
-          </h1>
-          <h2 className="text-lg text-muted-foreground">
-            Compre itens com as marcas do Grupo RHenz
-          </h2>
-          <h4 className="text-sm text-muted-foreground break-words">*Possibilidade de compra de brinde de ambas empresas, mas em pedidos <strong> distintos.</strong></h4>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold">
+                Lojinha RHenz
+              </h1>
+              <h2 className="text-lg text-muted-foreground">
+                Compre itens com as marcas do Grupo RHenz
+              </h2>
+              <h4 className="text-sm text-muted-foreground break-words">*Possibilidade de compra de brinde de ambas empresas, mas em pedidos <strong> distintos.</strong></h4>
+            </div>
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              size="icon"
+              className="flex-shrink-0"
+              title="Recarregar página"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Título para impressão */}

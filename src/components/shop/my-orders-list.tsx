@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -254,6 +254,29 @@ function OrderCard({
   const { canManageProducts, isSudo } = useAccessControl()
   const isAdmin = canManageProducts() || isSudo
 
+  const utils = api.useUtils()
+
+  // Buscar notificações não lidas do chat para este pedido
+  const { data: unreadChatCount = 0 } = api.productOrder.countChatNotifications.useQuery(
+    { orderId: order.id },
+    { enabled: !!order.id, refetchInterval: 5000 }
+  )
+
+  // Mutation para marcar notificações do chat como lidas
+  const markChatNotificationsAsRead = api.productOrder.markChatNotificationsAsRead.useMutation({
+    onSuccess: () => {
+      // Invalida a query para atualizar o contador
+      void utils.productOrder.countChatNotifications.invalidate({ orderId: order.id })
+    }
+  })
+
+  // Marcar como lido automaticamente quando o chat for aberto
+  useEffect(() => {
+    if (showChat && unreadChatCount > 0) {
+      markChatNotificationsAsRead.mutate({ orderId: order.id })
+    }
+  }, [showChat, unreadChatCount, order.id, markChatNotificationsAsRead])
+
   // Verificar se é um pedido agrupado
   const isGroupedOrder = !!order.orderGroupId || !!(order as { _groupOrders?: MyOrder[] })._groupOrders
   const orderGroupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: MyOrder[] })._groupOrders ?? []
@@ -373,9 +396,19 @@ function OrderCard({
       </CardContent>
       <div className="px-6 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowChat((v) => !v)}>
-            {showChat ? "Fechar chat" : "Chat com atendimento"}
-          </Button>
+          <div className="relative">
+            <Button variant="outline" size="sm" onClick={() => setShowChat((v) => !v)}>
+              {showChat ? "Fechar chat" : "Chat com atendimento"}
+            </Button>
+            {unreadChatCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              >
+                {unreadChatCount > 9 ? '9+' : unreadChatCount}
+              </Badge>
+            )}
+          </div>
           {showDeleteButton && isAdmin && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
