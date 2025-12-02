@@ -6,13 +6,14 @@ import { MyOrdersList } from "@/components/shop/my-orders-list"
 import ShoppingCart from "@/components/shop/shopping-cart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon, Inbox } from "lucide-react"
+import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon, Inbox, FileDown } from "lucide-react"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
 import React, { useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { CartProvider } from "@/contexts/cart-context"
 import { useCart } from "@/hooks/use-cart"
 import { useAccessControl } from "@/hooks/use-access-control"
@@ -152,10 +153,14 @@ function ShopPageContent() {
     }
   }, [cartEnterprise])
 
+  const handleExportPDF = () => {
+    window.print()
+  }
+
   return (
-    <DashboardShell>
+    <DashboardShell className="print:p-4">
       <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-        <div>
+        <div className="print:hidden">
           <h1 className="text-3xl font-bold">
             Lojinha RHenz
           </h1>
@@ -165,8 +170,13 @@ function ShopPageContent() {
           <h4 className="text-sm text-muted-foreground break-words">*Possibilidade de compra de brinde de ambas empresas, mas em pedidos <strong> distintos.</strong></h4>
         </div>
 
+        {/* Título para impressão */}
+        <div className="hidden print:block print:mb-4">
+          <h1 className="text-2xl font-bold">Catálogo de Produtos - Lojinha RHenz</h1>
+        </div>
+
         <Tabs defaultValue="products" className="space-y-4 w-full max-w-full">
-          <TabsList className="flex overflow-x-auto justify-center sm:justify-start w-full max-w-full">
+          <TabsList className="flex overflow-x-auto justify-center sm:justify-start w-full max-w-full print:hidden">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
               Produtos
@@ -205,7 +215,7 @@ function ShopPageContent() {
           </TabsList>
 
           <TabsContent value="products" className="w-full max-w-full overflow-x-hidden">
-            <div className="mb-4 space-y-3 w-full max-w-full">
+            <div className="mb-4 space-y-3 w-full max-w-full print:hidden">
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-full">
                 <div className="w-full sm:w-64 max-w-full">
                   <Select
@@ -257,6 +267,12 @@ function ShopPageContent() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleExportPDF} variant="outline" className="print:hidden">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
               </div>
             </div>
             <ProductGrid 
