@@ -720,6 +720,7 @@ export const mockEmailPedidoProduto = (
   precoTotal: number,
   empresa: string,
   dataPedido: string,
+  codigoProduto?: string | null,
 ) => (`
   <!DOCTYPE html>
   <html lang="pt-BR">
@@ -857,6 +858,11 @@ export const mockEmailPedidoProduto = (
                 <td>Produto:</td>
                 <td>${nomeProduto}</td>
               </tr>
+              ${codigoProduto ? `
+              <tr>
+                <td>Código:</td>
+                <td>${codigoProduto}</td>
+              </tr>` : ''}
               <tr>
                 <td>Empresa:</td>
                 <td>${empresa}</td>
@@ -903,6 +909,7 @@ export const mockEmailPedidoProduto = (
 // Tipo para item do pedido
 export interface OrderItem {
   nome: string
+  codigo?: string | null
   quantidade: number
   precoUnitario: number
   subtotal: number
@@ -935,6 +942,7 @@ export const mockEmailNotificacaoPedidoProduto = (
     <tr style="background-color: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
       <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
         <strong>${item.nome}</strong>
+        ${item.codigo ? `<br><small style="color: #666;">Código: ${item.codigo}</small>` : ''}
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">
         ${item.quantidade}

@@ -12,6 +12,8 @@ interface ProductGridProps {
   priceFilter?: "ALL" | "0-50" | "50-100" | "100-200" | "200+"
 }
 
+const ITEMS_PER_PAGE_PRINT = 6;
+
 function ProductGrid({ 
   size = "md", 
   enterpriseFilter = "ALL",
@@ -96,15 +98,32 @@ function ProductGrid({
     })
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 print:grid-cols-3 print:gap-4 gap-3 items-stretch w-full max-w-full overflow-x-hidden">
-            {
-                sorted.map((p) => (
-                    <div key={p.id} className="col-span-1 h-full w-full max-w-full print:break-inside-avoid">
-                        <ProductCard product={p} size={size}/>
-                    </div>
-                ))
-            }
-        </div>
+        <>
+            <style dangerouslySetInnerHTML={{__html: `
+                @media print {
+                    .print-product-item:nth-child(${ITEMS_PER_PAGE_PRINT}n+1) {
+                        page-break-before: always;
+                    }
+                    .print-product-item:first-child {
+                        page-break-before: auto;
+                    }
+                }
+            `}} />
+            <div className="w-full max-w-full overflow-x-hidden">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 print:grid-cols-3 print:gap-4 gap-3 items-stretch w-full max-w-full overflow-x-hidden">
+                    {
+                        sorted.map((p, index) => (
+                            <div 
+                                key={p.id} 
+                                className={`col-span-1 h-full w-full max-w-full print:break-inside-avoid print-product-item`}
+                            >
+                                <ProductCard product={p} size={size}/>
+                            </div>
+                        ))
+                    }
+                </div>
+            </div>
+        </>
     );
 }
 
