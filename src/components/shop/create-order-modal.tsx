@@ -228,7 +228,7 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
               disabled={isOutOfStock}
             >
               <SelectTrigger id="paymentMethod">
-                <SelectValue placeholder={totalPrice >= 200 ? "Selecione a forma de pagamento" : "PIX"} />
+                <SelectValue placeholder={totalPrice >= 200 ? "Selecione a forma de pagamento" : "Selecione a forma de pagamento"} />
               </SelectTrigger>
               <SelectContent>
                 {totalPrice >= 200 && (

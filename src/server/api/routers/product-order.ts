@@ -1315,6 +1315,22 @@ export const productOrderRouter = createTRPCRouter({
             return newMessage
         }),
     
+    // Contar notificações não lidas do chat para um pedido específico
+    countChatNotifications: protectedProcedure
+        .input(getProductOrderChatSchema)
+        .query(async ({ ctx, input }) => {
+            const userId = ctx.auth.userId
+            const count = await ctx.db.notification.count({
+                where: {
+                    userId,
+                    entityType: "product_order_chat",
+                    entityId: input.orderId,
+                    isRead: false,
+                }
+            })
+            return count
+        }),
+
     // Marcar notificações de chat do pedido como lidas para o usuário atual
     markChatNotificationsAsRead: protectedProcedure
         .input(getProductOrderChatSchema)
