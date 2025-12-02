@@ -322,7 +322,6 @@ export const userRouter = createTRPCRouter({
           emailExtension: true,
           matricula: true,
           role_config: true,
-          // @ts-expect-error - email_empresarial existe no schema mas ainda não está no tipo gerado pelo Prisma
           email_empresarial: true,
         },
         orderBy: {
@@ -528,8 +527,7 @@ export const userRouter = createTRPCRouter({
           extension: input.extension,
           emailExtension: input.emailExtension,
           matricula: input.matricula,
-          // @ts-expect-error - email_empresarial existe no schema mas ainda não está no tipo gerado pelo Prisma
-          email_empresarial: input.email_empresarial || null,
+          email_empresarial: input.email_empresarial,
         }
         
         return ctx.db.user.update({
