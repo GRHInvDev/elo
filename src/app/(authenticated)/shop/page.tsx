@@ -302,7 +302,7 @@ function ShopPageContent() {
                   <SelectContent>
                     <SelectItem value="ALL">Todos</SelectItem>
                     <SelectItem value="SOLICITADO">Solicitado</SelectItem>
-                    <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
+                    <SelectItem value="EM_ANDAMENTO">Pedido processado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -211,7 +211,7 @@ export function OrdersKanban() {
             onOrderSlotClick={handleOrderClick}
           />
           <OrdersKanbanColumn
-            title="Em Andamento"
+            title="Pedido processado"
             status="EM_ANDAMENTO"
             orders={columns.EM_ANDAMENTO}
             onMarkAsRead={handleMarkAsRead}
