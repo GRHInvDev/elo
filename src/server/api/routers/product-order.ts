@@ -178,7 +178,6 @@ export const productOrderRouter = createTRPCRouter({
                             precoTotal,
                             order.product.enterprise,
                             dataPedido,
-                            order.product.code
                         )
 
                         await sendEmail(
@@ -268,7 +267,8 @@ export const productOrderRouter = createTRPCRouter({
                             order.user.enterprise ?? "N/A",
                             dataPedido,
                             input.contactWhatsapp,
-                            orderItems
+                            orderItems,
+                            order.product.code
                         )
 
                         // Enviar para todos os emails de notificação
@@ -460,7 +460,6 @@ export const productOrderRouter = createTRPCRouter({
                             totalGeral,
                             enterprise,
                             dataPedido,
-                            null // código não usado para múltiplos produtos no email do usuário
                         )
 
                         await sendEmail(
@@ -530,7 +529,8 @@ export const productOrderRouter = createTRPCRouter({
                                 userEnterprise,
                                 dataPedido,
                                 input.contactWhatsapp,
-                                orderItems
+                                orderItems,
+                                null // Código do produto não aplicável para múltiplos pedidos
                             )
 
                             // Enviar para todos os emails de notificação
