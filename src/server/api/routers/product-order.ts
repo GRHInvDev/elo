@@ -1155,6 +1155,15 @@ export const productOrderRouter = createTRPCRouter({
                 },
             })
 
+            // Desativar o campo read do pedido quando uma nova mensagem for enviada
+            // Isso mantém a notificação ativa para indicar que há movimentações no chat
+            await ctx.db.productOrder.update({
+                where: { id: input.orderId },
+                data: { read: false }
+            }).catch((error) => {
+                console.error("[ProductOrder] Erro ao atualizar campo read do pedido:", error)
+            })
+
             // Preparar informações do remetente
             // Se o usuário tem permissão can_view_answer_without_admin_access e email_empresarial preenchido,
             // usar email_empresarial ao invés do email principal
