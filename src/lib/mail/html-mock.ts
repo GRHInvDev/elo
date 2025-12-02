@@ -909,6 +909,7 @@ export const mockEmailPedidoProduto = (
 // Tipo para item do pedido
 export interface OrderItem {
   nome: string
+  codigo?: string | null
   quantidade: number
   precoUnitario: number
   subtotal: number
