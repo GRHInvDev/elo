@@ -720,7 +720,6 @@ export const mockEmailPedidoProduto = (
   precoTotal: number,
   empresa: string,
   dataPedido: string,
-  codigoProduto?: string | null,
 ) => (`
   <!DOCTYPE html>
   <html lang="pt-BR">
@@ -858,11 +857,6 @@ export const mockEmailPedidoProduto = (
                 <td>Produto:</td>
                 <td>${nomeProduto}</td>
               </tr>
-              ${codigoProduto ? `
-              <tr>
-                <td>Código:</td>
-                <td>${codigoProduto}</td>
-              </tr>` : ''}
               <tr>
                 <td>Empresa:</td>
                 <td>${empresa}</td>
@@ -925,6 +919,7 @@ export const mockEmailNotificacaoPedidoProduto = (
   dataPedido: string,
   contactWhatsapp?: string,
   itens?: OrderItem[], // Lista de itens para pedidos agrupados
+  codigoProduto?: string | null,
 ) => {
   // Se itens foi fornecido, usar a lista de itens; caso contrário, criar um item único
   const itemsList: OrderItem[] = itens ?? [{
@@ -1111,6 +1106,10 @@ export const mockEmailNotificacaoPedidoProduto = (
               <tr>
                 <td>Produto:</td>
                 <td>${nomeProduto}</td>
+              </tr>
+              <tr>
+                <td>Código do Produto:</td>
+                <td>${codigoProduto}</td>
               </tr>
               <tr>
                 <td>Quantidade:</td>

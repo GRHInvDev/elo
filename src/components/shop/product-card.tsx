@@ -60,9 +60,6 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
                 {product.name.length > 20 ? `${product.name.substring(0, 20)}...` : product.name}
               </span>
             </CardTitle>
-            {product.code && (
-              <p className="text-xs text-muted-foreground mt-1 print:mt-1">Código: {product.code}</p>
-            )}
           </div>
           <div className="flex flex-col gap-2 items-end flex-shrink-0 print:hidden">
             <Badge className="whitespace-nowrap text-xs">{product.enterprise}</Badge>
