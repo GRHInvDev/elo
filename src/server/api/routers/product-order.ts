@@ -144,9 +144,12 @@ export const productOrderRouter = createTRPCRouter({
             }).then(async (order) => {
                 // Enviar emails após a criação do pedido (fora da transação)
                 try {
-                    const userName = order.user.firstName && order.user.lastName
-                        ? `${order.user.firstName} ${order.user.lastName}`
-                        : (order.user.firstName ?? order.user.email ?? "Usuário")
+                    // Construir nome completo usando firstName e lastName quando disponíveis
+                    const firstName = order.user.firstName?.trim() ?? ""
+                    const lastName = order.user.lastName?.trim() ?? ""
+                    const userName = firstName && lastName
+                        ? `${firstName} ${lastName}`
+                        : (firstName || lastName || order.user.email) ?? "Usuário"
                     
                     const userEmail = order.user.email
                     // Usar a data do pedido criado e formatar no timezone de São Paulo (UTC-3)
@@ -174,7 +177,8 @@ export const productOrderRouter = createTRPCRouter({
                             order.product.price,
                             precoTotal,
                             order.product.enterprise,
-                            dataPedido
+                            dataPedido,
+                            order.product.code
                         )
 
                         await sendEmail(
@@ -233,12 +237,13 @@ export const productOrderRouter = createTRPCRouter({
                     // Enviar email de notificação para responsáveis
                     if (notificationEmails.length > 0) {
                         // Buscar todos os pedidos do grupo se existir
-                        let orderItems: Array<{ nome: string; quantidade: number; precoUnitario: number; subtotal: number }> = []
+                        let orderItems: Array<{ nome: string; codigo?: string | null; quantidade: number; precoUnitario: number; subtotal: number }> = []
                         
                         if (order.orderGroupId && order.orderGroup?.orders) {
                             // Pedido agrupado - incluir todos os itens
                             orderItems = order.orderGroup.orders.map(o => ({
                                 nome: o.product.name,
+                                codigo: o.product.code,
                                 quantidade: o.quantity,
                                 precoUnitario: o.product.price,
                                 subtotal: o.product.price * o.quantity
@@ -247,6 +252,7 @@ export const productOrderRouter = createTRPCRouter({
                             // Pedido único
                             orderItems = [{
                                 nome: order.product.name,
+                                codigo: order.product.code,
                                 quantidade: order.quantity,
                                 precoUnitario: order.product.price,
                                 subtotal: precoTotal
@@ -419,9 +425,12 @@ export const productOrderRouter = createTRPCRouter({
                 try {
                     if (orders.length > 0) {
                         const firstOrder = orders[0]
-                        const userName = firstOrder?.user.firstName && firstOrder?.user.lastName
-                            ? `${firstOrder.user.firstName} ${firstOrder.user.lastName}`
-                            : (firstOrder?.user.firstName ?? firstOrder?.user.email ?? "Usuário")
+                        // Construir nome completo usando firstName e lastName quando disponíveis
+                        const firstName = firstOrder?.user.firstName?.trim() ?? ""
+                        const lastName = firstOrder?.user.lastName?.trim() ?? ""
+                        const userName = firstName && lastName
+                            ? `${firstName} ${lastName}`
+                            : (firstName || lastName || firstOrder?.user.email) ?? "Usuário"
 
                         const userEmail = firstOrder?.user.email
                         // Usar a data do primeiro pedido criado e formatar no timezone de São Paulo
@@ -450,7 +459,8 @@ export const productOrderRouter = createTRPCRouter({
                             0, // precoUnitario não usado para múltiplos produtos
                             totalGeral,
                             enterprise,
-                            dataPedido
+                            dataPedido,
+                            null // código não usado para múltiplos produtos no email do usuário
                         )
 
                         await sendEmail(
