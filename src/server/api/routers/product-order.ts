@@ -1071,8 +1071,16 @@ export const productOrderRouter = createTRPCRouter({
             // Carregar role_config do usuário
             const user = await ctx.db.user.findUnique({
                 where: { id: currentUserId },
-                select: { role_config: true },
+                select: { 
+                    role_config: true,
+                },
             })
+            
+            // Buscar email_empresarial separadamente (pode não estar no tipo ainda até a migração ser aplicada)
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+            const userWithEmailEmpresarial = await ctx.db.$queryRaw<Array<{ email_empresarial: string | null }>>`
+                SELECT "email_empresarial" FROM "users" WHERE "id" = ${currentUserId} LIMIT 1
+            `.then(result => result[0] ?? null).catch(() => null)
             const roleConfig = user?.role_config as RolesConfig | null
             const isManager = (roleConfig?.sudo === true) || (roleConfig?.can_manage_produtos === true)
 
@@ -1138,9 +1146,15 @@ export const productOrderRouter = createTRPCRouter({
             })
 
             // Preparar informações do remetente
+            // Se o usuário tem permissão can_view_answer_without_admin_access e email_empresarial preenchido,
+            // usar email_empresarial ao invés do email principal
+            const emailRemetente = (canViewAnswer && userWithEmailEmpresarial?.email_empresarial) 
+                ? userWithEmailEmpresarial.email_empresarial
+                : newMessage.user.email
+
             const remetenteNome = newMessage.user.firstName && newMessage.user.lastName
                 ? `${newMessage.user.firstName} ${newMessage.user.lastName}`
-                : (newMessage.user.firstName ?? newMessage.user.email ?? "Usuário")
+                : (newMessage.user.firstName ?? emailRemetente ?? "Usuário")
 
             // Criar notificações e enviar emails para a outra parte (comprador ou responsáveis)
             try {

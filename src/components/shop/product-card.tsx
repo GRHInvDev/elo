@@ -24,9 +24,9 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
   const imageHeightClass = size === "sm" ? "h-48" : "h-72"
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
+    <Card className="overflow-hidden h-full flex flex-col print:border print:border-gray-300">
       <div>
-        <div className={`relative ${imageHeightClass} w-full`}>
+        <div className={`relative ${imageHeightClass} print:h-40 w-full`}>
           {
             product.imageUrl.map((img, i) => (
               <Image
@@ -40,8 +40,8 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
             ))
           }
         </div>
-        <div className="absolute -translate-y-16 w-full bg-gradient-to-t from-card/80 to-transparent h-16" />
-        <div className="absolute size-10 -translate-y-16 translate-x-2">
+        <div className="absolute -translate-y-16 w-full bg-gradient-to-t from-card/80 to-transparent h-16 print:hidden" />
+        <div className="absolute size-10 -translate-y-16 translate-x-2 print:hidden">
           <Image
             src={product.enterprise.toLowerCase() == "box" ? "/LOGO BOX.png" : product.enterprise.toLowerCase() == "cristallux" ? "/icon_cristal.svg" : "/Logo R Henz.png"}
             alt={product.enterprise}
@@ -68,11 +68,11 @@ function ProductCard({ product, size = "md" }: ProductCardProps) {
       </CardHeader>
       <CardContent className="pb-2 flex-1 min-w-0">
         <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
-          <LucideBadgeInfo className="h-4 w-4 flex-shrink-0" />
-          <span className="line-clamp-2 break-words">{product.description}</span>
+          <LucideBadgeInfo className="h-4 w-4 flex-shrink-0 print:hidden" />
+          <span className="line-clamp-2 break-words print:line-clamp-none">{product.description}</span>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="print:hidden">
         <Button
           disabled={product.stock <= 0}
           className="w-full"

@@ -322,6 +322,7 @@ export const userRouter = createTRPCRouter({
           emailExtension: true,
           matricula: true,
           role_config: true,
+          email_empresarial: true,
         },
         orderBy: {
           firstName: 'asc',
@@ -492,6 +493,7 @@ export const userRouter = createTRPCRouter({
       extension: z.string().transform(val => BigInt(val)).optional(),
       emailExtension: z.string().email().optional().or(z.literal("")),
       matricula: z.string().optional().or(z.literal("")),
+      email_empresarial: z.string().email().optional().or(z.literal("")),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar permissões do usuário
@@ -525,6 +527,7 @@ export const userRouter = createTRPCRouter({
           extension: input.extension,
           emailExtension: input.emailExtension,
           matricula: input.matricula,
+          email_empresarial: input.email_empresarial,
         }
         
         return ctx.db.user.update({

@@ -328,6 +328,7 @@ interface UserManagementCardProps {
     role_config: RolesConfig
     emailExtension: string | null
     matricula: string | null
+    email_empresarial?: string | null
   }
   allForms: { id: string; title: string }[]
   onUserUpdate: () => void
@@ -358,6 +359,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     extension: user.extension ?? 0n,
     emailExtension: user.emailExtension ?? "",
     matricula: user.matricula ?? "",
+    email_empresarial: user.email_empresarial ?? "",
   })
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
     {
@@ -486,6 +488,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       setor: basicData.setor === "none" ? "" : basicData.setor,
       emailExtension: basicData.emailExtension || "",
       matricula: basicData.matricula || "",
+      email_empresarial: basicData.email_empresarial || "",
     })
   }
 
@@ -757,6 +760,19 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       Utilizada para exportação de pedidos
                     </p>
                   </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="email_empresarial">Email Empresarial</Label>
+                    <Input
+                      id="email_empresarial"
+                      type="email"
+                      value={basicData.email_empresarial}
+                      onChange={(e) => setBasicData({ ...basicData, email_empresarial: e.target.value })}
+                      placeholder="email.empresarial@exemplo.com"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Email usado para ações específicas (ex: chat com permissão can_view_answer_without_admin_access)
+                    </p>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" onClick={() => setIsEditing(false)}>
@@ -802,6 +818,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 <div>
                   <Label className="text-xs text-muted-foreground">Matrícula</Label>
                   <p className="text-sm font-medium">{user.matricula ?? 'Não informado'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email Empresarial</Label>
+                  <p className="text-sm font-medium">{user.email_empresarial ?? 'Não informado'}</p>
                 </div>
                 <div className="md:col-span-2 pt-2">
                   <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">

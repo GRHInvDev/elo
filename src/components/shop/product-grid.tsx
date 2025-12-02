@@ -96,10 +96,10 @@ function ProductGrid({
     })
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-stretch w-full max-w-full overflow-x-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 print:grid-cols-3 print:gap-4 gap-3 items-stretch w-full max-w-full overflow-x-hidden">
             {
                 sorted.map((p) => (
-                    <div key={p.id} className="col-span-1 h-full w-full max-w-full">
+                    <div key={p.id} className="col-span-1 h-full w-full max-w-full print:break-inside-avoid">
                         <ProductCard product={p} size={size}/>
                     </div>
                 ))

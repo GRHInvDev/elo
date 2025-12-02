@@ -193,3 +193,60 @@
     max-width: 100% !important;
   }
 }
+
+/* Estilos para impressão de produtos */
+@media print {
+  /* Ocultar elementos de navegação e UI */
+  aside,
+  header,
+  [data-sonner-toaster],
+  [data-sonner-toast] {
+    display: none !important;
+  }
+
+  /* Ajustar layout para impressão */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Garantir que os produtos sejam exibidos corretamente */
+  .grid {
+    page-break-inside: avoid;
+  }
+
+  /* Melhorar espaçamento dos cards na impressão */
+  .grid > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Garantir que imagens sejam exibidas */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Remover sombras e efeitos visuais na impressão */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ajustar cores para impressão em preto e branco */
+  .card {
+    border: 1px solid #e5e7eb !important;
+    background: white !important;
+  }
+
+  /* Garantir que o conteúdo principal seja visível */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remover overflow e garantir que tudo seja visível */
+  * {
+    overflow: visible !important;
+  }
+}
