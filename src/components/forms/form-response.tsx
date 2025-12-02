@@ -18,8 +18,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { sendEmail } from "@/lib/mail/email-utils"
-import { mockEmailRespostaFormulario } from "@/lib/mail/html-mock"
+// Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -119,13 +118,7 @@ export function FormResponseComponent({
     onSuccess: async () => {
       toast.success("Resposta enviada com sucesso!")
       setIsSubmitted(true)
-      if(form && user.data){
-        await sendEmail(form.user?.email??'', `Resposta ao formulário "${form.title}"`, mockEmailRespostaFormulario(
-          form.user?.firstName??'',
-          formId,
-          form.title
-        ))
-      }
+      // Email agora é enviado no router (form-response.ts), não precisa mais aqui
     },
     onError: (error) => {
       toast.error(`Erro ao enviar resposta: ${error.message}`)

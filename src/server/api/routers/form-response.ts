@@ -4,7 +4,7 @@ import type { InputJsonValue } from "@prisma/client/runtime/library"
 import type { ResponseStatus, Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
-import { mockEmailSituacaoFormulario } from "@/lib/mail/html-mock"
+import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario } from "@/lib/mail/html-mock"
 
 export const formResponseRouter = createTRPCRouter({
   create: protectedProcedure
@@ -26,10 +26,22 @@ export const formResponseRouter = createTRPCRouter({
       try {
         const form = await ctx.db.form.findUnique({
           where: { id: input.formId },
-          select: { userId: true, ownerIds: true, title: true }
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
         })
+        
         if (form) {
           const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
+          
+          // Criar notificações in-app
           if (recipients.length > 0) {
             const now = new Date()
             await ctx.db.notification.createMany({
@@ -46,6 +58,44 @@ export const formResponseRouter = createTRPCRouter({
                 updatedAt: now,
               }))
             })
+          }
+
+          // Enviar emails para todos os donos do formulário
+          const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
+          
+          if (ownerUserIds.length > 0) {
+            const ownerUsers = await ctx.db.user.findMany({
+              where: { id: { in: ownerUserIds } },
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            })
+
+            // Enviar email para cada dono do formulário
+            for (const owner of ownerUsers) {
+              if (owner.email) {
+                const ownerName = owner.firstName 
+                  ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
+                  : (owner.email ?? 'Usuário')
+
+                const emailContent = mockEmailRespostaFormulario(
+                  ownerName,
+                  input.formId,
+                  form.title ?? 'Formulário'
+                )
+
+                await sendEmail(
+                  owner.email,
+                  `Nova solicitação no formulário "${form.title ?? 'Formulário'}"`,
+                  emailContent
+                ).catch((error) => {
+                  console.error(`[FormResponse] Erro ao enviar email de nova solicitação para ${owner.email}:`, error)
+                })
+              }
+            }
           }
         }
       } catch (notificationError) {
@@ -96,6 +146,16 @@ export const formResponseRouter = createTRPCRouter({
       // Verificar se o formulário existe
       const form = await ctx.db.form.findUnique({
         where: { id: input.formId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            }
+          }
+        }
       })
 
       if (!form) {
@@ -115,9 +175,11 @@ export const formResponseRouter = createTRPCRouter({
         },
       })
 
-      // Criar notificações
+      // Criar notificações e enviar emails
       try {
         const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== input.userId)
+        
+        // Criar notificações in-app
         if (recipients.length > 0) {
           const now = new Date()
           await ctx.db.notification.createMany({
@@ -134,6 +196,54 @@ export const formResponseRouter = createTRPCRouter({
               updatedAt: now,
             }))
           })
+        }
+
+        // Enviar emails para todos os donos do formulário
+        const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== input.userId)
+        
+        if (ownerUserIds.length > 0) {
+          const ownerUsers = await ctx.db.user.findMany({
+            where: { id: { in: ownerUserIds } },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            }
+          })
+
+          // Buscar dados do usuário alvo (para quem o chamado foi criado)
+          const targetUser = await ctx.db.user.findUnique({
+            where: { id: input.userId },
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            }
+          })
+
+          // Enviar email para cada dono do formulário
+          for (const owner of ownerUsers) {
+            if (owner.email) {
+              const ownerName = owner.firstName 
+                ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
+                : (owner.email ?? 'Usuário')
+
+              const emailContent = mockEmailRespostaFormulario(
+                ownerName,
+                input.formId,
+                form.title ?? 'Formulário'
+              )
+
+              await sendEmail(
+                owner.email,
+                `Nova solicitação no formulário "${form.title ?? 'Formulário'}"`,
+                emailContent
+              ).catch((error) => {
+                console.error(`[FormResponse] Erro ao enviar email de nova solicitação (manual) para ${owner.email}:`, error)
+              })
+            }
+          }
         }
       } catch (notificationError) {
         console.error('Erro ao criar notificações de resposta de formulário:', notificationError)
@@ -540,6 +650,34 @@ export const formResponseRouter = createTRPCRouter({
           },
         },
       })
+
+      // Buscar dados completos do formulário e resposta para envio de emails
+      const responseWithDetails = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+        include: {
+          form: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                }
+              }
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            }
+          }
+        }
+      })
+
       try {
         const recipients = new Set<string>()
         recipients.add(response.userId)
@@ -563,6 +701,54 @@ export const formResponseRouter = createTRPCRouter({
               updatedAt: now,
             }))
           })
+
+          // Enviar emails para os destinatários
+          if (responseWithDetails) {
+            const recipientUserIds = Array.from(recipients)
+            const recipientUsers = await ctx.db.user.findMany({
+              where: { id: { in: recipientUserIds } },
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            })
+
+            const remetenteNome = created.user.firstName && created.user.lastName
+              ? `${created.user.firstName} ${created.user.lastName}`
+              : (created.user.firstName ?? created.user.email ?? "Usuário")
+
+            const formTitle = responseWithDetails.form.title ?? 'Formulário'
+
+            // Enviar email para cada destinatário
+            for (const recipient of recipientUsers) {
+              if (recipient.email) {
+                const destinatarioNome = recipient.firstName && recipient.lastName
+                  ? `${recipient.firstName} ${recipient.lastName}`
+                  : (recipient.firstName ?? recipient.email ?? "Usuário")
+
+                const isAutor = recipient.id === responseWithDetails.userId
+
+                const emailContent = mockEmailChatMensagemFormulario(
+                  destinatarioNome,
+                  remetenteNome,
+                  input.message,
+                  input.responseId,
+                  formTitle,
+                  isAutor
+                )
+
+                await sendEmail(
+                  recipient.email,
+                  "Elo | Intranet - Você tem uma nova mensagem em Solicitações",
+                  emailContent
+                ).catch((error) => {
+                  console.error(`[FormResponse] Erro ao enviar email de chat para ${recipient.email}:`, error)
+                })
+              }
+            }
+          }
         }
       } catch (notificationError) {
         console.error('Erro ao criar/emitter notificações de chat de formulário:', notificationError)
