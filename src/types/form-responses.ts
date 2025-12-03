@@ -7,6 +7,7 @@ export interface FormResponse {
     responses: unknown[]
     status: ResponseStatus
     statusComment: string | null
+    tags?: string[] | null // IDs das tags aplicadas
     createdAt: Date
     updatedAt: Date
     // Campos derivados (Kanban)

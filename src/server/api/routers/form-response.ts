@@ -993,4 +993,289 @@ export const formResponseRouter = createTRPCRouter({
         },
       })
     }),
+
+  // ========== TAGS MANAGEMENT ==========
+  
+  // Listar todas as tags
+  getAllTags: protectedProcedure.query(async ({ ctx }) => {
+    const config = await ctx.db.globalConfig.findFirst()
+    if (!config || !config.formResponseTags) {
+      return []
+    }
+    
+    const tags = config.formResponseTags as unknown as Array<{
+      id: string
+      nome: string
+      cor: string
+      timestampCreate: string
+      countVezesUsadas: number
+      ativa: boolean
+    }>
+    
+    return tags.filter(tag => tag.ativa)
+  }),
+
+  // Criar nova tag
+  createTag: protectedProcedure
+    .input(
+      z.object({
+        nome: z.string().min(1, "Nome da tag é obrigatório"),
+        cor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor deve ser um hex válido (ex: #FF5733)"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      let config = await ctx.db.globalConfig.findFirst()
+      if (!config) {
+        // Criar GlobalConfig se não existir
+        config = await ctx.db.globalConfig.create({
+          data: {
+            id: "default",
+            shopWebhook: "",
+            formResponseTags: [] as unknown as InputJsonValue,
+          },
+        })
+      }
+
+      const existingTags = (config.formResponseTags as unknown as Array<{
+        id: string
+        nome: string
+        cor: string
+        timestampCreate: string
+        countVezesUsadas: number
+        ativa: boolean
+      }>) || []
+
+      // Verificar se já existe tag com mesmo nome
+      if (existingTags.some(tag => tag.nome.toLowerCase() === input.nome.toLowerCase() && tag.ativa)) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Já existe uma tag com este nome"
+        })
+      }
+
+      const newTag = {
+        id: `tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        nome: input.nome,
+        cor: input.cor,
+        timestampCreate: new Date().toISOString(),
+        countVezesUsadas: 0,
+        ativa: true,
+      }
+
+      const updatedTags = [...existingTags, newTag]
+
+      await ctx.db.globalConfig.update({
+        where: { id: config.id },
+        data: {
+          formResponseTags: updatedTags as unknown as InputJsonValue,
+        },
+      })
+
+      return newTag
+    }),
+
+  // Atualizar tag
+  updateTag: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        nome: z.string().min(1).optional(),
+        cor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+        ativa: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      let config = await ctx.db.globalConfig.findFirst()
+      if (!config) {
+        // Criar GlobalConfig se não existir
+        config = await ctx.db.globalConfig.create({
+          data: {
+            id: "default",
+            shopWebhook: "",
+            formResponseTags: [] as unknown as InputJsonValue,
+          },
+        })
+      }
+      
+      if (!config.formResponseTags) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tag não encontrada"
+        })
+      }
+
+      const tags = (config.formResponseTags as unknown as Array<{
+        id: string
+        nome: string
+        cor: string
+        timestampCreate: string
+        countVezesUsadas: number
+        ativa: boolean
+      }>) || []
+
+      const tagIndex = tags.findIndex(tag => tag.id === input.id)
+      if (tagIndex === -1) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tag não encontrada"
+        })
+      }
+
+      // Verificar se nome já existe (se estiver mudando)
+      if (input.nome && tags.some((tag, idx) => 
+        tag.nome.toLowerCase() === input.nome!.toLowerCase() && 
+        tag.id !== input.id && 
+        tag.ativa
+      )) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Já existe uma tag com este nome"
+        })
+      }
+
+      const updatedTag = {
+        ...tags[tagIndex]!,
+        ...(input.nome && { nome: input.nome }),
+        ...(input.cor && { cor: input.cor }),
+        ...(input.ativa !== undefined && { ativa: input.ativa }),
+      }
+
+      tags[tagIndex] = updatedTag
+
+      await ctx.db.globalConfig.update({
+        where: { id: config.id },
+        data: {
+          formResponseTags: tags as unknown as InputJsonValue,
+        },
+      })
+
+      return updatedTag
+    }),
+
+  // Aplicar tag a uma resposta
+  applyTag: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+        tagId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verificar se a resposta existe
+      const response = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+      })
+
+      if (!response) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Resposta não encontrada"
+        })
+      }
+
+      // Verificar se a tag existe e está ativa
+      let config = await ctx.db.globalConfig.findFirst()
+      if (!config) {
+        // Criar GlobalConfig se não existir
+        config = await ctx.db.globalConfig.create({
+          data: {
+            id: "default",
+            shopWebhook: "",
+            formResponseTags: [] as unknown as InputJsonValue,
+          },
+        })
+      }
+      
+      if (!config.formResponseTags) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tag não encontrada"
+        })
+      }
+
+      const tags = (config.formResponseTags as unknown as Array<{
+        id: string
+        nome: string
+        cor: string
+        timestampCreate: string
+        countVezesUsadas: number
+        ativa: boolean
+      }>) || []
+
+      const tag = tags.find(t => t.id === input.tagId && t.ativa)
+      if (!tag) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tag não encontrada ou inativa"
+        })
+      }
+
+      // Obter tags atuais da resposta
+      const currentTags = (response.tags as unknown as string[]) || []
+      
+      // Se a tag já está aplicada, não fazer nada
+      if (currentTags.includes(input.tagId)) {
+        return { success: true, message: "Tag já estava aplicada" }
+      }
+
+      // Adicionar tag
+      const updatedTags = [...currentTags, input.tagId]
+
+      // Atualizar contador de uso da tag
+      const tagIndex = tags.findIndex(t => t.id === input.tagId)
+      if (tagIndex !== -1) {
+        tags[tagIndex]!.countVezesUsadas = (tags[tagIndex]!.countVezesUsadas || 0) + 1
+      }
+
+      // Atualizar resposta e tags globais
+      await Promise.all([
+        ctx.db.formResponse.update({
+          where: { id: input.responseId },
+          data: {
+            tags: updatedTags as unknown as InputJsonValue,
+          },
+        }),
+        ctx.db.globalConfig.update({
+          where: { id: config.id },
+          data: {
+            formResponseTags: tags as unknown as InputJsonValue,
+          },
+        }),
+      ])
+
+      return { success: true }
+    }),
+
+  // Remover tag de uma resposta
+  removeTag: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+        tagId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const response = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+      })
+
+      if (!response) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Resposta não encontrada"
+        })
+      }
+
+      const currentTags = (response.tags as unknown as string[]) || []
+      const updatedTags = currentTags.filter(tagId => tagId !== input.tagId)
+
+      await ctx.db.formResponse.update({
+        where: { id: input.responseId },
+        data: {
+          tags: updatedTags as unknown as InputJsonValue,
+        },
+      })
+
+      return { success: true }
+    }),
 })

@@ -8,12 +8,16 @@ import type { ResponseStatus } from "@/types/form-responses"
 import { KanbanColumn } from "./_components/kanban-column"
 import { ResponseDialog } from "./_components/response-dialog"
 import { KanbanFilters, type KanbanFiltersState } from "./_components/kanban-filters"
+import { TagsManagerModal } from "./_components/tags-manager-modal"
 import type { FormResponse } from "@/types/form-responses"
 import { DashboardShell } from "@/components/dashboard-shell"
+import { Button } from "@/components/ui/button"
+import { Tags } from "lucide-react"
 
 export default function KanbanPage() {
     const [selectedResponse, setSelectedResponse] = useState<string | null>(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isTagsModalOpen, setIsTagsModalOpen] = useState(false)
     const [localResponses, setLocalResponses] = useState<FormResponse[]>([])
     const [filters, setFilters] = useState<KanbanFiltersState>({
         userIds: [],
@@ -124,10 +128,21 @@ export default function KanbanPage() {
     return (
         <DashboardShell>
             <div className="mb-8">
-                <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
-                <p className="text-muted-foreground mt-2">
-                    Visualize e organize as respostas recebidas nos seus formulários.
-                </p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
+                        <p className="text-muted-foreground mt-2">
+                            Visualize e organize as respostas recebidas nos seus formulários.
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsTagsModalOpen(true)}
+                    >
+                        <Tags className="h-4 w-4 mr-2" />
+                        Gerenciar Tags
+                    </Button>
+                </div>
             </div>
 
             <KanbanFilters filters={filters} onFiltersChange={setFilters} />
@@ -160,6 +175,11 @@ export default function KanbanPage() {
             {selectedResponse && (
                 <ResponseDialog responseId={selectedResponse} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
             )}
+
+            <TagsManagerModal
+                open={isTagsModalOpen}
+                onOpenChange={setIsTagsModalOpen}
+            />
         </DashboardShell>
     )
 }

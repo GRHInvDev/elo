@@ -78,6 +78,7 @@ model GlobalConfig {
   id                 String @unique @default(cuid())
   shopWebhook        String
   shopNotificationEmail String?
+  formResponseTags   Json?  // Tags globais para respostas de formulários
 }
 
 model Room {
@@ -399,6 +400,7 @@ model FormResponse {
   formId           String
   status           ResponseStatus     @default(NOT_STARTED)
   statusComment    String?
+  tags             Json?              // Tags aplicadas nesta resposta (array de IDs de tags)
   form             Form               @relation(fields: [formId], references: [id], onDelete: Cascade)
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   FormResponseChat FormResponseChat[]
