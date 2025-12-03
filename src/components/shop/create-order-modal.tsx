@@ -91,8 +91,8 @@ export function CreateOrderModal({ product, cartItems, enterprise, open, onOpenC
   const createMultipleOrders = api.productOrder.createMultiple.useMutation({
     onSuccess: () => {
       // Toast animado de sucesso
-      toast.success(`🎉 ${items.length} pedidos criados com sucesso!`, {
-        description: `Todos os seus pedidos foram registrados e estão sendo processados. Você receberá confirmações em breve!`,
+      toast.success(`🎉 Seu pedido foi criado com sucesso!`, {
+        description: `Seu pedido foi registrado e está sendo processado. Você receberá uma confirmação em breve!`,
         icon: <CheckCircle2 className="h-6 w-6 text-green-500 animate-in zoom-in-50 duration-500" />,
         duration: 6000,
         className: "border-green-500/50 shadow-lg",

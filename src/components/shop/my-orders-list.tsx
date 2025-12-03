@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, Package, CheckCircle2, Calendar, Trash2, Clock } from "lucide-react"
+import { Loader2, Package, CheckCircle2, Calendar, Trash2, Clock, HelpCircle } from "lucide-react"
 import { api } from "@/trpc/react"
 import { formatDistanceToNow, format, addDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -12,6 +12,7 @@ import type { ProductOrderStatus } from "@/components/admin/products/orders-kanb
 import type { RouterOutputs } from "@/trpc/react"
 import Image from "next/image"
 import { OrderChat } from "@/components/shop/order-chat"
+import { OrderDoubtsModal } from "@/components/shop/order-doubts-modal"
 import { useAccessControl } from "@/hooks/use-access-control"
 import {
   AlertDialog,
@@ -251,6 +252,7 @@ function OrderCard({
   showDeleteButton?: boolean
 }) {
   const [showChat, setShowChat] = useState(false)
+  const [showDoubtsModal, setShowDoubtsModal] = useState(false)
   const { canManageProducts, isSudo } = useAccessControl()
   const isAdmin = canManageProducts() || isSudo
 
@@ -281,15 +283,87 @@ function OrderCard({
   const isGroupedOrder = !!order.orderGroupId || !!(order as { _groupOrders?: MyOrder[] })._groupOrders
   const orderGroupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: MyOrder[] })._groupOrders ?? []
   
-  // Usar a primeira imagem do primeiro produto do grupo
-  const firstOrderInGroup = orderGroupOrders[0]
-  const imageUrl = firstOrderInGroup && 'product' in firstOrderInGroup && firstOrderInGroup.product?.imageUrl
-    ? firstOrderInGroup.product.imageUrl
-    : order.product.imageUrl
-  const firstImage = Array.isArray(imageUrl) && imageUrl.length > 0 ? imageUrl[0] : null
+  // Coletar todas as imagens de todos os produtos do pedido
+  const allImages = useMemo(() => {
+    const images: string[] = []
+    
+    if (isGroupedOrder && orderGroupOrders.length > 0) {
+      // Para pedidos agrupados, coletar imagens de todos os produtos
+      orderGroupOrders.forEach((o) => {
+        if ('product' in o && o.product?.imageUrl) {
+          const productImages = Array.isArray(o.product.imageUrl) 
+            ? o.product.imageUrl 
+            : [o.product.imageUrl]
+          productImages.forEach((img) => {
+            if (typeof img === 'string' && img.trim() !== '' && !images.includes(img)) {
+              images.push(img)
+            }
+          })
+        }
+      })
+    } else {
+      // Para pedido único, coletar todas as imagens do produto
+      const productImages = Array.isArray(order.product.imageUrl)
+        ? order.product.imageUrl
+        : order.product.imageUrl ? [order.product.imageUrl] : []
+      productImages.forEach((img) => {
+        if (typeof img === 'string' && img.trim() !== '') {
+          images.push(img)
+        }
+      })
+    }
+    
+    return images
+  }, [isGroupedOrder, orderGroupOrders, order.product.imageUrl])
+
+  // Estado para controlar o índice da imagem atual no carrossel mobile
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Resetar índice quando as imagens mudarem
+  useEffect(() => {
+    setCurrentImageIndex(0)
+  }, [allImages.length])
+
+  // Carrossel automático em mobile (muda a cada 5 segundos)
+  useEffect(() => {
+    if (allImages.length <= 1) return
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % allImages.length)
+    }, 5000) // 5 segundos
+
+    return () => clearInterval(interval)
+  }, [allImages.length])
+
+  // Handler para clique no card (apenas mobile)
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Verificar se estamos em mobile (largura < 640px = sm breakpoint)
+    if (window.innerWidth >= 640) {
+      return
+    }
+
+    // Não abrir modal se clicar em botões, links ou elementos interativos
+    const target = e.target as HTMLElement
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="button"]') ||
+      target.closest('.order-chat') ||
+      target.closest('[data-no-click]')
+    ) {
+      return
+    }
+    
+    e.stopPropagation()
+    setShowDoubtsModal(true)
+  }
 
   return (
-    <Card className={`${isUnread ? "ring-2 ring-primary" : ""} w-full`}>
+    <>
+      <Card 
+        className={`${isUnread ? "ring-2 ring-primary" : ""} w-full sm:cursor-default cursor-pointer`}
+        onClick={handleCardClick}
+      >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -316,25 +390,67 @@ function OrderCard({
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
-          {/* Imagem do produto (expansiva) */}
-          <div className="relative h-48 w-full sm:h-24 sm:w-24 mb-4 sm:mb-0 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
-            {firstImage && typeof firstImage === "string" && firstImage.trim() !== "" ? (
-              <Image
-                src={firstImage}
-                alt={order.product.name}
-                fill
-                className="object-cover"
-                sizes="100%"
-                onError={() => {
-                  // Fallback será tratado pelo Image do Next.js
-                }}
-              />
-            ) : (
+          {/* Galeria de imagens */}
+          {allImages.length > 0 ? (
+            <>
+              {/* Mobile: Carrossel automático */}
+              <div className="relative h-48 w-full sm:hidden rounded-md overflow-hidden border flex-shrink-0 bg-muted">
+                <Image
+                  key={currentImageIndex}
+                  src={allImages[currentImageIndex]!}
+                  alt={`${order.product.name} - Imagem ${currentImageIndex + 1}`}
+                  fill
+                  className="object-cover transition-opacity duration-500"
+                  sizes="100%"
+                  onError={() => {
+                    // Fallback será tratado pelo Image do Next.js
+                  }}
+                />
+                {/* Indicadores de posição */}
+                {allImages.length > 1 && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {allImages.map((_, index) => (
+                      <div
+                        key={index}
+                        className={`h-1.5 rounded-full transition-all ${
+                          index === currentImageIndex
+                            ? 'w-6 bg-primary'
+                            : 'w-1.5 bg-primary/30'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop: Grid de todas as imagens */}
+              <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {allImages.map((img, index) => (
+                  <div
+                    key={index}
+                    className="relative h-24 w-full rounded-md overflow-hidden border flex-shrink-0 bg-muted"
+                  >
+                    <Image
+                      src={img}
+                      alt={`${order.product.name} - Imagem ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      onError={() => {
+                        // Fallback será tratado pelo Image do Next.js
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="relative h-48 w-full sm:h-24 sm:w-24 mb-4 sm:mb-0 rounded-md overflow-hidden border flex-shrink-0 bg-muted">
               <div className="flex items-center justify-center h-full w-full bg-muted text-muted-foreground">
                 <Package className="h-8 w-8 opacity-50" />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Informações do pedido */}
           <div className="flex-1 space-y-2">
@@ -403,18 +519,33 @@ function OrderCard({
       </CardContent>
       <div className="px-6 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="relative">
-            <Button variant="outline" size="sm" onClick={() => setShowChat((v) => !v)}>
-              {showChat ? "Fechar chat" : "Chat com atendimento"}
+          <div className="flex items-center gap-2 flex-1">
+            <div className="relative">
+              <Button variant="outline" size="sm" onClick={() => setShowChat((v) => !v)}>
+                {showChat ? "Fechar chat" : "Chat com atendimento"}
+              </Button>
+              {unreadChatCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                >
+                  {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                </Badge>
+              )}
+            </div>
+            {/* Botão de dúvidas - apenas em desktop */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowDoubtsModal(true)
+              }}
+              className="hidden sm:flex items-center gap-2"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Dúvidas sobre o pedido
             </Button>
-            {unreadChatCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              >
-                {unreadChatCount > 9 ? '9+' : unreadChatCount}
-              </Badge>
-            )}
           </div>
           {showDeleteButton && isAdmin && (
             <AlertDialog>
@@ -465,11 +596,16 @@ function OrderCard({
           )}
         </div>
         {showChat && (
-          <div className="mt-3">
+          <div className="mt-3 order-chat">
             <OrderChat orderId={order.id} />
           </div>
         )}
       </div>
     </Card>
+    <OrderDoubtsModal
+      open={showDoubtsModal}
+      onOpenChange={setShowDoubtsModal}
+    />
+    </>
   )
 }

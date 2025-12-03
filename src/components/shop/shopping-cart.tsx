@@ -11,6 +11,7 @@ import { Minus, Plus, Trash2, CreditCard, ShoppingCart as ShoppingCartIcon } fro
 import { useCart } from "@/hooks/use-cart"
 import { CreateOrderModal } from "./create-order-modal"
 import { OrderSuccessModal } from "./order-success-modal"
+import { PixPaymentWarningModal } from "./pix-payment-warning-modal"
 import type { Product } from "@prisma/client"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +23,7 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
   const { items, enterprise, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showPixWarningModal, setShowPixWarningModal] = useState(false)
   const [successEnterprise, setSuccessEnterprise] = useState<Product["enterprise"] | null>(null)
 
 
@@ -50,7 +52,13 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
 
   const handleSuccessModalClose = useCallback(() => {
     setShowSuccessModal(false)
-    // Após fechar o modal de sucesso, limpar o carrinho e fechar o modal de checkout
+    // Após fechar o modal de sucesso, mostrar o modal do PIX
+    setShowPixWarningModal(true)
+  }, [])
+
+  const handlePixWarningModalClose = useCallback(() => {
+    setShowPixWarningModal(false)
+    // Após fechar o modal do PIX, limpar o carrinho e fechar o modal de checkout
     handleCheckoutSuccess()
   }, [handleCheckoutSuccess])
 
@@ -191,6 +199,12 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
         onOpenChange={setShowSuccessModal}
         enterprise={successEnterprise}
         onClose={handleSuccessModalClose}
+      />
+
+      <PixPaymentWarningModal
+        open={showPixWarningModal}
+        onOpenChange={setShowPixWarningModal}
+        onClose={handlePixWarningModalClose}
       />
     </>
   )
