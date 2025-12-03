@@ -2,7 +2,7 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, AlertTriangle } from "lucide-react"
 import type { Product } from "@prisma/client"
 
 interface OrderSuccessModalProps {
@@ -34,6 +34,22 @@ export function OrderSuccessModal({ open, onOpenChange, enterprise, onClose }: O
         <div className="space-y-4">
           <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
             <h3 className="font-semibold mb-3 text-lg">Instruções para retirada</h3>
+            
+            {/* Aviso sobre pagamentos via PIX */}
+            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-2 text-sm">
+                  <p className="font-medium text-amber-900 dark:text-amber-100">
+                    Para pagamentos via PIX, o setor Financeiro entrará em contato via WhatsApp.
+                  </p>
+                  <p className="text-amber-800 dark:text-amber-200">
+                    Após a confirmação do pagamento, o pedido segue para a Logística e estará disponível para retirada dentro do prazo informado.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {enterprise === "Cristallux" || enterprise === "Cristallux_Filial" ? (
               <div className="space-y-3 text-sm text-muted-foreground">
                 <p>

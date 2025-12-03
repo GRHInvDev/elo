@@ -4,9 +4,9 @@ import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, Package, CheckCircle2, Calendar, Trash2 } from "lucide-react"
+import { Loader2, Package, CheckCircle2, Calendar, Trash2, Clock } from "lucide-react"
 import { api } from "@/trpc/react"
-import { formatDistanceToNow, format } from "date-fns"
+import { formatDistanceToNow, format, addDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import type { ProductOrderStatus } from "@/components/admin/products/orders-kanban-column"
 import type { RouterOutputs } from "@/trpc/react"
@@ -357,6 +357,13 @@ function OrderCard({
                   {format(new Date(order.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </span>
               </div>
+            </div>
+            {/* Previsão de retirada */}
+            <div className="flex items-center gap-2 text-sm text-primary font-medium">
+              <Clock className="h-4 w-4" />
+              <span>
+                Previsão de retirada: {format(addDays(new Date(order.orderTimestamp ?? order.createdAt), 1), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </span>
             </div>
             {isGroupedOrder && (
               <div className="text-sm font-semibold text-primary">

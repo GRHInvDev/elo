@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
 import { Loader2, Send } from "lucide-react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 interface OrderChatProps {
   orderId: string
@@ -67,6 +69,9 @@ export function OrderChat({ orderId, className }: OrderChatProps) {
             {(Array.isArray(chatMessages) ? chatMessages : []).map((m) => {
               const fullName = [m.user?.firstName, m.user?.lastName].filter(Boolean).join(" ")
               const name = fullName.length > 0 ? fullName : (m.user?.email ?? "Usuário")
+              const messageTime = m.createdAt 
+                ? format(new Date(m.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                : null
               return (
                 <div key={m.id} className="flex items-start gap-2">
                   <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-muted">
@@ -75,7 +80,12 @@ export function OrderChat({ orderId, className }: OrderChatProps) {
                     ) : null}
                   </div>
                   <div className="flex-1">
-                    <div className="text-xs text-muted-foreground">{name}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{name}</span>
+                      {messageTime && (
+                        <span className="text-xs opacity-70">• {messageTime}</span>
+                      )}
+                    </div>
                     <div className="px-3 py-2 rounded-md bg-background border mt-1 whitespace-pre-wrap break-words">
                       {m.message}
                     </div>

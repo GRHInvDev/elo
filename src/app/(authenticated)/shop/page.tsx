@@ -6,7 +6,7 @@ import { MyOrdersList } from "@/components/shop/my-orders-list"
 import ShoppingCart from "@/components/shop/shopping-cart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon, Inbox, FileDown, RefreshCw } from "lucide-react"
+import { Package, ShoppingBag, ShoppingCart as ShoppingCartIcon, Inbox, FileDown, RefreshCw, HelpCircle } from "lucide-react"
 import { api } from "@/trpc/react"
 import type { RouterOutputs } from "@/trpc/react"
 import React, { useState } from "react"
@@ -18,6 +18,7 @@ import { CartProvider } from "@/contexts/cart-context"
 import { useCart } from "@/hooks/use-cart"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { OrdersKanban } from "@/components/admin/products/orders-kanban"
+import { OrderDoubtsModal } from "@/components/shop/order-doubts-modal"
 
 type MyOrder = RouterOutputs["productOrder"]["listMyOrders"][number]
 
@@ -144,6 +145,7 @@ function ShopPageContent() {
   const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO">("ALL");
   const [nameFilter, setNameFilter] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<"ALL" | "0-50" | "50-100" | "100-200" | "200+">("ALL");
+  const [showOrderDoubtsModal, setShowOrderDoubtsModal] = useState(false);
 
   const unreadCount = getUnreadCount(myOrders)
   const cartItemCount = totalItems ?? 0
@@ -317,7 +319,7 @@ function ShopPageContent() {
           </TabsContent>
 
           <TabsContent value="orders" className="overflow-y-auto overflow-x-hidden max-h-[calc(100vh-200px)] p-2 md:p-0 w-full max-w-full">
-            {/* Filtro de pedidos */}
+            {/* Filtro de pedidos e botão de dúvidas */}
             <div className="mb-4 flex flex-col sm:flex-row items-center gap-3 w-full max-w-full">
               <div className="w-full sm:w-64 max-w-full">
                 <Select value={orderFilter} onValueChange={(v) => setOrderFilter(v as typeof orderFilter)}>
@@ -331,8 +333,22 @@ function ShopPageContent() {
                   </SelectContent>
                 </Select>
               </div>
+              {myOrders && myOrders.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowOrderDoubtsModal(true)}
+                  className="w-full sm:w-auto"
+                >
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Dúvidas sobre o pedido
+                </Button>
+              )}
             </div>
             <MyOrdersList filter={orderFilter} />
+            <OrderDoubtsModal
+              open={showOrderDoubtsModal}
+              onOpenChange={setShowOrderDoubtsModal}
+            />
           </TabsContent>
 
           {canViewReceivedOrders && (
