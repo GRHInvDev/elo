@@ -30,7 +30,7 @@ function ProductGrid({
             skeletonItems.push(i)
         }
         return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full max-w-full overflow-x-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 w-full min-w-0 overflow-x-hidden">
                 {skeletonItems.map((i) => (
                     <div key={i} className="col-span-1 h-56 bg-muted animate-pulse rounded-lg" />
                 ))}
@@ -109,13 +109,13 @@ function ProductGrid({
                     }
                 }
             `}} />
-            <div className="w-full max-w-full overflow-x-hidden">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 print:grid-cols-3 print:gap-4 gap-3 items-stretch w-full max-w-full overflow-x-hidden">
+            <div className="w-full min-w-0 overflow-x-hidden">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 print:grid-cols-3 print:gap-4 gap-3 items-stretch w-full min-w-0 overflow-x-hidden">
                     {
                         sorted.map((p, index) => (
                             <div 
                                 key={p.id} 
-                                className={`col-span-1 h-full w-full max-w-full print:break-inside-avoid print-product-item`}
+                                className={`col-span-1 h-full w-full min-w-0 print:break-inside-avoid print-product-item`}
                             >
                                 <ProductCard product={p} size={size}/>
                             </div>

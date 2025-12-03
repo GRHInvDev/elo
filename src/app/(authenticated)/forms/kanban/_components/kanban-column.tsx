@@ -8,22 +8,38 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { type FormResponse, type ResponseStatus } from "@/types/form-responses";
 import { Badge } from "@/components/ui/badge";
-import { TagsContextMenu } from "./tags-context-menu";
+import { ResponseContextMenu } from "./tags-context-menu";
 import { api } from "@/trpc/react";
+import { formatFormResponseNumber } from "@/lib/utils/form-response-number";
 
 interface KanbanColumnProps {
     title: string;
     status: ResponseStatus;
     responses: FormResponse[];
     onOpenDetails: (responseId: string) => void;
+    onEdit?: (responseId: string, formId: string) => void;
+    onOpenChat?: (responseId: string) => void;
+    onMoveToNextStatus?: (responseId: string, currentStatus: ResponseStatus) => void;
+    onOpenTagsManager?: () => void;
 }
 
 interface ResponseCardProps {
     response: FormResponse;
     onOpenDetails: (responseId: string) => void;
+    onEdit?: (responseId: string, formId: string) => void;
+    onOpenChat?: (responseId: string) => void;
+    onMoveToNextStatus?: (responseId: string, currentStatus: ResponseStatus) => void;
+    onOpenTagsManager?: () => void;
 }
 
-function ResponseCard({ response, onOpenDetails }: ResponseCardProps) {
+function ResponseCard({ 
+    response, 
+    onOpenDetails,
+    onEdit,
+    onOpenChat,
+    onMoveToNextStatus,
+    onOpenTagsManager,
+}: ResponseCardProps) {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const utils = api.useUtils();
     const { data: allTags = [] } = api.formResponse.getAllTags.useQuery();
@@ -54,9 +70,16 @@ function ResponseCard({ response, onOpenDetails }: ResponseCardProps) {
             >
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-base font-medium">
-                            {response.form.title}
-                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                            {response.number && (
+                                <span className="text-sm font-mono text-muted-foreground">
+                                    {formatFormResponseNumber(response.number)}
+                                </span>
+                            )}
+                            <CardTitle className="text-base font-medium">
+                                {response.form.title}
+                            </CardTitle>
+                        </div>
                         {response.hasNewMessages && (
                             <Badge variant="destructive">Novo</Badge>
                         )}
@@ -119,19 +142,35 @@ function ResponseCard({ response, onOpenDetails }: ResponseCardProps) {
                 </CardFooter>
             </Card>
             {contextMenu && (
-                <TagsContextMenu
+                <ResponseContextMenu
                     responseId={response.id}
+                    formId={response.formId}
+                    currentStatus={response.status}
                     currentTags={response.tags ?? []}
                     position={contextMenu}
                     onClose={() => setContextMenu(null)}
                     onTagChange={handleTagChange}
+                    onOpenDetails={onOpenDetails}
+                    onEdit={onEdit}
+                    onOpenChat={onOpenChat}
+                    onMoveToNextStatus={onMoveToNextStatus}
+                    onOpenTagsManager={onOpenTagsManager}
                 />
             )}
         </>
     );
 }
 
-export function KanbanColumn({ title, status, responses, onOpenDetails }: KanbanColumnProps) {
+export function KanbanColumn({ 
+    title, 
+    status, 
+    responses, 
+    onOpenDetails,
+    onEdit,
+    onOpenChat,
+    onMoveToNextStatus,
+    onOpenTagsManager,
+}: KanbanColumnProps) {
     const getStatusColor = (status: ResponseStatus) => {
         switch (status) {
             case "NOT_STARTED":
@@ -167,6 +206,10 @@ export function KanbanColumn({ title, status, responses, onOpenDetails }: Kanban
                                         <ResponseCard
                                             response={response}
                                             onOpenDetails={onOpenDetails}
+                                            onEdit={onEdit}
+                                            onOpenChat={onOpenChat}
+                                            onMoveToNextStatus={onMoveToNextStatus}
+                                            onOpenTagsManager={onOpenTagsManager}
                                         />
                                     </div>
                                 )}

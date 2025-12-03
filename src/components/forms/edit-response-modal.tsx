@@ -40,11 +40,9 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
   // useEffect para carregar os dados quando o modal abre
   useEffect(() => {
     if (isOpen && responseData && formData) {
-      // Converter tags de JsonValue para string[] | null
-      const convertedResponse: FormResponse = {
-        ...responseData,
-        tags: Array.isArray(responseData.tags) ? responseData.tags : null,
-      }
+      // `getById` já retorna os tipos normalizados (number | null, string[] | null)
+      // Aqui apenas fazemos um cast centralizado para o tipo de domínio `FormResponse`
+      const convertedResponse = responseData as unknown as FormResponse
       setResponse(convertedResponse)
       // @ts-expect-error - JsonValue to Field conversion
       setFields(formData.fields as Field[])

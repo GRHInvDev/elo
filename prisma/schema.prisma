@@ -393,6 +393,7 @@ model Form {
 
 model FormResponse {
   id               String             @id @default(cuid())
+  number           Int?               @unique // Número sequencial do chamado (#0000001) - temporariamente opcional para migração
   userId           String
   responses        Json[]             @db.Json
   createdAt        DateTime           @default(now())

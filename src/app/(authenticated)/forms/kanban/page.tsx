@@ -13,11 +13,15 @@ import type { FormResponse } from "@/types/form-responses"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Tags } from "lucide-react"
+import { EditResponseModal } from "@/components/forms/edit-response-modal"
 
 export default function KanbanPage() {
     const [selectedResponse, setSelectedResponse] = useState<string | null>(null)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [isTagsModalOpen, setIsTagsModalOpen] = useState(false)
+    const [editResponseId, setEditResponseId] = useState<string | null>(null)
+    const [editFormId, setEditFormId] = useState<string | null>(null)
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [localResponses, setLocalResponses] = useState<FormResponse[]>([])
     const [filters, setFilters] = useState<KanbanFiltersState>({
         userIds: [],
@@ -93,6 +97,30 @@ export default function KanbanPage() {
         setIsDialogOpen(true)
     }
 
+    const handleEdit = (responseId: string, formId: string) => {
+        setEditResponseId(responseId)
+        setEditFormId(formId)
+        setIsEditModalOpen(true)
+    }
+
+    const handleOpenChat = (responseId: string) => {
+        setSelectedResponse(responseId)
+        setIsDialogOpen(true)
+        // O ResponseDialog já tem o chat integrado, então apenas abrimos o dialog
+    }
+
+    const handleMoveToNextStatus = (responseId: string, currentStatus: ResponseStatus) => {
+        const statusOrder: ResponseStatus[] = ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]
+        const currentIndex = statusOrder.indexOf(currentStatus)
+        if (currentIndex < statusOrder.length - 1) {
+            const nextStatus = statusOrder[currentIndex + 1]!
+            updateStatusMutation.mutate({
+                responseId,
+                status: nextStatus,
+            })
+        }
+    }
+
     if (isLoading) {
         return (
             <DashboardShell>
@@ -155,6 +183,10 @@ export default function KanbanPage() {
                         status="NOT_STARTED"
                         responses={columns.NOT_STARTED}
                         onOpenDetails={handleOpenDetails}
+                        onEdit={handleEdit}
+                        onOpenChat={handleOpenChat}
+                        onMoveToNextStatus={handleMoveToNextStatus}
+                        onOpenTagsManager={() => setIsTagsModalOpen(true)}
                     />
 
                     <KanbanColumn
@@ -162,6 +194,10 @@ export default function KanbanPage() {
                         status="IN_PROGRESS"
                         responses={columns.IN_PROGRESS}
                         onOpenDetails={handleOpenDetails}
+                        onEdit={handleEdit}
+                        onOpenChat={handleOpenChat}
+                        onMoveToNextStatus={handleMoveToNextStatus}
+                        onOpenTagsManager={() => setIsTagsModalOpen(true)}
                     />
 
                     <KanbanColumn
@@ -169,6 +205,10 @@ export default function KanbanPage() {
                         status="COMPLETED"
                         responses={columns.COMPLETED}
                         onOpenDetails={handleOpenDetails}
+                        onEdit={handleEdit}
+                        onOpenChat={handleOpenChat}
+                        onMoveToNextStatus={handleMoveToNextStatus}
+                        onOpenTagsManager={() => setIsTagsModalOpen(true)}
                     />
                 </div>
             </DragDropContext>
@@ -181,6 +221,19 @@ export default function KanbanPage() {
                 open={isTagsModalOpen}
                 onOpenChange={setIsTagsModalOpen}
             />
+
+            {editResponseId && editFormId && (
+                <EditResponseModal
+                    responseId={editResponseId}
+                    formId={editFormId}
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false)
+                        setEditResponseId(null)
+                        setEditFormId(null)
+                    }}
+                />
+            )}
         </DashboardShell>
     )
 }

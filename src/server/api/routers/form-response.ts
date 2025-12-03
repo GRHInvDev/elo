@@ -6,6 +6,25 @@ import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario } from "@/lib/mail/html-mock"
 
+/**
+ * Gera o próximo número sequencial para um novo chamado
+ * Começa a partir do número 210
+ */
+async function getNextFormResponseNumber(db: Prisma.TransactionClient): Promise<number> {
+  const lastResponse = await db.formResponse.findFirst({
+    where: {
+      number: { not: null },
+    },
+    orderBy: { number: "desc" },
+    select: { number: true },
+  })
+
+  // Se não há nenhum número ainda, começa do 210
+  // Caso contrário, incrementa o último número encontrado
+  const lastNumber = lastResponse?.number ?? 209
+  return lastNumber + 1
+}
+
 export const formResponseRouter = createTRPCRouter({
   create: protectedProcedure
     .input(
@@ -15,8 +34,12 @@ export const formResponseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Gerar próximo número sequencial
+      const nextNumber = await getNextFormResponseNumber(ctx.db)
+
       const created = await ctx.db.formResponse.create({
         data: {
+          number: nextNumber,
           userId: ctx.auth.userId,
           formId: input.formId,
           responses: input.responses as unknown as InputJsonValue[],
@@ -165,9 +188,13 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
+      // Gerar próximo número sequencial
+      const nextNumber = await getNextFormResponseNumber(ctx.db)
+
       // Criar o chamado vinculado ao usuário especificado
       const created = await ctx.db.formResponse.create({
         data: {
+          number: nextNumber,
           userId: input.userId, // Usuário alvo, não o criador
           formId: input.formId,
           responses: input.responses as unknown as InputJsonValue[],

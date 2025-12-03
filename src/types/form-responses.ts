@@ -2,6 +2,7 @@ export type ResponseStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
 
 export interface FormResponse {
     id: string
+    number: number | null // Número sequencial do chamado (#0000001) - null para registros antigos
     userId: string
     formId: string
     responses: unknown[]

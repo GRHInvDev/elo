@@ -24,6 +24,7 @@ import { type Field } from "@/lib/form-types"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
+import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
 interface ResponseDialogProps {
     responseId: string
@@ -442,7 +443,14 @@ export function ResponseDialog({ responseId, open, onOpenChange }: ResponseDialo
             <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-[1000px] max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader className="space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <DialogTitle className="text-lg sm:text-xl break-words pr-2">{response.form.title}</DialogTitle>
+                        <div className="flex items-center gap-2">
+                            {response.number && (
+                                <span className="text-sm font-mono text-muted-foreground">
+                                    {formatFormResponseNumber(response.number)}
+                                </span>
+                            )}
+                            <DialogTitle className="text-lg sm:text-xl break-words pr-2">{response.form.title}</DialogTitle>
+                        </div>
                         <EditResponseButton
                             responseId={responseId}
                             formId={response.formId}

@@ -14,6 +14,7 @@ import { EditResponseButton } from "@/components/forms/edit-response-button"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { canAccessForm } from "@/lib/access-control"
+import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
 export const metadata = {
   title: "Detalhes da Resposta",
@@ -88,7 +89,14 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
         </Link>
 
         <div className="mt-4">
-          <h1 className="text-3xl font-bold tracking-tight">Detalhes da Resposta</h1>
+          <div className="flex items-center gap-2">
+            {response.number && (
+              <span className="text-lg font-mono text-muted-foreground">
+                {formatFormResponseNumber(response.number)}
+              </span>
+            )}
+            <h1 className="text-3xl font-bold tracking-tight">Detalhes da Resposta</h1>
+          </div>
           <p className="text-muted-foreground mt-2">Formulário: {response.form.title}</p>
         </div>
       </div>
