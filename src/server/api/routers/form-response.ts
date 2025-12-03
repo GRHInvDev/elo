@@ -212,16 +212,6 @@ export const formResponseRouter = createTRPCRouter({
             }
           })
 
-          // Buscar dados do usuário alvo (para quem o chamado foi criado)
-          const targetUser = await ctx.db.user.findUnique({
-            where: { id: input.userId },
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-            }
-          })
-
           // Enviar email para cada dono do formulário
           for (const owner of ownerUsers) {
             if (owner.email) {
@@ -566,7 +556,9 @@ export const formResponseRouter = createTRPCRouter({
         const lastChatAt = lastChatMap.get(r.id) ?? null
         const myLastViewedAt = viewMap.get(r.id) ?? null
         const hasNewMessages = !!lastChatAt && (!myLastViewedAt || lastChatAt >= myLastViewedAt)
-        return { ...r, lastChatAt, myLastViewedAt, hasNewMessages }
+        // Converter tags de JsonValue para string[] | null
+        const tags = Array.isArray(r.tags) ? (r.tags as string[]) : null
+        return { ...r, tags, lastChatAt, myLastViewedAt, hasNewMessages }
       })
     }),
 
@@ -936,7 +928,13 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
-      return response
+      // Converter tags de JsonValue para string[] | null
+      const tags = Array.isArray(response.tags) ? (response.tags as string[]) : null
+
+      return {
+        ...response,
+        tags,
+      }
     }),
 
   update: protectedProcedure
@@ -999,7 +997,7 @@ export const formResponseRouter = createTRPCRouter({
   // Listar todas as tags
   getAllTags: protectedProcedure.query(async ({ ctx }) => {
     const config = await ctx.db.globalConfig.findFirst()
-    if (!config || !config.formResponseTags) {
+    if (!config?.formResponseTags) {
       return []
     }
     
@@ -1025,16 +1023,13 @@ export const formResponseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       let config = await ctx.db.globalConfig.findFirst()
-      if (!config) {
-        // Criar GlobalConfig se não existir
-        config = await ctx.db.globalConfig.create({
-          data: {
-            id: "default",
-            shopWebhook: "",
-            formResponseTags: [] as unknown as InputJsonValue,
-          },
-        })
-      }
+      config ??= await ctx.db.globalConfig.create({
+        data: {
+          id: "default",
+          shopWebhook: "",
+          formResponseTags: [] as unknown as InputJsonValue,
+        },
+      })
 
       const existingTags = (config.formResponseTags as unknown as Array<{
         id: string
@@ -1086,16 +1081,13 @@ export const formResponseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       let config = await ctx.db.globalConfig.findFirst()
-      if (!config) {
-        // Criar GlobalConfig se não existir
-        config = await ctx.db.globalConfig.create({
-          data: {
-            id: "default",
-            shopWebhook: "",
-            formResponseTags: [] as unknown as InputJsonValue,
-          },
-        })
-      }
+      config ??= await ctx.db.globalConfig.create({
+        data: {
+          id: "default",
+          shopWebhook: "",
+          formResponseTags: [] as unknown as InputJsonValue,
+        },
+      })
       
       if (!config.formResponseTags) {
         throw new TRPCError({
@@ -1122,7 +1114,7 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Verificar se nome já existe (se estiver mudando)
-      if (input.nome && tags.some((tag, idx) => 
+      if (input.nome && tags.some((tag) => 
         tag.nome.toLowerCase() === input.nome!.toLowerCase() && 
         tag.id !== input.id && 
         tag.ativa
@@ -1175,16 +1167,13 @@ export const formResponseRouter = createTRPCRouter({
 
       // Verificar se a tag existe e está ativa
       let config = await ctx.db.globalConfig.findFirst()
-      if (!config) {
-        // Criar GlobalConfig se não existir
-        config = await ctx.db.globalConfig.create({
-          data: {
-            id: "default",
-            shopWebhook: "",
-            formResponseTags: [] as unknown as InputJsonValue,
-          },
-        })
-      }
+      config ??= await ctx.db.globalConfig.create({
+        data: {
+          id: "default",
+          shopWebhook: "",
+          formResponseTags: [] as unknown as InputJsonValue,
+        },
+      })
       
       if (!config.formResponseTags) {
         throw new TRPCError({

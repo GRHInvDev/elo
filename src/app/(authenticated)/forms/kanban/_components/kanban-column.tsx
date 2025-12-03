@@ -44,7 +44,7 @@ function ResponseCard({ response, onOpenDetails }: ResponseCardProps) {
     // Obter informações das tags aplicadas
     const appliedTags = response.tags
         ? allTags.filter(tag => response.tags?.includes(tag.id))
-        : [];
+        : []
 
     return (
         <>
@@ -121,7 +121,7 @@ function ResponseCard({ response, onOpenDetails }: ResponseCardProps) {
             {contextMenu && (
                 <TagsContextMenu
                     responseId={response.id}
-                    currentTags={response.tags || []}
+                    currentTags={response.tags ?? []}
                     position={contextMenu}
                     onClose={() => setContextMenu(null)}
                     onTagChange={handleTagChange}

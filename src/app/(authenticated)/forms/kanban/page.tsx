@@ -37,7 +37,8 @@ export default function KanbanPage() {
     // Update local state when server data changes
     useEffect(() => {
         if (responses) {
-            setLocalResponses(responses)
+            // O router já converte tags, mas precisamos garantir o tipo
+            setLocalResponses(responses as FormResponse[])
         }
     }, [responses])
 
@@ -130,10 +131,10 @@ export default function KanbanPage() {
             <div className="mb-8">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
-                        <p className="text-muted-foreground mt-2">
-                            Visualize e organize as respostas recebidas nos seus formulários.
-                        </p>
+                <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
+                <p className="text-muted-foreground mt-2">
+                    Visualize e organize as respostas recebidas nos seus formulários.
+                </p>
                     </div>
                     <Button
                         variant="outline"
