@@ -281,7 +281,14 @@ function OrderCard({
 
   // Verificar se é um pedido agrupado
   const isGroupedOrder = !!order.orderGroupId || !!(order as { _groupOrders?: MyOrder[] })._groupOrders
-  const orderGroupOrders = order.orderGroup?.orders ?? (order as { _groupOrders?: MyOrder[] })._groupOrders ?? []
+  
+  // Extrair _groupOrders para usar nas dependências
+  const orderGroupOrdersFromOrder = (order as { _groupOrders?: MyOrder[] })._groupOrders
+  
+  // Memoizar orderGroupOrders para evitar recriação a cada render
+  const orderGroupOrders = useMemo(() => {
+    return order.orderGroup?.orders ?? orderGroupOrdersFromOrder ?? []
+  }, [order.orderGroup?.orders, orderGroupOrdersFromOrder])
   
   // Coletar todas as imagens de todos os produtos do pedido
   const allImages = useMemo(() => {

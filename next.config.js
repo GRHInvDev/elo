@@ -6,53 +6,51 @@ import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
-    images: {
-        remotePatterns: [
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.ufs.sh",
+      },
+      {
+        protocol: "https",
+        hostname: "ufs.sh",
+      },
+    ],
+  },
+  // Configurações para WebSocket
+  async headers() {
+    return [
+      {
+        // Aplicar headers a todas as rotas da API
+        source: "/api/:path*",
+        headers: [
           {
-            protocol: 'https',
-            hostname: '**',
+            key: "Access-Control-Allow-Origin",
+            value: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
           },
           {
-            protocol: 'https',
-            hostname: '*.ufs.sh',
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, DELETE, OPTIONS",
           },
           {
-            protocol: 'https',
-            hostname: 'ufs.sh',
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization",
+          },
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true",
           },
         ],
       },
-    // Configurações para WebSocket
-    async headers() {
-        return [
-            {
-                // Aplicar headers a todas as rotas da API
-                source: '/api/:path*',
-                headers: [
-                    {
-                        key: 'Access-Control-Allow-Origin',
-                        value: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
-                    },
-                    {
-                        key: 'Access-Control-Allow-Methods',
-                        value: 'GET, POST, PUT, DELETE, OPTIONS',
-                    },
-                    {
-                        key: 'Access-Control-Allow-Headers',
-                        value: 'Content-Type, Authorization',
-                    },
-                    {
-                        key: 'Access-Control-Allow-Credentials',
-                        value: 'true',
-                    },
-                ],
-            },
-        ]
-    },
-    // Configuração experimental para WebSocket
-    experimental: {
-        serverComponentsExternalPackages: ['socket.io', 'socket.io-client'],
-    },
+    ];
+  },
+  // Configuração para permitir pacotes externos em Server Components / edge
+  serverExternalPackages: ["socket.io", "socket.io-client"],
 };
 
 export default config;
@@ -60,4 +58,26 @@ export default config;
 /**
  *  (`¬´)
  * (|  |) @jdalmeida
+ */
+
+
+/**
+⠀⠀⠀⠀⠀⢀⡀⠤⠤⠤⠤⢀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⢀⡤⠂⠁⠀⠀⠀⠀⣆⣢⢄⠀⠉⠒⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠉⠙⠛⠻⢶⡤⠄⢀⣿⢀⠡⠷⠄⠀⠀⠑⢤⠒⢩⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⡠⠂⠁⠀⠀⠀⠛⠁⠔⣨⣅⡢⡀⠀⠈⡦⠎⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠜⠀⠀⠀⠀⠀⠀⠀⠸⡘⠀⡀⠹⡞⠀⠀⣾⢥⠂⢄⠀⣀⠀⠀⠀
+⠀⡌⠀⠀⢀⣠⣤⠆⠀⠀⠀⢣⢰⡞⠀⠹⡀⣽⡾⠀⢢⢈⢃⠔⢙⣄⠀
+⢰⠀⣠⡴⠟⠻⠁⠀⠀⢢⣏⢖⡝⠡⠤⠐⠛⢿⠿⠀⣸⠀⡢⡎⠠⢬⠆
+⢨⡴⠉⠀⠀⠇⠀⢀⣴⡿⢿⡶⠭⡥⢤⡴⢂⠁⠀⢰⣆⠻⣄⣘⣴⠖⠀
+⠈⠀⠀⠀⠀⠀⢠⠞⢡⠊⣤⡒⢋⠀⡇⠀⠈⣇⡒⠊⡢⠤⠖⠁⠀⠀⠀
+⠀⠀⠀⠀⠀⣇⠋⠀⢨⣦⠜⠈⡏⠓⢃⠀⢀⠇⠈⠁⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠘⠀⠀⠀⠹⣧⠘⠁⠀⣄⣶⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠯⠿⡟⠻⡏⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡰⢠⣷⢁⡤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢀⣅⠃⠓⢊⠑⠠⠖⢢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢀⡠⠵⠬⣄⢀⠱⠓⠟⠉⢉⠝⠂⠄⡀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⡰⠛⠒⠠⠀⠈⢢⠀⣾⠀⢰⠁⠀⠀⠀⠈⢢⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠊⠀⠀⠀⠀⢱⣀⡼⠊⠉⠙⠛⠒⠒⠶⠒⠒⠋⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠲⠤⠤⠤⠖⠚⠉⠀⠀⠀⠀⠀⠀ @rbxyz
  */

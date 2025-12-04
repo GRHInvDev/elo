@@ -455,6 +455,7 @@ export const userRouter = createTRPCRouter({
         can_manage_produtos: z.boolean().optional(),
         can_manage_quality_management: z.boolean().optional(),
         can_view_answer_without_admin_access: z.boolean().optional(),
+        can_view_add_manual_ped: z.boolean().optional(),
         isTotem: z.boolean().optional(),
         visible_forms: z.array(z.string()).optional(),
         hidden_forms: z.array(z.string()).optional(),

@@ -41,8 +41,6 @@ export function FormResponseComponent({
 }: FormResponseComponentProps) {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const router = useRouter()
-  const {data: form} = api.form.getById.useQuery({id: formId})
-  const user = api.user.me.useQuery()
   // Criar um schema Zod dinâmico baseado nos campos
   const schemaObj: Record<string, z.ZodTypeAny> = {}
   fields.forEach((field) => {

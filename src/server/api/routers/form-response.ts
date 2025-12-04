@@ -1,7 +1,8 @@
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { z } from "zod"
 import type { InputJsonValue } from "@prisma/client/runtime/library"
-import type { ResponseStatus, Prisma } from "@prisma/client"
+import type { ResponseStatus } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario } from "@/lib/mail/html-mock"
@@ -884,6 +885,8 @@ export const formResponseRouter = createTRPCRouter({
           status: input.status as ResponseStatus,
           statusComment: input.statusComment,
           updatedAt: new Date(),
+          // Ao finalizar o chamado, remover todas as tags
+          ...(input.status === "COMPLETED" && { tags: Prisma.JsonNull }),
         },
         include: {
           form: true,
@@ -894,11 +897,17 @@ export const formResponseRouter = createTRPCRouter({
         where: { id: response.userId },
       })
 
-      if (ret && user) {
+      if (ret && user && ret.form) {
+        const form = ret.form as { id: string; title: string | null }
+        const formTitle = form.title ?? "Formulário"
+        const formId = form.id
+        const responseId = ret.id
+        const responseStatus = ret.status
+
         await sendEmail(
           user.email,
-          `Resposta ao formulário "${ret.form.title}"`,
-          mockEmailSituacaoFormulario(user.firstName ?? "", ret.status, ret.id, ret.form.id, ret.form.title),
+          `Resposta ao formulário "${formTitle}"`,
+          mockEmailSituacaoFormulario(user.firstName ?? "", responseStatus, responseId, formId, formTitle),
         )
       }
 

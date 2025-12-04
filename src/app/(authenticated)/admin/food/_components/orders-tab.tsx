@@ -81,10 +81,12 @@ export default function OrdersTab({
 
 
   const isSudo = currentUser.data?.role_config?.sudo ?? false
+  const canViewAddManualPed = currentUser.data?.role_config?.can_view_add_manual_ped ?? false
+  const canAddManualOrder = isSudo || canViewAddManualPed
 
   const usersQuery = api.user.searchMinimal.useQuery(
     { query: createUserSearch },
-    { enabled: isSudo && createDialogOpen }
+    { enabled: canAddManualOrder && createDialogOpen }
   )
 
   // Buscar pedidos com filtros - período da data selecionada
@@ -550,7 +552,7 @@ export default function OrdersTab({
           </DialogContent>
         </Dialog>
 
-        {isSudo && (
+        {canAddManualOrder && (
           <Dialog
             open={createDialogOpen}
             onOpenChange={(isOpen) => {

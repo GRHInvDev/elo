@@ -115,7 +115,7 @@ export const foodOrderRouter = createTRPCRouter({
       })
     }),
 
-  // Criar pedido manualmente (apenas superadmins)
+  // Criar pedido manualmente (apenas superadmins ou usuários com permissão can_view_add_manual_ped)
   createManual: protectedProcedure
     .input(createManualFoodOrderSchema)
     .mutation(async ({ ctx, input }) => {
@@ -126,10 +126,13 @@ export const foodOrderRouter = createTRPCRouter({
 
       const roleConfig = currentUser?.role_config as RolesConfig | null
 
-      if (!roleConfig?.sudo) {
+      const isSudo = roleConfig?.sudo ?? false
+      const canViewAddManualPed = roleConfig?.can_view_add_manual_ped ?? false
+
+      if (!isSudo && !canViewAddManualPed) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Apenas superadmins podem criar pedidos manualmente",
+          message: "Você não tem permissão para criar pedidos manualmente",
         })
       }
 

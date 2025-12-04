@@ -34,7 +34,6 @@ import {
 import type { RolesConfig } from "@/types/role-config"
 import type { Enterprise } from "@prisma/client"
 
-// Extensão temporária do tipo RolesConfig para incluir as novas propriedades
 type ExtendedRolesConfig = RolesConfig & {
   can_view_dre_report: boolean
   can_manage_extensions?: boolean
@@ -42,11 +41,9 @@ type ExtendedRolesConfig = RolesConfig & {
   can_manage_produtos?: boolean
   can_create_solicitacoes?: boolean
   can_view_answer_without_admin_access?: boolean
+  can_view_add_manual_ped?: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
-
-// SISTEMA SIMPLIFICADO: Todos podem visualizar, apenas alguns podem criar
-// Removidas constantes não utilizadas
 
 // Lista de setores disponíveis
 const AVAILABLE_SETORES = [
@@ -56,13 +53,11 @@ const AVAILABLE_SETORES = [
   { value: "FINANCEIRO", label: "Financeiro" },
   { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
   { value: "TI", label: "Tecnologia da Informação" },
+  { value: "INOVACAO", label: "Inovação" },
   { value: "MARKETING", label: "Marketing" },
-  { value: "VENDAS", label: "Vendas" },
   { value: "PRODUCAO", label: "Produção" },
   { value: "COMPRAS", label: "Compras" },
-  { value: "QUALIDADE", label: "Qualidade" },
   { value: "LOGISTICA", label: "Logística" },
-  { value: "JURIDICO", label: "Jurídico" },
 ]
 
 
@@ -376,6 +371,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       can_create_solicitacoes: (user.role_config as ExtendedRolesConfig)?.can_create_solicitacoes ?? false,
       can_manage_produtos: (user.role_config as ExtendedRolesConfig)?.can_manage_produtos ?? false,
       can_view_answer_without_admin_access: (user.role_config as ExtendedRolesConfig)?.can_view_answer_without_admin_access ?? false,
+      can_view_add_manual_ped: (user.role_config as ExtendedRolesConfig)?.can_view_add_manual_ped ?? false,
       isTotem: (user.role_config as ExtendedRolesConfig)?.isTotem ?? false,
       visible_forms: (user.role_config as ExtendedRolesConfig)?.visible_forms,
       hidden_forms: (user.role_config as ExtendedRolesConfig)?.hidden_forms,
@@ -416,7 +412,6 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         })
       }
     } else if (!permissionsData.can_manage_produtos && hasProductsRoute) {
-      // Remover /admin/products se can_manage_produtos está false mas a rota está na lista
       // Nota: não removemos /admin automaticamente, pois pode ser usado por outras rotas
       setPermissionsData({
         ...permissionsData,
@@ -508,6 +503,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_manage_dados_basicos_users: permissionsData.can_manage_dados_basicos_users ?? false,
         can_manage_produtos: permissionsData.can_manage_produtos ?? false,
         can_view_answer_without_admin_access: permissionsData.can_view_answer_without_admin_access ?? false,
+        can_view_add_manual_ped: permissionsData.can_view_add_manual_ped ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
@@ -930,7 +926,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                                 "Visualizar Relatório DRE",
                                 "Alterar ramal de usuários",
                                 "Gerenciar produtos da loja",
-                                "Visualizar/Responder pedidos sem acesso admin"
+                                "Visualizar/Responder pedidos sem acesso admin",
+                                "Adicionar pedidos manuais de alimentação"
                               ]
                                 .filter(permission => 
                                   permission.toLowerCase().includes(permissionSearch.toLowerCase())
@@ -958,7 +955,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                                 "Visualizar Relatório DRE",
                                 "Alterar ramal de usuários",
                                 "Gerenciar produtos da loja",
-                                "Visualizar/Responder pedidos sem acesso admin"
+                                "Visualizar/Responder pedidos sem acesso admin",
+                                "Adicionar pedidos manuais de alimentação"
                               ].filter(permission => 
                                 permission.toLowerCase().includes(permissionSearch.toLowerCase())
                               ).length === 0 && (
@@ -1075,6 +1073,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                                   can_view_answer_without_admin_access: checked
                                 });
                               }
+                            },
+                            {
+                              id: "view_add_manual_ped",
+                              label: "Adicionar pedidos manuais de alimentação",
+                              checked: permissionsData.can_view_add_manual_ped,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_view_add_manual_ped: checked
+                                });
+                              }
                             }
                           ]
                             .filter(permission => 
@@ -1162,6 +1171,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         {permissionsData.can_view_answer_without_admin_access && (
                           <Badge variant="secondary">Visualizar/Responder Pedidos</Badge>
                         )}
+                        {permissionsData.can_view_add_manual_ped && (
+                          <Badge variant="secondary">Adicionar Pedidos Manuais</Badge>
+                        )}
                         {!permissionsData.can_create_form &&
                          !permissionsData.can_create_event &&
                          !permissionsData.can_create_flyer &&
@@ -1170,7 +1182,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                          !permissionsData.can_view_dre_report &&
                          !permissionsData.can_manage_extensions &&
                          !permissionsData.can_manage_produtos &&
-                         !permissionsData.can_view_answer_without_admin_access && (
+                         !permissionsData.can_view_answer_without_admin_access &&
+                         !permissionsData.can_view_add_manual_ped && (
                           <span className="text-sm text-muted-foreground">Apenas visualização</span>
                         )}
                       </div>

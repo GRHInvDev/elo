@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Calendar, User } from 'lucide-react';
+import { MessageSquare, Calendar, User, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -10,6 +10,7 @@ import { type FormResponse, type ResponseStatus } from "@/types/form-responses";
 import { Badge } from "@/components/ui/badge";
 import { ResponseContextMenu } from "./tags-context-menu";
 import { api } from "@/trpc/react";
+import { toast } from "sonner";
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number";
 
 interface KanbanColumnProps {
@@ -43,6 +44,15 @@ function ResponseCard({
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const utils = api.useUtils();
     const { data: allTags = [] } = api.formResponse.getAllTags.useQuery();
+    const removeTag = api.formResponse.removeTag.useMutation({
+        onSuccess: () => {
+            toast.success("Tag removida");
+            void utils.formResponse.listKanBan.invalidate();
+        },
+        onError: (error) => {
+            toast.error(error.message || "Erro ao remover tag");
+        },
+    });
 
     const handleContextMenu = (e: React.MouseEvent) => {
         // Apenas em desktop (não mobile)
@@ -90,16 +100,29 @@ function ResponseCard({
                     {appliedTags.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-1">
                             {appliedTags.map((tag) => (
-                                <Badge
-                                    key={tag.id}
-                                    style={{
-                                        backgroundColor: tag.cor,
-                                        color: "#fff",
-                                    }}
-                                    className="text-xs px-2 py-0.5"
-                                >
-                                    {tag.nome}
-                                </Badge>
+                                <div key={tag.id} className="relative">
+                                    <Badge
+                                        style={{
+                                            backgroundColor: tag.cor,
+                                            color: "#fff",
+                                        }}
+                                        className="group text-xs px-2 py-0.5 pr-5 flex items-center gap-1"
+                                    >
+                                        <span className="truncate max-w-[120px]">{tag.nome}</span>
+                                        <button
+                                            type="button"
+                                            className="absolute right-0 top-0 h-full px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                removeTag.mutate({ responseId: response.id, tagId: tag.id });
+                                            }}
+                                            aria-label={`Remover tag ${tag.nome}`}
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </Badge>
+                                </div>
                             ))}
                         </div>
                     )}

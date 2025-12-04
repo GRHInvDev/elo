@@ -2,22 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, Plus, Tags, ExternalLink, Edit, MessageSquare, ArrowRight, ChevronRight } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import type { ResponseStatus } from "@/types/form-responses"
-
-interface Tag {
-  id: string
-  nome: string
-  cor: string
-  timestampCreate: string
-  countVezesUsadas: number
-  ativa: boolean
-}
 
 interface ResponseContextMenuProps {
   responseId: string
@@ -45,7 +35,7 @@ export function ResponseContextMenu({
   onOpenDetails,
   onEdit,
   onOpenChat,
-  onMoveToNextStatus,
+  onMoveToNextStatus: _onMoveToNextStatus,
   onOpenTagsManager,
 }: ResponseContextMenuProps) {
   const [showTagsSection, setShowTagsSection] = useState(false)

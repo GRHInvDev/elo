@@ -41,7 +41,8 @@ export function EnterpriseManagers() {
   const [externalName, setExternalName] = useState("")
   const [externalEmail, setExternalEmail] = useState("")
 
-  const { data: managers, isLoading, refetch } = api.enterpriseManager.list.useQuery()
+  const utils = api.useUtils()
+  const { data: managers, isLoading } = api.enterpriseManager.list.useQuery()
   const { data: users, isLoading: isLoadingUsers } = api.user.searchMinimal.useQuery(
     { query: searchQuery },
     { enabled: dialogOpen && searchQuery.length > 2 }
@@ -63,10 +64,10 @@ export function EnterpriseManagers() {
   }
 
   const createManager = api.enterpriseManager.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Responsável adicionado com sucesso!")
       handleDialogOpenChange(false)
-      void refetch()
+      await utils.enterpriseManager.list.invalidate()
     },
     onError: (error: { message?: string }) => {
       toast.error(`Erro ao adicionar responsável: ${error.message ?? "Erro desconhecido"}`)
@@ -74,9 +75,9 @@ export function EnterpriseManagers() {
   })
 
   const deleteManager = api.enterpriseManager.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Responsável removido com sucesso!")
-      void refetch()
+      await utils.enterpriseManager.list.invalidate()
     },
     onError: (error: { message?: string }) => {
       toast.error(`Erro ao remover responsável: ${error.message ?? "Erro desconhecido"}`)
@@ -239,7 +240,7 @@ export function EnterpriseManagers() {
                           ))}
                         </div>
                       )}
-                      {searchQuery.length > 2 && users && users.length === 0 && !isLoadingUsers && (
+                      {searchQuery.length > 2 && users?.length === 0 && !isLoadingUsers && (
                         <div className="mt-2 text-sm text-muted-foreground">
                           Nenhum usuário encontrado
                         </div>
