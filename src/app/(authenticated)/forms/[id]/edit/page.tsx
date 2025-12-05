@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation"
 import { FormBuilderWithSave } from "@/components/forms/form-builder-with-save"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
-import { canCreateForm } from "@/lib/access-control"
+import { checkFormEditAccess } from "@/lib/access-control-server"
 
 export const metadata = {
   title: "Editar Formulário",
@@ -21,13 +21,12 @@ interface EditFormPageProps {
 
 export default async function EditFormPage({ params }: EditFormPageProps) {
   const { id } = await params;
+  
+  // Verificar se o usuário tem permissão para editar este formulário
+  // Esta função verifica se é criador, owner, tem can_create_form ou tem acesso às respostas
+  await checkFormEditAccess(id)
+  
   const form = await api.form.getById(id)
-  const userData = await api.user.me()
-
-  // Verificar se o usuário tem permissão para editar solicitações
-  if (!canCreateForm(userData.role_config)) {
-    redirect("/forms")
-  }
   
   if (!form) {
     notFound()

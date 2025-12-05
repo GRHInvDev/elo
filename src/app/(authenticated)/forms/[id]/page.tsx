@@ -11,6 +11,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { auth } from "@clerk/nextjs/server"
 import { FormDescription } from "@/components/forms/form-description"
 import { CreateManualResponseButtonWrapper } from "@/components/forms/create-manual-response-button-wrapper"
+import { canEditForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Visualizar Formulário",
@@ -91,7 +92,19 @@ export default async function FormPage({ params }: FormPageProps) {
               </Button>
             </Link>
               {
-                user.userId === form.userId &&
+                canEditForm(
+                  userData.role_config,
+                  userData.id,
+                  form.id,
+                  {
+                    userId: form.userId,
+                    ownerIds: form.ownerIds,
+                    isPrivate: form.isPrivate,
+                    allowedUsers: form.allowedUsers,
+                    allowedSectors: form.allowedSectors,
+                  },
+                  userData.setor
+                ) &&
                 <Link href={`/forms/${form.id}/edit`}>
                   <Button variant="outline" className="col-span-1 w-full">
                     <Pencil className="mr-2 h-4 w-4" />

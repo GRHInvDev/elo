@@ -1,4 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { Field } from "@/lib/form-types"
 import { type InputJsonValue } from "@prisma/client/runtime/library";
@@ -103,12 +104,91 @@ export const formsRouter = createTRPCRouter({
         ownerIds: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input })=>{
+        // Buscar o formulário existente para verificar permissões
+        const existingForm = await ctx.db.form.findUnique({
+            where: { id: input.id },
+            select: {
+                userId: true,
+                ownerIds: true,
+                isPrivate: true,
+                allowedUsers: true,
+                allowedSectors: true,
+            }
+        });
+
+        if (!existingForm) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Formulário não encontrado",
+            });
+        }
+
+        // Buscar dados do usuário atual
+        const currentUser = await ctx.db.user.findUnique({
+            where: { id: ctx.auth.userId },
+            select: {
+                id: true,
+                setor: true,
+                role_config: true,
+            }
+        });
+
+        if (!currentUser) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Usuário não encontrado",
+            });
+        }
+
+        const roleConfig = currentUser.role_config as RolesConfig | null;
+
+        // Verificar se o usuário pode editar este formulário
+        // 1. Se é o criador do formulário, sempre pode editar
+        const isCreator = existingForm.userId === currentUser.id;
+        
+        // 2. Se está na lista de owners, pode editar
+        const isOwner = existingForm.ownerIds?.includes(currentUser.id) ?? false;
+        
+        // 3. Se tem permissão can_create_form, pode editar qualquer formulário
+        const canCreate = roleConfig?.sudo || roleConfig?.can_create_form || false;
+        
+        // 4. Se tem acesso às respostas do formulário, pode editar
+        let hasAccessToResponses = false;
+        if (!isCreator && !isOwner && !canCreate) {
+            // Verificar se o formulário é privado
+            if (existingForm.isPrivate) {
+                // Verificar se o formulário está na lista de ocultos
+                const isHidden = roleConfig?.hidden_forms?.includes(input.id) ?? false;
+                
+                if (!isHidden) {
+                    // Verificar se o usuário está na lista de usuários permitidos
+                    const isAllowedUser = existingForm.allowedUsers?.includes(currentUser.id) ?? false;
+                    
+                    // Verificar se o usuário está em um setor permitido
+                    const isAllowedSector = existingForm.allowedSectors?.includes(currentUser.setor ?? "") ?? false;
+                    
+                    hasAccessToResponses = isAllowedUser || isAllowedSector;
+                }
+            } else {
+                // Se o formulário não é privado, todos têm acesso (exceto TOTEMs)
+                hasAccessToResponses = !roleConfig?.isTotem;
+            }
+        }
+
+        // Se não tem nenhuma das permissões, lançar erro
+        if (!isCreator && !isOwner && !canCreate && !hasAccessToResponses) {
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "Você não tem permissão para editar este formulário",
+            });
+        }
+
         const form = await ctx.db.form.update({
             data: {
                 title: input.title,
                 description: input.description,
                 fields: input.fields as unknown as InputJsonValue[], 
-                userId: ctx.auth.userId,
+                // Não alterar userId - o criador do formulário não deve mudar
                 ...(input.isPrivate !== undefined ? { isPrivate: input.isPrivate } : {}),
                 ...(input.allowedUsers !== undefined ? { allowedUsers: input.allowedUsers } : {}),
                 ...(input.allowedSectors !== undefined ? { allowedSectors: input.allowedSectors } : {}),

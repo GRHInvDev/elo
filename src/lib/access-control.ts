@@ -121,3 +121,66 @@ export function getAccessibleForms<T extends { id: string }>(
   if (roleConfig.isTotem) return [];
   return forms;
 }
+
+/**
+ * Verifica se o usuário pode editar um formulário específico
+ * 
+ * Um usuário pode editar um formulário se:
+ * 1. É o criador do formulário
+ * 2. Está na lista de owners do formulário
+ * 3. Tem permissão can_create_form (pode editar qualquer formulário)
+ * 4. Tem acesso às respostas do formulário (mesma lógica de canAccessForm)
+ * 
+ * @param roleConfig - Configuração de roles do usuário
+ * @param userId - ID do usuário
+ * @param formId - ID do formulário
+ * @param form - Dados do formulário (userId, ownerIds, isPrivate, allowedUsers, allowedSectors)
+ * @param userSetor - Setor do usuário (opcional)
+ * @returns true se o usuário pode editar o formulário
+ */
+export function canEditForm(
+  roleConfig: RolesConfig | null,
+  userId: string | null | undefined,
+  formId: string,
+  form: {
+    userId: string;
+    ownerIds?: string[] | null;
+    isPrivate?: boolean | null;
+    allowedUsers?: string[] | null;
+    allowedSectors?: string[] | null;
+  },
+  userSetor?: string | null
+): boolean {
+  if (!roleConfig || !userId) return false;
+
+  // TOTEMs não podem editar
+  if (roleConfig.isTotem) return false;
+
+  // Se é o criador do formulário, sempre pode editar
+  if (form.userId === userId) return true;
+
+  // Se está na lista de owners, pode editar
+  if (form.ownerIds?.includes(userId)) return true;
+
+  // Se tem permissão can_create_form, pode editar qualquer formulário
+  if (roleConfig.sudo || roleConfig.can_create_form) return true;
+
+  // Se tem acesso às respostas do formulário, pode editar
+  // Verificar se o formulário é privado
+  if (form.isPrivate) {
+    // Verificar se o formulário está na lista de ocultos
+    if (roleConfig.hidden_forms?.includes(formId)) return false;
+
+    // Verificar se o usuário está na lista de usuários permitidos
+    const isAllowedUser = form.allowedUsers?.includes(userId) ?? false;
+
+    // Verificar se o usuário está em um setor permitido
+    const isAllowedSector = form.allowedSectors?.includes(userSetor ?? "") ?? false;
+
+    // Se não tem acesso nem por usuário nem por setor, não pode editar
+    if (!isAllowedUser && !isAllowedSector) return false;
+  }
+
+  // Se passou por todas as verificações, pode editar
+  return true;
+}

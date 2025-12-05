@@ -8,7 +8,7 @@ import { ptBR } from "date-fns/locale"
 import { type Field } from "@/lib/form-types"
 import { auth } from "@clerk/nextjs/server"
 import { DeleteFormButton } from "./delete-form-button"
-import { getAccessibleForms, canCreateForm } from "@/lib/access-control"
+import { getAccessibleForms, canCreateForm, canEditForm } from "@/lib/access-control"
 
 export async function FormsList() {
   const allForms = await api.form.list()
@@ -55,7 +55,19 @@ export async function FormsList() {
               Criado {formatDistanceToNow(new Date(form.createdAt), { addSuffix: true, locale: ptBR })}
             </CardDescription>
             {
-              user.userId === form.userId &&
+              canEditForm(
+                db_user?.role_config,
+                db_user?.id,
+                form.id,
+                {
+                  userId: form.userId,
+                  ownerIds: form.ownerIds,
+                  isPrivate: form.isPrivate,
+                  allowedUsers: form.allowedUsers,
+                  allowedSectors: form.allowedSectors,
+                },
+                db_user?.setor
+              ) &&
               <div className="flex gap-4 items-center">
                 <Link href={`/forms/${form.id}/edit`}>
                   <Button variant="outline" size="sm">
@@ -63,7 +75,9 @@ export async function FormsList() {
                     Editar
                   </Button>
                 </Link>
-                <DeleteFormButton formId={form.id} formTitle={form.title}/>
+                {user.userId === form.userId && (
+                  <DeleteFormButton formId={form.id} formTitle={form.title}/>
+                )}
               </div>
             }
           </CardHeader>

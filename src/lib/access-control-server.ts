@@ -122,3 +122,65 @@ export async function checkFormCreationAccess() {
   return db_user;
 }
 
+export async function checkFormEditAccess(formId: string) {
+  const db_user = await api.user.me();
+
+  if (!db_user?.role_config) {
+    redirect("/dashboard");
+  }
+
+  if (db_user.role_config.isTotem) {
+    redirect("/dashboard");
+  }
+
+  // Buscar o formulário para verificar permissões
+  const form = await api.form.getById(formId);
+
+  if (!form) {
+    redirect("/forms");
+  }
+
+  if (!db_user.id) {
+    redirect("/forms");
+  }
+
+  // Se é o criador do formulário, sempre tem acesso
+  if (form.userId === db_user.id) {
+    return db_user;
+  }
+
+  // Se está na lista de owners, tem acesso
+  if (form.ownerIds?.includes(db_user.id)) {
+    return db_user;
+  }
+
+  // Se tem permissão can_create_form, pode editar qualquer formulário
+  if (db_user.role_config.sudo || db_user.role_config.can_create_form) {
+    return db_user;
+  }
+
+  // Se tem acesso às respostas do formulário, pode editar
+  // Verificar se o formulário é privado
+  if (form.isPrivate) {
+    const roleConfig = db_user.role_config;
+    
+    // Verificar se o formulário está na lista de ocultos
+    if (roleConfig.hidden_forms?.includes(formId)) {
+      redirect("/forms");
+    }
+
+    // Verificar se o usuário está na lista de usuários permitidos
+    const isAllowedUser = form.allowedUsers?.includes(db_user.id) ?? false;
+    
+    // Verificar se o usuário está em um setor permitido
+    const isAllowedSector = form.allowedSectors?.includes(db_user.setor ?? "") ?? false;
+
+    // Se não tem acesso nem por usuário nem por setor, redirecionar
+    if (!isAllowedUser && !isAllowedSector) {
+      redirect("/forms");
+    }
+  }
+
+  return db_user;
+}
+
