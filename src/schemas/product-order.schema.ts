@@ -32,7 +32,7 @@ export const createPurchaseRegistrationSchema = z.object({
 
 export const updateProductOrderStatusSchema = z.object({
     id: z.string().cuid("ID inválido"),
-    status: z.enum(["SOLICITADO", "EM_ANDAMENTO"]),
+    status: z.enum(["SOLICITADO", "EM_ANDAMENTO", "PEDIDO_PROCESSADO"]),
 })
 
 export const markProductOrderAsReadSchema = z.object({

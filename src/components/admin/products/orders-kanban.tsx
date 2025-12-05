@@ -121,6 +121,7 @@ export function OrdersKanban() {
   const columns = {
     SOLICITADO: groupedOrders.filter((order) => order.status === "SOLICITADO"),
     EM_ANDAMENTO: groupedOrders.filter((order) => order.status === "EM_ANDAMENTO"),
+    PEDIDO_PROCESSADO: groupedOrders.filter((order) => order.status === "PEDIDO_PROCESSADO"),
   }
 
   // Handle drag end
@@ -202,7 +203,7 @@ export function OrdersKanban() {
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <OrdersKanbanColumn
             title="Solicitado"
             status="SOLICITADO"
@@ -211,9 +212,16 @@ export function OrdersKanban() {
             onOrderSlotClick={handleOrderClick}
           />
           <OrdersKanbanColumn
-            title="Pedido processado"
+            title="Em Andamento"
             status="EM_ANDAMENTO"
             orders={columns.EM_ANDAMENTO}
+            onMarkAsRead={handleMarkAsRead}
+            onOrderSlotClick={handleOrderClick}
+          />
+          <OrdersKanbanColumn
+            title="Pedido Processado"
+            status="PEDIDO_PROCESSADO"
+            orders={columns.PEDIDO_PROCESSADO}
             onMarkAsRead={handleMarkAsRead}
             onOrderSlotClick={handleOrderClick}
           />

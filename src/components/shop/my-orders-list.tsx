@@ -177,6 +177,12 @@ export function MyOrdersList({ filter, showDeleteButton = false }: { filter?: st
             Em Andamento
           </Badge>
         )
+      case "PEDIDO_PROCESSADO":
+        return (
+          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+            Pedido Processado
+          </Badge>
+        )
       default:
         return <Badge variant="outline">Desconhecido</Badge>
     }

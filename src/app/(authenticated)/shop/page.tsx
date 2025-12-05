@@ -142,7 +142,7 @@ function ShopPageContent() {
 
   // Se há itens no carrinho, filtrar apenas produtos da mesma empresa
   const [enterprise, setEnterprise] = useState<"ALL" | "Box" | "RHenz" | "Cristallux" | "Box_Filial" | "Cristallux_Filial">("ALL");
-  const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO">("ALL");
+  const [orderFilter, setOrderFilter] = useState<"ALL" | "SOLICITADO" | "EM_ANDAMENTO" | "PEDIDO_PROCESSADO">("ALL");
   const [nameFilter, setNameFilter] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<"ALL" | "0-50" | "50-100" | "100-200" | "200+">("ALL");
   const [showOrderDoubtsModal, setShowOrderDoubtsModal] = useState(false);
@@ -331,7 +331,8 @@ function ShopPageContent() {
                   <SelectContent>
                     <SelectItem value="ALL">Todos</SelectItem>
                     <SelectItem value="SOLICITADO">Solicitado</SelectItem>
-                    <SelectItem value="EM_ANDAMENTO">Pedido processado</SelectItem>
+                    <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
+                    <SelectItem value="PEDIDO_PROCESSADO">Pedido Processado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

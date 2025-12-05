@@ -11,7 +11,7 @@ import { ptBR } from "date-fns/locale"
 import Image from "next/image"
 import type { RouterOutputs } from "@/trpc/react"
 
-export type ProductOrderStatus = "SOLICITADO" | "EM_ANDAMENTO"
+export type ProductOrderStatus = "SOLICITADO" | "EM_ANDAMENTO" | "PEDIDO_PROCESSADO"
 
 type KanbanOrder = RouterOutputs["productOrder"]["listKanban"][number]
 
@@ -32,6 +32,8 @@ export function OrdersKanbanColumn({ title, status, orders, onMarkAsRead, onOrde
         return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-300/50 dark:text-blue-100"
       case "EM_ANDAMENTO":
         return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-300/50 dark:text-yellow-100"
+      case "PEDIDO_PROCESSADO":
+        return "bg-green-100 text-green-800 border-green-200 dark:bg-green-300/50 dark:text-green-100"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
     }

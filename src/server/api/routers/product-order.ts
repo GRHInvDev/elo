@@ -9,7 +9,7 @@ import {
 } from "@/schemas/product-order.schema"
 import type { RolesConfig } from "@/types/role-config"
 import { sendEmail } from "@/lib/mail/email-utils"
-import { mockEmailPedidoProduto, mockEmailNotificacaoPedidoProduto, mockEmailChatMensagemPedido } from "@/lib/mail/html-mock"
+import { mockEmailPedidoProduto, mockEmailNotificacaoPedidoProduto, mockEmailChatMensagemPedido, mockEmailAtualizacaoStatusPedido } from "@/lib/mail/html-mock"
 import { getProductOrderChatSchema, sendProductOrderChatMessageSchema } from "@/schemas/product-order-chat.schema"
 
 export const productOrderRouter = createTRPCRouter({
@@ -50,7 +50,7 @@ export const productOrderRouter = createTRPCRouter({
                             userId,
                             enterprise: product.enterprise,
                             status: {
-                                in: ["SOLICITADO", "EM_ANDAMENTO"]
+                                in: ["SOLICITADO", "EM_ANDAMENTO", "PEDIDO_PROCESSADO"]
                             }
                         },
                         orderBy: {
@@ -707,7 +707,7 @@ export const productOrderRouter = createTRPCRouter({
                 })
             }
 
-            return await ctx.db.productOrder.update({
+            const updatedOrder = await ctx.db.productOrder.update({
                 where: { id: input.id },
                 data: {
                     status: input.status
@@ -723,8 +723,82 @@ export const productOrderRouter = createTRPCRouter({
                         }
                     },
                     product: true,
+                    orderGroup: {
+                        include: {
+                            orders: {
+                                include: {
+                                    product: true
+                                }
+                            }
+                        }
+                    }
                 }
             })
+
+            // Enviar email quando o status mudar para EM_ANDAMENTO ou PEDIDO_PROCESSADO
+            if (input.status === "EM_ANDAMENTO" || input.status === "PEDIDO_PROCESSADO") {
+                try {
+                    const firstName = updatedOrder.user.firstName?.trim() ?? ""
+                    const lastName = updatedOrder.user.lastName?.trim() ?? ""
+                    const userName = firstName && lastName
+                        ? `${firstName} ${lastName}`
+                        : (firstName || lastName || updatedOrder.user.email) ?? "Usuário"
+
+                    const userEmail = updatedOrder.user.email
+                    if (userEmail) {
+                        // Buscar todos os pedidos do grupo se existir
+                        let orderItems: Array<{ nome: string; codigo?: string | null; quantidade: number; precoUnitario: number; subtotal: number }> = []
+                        let totalGeral = 0
+
+                        if (updatedOrder.orderGroupId && updatedOrder.orderGroup?.orders) {
+                            // Pedido agrupado - incluir todos os itens
+                            orderItems = updatedOrder.orderGroup.orders.map(o => ({
+                                nome: o.product.name,
+                                codigo: o.product.code,
+                                quantidade: o.quantity,
+                                precoUnitario: o.product.price,
+                                subtotal: o.product.price * o.quantity
+                            }))
+                            totalGeral = updatedOrder.orderGroup.orders.reduce((sum, o) => sum + (o.product.price * o.quantity), 0)
+                        } else {
+                            // Pedido único
+                            orderItems = [{
+                                nome: updatedOrder.product.name,
+                                codigo: updatedOrder.product.code,
+                                quantidade: updatedOrder.quantity,
+                                precoUnitario: updatedOrder.product.price,
+                                subtotal: updatedOrder.product.price * updatedOrder.quantity
+                            }]
+                            totalGeral = updatedOrder.product.price * updatedOrder.quantity
+                        }
+
+                        const statusText = input.status === "EM_ANDAMENTO" 
+                            ? "Em Andamento" 
+                            : "Pedido Processado"
+
+                        const emailContent = mockEmailAtualizacaoStatusPedido(
+                            userName,
+                            orderItems,
+                            totalGeral,
+                            statusText,
+                            updatedOrder.product.enterprise
+                        )
+
+                        await sendEmail(
+                            userEmail,
+                            `Atualização do Pedido - ${statusText}`,
+                            emailContent
+                        ).catch((error) => {
+                            console.error(`[ProductOrder] Erro ao enviar email de atualização de status para ${userEmail}:`, error)
+                        })
+                    }
+                } catch (error) {
+                    // Não falhar a atualização se o email falhar
+                    console.error('[ProductOrder] Erro ao processar envio de email de atualização de status:', error)
+                }
+            }
+
+            return updatedOrder
         }),
 
     // Marcar pedido como lido (gestor ou responsável)

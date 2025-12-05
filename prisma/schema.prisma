@@ -574,6 +574,7 @@ enum OrderStatus {
 enum ProductOrderStatus {
   SOLICITADO
   EM_ANDAMENTO
+  PEDIDO_PROCESSADO
 }
 
 enum PaymentMethod {

@@ -32,9 +32,10 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
   const {id, responseId} = await params;
 
   const userData = await api.user.me()
+  const form = await api.form.getById(id)
   const response = await api.formResponse.getById(responseId)
 
-  if (!response) {
+  if (!form || !response) {
     notFound()
   }
 
@@ -44,12 +45,12 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
     id,
     userData?.id,
     {
-      userId: response.form.userId,
-      isPrivate: response.form.isPrivate,
-      allowedUsers: response.form.allowedUsers,
-      allowedSectors: response.form.allowedSectors,
+      userId: form.userId,
+      isPrivate: form.isPrivate ?? null,
+      allowedUsers: Array.isArray(form.allowedUsers) ? form.allowedUsers : null,
+      allowedSectors: Array.isArray(form.allowedSectors) ? form.allowedSectors : null,
     },
-    userData?.setor
+    userData?.setor ?? null
   )) {
     redirect("/forms")
   }

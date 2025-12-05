@@ -1522,3 +1522,219 @@ export const mockEmailChatMensagemFormulario = (
     </html>
     `;
   };
+
+export const mockEmailAtualizacaoStatusPedido = (
+  nomeUsuario: string,
+  itens: OrderItem[],
+  totalGeral: number,
+  status: string,
+  empresa: string,
+) => {
+  const itemsTable = itens.map((item, index) => {
+    const precoUnitario = item.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const subtotal = item.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return `
+    <tr style="background-color: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+        <strong>${item.nome}</strong>
+        ${item.codigo ? `<br><small style="color: #666;">Código: ${item.codigo}</small>` : ''}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">
+        ${item.quantidade}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right;">
+        R$ ${precoUnitario}
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: bold;">
+        R$ ${subtotal}
+      </td>
+    </tr>
+  `
+  }).join('')
+
+  const totalGeralFormatado = totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  
+  const statusColor = status === "Em Andamento" ? "#ffc107" : "#28a745"
+  const statusBgColor = status === "Em Andamento" ? "#fff3cd" : "#d4edda"
+  const statusBorderColor = status === "Em Andamento" ? "#ffc107" : "#28a745"
+
+  return `
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #f7f7f7;
+          margin: 0;
+          padding: 0;
+          color: #333;
+        }
+        .container {
+          background-color: #ffffff;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          margin: 20px auto;
+          max-width: 600px;
+          overflow: hidden;
+        }
+        .header {
+          background-color: ${statusColor};
+          color: #fff;
+          padding: 24px 20px;
+          text-align: center;
+          border-top-left-radius: 8px;
+          border-top-right-radius: 8px;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 2rem;
+          line-height: 1.2;
+        }
+        .content-section {
+          padding: 30px;
+        }
+        .status-box {
+          background-color: ${statusBgColor};
+          border-left: 5px solid ${statusBorderColor};
+          padding: 20px;
+          margin-bottom: 25px;
+          border-radius: 4px;
+        }
+        .status-box h2 {
+          margin: 0 0 10px;
+          color: ${status === "Em Andamento" ? "#856404" : "#155724"};
+          font-size: 1.3rem;
+        }
+        .status-box p {
+          margin: 8px 0;
+          color: ${status === "Em Andamento" ? "#856404" : "#155724"};
+        }
+        .order-details {
+          background-color: #f8f9fa;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          padding: 20px;
+          margin-bottom: 20px;
+        }
+        .order-details table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .order-details th {
+          padding: 12px;
+          text-align: left;
+          border-bottom: 2px solid #e0e0e0;
+          font-weight: bold;
+          color: #555;
+        }
+        .order-details td {
+          padding: 12px;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        .total-box {
+          background-color: ${statusColor};
+          color: #fff;
+          padding: 15px 20px;
+          border-radius: 6px;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .total-box .label {
+          font-size: 0.9rem;
+          opacity: 0.9;
+        }
+        .total-box .value {
+          font-size: 1.8rem;
+          font-weight: bold;
+          margin-top: 5px;
+        }
+        .instructions {
+          background-color: #e9f7ff;
+          border-left: 5px solid #007bff;
+          padding: 20px;
+          margin-bottom: 20px;
+          border-radius: 4px;
+        }
+        .instructions h3 {
+          margin: 0 0 10px;
+          color: #007bff;
+          font-size: 1.1rem;
+        }
+        .instructions p {
+          margin: 8px 0;
+          color: #555;
+          line-height: 1.6;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #e9ecef;
+          font-size: 0.9rem;
+          color: #666;
+          text-align: center;
+        }
+        .footer p {
+          margin: 5px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Atualização do Pedido</h1>
+        </div>
+        <div class="content-section">
+          <div class="status-box">
+            <h2>Olá, ${nomeUsuario}!</h2>
+            <p>Seu pedido teve o status atualizado para: <strong>${status}</strong></p>
+            ${status === "Em Andamento" 
+              ? "<p>Seu pedido está sendo preparado e em breve estará disponível para retirada.</p>"
+              : "<p>Seu pedido foi processado e está pronto para retirada!</p>"
+            }
+          </div>
+
+          <div class="order-details">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th style="text-align: center;">Qtd</th>
+                  <th style="text-align: right;">Preço Unit.</th>
+                  <th style="text-align: right;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsTable}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="total-box">
+            <div class="label">Total do Pedido</div>
+            <div class="value">R$ ${totalGeralFormatado}</div>
+          </div>
+
+          ${status === "Pedido Processado" ? `
+          <div class="instructions">
+            <h3>📦 Instruções para Retirada</h3>
+            <p><strong>Local:</strong> Expedição em Santa Cruz do Sul</p>
+            <p><strong>Prazo:</strong> Seu pedido está disponível para retirada.</p>
+            <p><strong>Importante:</strong> Equipe de outras unidades receberão contato da equipe interna para agendar retirada ou envio.</p>
+            <p>Dúvidas? Use o chat na opção Shop → Meus Pedidos no Elo | Intranet.</p>
+          </div>
+          ` : ''}
+
+          <div class="footer">
+            <p>Atenciosamente,</p>
+            <p>Equipe de Suporte</p>
+            <p>elo - Sistema de Intranet</p>
+          </div>
+        </div>
+      </div>
+    </body>
+  </html>
+  `
+}
