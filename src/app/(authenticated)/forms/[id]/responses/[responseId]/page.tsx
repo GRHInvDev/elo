@@ -31,16 +31,27 @@ interface ResponseDetailsPageProps {
 export default async function ResponseDetailsPage({ params }: ResponseDetailsPageProps) {
   const {id, responseId} = await params;
 
-  // Verificar se o usuário pode acessar o formulário
   const userData = await api.user.me()
-  if (!canAccessForm(userData?.role_config, id)) {
-    redirect("/forms")
-  }
-
   const response = await api.formResponse.getById(responseId)
 
   if (!response) {
     notFound()
+  }
+
+  // Verificar se o usuário pode acessar o formulário
+  if (!canAccessForm(
+    userData?.role_config,
+    id,
+    userData?.id,
+    {
+      userId: response.form.userId,
+      isPrivate: response.form.isPrivate,
+      allowedUsers: response.form.allowedUsers,
+      allowedSectors: response.form.allowedSectors,
+    },
+    userData?.setor
+  )) {
+    redirect("/forms")
   }
 
   // Verificar se a resposta pertence ao formulário correto

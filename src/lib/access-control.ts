@@ -106,10 +106,59 @@ export function canViewCars(roleConfig: RolesConfig | null): boolean {
   return !roleConfig.isTotem;
 }
 
-export function canAccessForm(roleConfig: RolesConfig | null, _formId: string): boolean {
-  // SISTEMA SIMPLIFICADO: Todos podem acessar formulários, exceto TOTEMs
-  if (!roleConfig) return false;
-  return !roleConfig.isTotem;
+/**
+ * Verifica se o usuário pode acessar um formulário específico
+ * 
+ * Um usuário pode acessar um formulário se:
+ * 1. É o criador do formulário
+ * 2. O formulário não é privado (todos podem ver, exceto TOTEMs)
+ * 3. O formulário é privado mas o usuário está em allowedUsers ou allowedSectors
+ * 4. O formulário não está na lista de hidden_forms do usuário
+ * 
+ * @param roleConfig - Configuração de roles do usuário
+ * @param formId - ID do formulário
+ * @param userId - ID do usuário
+ * @param form - Dados do formulário (userId, isPrivate, allowedUsers, allowedSectors)
+ * @param userSetor - Setor do usuário (opcional)
+ * @returns true se o usuário pode acessar o formulário
+ */
+export function canAccessForm(
+  roleConfig: RolesConfig | null,
+  formId: string,
+  userId: string | null | undefined,
+  form: {
+    userId: string;
+    isPrivate?: boolean | null;
+    allowedUsers?: string[] | null;
+    allowedSectors?: string[] | null;
+  },
+  userSetor?: string | null
+): boolean {
+  if (!roleConfig || !userId) return false;
+
+  // TOTEMs não podem acessar
+  if (roleConfig.isTotem) return false;
+
+  // Se é o criador do formulário, sempre tem acesso
+  if (form.userId === userId) return true;
+
+  // Se o formulário é privado, verificar permissões específicas
+  if (form.isPrivate) {
+    // Verificar se o formulário está na lista de ocultos
+    if (roleConfig.hidden_forms?.includes(formId)) return false;
+
+    // Verificar se o usuário está na lista de usuários permitidos
+    const isAllowedUser = form.allowedUsers?.includes(userId) ?? false;
+
+    // Verificar se o usuário está em um setor permitido
+    const isAllowedSector = form.allowedSectors?.includes(userSetor ?? "") ?? false;
+
+    // Se não tem acesso nem por usuário nem por setor, não pode acessar
+    if (!isAllowedUser && !isAllowedSector) return false;
+  }
+
+  // Se passou por todas as verificações, pode acessar
+  return true;
 }
 
 export function getAccessibleForms<T extends { id: string }>(

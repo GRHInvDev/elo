@@ -25,13 +25,24 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
   const form = await api.form.getById(id)
   const userData = await api.user.me()
 
-  // Verificar se o usuário tem permissão para acessar este formulário
-  if (!canAccessForm(userData.role_config, id)) {
-    redirect("/forms")
-  }
-
   if (!form) {
     notFound()
+  }
+
+  // Verificar se o usuário tem permissão para acessar este formulário
+  if (!canAccessForm(
+    userData.role_config,
+    id,
+    userData.id,
+    {
+      userId: form.userId,
+      isPrivate: form.isPrivate,
+      allowedUsers: form.allowedUsers,
+      allowedSectors: form.allowedSectors,
+    },
+    userData.setor
+  )) {
+    redirect("/forms")
   }
 
   return (
