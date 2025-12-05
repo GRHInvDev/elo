@@ -150,7 +150,7 @@ export const formsRouter = createTRPCRouter({
         const isOwner = existingForm.ownerIds?.includes(currentUser.id) ?? false;
         
         // 3. Se tem permissão can_create_form, pode editar qualquer formulário
-        const canCreate = roleConfig?.sudo || roleConfig?.can_create_form || false;
+        const canCreate = roleConfig?.sudo ?? roleConfig?.can_create_form ?? false;
         
         // 4. Se tem acesso às respostas do formulário, pode editar
         let hasAccessToResponses = false;
