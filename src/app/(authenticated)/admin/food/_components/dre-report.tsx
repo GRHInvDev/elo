@@ -39,6 +39,9 @@ interface DREReportProps {
 
 type RateioType = 'proportional' | 'headquarters' | 'branch'
 
+// Constante com os valores do enum Enterprise que representam filiais
+const BRANCH_ENTERPRISES = ['Box_Filial', 'Cristallux_Filial'] as const
+
 export default function DREReport({ selectedDate, setSelectedDate }: DREReportProps) {
   const [invoiceValue, setInvoiceValue] = useState<string>("")
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month')
@@ -59,7 +62,8 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
 
   // Função helper para determinar se empresa é matriz ou filial
   const getEnterpriseType = (enterprise: string): 'headquarters' | 'branch' => {
-    return enterprise.includes('_Filial') ? 'branch' : 'headquarters'
+    // Verificar explicitamente os valores do enum Enterprise
+    return BRANCH_ENTERPRISES.includes(enterprise as typeof BRANCH_ENTERPRISES[number]) ? 'branch' : 'headquarters'
   }
 
   // Calcular representatividade e rateio quando os dados mudam
@@ -201,11 +205,13 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
 
   const filteredData = React.useMemo(() => {
     return processedData.filter((item) => {
+      const isBranch = BRANCH_ENTERPRISES.includes(item.enterprise as typeof BRANCH_ENTERPRISES[number])
+      
       if (rateioType === 'branch') {
-        return item.enterprise.includes('_Filial')
+        return isBranch
       }
       if (rateioType === 'headquarters') {
-        return !item.enterprise.includes('_Filial')
+        return !isBranch
       }
       return true // para rateio proporcional, mostra tudo
     })
