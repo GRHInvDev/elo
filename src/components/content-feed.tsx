@@ -106,6 +106,16 @@ interface ContentFeedProps {
   enablePagination?: boolean
 }
 
+/**
+ * Renders a content feed with tabs for posts, events, flyers, and birthdays, and provides a dialog to create new Markdown-formatted posts.
+ *
+ * Renders post items with pagination (optional), event and flyer lists, and a birthdays tab. Includes a "Novo Post" dialog that uses a Markdown editor and multi-image upload; submitted posts are created via the API and the post list is invalidated on success.
+ *
+ * @param className - Optional container CSS class name applied to the root element
+ * @param postsPerPage - Number of posts to reveal per page when pagination is enabled (defaults to 3)
+ * @param enablePagination - When true, reveals posts incrementally using an IntersectionObserver to load more as the user scrolls
+ * @returns The ContentFeed React element that displays the feed UI and handles post creation, reactions, comments, and view tracking
+ */
 export function ContentFeed({
   className,
   postsPerPage = 3,
@@ -470,6 +480,20 @@ function useIntersectionObserver(
   return { isIntersecting }
 }
 
+/**
+ * Renders a single feed post with author info, content (Markdown), images, reactions and comments.
+ *
+ * Displays the post header (author, timestamp), the title and Markdown-rendered content with a "read more" toggle,
+ * an image viewer/carousel when images are present, reaction controls (emoji picker and top emojis display),
+ * an inline comment form and a dialog listing all comments. Provides edit/delete controls when the current user is the post author.
+ *
+ * Observable side effects:
+ * - Increments the post's view count once when the post becomes sufficiently visible.
+ * - Adds/removes reactions and adds/removes comments via API mutations, with UI updates triggered by query invalidation.
+ *
+ * @param props.post - Post data augmented with its author information and media fields.
+ * @returns The rendered post item element.
+ */
 function PostItem({ post }: PostItemProps) {
   const auth = useAuth()
   const utils = api.useUtils()
@@ -973,6 +997,13 @@ interface UpdatePostDialogProps {
   }
 }
 
+/**
+ * Opens a dialog to edit an existing post's title and Markdown content.
+ *
+ * Submits the edited title and normalized Markdown content to update the post, closes the dialog on success, shows success or error toasts, and refreshes the post list.
+ *
+ * @param post - The post to edit; must include `id`, `title`, and `content`
+ */
 function UpdatePostDialog({ post }: UpdatePostDialogProps) {
   const utils = api.useUtils()
   const [open, setOpen] = useState(false)

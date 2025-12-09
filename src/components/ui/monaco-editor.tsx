@@ -57,6 +57,19 @@ const SLASH_COMMANDS: Record<string, string> = {
   "/table": "| Coluna 1 | Coluna 2 |\n|----------|----------|\n| Dado 1   | Dado 2   |",
 }
 
+/**
+ * Renders a configurable Monaco-based Markdown editor with an optional formatting toolbar, keyboard shortcuts, and slash-command completions.
+ *
+ * @param value - The editor content.
+ * @param onChange - Callback invoked when the content changes with the new value (or `undefined`).
+ * @param height - CSS height for the editor container (e.g., `"400px"`).
+ * @param className - Additional container CSS class names.
+ * @param language - Language identifier for the editor (default: `"markdown"`).
+ * @param readOnly - When `true`, the editor is rendered read-only and the toolbar is hidden.
+ * @param theme - Editor theme, either `"light"` or `"vs-dark"` (default: `"vs-dark"`).
+ * @param showToolbar - When `true`, displays the formatting toolbar (hidden when `readOnly` is `true`).
+ * @returns The rendered Monaco editor React element configured for Markdown editing.
+ */
 export function MonacoEditor({
   value,
   onChange,
@@ -610,4 +623,3 @@ export function MonacoEditor({
     </div>
   )
 }
-

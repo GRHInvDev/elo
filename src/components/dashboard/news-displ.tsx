@@ -39,7 +39,12 @@ interface PostItemProps {
   post: PostWithAuthor
 }
 
-// Componente compacto para posts em grid
+/**
+ * Render a compact post card showing image(s), author, date, title, a short markdown excerpt, and a "Ver mais" link.
+ *
+ * @param post - The post object (with author and optional images) to display in compact form.
+ * @returns A JSX element representing the compact post card suitable for use in a grid or list.
+ */
 function PostItemCompact({ post }: PostItemProps) {
   // Processar imagens: priorizar array de imagens múltiplas, depois imageUrl única
   const imageUrls: string[] = []
@@ -121,6 +126,17 @@ function PostItemCompact({ post }: PostItemProps) {
   )
 }
 
+/**
+ * Render the News feed UI with a featured post and a responsive grid of additional posts.
+ *
+ * Fetches post data and displays one of three states: loading skeletons while posts load,
+ * a centered message when there are no posts, or the content layout when posts are available.
+ * When posts exist the first post is shown as the featured item and up to three subsequent posts
+ * are shown in a 3-column responsive grid. The component uses tabs with a single "posts" view.
+ *
+ * @param className - Optional additional CSS classes applied to the root container
+ * @returns A React element containing the news feed UI including header, tabs, and posts (or loading/empty states)
+ */
 export function NewsDisplay({ className }: { className?: string }) {
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
 
@@ -188,6 +204,14 @@ export function NewsDisplay({ className }: { className?: string }) {
   )
 }
 
+/**
+ * Render a detailed card for a single post including author info, formatted date, image(s) if present, and a constrained content preview.
+ *
+ * The component displays an image carousel when the post has images (or a single image fallback), an author avatar with initials fallback, a localized creation date, the post title, and a markdown-rendered excerpt constrained to 100px with a gradient overlay. Includes an action button linking to the full posts list.
+ *
+ * @param post - The post data with author metadata used to populate the card (title, content, images, imageUrl, createdAt, and author fields).
+ * @returns A JSX element representing the post card.
+ */
 function PostItem({ post }: PostItemProps) {
 
   // Processar imagens: priorizar array de imagens múltiplas, depois imageUrl única
@@ -272,4 +296,3 @@ function PostItem({ post }: PostItemProps) {
     </Card>
   )
 }
-

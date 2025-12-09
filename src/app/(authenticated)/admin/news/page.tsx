@@ -47,6 +47,11 @@ function normalizeLineBreaks(text: string): string {
   return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
+/**
+ * Renders the News Management page for listing, searching, creating, editing, and deleting company news posts with image upload and Markdown editing.
+ *
+ * @returns The News Management page React element.
+ */
 export default function NewsManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
