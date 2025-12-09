@@ -50,8 +50,8 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
   }
 
   return (
-    <div className={cn(className)}>
-      <div className="-mt-11 flex justify-between items-center translate-y-11 relative z-40 pb-4 bg-gradient-to-br from-black/70 via-black/20 to-transparent">
+    <div className={cn("rounded-2xl overflow-hidden", className)}>
+      <div className="-mt-11 flex justify-between items-center translate-y-11 relative z-40 pb-4 bg-gradient-to-br from-black/70 via-black/20 to-transparent rounded-t-2xl">
         <h2 className="text-xl font-semibold ml-2 text-white drop-shadow-md z-50">Aniversariantes do dia 🎉</h2>
       </div>
       <Carousel
@@ -66,7 +66,7 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
         <CarouselContent>
           {itens.map((item, index) => (
             <CarouselItem key={index} className="w-full h-96">
-              <div className="relative w-full h-full">
+              <div className="relative w-full h-full rounded-2xl overflow-hidden">
                 <OptimizedImage
                   alt={item.title}
                   src={item.imageRef || "/placeholder.svg"}

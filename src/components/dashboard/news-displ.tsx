@@ -2,7 +2,6 @@
 
 import type React from "react"
 import type { RolesConfig } from "@/types/role-config"
-import { useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { LucideVerified } from "lucide-react"
@@ -14,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ImageCarousel } from "@/components/ui/image-carousel"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -101,9 +101,11 @@ function PostItemCompact({ post }: PostItemProps) {
           </h3>
 
           {/* Texto do Post */}
-          <p className="line-clamp-3 text-xs text-muted-foreground whitespace-pre-line leading-relaxed flex-1">
-            {post.content}
-          </p>
+          <div className="text-xs text-muted-foreground flex-1 overflow-hidden">
+            <div className="line-clamp-3">
+              <MarkdownRenderer content={post.content} />
+            </div>
+          </div>
 
           {/* Botão de Ação */}
           <div className="pt-2 border-t">
@@ -187,7 +189,6 @@ export function NewsDisplay({ className }: { className?: string }) {
 }
 
 function PostItem({ post }: PostItemProps) {
-  const [showMore, setShowMore] = useState(false)
 
   // Processar imagens: priorizar array de imagens múltiplas, depois imageUrl única
   const imageUrls: string[] = []
@@ -221,7 +222,7 @@ function PostItem({ post }: PostItemProps) {
           )}
 
           {/* Coluna do Conteúdo */}
-          <div className={`p-6 space-y-4 ${imageUrls.length > 0 ? 'md:col-span-2' : 'md:col-span-3'}`}>
+          <div className={`p-6 space-y-4 ${imageUrls.length > 0 ? 'md:col-span-2' : 'md:col-span-3'} flex flex-col`}>
             {/* Header com Avatar e Data */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -251,39 +252,14 @@ function PostItem({ post }: PostItemProps) {
               {post.title}
             </h3>
 
-            {/* Texto do Post */}
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              {showMore ? (
-                <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                    {post.content}
-                  </div>
-                  <button 
-                    className="text-xs font-semibold text-primary hover:underline transition-colors" 
-                    onClick={() => setShowMore(false)}
-                  >
-                    Ler menos
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="line-clamp-4 text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                    {post.content}
-                  </p>
-                  {post.content.length > 200 && (
-                    <button 
-                      className="text-xs font-semibold text-primary hover:underline transition-colors" 
-                      onClick={() => setShowMore(true)}
-                    >
-                      Ler mais...
-                    </button>
-                  )}
-                </div>
-              )}
+            {/* Texto do Post - Limitado a 100px de altura */}
+            <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden relative" style={{ maxHeight: '100px' }}>
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background pointer-events-none z-10" />
+              <MarkdownRenderer content={post.content} />
             </div>
 
             {/* Botão de Ação */}
-            <div className="pt-2 border-t">
+            <div className="pt-2 border-t mt-auto">
               <Link href="/news">
                 <Button variant="outline" size="sm" className="w-full md:w-auto">
                   Ver post completo

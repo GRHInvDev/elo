@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
+import { MonacoEditor } from "@/components/ui/monaco-editor"
 import {
   Newspaper,
   Search,
@@ -53,6 +54,8 @@ export default function NewsManagementPage() {
   const [editingPost, setEditingPost] = useState<Post | null>(null)
   const [fileUrl, setFileUrl] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(false)
+  const [createContent, setCreateContent] = useState("")
+  const [editContent, setEditContent] = useState("")
 
   const { isSudo, hasAdminAccess } = useAccessControl()
   const { toast } = useToast()
@@ -148,10 +151,13 @@ export default function NewsManagementPage() {
 
     createPost.mutate({
       title: formData.get("title") as string,
-      content: normalizeLineBreaks(formData.get("content") as string),
+      content: normalizeLineBreaks(createContent || ""),
       published: true,
       imageUrl: fileUrl,
     })
+    
+    // Limpar o conteúdo após criar
+    setCreateContent("")
   }
 
   const handleUpdatePost = (e: React.FormEvent<HTMLFormElement>) => {
@@ -163,11 +169,18 @@ export default function NewsManagementPage() {
     updatePost.mutate({
       id: editingPost.id,
       title: formData.get("title") as string,
-      content: normalizeLineBreaks(formData.get("content") as string),
+      content: normalizeLineBreaks(editContent || ""),
       published: true,
       imageUrl: fileUrl,
     })
   }
+
+  // Atualizar conteúdo de edição quando o post for selecionado
+  useEffect(() => {
+    if (editingPost) {
+      setEditContent(editingPost.content)
+    }
+  }, [editingPost])
 
   const handleDeletePost = (postId: string) => {
     if (confirm("Tem certeza que deseja excluir este post?")) {
@@ -210,12 +223,12 @@ export default function NewsManagementPage() {
                 Nova Notícia
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleCreatePost}>
                 <DialogHeader>
                   <DialogTitle>Criar Nova Notícia</DialogTitle>
                   <DialogDescription>
-                    Compartilhe uma novidade importante com a equipe
+                    Compartilhe uma novidade importante com a equipe. Use Markdown para formatar o conteúdo.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -249,20 +262,22 @@ export default function NewsManagementPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="create-content">Conteúdo</Label>
-                    <Textarea
-                      id="create-content"
-                      name="content"
-                      placeholder="Digite o conteúdo da notícia. Pressione Enter para criar quebras de linha."
-                      rows={6}
-                      required
+                    <Label htmlFor="create-content">Conteúdo (Markdown)</Label>
+                    <MonacoEditor
+                      value={createContent}
+                      onChange={(value) => setCreateContent(value || "")}
+                      height="500px"
+                      language="markdown"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
+                    </p>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button
                     type="submit"
-                    disabled={createPost.isPending || loading}
+                    disabled={createPost.isPending || loading || !createContent.trim()}
                   >
                     {createPost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Publicar
@@ -471,14 +486,19 @@ export default function NewsManagementPage() {
         </Card>
 
         {/* Dialog de edição */}
-        <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
-          <DialogContent className="max-w-2xl">
+        <Dialog open={!!editingPost} onOpenChange={(open) => {
+          if (!open) {
+            setEditingPost(null)
+            setEditContent("")
+          }
+        }}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             {editingPost && (
               <form onSubmit={handleUpdatePost}>
                 <DialogHeader>
                   <DialogTitle>Editar Notícia</DialogTitle>
                   <DialogDescription>
-                    Faça alterações nesta notícia
+                    Faça alterações nesta notícia. Use Markdown para formatar o conteúdo.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -513,21 +533,22 @@ export default function NewsManagementPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="edit-content">Conteúdo</Label>
-                    <Textarea
-                      id="edit-content"
-                      name="content"
-                      defaultValue={editingPost.content}
-                      placeholder="Digite o conteúdo da notícia. Pressione Enter para criar quebras de linha."
-                      rows={6}
-                      required
+                    <Label htmlFor="edit-content">Conteúdo (Markdown)</Label>
+                    <MonacoEditor
+                      value={editContent}
+                      onChange={(value) => setEditContent(value || "")}
+                      height="500px"
+                      language="markdown"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
+                    </p>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button
                     type="submit"
-                    disabled={updatePost.isPending || loading}
+                    disabled={updatePost.isPending || loading || !editContent.trim()}
                   >
                     {updatePost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Atualizar
