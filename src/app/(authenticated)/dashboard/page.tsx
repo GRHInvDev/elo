@@ -4,14 +4,16 @@ import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
 import { api } from "@/trpc/react"
 import { cn } from "@/lib/utils"
-import { LinkIcon, LucideGraduationCap, LucidePlane, LucidePlay } from "lucide-react"
+import { LinkIcon, LucideGraduationCap } from "lucide-react"
 import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import { NewsDisplay } from "@/components/dashboard/news-displ"
 import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
-import { DashboardShell } from "@/components/dashboard-shell";
+import { DashboardShell } from "@/components/dashboard-shell"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { WeatherWidget } from "@/components/dashboard/weather-widget"
 
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/complete-profile-modal"
@@ -100,29 +102,18 @@ export default function DashboardPage() {
       <div className={cn("grid grid-cols-1 md:grid-cols-3", !hasTodayBirthdays && "md:grid-cols-1")}>
         {
           posts.length > 0 &&
-          <MainCarousel className={cn("w-full md:col-span-2", !hasTodayBirthdays && "md:col-span-1")} itens={posts}/>
+          <MainCarousel className={cn("w-full max-w-6xl md:max-w-[1920px] mx-auto px-4 md:px-4 lg:px-8 md:col-span-2", !hasTodayBirthdays && "md:col-span-1")} itens={posts}/>
         }
         {
           hasTodayBirthdays && (
-          <BirthdaysCarousel className="w-full md:col-span-1" itens={todayBirthdays.map((b)=>({
-            imageRef: b.imageUrl ?? "",
-            title: b.name
-          }))}/>
+            <BirthdaysCarousel className="w-full md:col-span-1" itens={todayBirthdays.map((b)=>({
+              imageRef: b.imageUrl ?? "",
+              title: b.name
+            }))}/>
           )
         }
     </div>
-      <div className={cn("grid grid-cols-1 gap-4 md:gap-6", !hasTodayBirthdays && "md:grid-cols-1")}>
-
-        {/* Seção de Conteúdo - Vídeos, Links e ideias */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          {
-            videos.length> 0 && (
-              <div className="lg:col-span-2">
-                <VideosCarousel className="w-full" itens={videos}/>
-              </div>
-            )
-          }
-          <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+    <div className="w-full max-w-6xl md:max-w-[1920px] mx-auto px-4 md:px-4 lg:px-8 mt-6 md:mt-8 space-y-4 md:space-y-6">
             {/* Funcionalidades Mobile */}
             <div className="md:hidden">
               <h1 className="text-2xl md:text-4xl mb-4 md:mb-6 font-semibold">
@@ -141,62 +132,119 @@ export default function DashboardPage() {
                 }
               </div>
             </div>
-
-            {/* Links Úteis */}
-            <div className="bg-muted rounded-md p-3 md:p-4">
-              <div className="flex gap-2 items-center text-sm font-semibold mb-3">
-                <LinkIcon className="size-4"/>
-                Links Úteis
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Link href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
-                  <Image src="/umentor.jpg" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="umentor"/>
-                  <span className="text-xs truncate">Umentor</span>
-                </Link>
-                <Link href={'https://cristaluni.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
-                  <LucideGraduationCap className="size-4 mr-2 flex-shrink-0"/>
-                  <span className="text-xs truncate">CristalUni</span>
-                </Link>
-                <Link href={'https://boxdistribuidor.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
-                  <Image src="/LOGO BOX.png" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="Site Box"/>
-                  <span className="text-xs truncate">Site Box</span>
-                </Link>
-                <Link href={'https://cristallux.com.br'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
-                  <Image src="/icon_cristal.svg" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="Cristaluni"/>
-                  <span className="text-xs truncate">Cristallux</span>
-                </Link>
-                <Link href={'https://centraldofuncionario.com.br/60939'} className="flex items-center rounded-md p-2 bg-background/50 hover:bg-background/80 transition-colors">
-                  <Image src="/central-funcionario.ico" height={20} width={20} className="rounded-md mr-2 flex-shrink-0" alt="Cristaluni"/>
-                  <span className="text-xs truncate">Central do Colaborador</span>
-                </Link>
-              </div>
+          </div>
+      {/* Links Úteis e Ideias - Dividido em duas colunas */}
+      <div className="w-full max-w-6xl md:max-w-[1920px] mx-auto px-4 md:px-4 lg:px-8 mt-4 md:mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+          {/* Links Úteis */}
+          <div className="bg-muted rounded-lg p-3 md:p-4">
+            <div className="flex gap-2 items-center text-sm md:text-base font-semibold mb-3">
+              <LinkIcon className="size-4 md:size-5"/>
+              <span>Links Úteis</span>
             </div>
+            <Tabs defaultValue="treinamento" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-8 md:h-9 mb-3 rounded-sm">
+                <TabsTrigger value="treinamento" className="text-xs font-medium">
+                  Treinamento
+                </TabsTrigger>
+                <TabsTrigger value="sites" className="text-xs font-medium">
+                  Sites
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="treinamento" className="mt-0 space-y-1.5 md:space-y-2">
+                <Link 
+                  href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} 
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image 
+                    src="/umentor.jpg" 
+                    height={20} 
+                    width={20} 
+                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
+                    alt="Umentor"
+                  />
+                  <span className="text-xs md:text-sm font-medium">Umentor</span>
+                </Link>
+                <Link 
+                  href={'https://cristaluni.com.br'} 
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <LucideGraduationCap className="size-5 md:size-6 mr-2 md:mr-3 flex-shrink-0 text-primary"/>
+                  <span className="text-xs md:text-sm font-medium">CristalUni</span>
+                </Link>
+              </TabsContent>
+              <TabsContent value="sites" className="mt-0 space-y-1.5 md:space-y-2">
+                <Link 
+                  href={'https://boxdistribuidor.com.br'} 
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image 
+                    src="/LOGO BOX.png" 
+                    height={20} 
+                    width={20} 
+                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
+                    alt="Site Box"
+                  />
+                  <span className="text-xs md:text-sm font-medium">Site Box</span>
+                </Link>
+                <Link 
+                  href={'https://cristallux.com.br'} 
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image 
+                    src="/icon_cristal.svg" 
+                    height={20} 
+                    width={20} 
+                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
+                    alt="Cristallux"
+                  />
+                  <span className="text-xs md:text-sm font-medium">Cristallux</span>
+                </Link>
+                <Link 
+                  href={'https://centraldofuncionario.com.br/60939'} 
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image 
+                    src="/central-funcionario.ico" 
+                    height={20} 
+                    width={20} 
+                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
+                    alt="Central do Colaborador"
+                  />
+                  <span className="text-xs md:text-sm font-medium">Central do Colaborador</span>
+                </Link>
+              </TabsContent>
+            </Tabs>
+          </div>
 
-            {/* Card de Ideias - Melhorado para mobile */}
-            <div className="w-full">
-              <h3 className="text-lg font-semibold mb-3 md:mb-4">Ideias</h3>
-              <SuggestionsWrapper />
-            </div>
+          {/* Card de Ideias */}
+          <div className="bg-muted rounded-lg p-3 md:p-4">
+            <h3 className="text-sm md:text-base font-semibold mb-3 flex items-center gap-2">
+              <span>Ideias</span>
+            </h3>
+            <SuggestionsWrapper />
           </div>
         </div>
       </div>
-      <div className="hidden w-full max-w-6xl place-self-center">
-        <div className="ml-8 md:ml-16 mt-16 flex justify-between items-center overflow-hidden">
-          <div className="flex items-center gap-8">
-            <div className="p-2 bg-foreground size-14 md:size-28 flex items-center justify-center">
-              <LucidePlane className="text-background size-8 md:size-20 rotate-45"/>
-            </div>
-            <h1 className="text-xl md:text-4xl font-semibold">
-              OnBoarding
-            </h1>
-          </div>
-          <div>
-            <div className="flex items-center justify-center h-36 md:h-44 relative translate-x-14 md:translate-x-0 bg-muted rounded-md aspect-video">
-              <LucidePlay/>
-            </div>
-          </div>
-        </div>
+      <div className="w-full max-w-6xl md:max-w-[1920px] mx-auto px-4 md:px-4 lg:px-8 space-y-4 md:space-y-6">
+        {/* Seção de Conteúdo - Video e Clima */}
+        {
+          videos.length > 0 && (
+            <VideosCarousel className="w-full" itens={videos}/>
+          )
+        }
       </div>
+   
     <div> 
     <DashboardShell className="p-0">
       <NewsDisplay className="w-full"/>
@@ -204,7 +252,7 @@ export default function DashboardPage() {
     </div>
       {/* Footer com Redes Sociais */}
       <div className="mt-8 lg:mt-12 bg-muted/50 border-t">
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 md:px-2 py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Redes Sociais */}
             <div className="space-y-3">

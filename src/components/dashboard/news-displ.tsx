@@ -39,6 +39,86 @@ interface PostItemProps {
   post: PostWithAuthor
 }
 
+// Componente compacto para posts em grid
+function PostItemCompact({ post }: PostItemProps) {
+  // Processar imagens: priorizar array de imagens múltiplas, depois imageUrl única
+  const imageUrls: string[] = []
+  
+  if (post.images && post.images.length > 0) {
+    imageUrls.push(...post.images
+      .sort((a, b) => a.order - b.order)
+      .map(img => img.imageUrl)
+    )
+  } else if (post.imageUrl) {
+    imageUrls.push(post.imageUrl)
+  }
+
+  return (
+    <Card className="w-full overflow-hidden hover:shadow-lg transition-shadow duration-300 rounded-2xl flex flex-col h-full">
+      <CardContent className="p-0 flex flex-col h-full">
+        {/* Imagem no topo */}
+        {imageUrls.length > 0 && (
+          <div className="relative h-48 md:h-56 overflow-hidden bg-muted">
+            <ImageCarousel
+              images={imageUrls}
+              alt={post.title}
+              aspectRatio="auto"
+              showArrows={imageUrls.length > 1}
+              showDots={imageUrls.length > 1}
+              className="h-full w-full"
+              imageFit="cover"
+            />
+          </div>
+        )}
+
+        {/* Conteúdo */}
+        <div className="p-4 space-y-3 flex flex-col flex-1">
+          {/* Header com Avatar e Data */}
+          <div className="flex items-center gap-2">
+            <Avatar className="h-8 w-8 border border-background">
+              <AvatarImage src={post.author.imageUrl ?? undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                {post.author.firstName?.charAt(0).toUpperCase()}
+                {post.author.lastName?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-foreground flex items-center gap-1 truncate">
+                {post.author.firstName} {post.author.lastName}
+                {post.author.role_config?.sudo && (
+                  <LucideVerified className="text-blue-500 size-3 flex-shrink-0" />
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {format(post.createdAt, "d 'de' MMM", { locale: ptBR })}
+              </p>
+            </div>
+          </div>
+
+          {/* Título */}
+          <h3 className="font-bold text-base md:text-lg leading-tight text-foreground line-clamp-2">
+            {post.title}
+          </h3>
+
+          {/* Texto do Post */}
+          <p className="line-clamp-3 text-xs text-muted-foreground whitespace-pre-line leading-relaxed flex-1">
+            {post.content}
+          </p>
+
+          {/* Botão de Ação */}
+          <div className="pt-2 border-t">
+            <Link href="/news">
+              <Button variant="outline" size="sm" className="w-full text-xs">
+                Ver mais
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function NewsDisplay({ className }: { className?: string }) {
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
 
@@ -48,30 +128,54 @@ export function NewsDisplay({ className }: { className?: string }) {
   return (
     <div className={`w-full max-w-none ${className ?? ""}`}>
       <div className="w-full max-w-none">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle>News do Grupo RHenz</CardTitle>
+            <div>
+              <CardTitle className="text-2xl md:text-3xl mb-2">News do Grupo RHenz</CardTitle>
+              <p className="text-sm text-muted-foreground">Fique por dentro das últimas novidades</p>
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <Tabs defaultValue="posts">
-            <TabsContent value="posts" className="mt-4">
+            <TabsContent value="posts" className="mt-0">
               {isLoadingPosts ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="space-y-2">
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-4 w-full" />
-                    </div>
+                    <Card key={i} className="overflow-hidden">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+                        <Skeleton className="h-48 w-full md:col-span-1" />
+                        <div className="md:col-span-2 space-y-3">
+                          <Skeleton className="h-6 w-2/3" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-5/6" />
+                        </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
               ) : !postsWithRoleConfig?.length ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum post publicado ainda.</p>
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-2">Nenhum post publicado ainda.</p>
+                  <p className="text-sm text-muted-foreground/70">Fique atento para novidades em breve!</p>
+                </div>
               ) : (
-                <div className="space-y-4">
-                  {postsWithRoleConfig?.slice(0, 3).map((post) => (
-                    <PostItem key={post.id} post={post} />
-                  ))}
+                <div className="space-y-6">
+                  {/* Post em Destaque (Mais Recente) */}
+                  {postsWithRoleConfig[0] && (
+                    <div>
+                      <PostItem key={postsWithRoleConfig[0].id} post={postsWithRoleConfig[0]} />
+                    </div>
+                  )}
+                  
+                  {/* Posts em 3 Colunas */}
+                  {postsWithRoleConfig.length > 1 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                      {postsWithRoleConfig.slice(1, 4).map((post) => (
+                        <PostItemCompact key={post.id} post={post} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -85,82 +189,104 @@ export function NewsDisplay({ className }: { className?: string }) {
 function PostItem({ post }: PostItemProps) {
   const [showMore, setShowMore] = useState(false)
 
+  // Processar imagens: priorizar array de imagens múltiplas, depois imageUrl única
+  const imageUrls: string[] = []
+  
+  if (post.images && post.images.length > 0) {
+    imageUrls.push(...post.images
+      .sort((a, b) => a.order - b.order)
+      .map(img => img.imageUrl)
+    )
+  } else if (post.imageUrl) {
+    imageUrls.push(post.imageUrl)
+  }
+
   return (
-    <Card className="w-full max-w-none">
-      <CardContent className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <Card className="w-full max-w-none overflow-hidden hover:shadow-lg transition-shadow duration-300 rounded-2xl">
+      <CardContent className="p-0">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
           {/* Coluna da Imagem */}
-          <div className="order-2 md:order-1">
-            {(() => {
-              // Processar imagens: priorizar array de imagens múltiplas, depois imageUrl única
-              const imageUrls: string[] = []
-              
-              if (post.images && post.images.length > 0) {
-                // Ordenar por 'order' e extrair URLs
-                imageUrls.push(...post.images
-                  .sort((a, b) => a.order - b.order)
-                  .map(img => img.imageUrl)
-                )
-              } else if (post.imageUrl) {
-                // Fallback para imagem única (compatibilidade com posts antigos)
-                imageUrls.push(post.imageUrl)
-              }
-              
-              return imageUrls.length > 0 ? (
-                <ImageCarousel
-                  images={imageUrls}
-                  alt={post.title}
-                  aspectRatio="auto"
-                  showArrows={imageUrls.length > 1}
-                  showDots={imageUrls.length > 1}
-                  className="max-h-[300px]"
-                  imageFit="contain"
-                />
-              ) : null
-            })()}
-          </div>
+          {imageUrls.length > 0 && (
+            <div className="relative h-48 md:h-auto md:min-h-[240px] overflow-hidden bg-muted">
+              <ImageCarousel
+                images={imageUrls}
+                alt={post.title}
+                aspectRatio="auto"
+                showArrows={imageUrls.length > 1}
+                showDots={imageUrls.length > 1}
+                className="h-full w-full"
+                imageFit="cover"
+              />
+            </div>
+          )}
 
           {/* Coluna do Conteúdo */}
-          <div className="order-1 md:order-2 space-y-4">
-            {/* Avatar e Info do Autor */}
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border">
-                <AvatarImage src={post.author.imageUrl ?? undefined} />
-                <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-semibold text-foreground flex items-center">
-                  {post.author.firstName} {post.author.lastName}
-                  {post.author.role_config?.sudo && <LucideVerified className={"ml-2 text-blue-500 size-4"} />}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                </p>
+          <div className={`p-6 space-y-4 ${imageUrls.length > 0 ? 'md:col-span-2' : 'md:col-span-3'}`}>
+            {/* Header com Avatar e Data */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                  <AvatarImage src={post.author.imageUrl ?? undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                    {post.author.firstName?.charAt(0).toUpperCase()}
+                    {post.author.lastName?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+                    {post.author.firstName} {post.author.lastName}
+                    {post.author.role_config?.sudo && (
+                      <LucideVerified className="text-blue-500 size-4" />
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Título */}
-            <h3 className="font-semibold text-lg">{post.title}</h3>
+            <h3 className="font-bold text-xl md:text-2xl leading-tight text-foreground">
+              {post.title}
+            </h3>
 
             {/* Texto do Post */}
-            {showMore ? (
-              <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-                <div className="whitespace-pre-line">{post.content}</div>
-                <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(false)}>
-                  Ler menos...
-                </button>
-              </div>
-            ) : (
-              <div>
-                <p className="line-clamp-6 text-sm whitespace-pre-line">{post.content}</p>
-              </div>
-            )}
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              {showMore ? (
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                    {post.content}
+                  </div>
+                  <button 
+                    className="text-xs font-semibold text-primary hover:underline transition-colors" 
+                    onClick={() => setShowMore(false)}
+                  >
+                    Ler menos
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="line-clamp-4 text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                    {post.content}
+                  </p>
+                  {post.content.length > 200 && (
+                    <button 
+                      className="text-xs font-semibold text-primary hover:underline transition-colors" 
+                      onClick={() => setShowMore(true)}
+                    >
+                      Ler mais...
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
-            {/* Botão Leia Mais */}
-            <div className="pt-2">
+            {/* Botão de Ação */}
+            <div className="pt-2 border-t">
               <Link href="/news">
-                <Button variant="outline" size="sm">
-                  Ler mais
+                <Button variant="outline" size="sm" className="w-full md:w-auto">
+                  Ver post completo
                 </Button>
               </Link>
             </div>

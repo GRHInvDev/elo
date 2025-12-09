@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { WeatherWidget } from "@/components/dashboard/weather-widget"
 
 interface MainCarouselProps {
   itens: {
@@ -33,56 +34,99 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
   }, [carouselApi])
 
   return (
-    <div className={cn(className)}>
-      <Carousel
-        className="w-full"
-        setApi={setCarouselApi}
-        opts={{
-          loop: true,
-          align: "center",
-          inViewThreshold: 1
-        }}
-      >
-        <CarouselContent className="p-4">
-          {itens.map((item, index) => (
-            <CarouselItem key={index} className="w-full h-96 p-4 aspect-video md:basis-1/2">
-              <div className="relative w-full h-full">
-                <iframe
-                  src={item.imageRef}
-                  title={item.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  className="size-full rounded-lg aspect-video"
-                  allowFullScreen
-                  loading="lazy"
-                ></iframe>
-              </div>
-            </CarouselItem>
-          ))}
-          <CarouselItem className="object-contain w-full h-96 p-4 aspect-video md:basis-1/2">
-            <div className="size-full">
-              <Link className="rounded-md relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
-                <OptimizedImage className="object-cover rounded-md" fill src="/banners/Banners-intranet-3.png" alt="box"/>
-              </Link>
+    <div className={cn("w-full", className)}>
+      {/* Grid estático no desktop - 3 colunas */}
+      <div className="hidden md:grid md:grid-cols-3 mt-8 gap-4 md:gap-6">
+        {/* Primeira coluna - Vídeos */}
+        {itens.map((item, index) => (
+          <div key={index} className="w-full h-96 aspect-video">
+            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
+              <iframe
+                src={item.imageRef}
+                title={item.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                className="size-full aspect-video"
+                allowFullScreen
+                loading="lazy"
+              ></iframe>
             </div>
-          </CarouselItem>
-        </CarouselContent>
-      </Carousel>
-
-      {/* Indicators */}
-      {count > 0 && (
-        <div className="md:hidden flex justify-center gap-2 relative -translate-y-8">
-          <div className="rounded-full bg-muted/50 flex items-center gap-2 p-1">
-            {Array.from({ length: count }).map((_, index) => (
-              <button
-                key={index}
-                className={`size-2 md:size-3 rounded-full transition-colors ${current === index ? "bg-foreground" : "bg-muted-foreground"}`}
-                onClick={() => carouselApi?.scrollTo(index)}
-                aria-label={`Ir para slide ${index + 1}`}
-              />
-            ))}
+          </div>
+        ))}
+        
+        {/* Segunda coluna - Banner */}
+        <div className="w-full h-96 aspect-video">
+          <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
+            <Link className="relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
+              <OptimizedImage className="object-cover" fill src="/banners/Banners-intranet-3.png" alt="box"/>
+            </Link>
           </div>
         </div>
-      )}
+
+        {/* Terceira coluna - WeatherWidget */}
+        <div className="w-full h-96 aspect-video">
+          <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
+            <WeatherWidget className="h-full" />
+          </div>
+        </div>
+      </div>
+
+      {/* Carrossel no mobile */}
+      <div className="md:hidden mt-4">
+        <Carousel
+          className="w-full"
+          setApi={setCarouselApi}
+          opts={{
+            loop: true,
+            align: "center",
+            inViewThreshold: 1
+          }}
+        >
+          <CarouselContent className="-ml-2 md:-ml-4">
+            {itens.map((item, index) => (
+              <CarouselItem key={index} className="pl-2 md:pl-4 basis-full">
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg">
+                  <iframe
+                    src={item.imageRef}
+                    title={item.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    loading="lazy"
+                  ></iframe>
+                </div>
+              </CarouselItem>
+            ))}
+            <CarouselItem className="pl-2 md:pl-4 basis-full">
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg">
+                <Link className="relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
+                  <OptimizedImage className="object-cover" fill src="/banners/Banners-intranet-3.png" alt="box"/>
+                </Link>
+              </div>
+            </CarouselItem>
+            <CarouselItem className="pl-2 md:pl-4 basis-full">
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg">
+                <WeatherWidget className="h-full" />
+              </div>
+            </CarouselItem>
+          </CarouselContent>
+        </Carousel>
+
+        {/* Indicators - Apenas no mobile */}
+        {count > 0 && (
+          <div className="flex justify-center gap-2 relative -translate-y-8 z-10">
+            <div className="rounded-full bg-muted/50 backdrop-blur-sm flex items-center gap-2 p-1.5">
+              {Array.from({ length: count }).map((_, index) => (
+                <button
+                  key={index}
+                  className={`size-2 rounded-full transition-all duration-200 ${current === index ? "bg-foreground w-6" : "bg-muted-foreground/50"}`}
+                  onClick={() => carouselApi?.scrollTo(index)}
+                  aria-label={`Ir para slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
