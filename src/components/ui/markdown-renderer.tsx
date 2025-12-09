@@ -10,6 +10,15 @@ interface MarkdownRendererProps {
   className?: string
 }
 
+/**
+ * Render Markdown content as styled HTML elements using GitHub Flavored Markdown.
+ *
+ * Renders the given markdown string with custom component mappings (headings, lists, code blocks, links, images, tables, etc.) and applies typographic and layout styles. Links open in a new tab with noopener/noreferrer; images render responsively using Next.js Image when a valid `src` is provided.
+ *
+ * @param content - The Markdown source to render
+ * @param className - Optional additional class names applied to the outer container
+ * @returns A React element containing the rendered and styled Markdown content
+ */
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   return (
     <div className={cn("prose prose-sm dark:prose-invert max-w-none", className)}>
@@ -107,4 +116,3 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
     </div>
   )
 }
-
