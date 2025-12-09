@@ -35,7 +35,6 @@ import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
@@ -231,7 +230,7 @@ export function ContentFeed({
                       <Label htmlFor="content">Conteúdo (Markdown)</Label>
                       <MonacoEditor
                         value={postContent}
-                        onChange={(value) => setPostContent(value || "")}
+                        onChange={(value) => setPostContent(value ?? "")}
                         height="500px"
                         language="markdown"
                       />
@@ -1041,7 +1040,7 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
               <Label htmlFor="content">Conteúdo (Markdown)</Label>
               <MonacoEditor
                 value={editContent}
-                onChange={(value) => setEditContent(value || "")}
+                onChange={(value) => setEditContent(value ?? "")}
                 height="500px"
                 language="markdown"
               />

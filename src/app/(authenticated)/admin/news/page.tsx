@@ -15,7 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
@@ -265,7 +264,7 @@ export default function NewsManagementPage() {
                     <Label htmlFor="create-content">Conteúdo (Markdown)</Label>
                     <MonacoEditor
                       value={createContent}
-                      onChange={(value) => setCreateContent(value || "")}
+                      onChange={(value) => setCreateContent(value ?? "")}
                       height="500px"
                       language="markdown"
                     />
@@ -536,7 +535,7 @@ export default function NewsManagementPage() {
                     <Label htmlFor="edit-content">Conteúdo (Markdown)</Label>
                     <MonacoEditor
                       value={editContent}
-                      onChange={(value) => setEditContent(value || "")}
+                      onChange={(value) => setEditContent(value ?? "")}
                       height="500px"
                       language="markdown"
                     />

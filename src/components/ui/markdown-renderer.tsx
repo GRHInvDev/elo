@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 interface MarkdownRendererProps {
   content: string
@@ -16,34 +17,34 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         remarkPlugins={[remarkGfm]}
         components={{
           // Customizar estilos dos elementos
-          h1: ({ node, ...props }) => (
+          h1: ({ node: _node, ...props }) => (
             <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />
           ),
-          h2: ({ node, ...props }) => (
+          h2: ({ node: _node, ...props }) => (
             <h2 className="text-xl font-bold mt-5 mb-3" {...props} />
           ),
-          h3: ({ node, ...props }) => (
+          h3: ({ node: _node, ...props }) => (
             <h3 className="text-lg font-semibold mt-4 mb-2" {...props} />
           ),
-          p: ({ node, ...props }) => (
+          p: ({ node: _node, ...props }) => (
             <p className="mb-4 leading-relaxed" {...props} />
           ),
-          ul: ({ node, ...props }) => (
+          ul: ({ node: _node, ...props }) => (
             <ul className="list-disc list-inside mb-4 space-y-1" {...props} />
           ),
-          ol: ({ node, ...props }) => (
+          ol: ({ node: _node, ...props }) => (
             <ol className="list-decimal list-inside mb-4 space-y-1" {...props} />
           ),
-          li: ({ node, ...props }) => (
+          li: ({ node: _node, ...props }) => (
             <li className="ml-4" {...props} />
           ),
-          blockquote: ({ node, ...props }) => (
+          blockquote: ({ node: _node, ...props }) => (
             <blockquote
               className="border-l-4 border-primary pl-4 italic my-4 text-muted-foreground"
               {...props}
             />
           ),
-          code: ({ node, className, ...props }) => {
+          code: ({ node: _node, className, ...props }) => {
             const isInline = !className
             return isInline ? (
               <code
@@ -57,10 +58,10 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               />
             )
           },
-          pre: ({ node, ...props }) => (
+          pre: ({ node: _node, ...props }) => (
             <pre className="bg-muted p-4 rounded-md overflow-x-auto mb-4" {...props} />
           ),
-          a: ({ node, ...props }) => (
+          a: ({ node: _node, ...props }) => (
             <a
               className="text-primary hover:underline"
               target="_blank"
@@ -68,28 +69,35 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               {...props}
             />
           ),
-          img: ({ node, ...props }) => (
-            <img
-              className="rounded-lg my-4 max-w-full h-auto"
-              alt=""
-              {...props}
-            />
-          ),
-          hr: ({ node, ...props }) => (
+          img: ({ node: _node, src, alt }) => {
+            if (!src || typeof src !== "string") return null
+            return (
+              <div className="relative w-full my-4 rounded-lg overflow-hidden">
+                <Image
+                  src={src}
+                  alt={alt ?? ""}
+                  width={800}
+                  height={600}
+                  className="rounded-lg max-w-full h-auto"
+                />
+              </div>
+            )
+          },
+          hr: ({ node: _node, ...props }) => (
             <hr className="my-6 border-t border-border" {...props} />
           ),
-          table: ({ node, ...props }) => (
+          table: ({ node: _node, ...props }) => (
             <div className="overflow-x-auto my-4">
               <table className="min-w-full border-collapse border border-border" {...props} />
             </div>
           ),
-          th: ({ node, ...props }) => (
+          th: ({ node: _node, ...props }) => (
             <th
               className="border border-border px-4 py-2 bg-muted font-semibold text-left"
               {...props}
             />
           ),
-          td: ({ node, ...props }) => (
+          td: ({ node: _node, ...props }) => (
             <td className="border border-border px-4 py-2" {...props} />
           ),
         }}
