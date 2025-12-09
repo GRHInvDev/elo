@@ -57,7 +57,7 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
         <CarouselContent>
           {itens.map((item, index) => (
             <CarouselItem key={index} className="w-full h-96">
-              <div className="relative w-full h-full">
+              <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
                 <OptimizedImage
                   alt={item.title}
                   src={item.imageRef || "/placeholder.svg"}
