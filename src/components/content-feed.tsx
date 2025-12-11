@@ -35,7 +35,6 @@ import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
@@ -50,6 +49,8 @@ import { ImageCarousel } from "./ui/image-carousel"
 import { OptimizedImage } from "./ui/optimized-image"
 import { ImageViewer } from "./ui/image-viewer"
 import { LazyIframe } from "./ui/lazy-iframe"
+import { MonacoEditor } from "./ui/monaco-editor"
+import { MarkdownRenderer } from "./ui/markdown-renderer"
 
 // Define interfaces específicas para os tipos de dados
 interface AuthorWithRoleConfig {
@@ -105,6 +106,16 @@ interface ContentFeedProps {
   enablePagination?: boolean
 }
 
+/**
+ * Renders a content feed with tabs for posts, events, flyers, and birthdays, and provides a dialog to create new Markdown-formatted posts.
+ *
+ * Renders post items with pagination (optional), event and flyer lists, and a birthdays tab. Includes a "Novo Post" dialog that uses a Markdown editor and multi-image upload; submitted posts are created via the API and the post list is invalidated on success.
+ *
+ * @param className - Optional container CSS class name applied to the root element
+ * @param postsPerPage - Number of posts to reveal per page when pagination is enabled (defaults to 3)
+ * @param enablePagination - When true, reveals posts incrementally using an IntersectionObserver to load more as the user scrolls
+ * @returns The ContentFeed React element that displays the feed UI and handles post creation, reactions, comments, and view tracking
+ */
 export function ContentFeed({
   className,
   postsPerPage = 3,
@@ -115,6 +126,7 @@ export function ContentFeed({
   const [images, setImages] = useState<string[]>([])
   const [loading] = useState(false)
   const [visiblePostsCount, setVisiblePostsCount] = useState(enablePagination ? postsPerPage : postsPerPage)
+  const [postContent, setPostContent] = useState("")
   const { toast } = useToast()
   const utils = api.useUtils()
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -178,11 +190,15 @@ export function ContentFeed({
 
     createPost.mutate({
       title: formData.get("title") as string,
-      content: normalizeLineBreaks(formData.get("content") as string),
+      content: normalizeLineBreaks(postContent || ""),
       published: true,
       imageUrl: fileUrl, // Mantido para compatibilidade
       images: images.length > 0 ? images : undefined, // Novas imagens múltiplas
     })
+    
+    // Limpar o conteúdo após criar
+    setPostContent("")
+    setImages([])
   }
 
   return (
@@ -198,11 +214,13 @@ export function ContentFeed({
                   Novo Post
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                 <form onSubmit={onSubmit}>
                   <DialogHeader>
                     <DialogTitle>Novo Post</DialogTitle>
-                    <DialogDescription>Compartilhe uma novidade com a equipe</DialogDescription>
+                    <DialogDescription>
+                      Compartilhe uma novidade com a equipe. Use Markdown para formatar o conteúdo.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -219,17 +237,20 @@ export function ContentFeed({
 
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="content">Conteúdo</Label>
-                      <Textarea
-                        id="content"
-                        name="content"
-                        placeholder="Digite o conteúdo do post. Pressione Enter para criar quebras de linha."
-                        required
+                      <Label htmlFor="content">Conteúdo (Markdown)</Label>
+                      <MonacoEditor
+                        value={postContent}
+                        onChange={(value) => setPostContent(value ?? "")}
+                        height="500px"
+                        language="markdown"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
+                      </p>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit" disabled={createPost.isPending || loading}>
+                    <Button type="submit" disabled={createPost.isPending || loading || !postContent.trim()}>
                       {createPost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Publicar
                     </Button>
@@ -459,6 +480,20 @@ function useIntersectionObserver(
   return { isIntersecting }
 }
 
+/**
+ * Renders a single feed post with author info, content (Markdown), images, reactions and comments.
+ *
+ * Displays the post header (author, timestamp), the title and Markdown-rendered content with a "read more" toggle,
+ * an image viewer/carousel when images are present, reaction controls (emoji picker and top emojis display),
+ * an inline comment form and a dialog listing all comments. Provides edit/delete controls when the current user is the post author.
+ *
+ * Observable side effects:
+ * - Increments the post's view count once when the post becomes sufficiently visible.
+ * - Adds/removes reactions and adds/removes comments via API mutations, with UI updates triggered by query invalidation.
+ *
+ * @param props.post - Post data augmented with its author information and media fields.
+ * @returns The rendered post item element.
+ */
 function PostItem({ post }: PostItemProps) {
   const auth = useAuth()
   const utils = api.useUtils()
@@ -679,14 +714,16 @@ function PostItem({ post }: PostItemProps) {
         <h3 className="font-semibold px-6">{post.title}</h3>
         {showMore ? (
           <div className="text-sm prose prose-sm dark:prose-invert max-w-none px-6 md:px-0">
-            <div className="whitespace-pre-line">{post.content}</div>
+            <MarkdownRenderer content={post.content} />
             <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(false)}>
               Ler menos...
             </button>
           </div>
         ) : (
           <div className="px-6 md:px-0">
-            <p className="line-clamp-3 text-sm whitespace-pre-line">{post.content}</p>
+            <div className="line-clamp-3 text-sm">
+              <MarkdownRenderer content={post.content} />
+            </div>
             {post.content.length > 250 && (
               <button className="font-semibold text-xs text-muted-foreground mt-2" onClick={() => setShowMore(true)}>
                 Ler mais...
@@ -960,9 +997,17 @@ interface UpdatePostDialogProps {
   }
 }
 
+/**
+ * Opens a dialog to edit an existing post's title and Markdown content.
+ *
+ * Submits the edited title and normalized Markdown content to update the post, closes the dialog on success, shows success or error toasts, and refreshes the post list.
+ *
+ * @param post - The post to edit; must include `id`, `title`, and `content`
+ */
 function UpdatePostDialog({ post }: UpdatePostDialogProps) {
   const utils = api.useUtils()
   const [open, setOpen] = useState(false)
+  const [editContent, setEditContent] = useState(post.content)
   const { toast } = useToast()
 
   const updatePost = api.post.update.useMutation({
@@ -983,6 +1028,12 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
     },
   })
 
+  useEffect(() => {
+    if (open) {
+      setEditContent(post.content)
+    }
+  }, [open, post.content])
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
@@ -990,7 +1041,7 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
     updatePost.mutate({
       id: post.id,
       title: formData.get("title") as string,
-      content: normalizeLineBreaks(formData.get("content") as string),
+      content: normalizeLineBreaks(editContent || ""),
       published: true,
     })
   }
@@ -1003,11 +1054,13 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
           Editar Post
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={onSubmit}>
           <DialogHeader>
             <DialogTitle>Editar Post</DialogTitle>
-            <DialogDescription>Compartilhe uma novidade com a equipe</DialogDescription>
+            <DialogDescription>
+              Compartilhe uma novidade com a equipe. Use Markdown para formatar o conteúdo.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -1015,18 +1068,20 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
               <Input id="title" name="title" defaultValue={post.title} placeholder="Digite o título do post" required />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="content">Conteúdo</Label>
-              <Textarea
-                id="content"
-                name="content"
-                defaultValue={post.content}
-                placeholder="Digite o conteúdo do post. Pressione Enter para criar quebras de linha."
-                required
+              <Label htmlFor="content">Conteúdo (Markdown)</Label>
+              <MonacoEditor
+                value={editContent}
+                onChange={(value) => setEditContent(value ?? "")}
+                height="500px"
+                language="markdown"
               />
+              <p className="text-xs text-muted-foreground">
+                Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={updatePost.isPending}>
+            <Button type="submit" disabled={updatePost.isPending || !editContent.trim()}>
               {updatePost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Publicar
             </Button>

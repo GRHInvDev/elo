@@ -1528,7 +1528,7 @@ export const mockEmailAtualizacaoStatusPedido = (
   itens: OrderItem[],
   totalGeral: number,
   status: string,
-  empresa: string,
+  _empresa: string,
 ) => {
   const itemsTable = itens.map((item, index) => {
     const precoUnitario = item.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
