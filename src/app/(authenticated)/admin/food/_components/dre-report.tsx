@@ -9,12 +9,20 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { DatePicker } from "@/components/ui/date-picker"
+import { DateRangeCalendar } from "@/components/forms/date-range-calendar"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { format, startOfMonth, endOfMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Calculator, Download, FileText } from "lucide-react"
+import { Calculator, Download, FileText, Eye, FileSpreadsheet } from "lucide-react"
 import * as XLSX from "xlsx"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface DREData {
   enterprise: string
@@ -44,19 +52,29 @@ const BRANCH_ENTERPRISES = ['Box_Filial', 'Cristallux_Filial'] as const
 
 export default function DREReport({ selectedDate, setSelectedDate }: DREReportProps) {
   const [invoiceValue, setInvoiceValue] = useState<string>("")
-  const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month')
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    startOfMonth(selectedDate)
+  )
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    endOfMonth(selectedDate)
+  )
   const [rateioType, setRateioType] = useState<RateioType>('proportional')
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
+
+  // Calcular ano baseado na data inicial ou usar o ano atual
+  const selectedYear = startDate?.getFullYear() ?? new Date().getFullYear()
 
   // Buscar dados DRE por empresa/setor
   const dreQuery = api.foodOrder.getDREData.useQuery(
     {
       year: selectedYear,
-      period: selectedPeriod,
-      date: selectedPeriod === 'month' ? selectedDate : undefined,
+      period: "month", // Mantém compatibilidade
+      date: startDate,
+      startDate: startDate,
+      endDate: endDate,
     },
     {
-      enabled: true,
+      enabled: !!(startDate && endDate),
     }
   )
 
@@ -148,7 +166,12 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
       return
     }
 
-    toast.success("Relatório DRE gerado com sucesso!")
+    if (filteredData.length === 0) {
+      toast.error("Nenhum dado encontrado para os filtros selecionados")
+      return
+    }
+
+    setIsPreviewModalOpen(true)
   }
 
   const handleExportToExcel = () => {
@@ -193,7 +216,13 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "DRE_Report")
 
-      const fileName = `dre_report_${selectedYear}_${selectedPeriod}_${format(new Date(), "yyyy-MM-dd")}.xlsx`
+      const isFullMonth = startDate && endDate && 
+        startDate.getTime() === startOfMonth(startDate).getTime() && 
+        endDate.getTime() === endOfMonth(startDate).getTime()
+      const periodLabel = isFullMonth
+        ? format(startDate ?? new Date(), "MM-yyyy", { locale: ptBR })
+        : `${format(startDate ?? new Date(), "dd-MM-yyyy", { locale: ptBR })}_${format(endDate ?? new Date(), "dd-MM-yyyy", { locale: ptBR })}`
+      const fileName = `dre_report_${periodLabel}_${format(new Date(), "yyyy-MM-dd")}.xlsx`
       XLSX.writeFile(wb, fileName)
 
       toast.success("Relatório DRE exportado com sucesso!")
@@ -254,58 +283,14 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Primeira linha: Período, Ano, Data */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-2">
-                <Label>Período</Label>
-                <Select
-                  value={selectedPeriod}
-                  onValueChange={(value: 'month' | 'quarter' | 'year') => setSelectedPeriod(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="month">Mensal</SelectItem>
-                    <SelectItem value="quarter">Trimestral</SelectItem>
-                    <SelectItem value="year">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Ano</Label>
-                <Select
-                  value={String(selectedYear)}
-                  onValueChange={(value) => setSelectedYear(parseInt(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 5 }, (_, i) => {
-                      const year = new Date().getFullYear() - 2 + i
-                      return (
-                        <SelectItem key={year} value={String(year)}>
-                          {year}
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedPeriod === 'month' && (
-                <div className="space-y-2">
-                  <Label>Data</Label> <br />
-                  <DatePicker
-                    date={selectedDate}
-                    onDateChange={(date: Date | undefined) => {
-                      if (date) setSelectedDate(date)
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+            {/* Seleção de Período */}
+            <DateRangeCalendar
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              label="Período"
+            />
 
             {/* Segunda linha: Valor da Nota, Tipo de Rateio */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -341,8 +326,13 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
           </div>
 
           <div className="flex gap-2 mt-6">
-            <Button onClick={handleGenerateReport} disabled={dreQuery.isLoading}>
-              {dreQuery.isLoading ? "Carregando..." : "Gerar Relatório"}
+            <Button 
+              onClick={handleGenerateReport} 
+              disabled={dreQuery.isLoading || !(startDate && endDate)}
+              className="flex items-center gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              {dreQuery.isLoading ? "Carregando..." : "Gerar e Visualizar Relatório"}
             </Button>
 
             <Button
@@ -351,7 +341,7 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
               disabled={filteredData.length === 0}
               className="flex items-center gap-2"
             >
-              <Download className="h-4 w-4" />
+              <FileSpreadsheet className="h-4 w-4" />
               Exportar Excel
             </Button>
           </div>
@@ -381,9 +371,15 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
         <CardHeader>
           <CardTitle>Resultado DRE por Empresa e Setor</CardTitle>
           <CardDescription>
-            {selectedPeriod === 'month' && `Dados do mês ${format(selectedDate, "MM/yyyy", { locale: ptBR })}`}
-            {selectedPeriod === 'quarter' && `Dados do trimestre ${Math.ceil((selectedDate.getMonth() + 1) / 3)}/${selectedYear}`}
-            {selectedPeriod === 'year' && `Dados do ano ${selectedYear}`}
+            {startDate && endDate && (
+              <>
+                {startDate.getTime() === startOfMonth(startDate).getTime() && 
+                 endDate.getTime() === endOfMonth(startDate).getTime()
+                  ? `Dados do mês ${format(startDate, "MMMM 'de' yyyy", { locale: ptBR })}`
+                  : `Dados do período de ${format(startDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`
+                }
+              </>
+            )}
             {rateioType !== 'proportional' && (
               <span className="block mt-1 text-sm font-medium text-blue-600">
                 Rateio aplicado: {
@@ -449,6 +445,139 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Pré-visualização do Relatório */}
+      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Pré-visualização do Relatório DRE
+            </DialogTitle>
+            <DialogDescription>
+              {startDate && endDate && (
+                <>
+                  {startDate.getTime() === startOfMonth(startDate).getTime() && 
+                   endDate.getTime() === endOfMonth(startDate).getTime()
+                    ? `Período: ${format(startDate, "MMMM 'de' yyyy", { locale: ptBR })}`
+                    : `Período: ${format(startDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`
+                  }
+                  {invoiceValue && (
+                    <span className="block mt-1">
+                      Valor da Nota Fiscal: R$ {parseFloat(invoiceValue).toFixed(2)} | 
+                      Tipo de Rateio: {
+                        rateioType === 'proportional' ? 'Proporcional' :
+                        rateioType === 'headquarters' ? 'Matriz' :
+                        'Filial'
+                      }
+                    </span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Resumo */}
+            {filteredData.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold">{totalOrders}</div>
+                    <p className="text-xs text-muted-foreground">Total de Pedidos</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold">R$ {totalValue.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Valor Total</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="text-2xl font-bold">R$ {totalRateio.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Total Rateio</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Tabela de Resultados */}
+            {filteredData.length > 0 ? (
+              <div className="space-y-4">
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>  
+                        <TableHead>Empresa</TableHead>
+                        <TableHead>Setor</TableHead>
+                        <TableHead className="text-right">Pedidos</TableHead>
+                        <TableHead className="text-right">Valor (R$)</TableHead>
+                        <TableHead className="text-right">Representatividade (%)</TableHead>
+                        <TableHead className="text-right">Rateio Centro Custo (R$)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.map((item, index) => (
+                        <TableRow key={`${item.enterprise}-${item.sector}-${index}`}>
+                          <TableCell>
+                            <Badge variant="outline">{item.enterprise}</Badge>
+                          </TableCell>
+                          <TableCell>{item.sector ?? "Não informado"}</TableCell>
+                          <TableCell className="text-right">{item.totalOrders}</TableCell>
+                          <TableCell className="text-right">R$ {item.totalValue.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{item.representativeness.toFixed(2)}%</TableCell>
+                          <TableCell className="text-right">
+                            R$ {item.costCenterRateio?.toFixed(2) ?? "0.00"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Totais */}
+                <div className="border-t pt-4 bg-muted/50 p-4 rounded-lg">
+                  <div className="flex justify-end space-x-6 text-sm font-medium">
+                    <span>Total Geral:</span>
+                    <span>{totalOrders} pedidos</span>
+                    <span>R$ {totalValue.toFixed(2)}</span>
+                    <span>100.00%</span>
+                    <span>R$ {totalRateio.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Nenhum dado encontrado para os filtros selecionados
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsPreviewModalOpen(false)}
+            >
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                handleExportToExcel()
+                setIsPreviewModalOpen(false)
+              }}
+              disabled={filteredData.length === 0}
+              className="flex items-center gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Exportar Excel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

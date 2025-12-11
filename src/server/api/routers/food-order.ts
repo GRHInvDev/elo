@@ -916,6 +916,8 @@ export const foodOrderRouter = createTRPCRouter({
         year: z.number(),
         period: z.enum(["month", "quarter", "year"]),
         date: z.date().optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<{
@@ -924,13 +926,33 @@ export const foodOrderRouter = createTRPCRouter({
       totalOrders: number
       totalValue: number
     }[]> => {
-      const { year, period, date } = input
+      const { year, period, date, startDate: inputStartDate, endDate: inputEndDate } = input
 
       // Definir o período de busca baseado no tipo selecionado
       let startDate: Date
       let endDate: Date
 
-      if (period === "year") {
+      // Se startDate e endDate foram fornecidos diretamente, usar esses valores
+      if (inputStartDate && inputEndDate) {
+        startDate = new Date(Date.UTC(
+          inputStartDate.getFullYear(),
+          inputStartDate.getMonth(),
+          inputStartDate.getDate(),
+          0,
+          0,
+          0,
+          0
+        ))
+        endDate = new Date(Date.UTC(
+          inputEndDate.getFullYear(),
+          inputEndDate.getMonth(),
+          inputEndDate.getDate(),
+          23,
+          59,
+          59,
+          999
+        ))
+      } else if (period === "year") {
         startDate = new Date(Date.UTC(year, 0, 1)) // 1 de janeiro
         endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999)) // 31 de dezembro
       } else if (period === "quarter" && date) {
