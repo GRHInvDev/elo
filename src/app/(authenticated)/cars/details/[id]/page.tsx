@@ -102,11 +102,22 @@ export default async function VehicleDetailsPage({
           <h2 className="text-2xl font-bold mb-6">Histórico de reservas</h2>
           <div className="space-y-4">
             {vehicle.rents.map((rent) => {
-              const observation = rent.observation ? JSON.parse(JSON.stringify(rent.observation)) as {
-                gasLevel: "Reserva" | "1/4" |"1/2" | "3/4" | "Cheio",
-                needCleaning: boolean,
-                considerations?: string
-              } : null
+              const observation = rent.observation ? (() => {
+                const obs = JSON.parse(JSON.stringify(rent.observation)) as Record<string, unknown>
+                // Caso de finalização sem uso
+                if (obs.noUsage) {
+                  return {
+                    noUsage: true,
+                    reason: obs.reason as string | undefined
+                  }
+                }
+                // Caso de finalização normal
+                return {
+                  gasLevel: obs.gasLevel as "Reserva" | "1/4" | "1/2" | "3/4" | "Cheio" | undefined,
+                  needCleaning: obs.needCleaning as boolean | undefined,
+                  considerations: obs.considerations as string | undefined
+                }
+              })() : null
 
               return (
                 <Card key={rent.id} className="overflow-hidden">
@@ -216,39 +227,51 @@ export default async function VehicleDetailsPage({
                     {observation && (
                       <div className="mt-6 pt-6 border-t">
                         <h3 className="font-semibold mb-4">Observações</h3>
-                        <div className="grid gap-4 md:grid-cols-3">
-                          {observation.gasLevel && (
-                            <div className="flex items-start gap-2">
-                              <Fuel className="h-5 w-5 text-muted-foreground mt-0.5" />
-                              <div>
-                                <p className="font-medium">Nível de combustível</p>
-                                <p className="text-sm text-muted-foreground">{observation.gasLevel}</p>
-                              </div>
+                        {observation.noUsage ? (
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-amber-600 dark:text-amber-400">Finalizado sem uso</p>
+                              {observation.reason && (
+                                <p className="text-sm text-muted-foreground mt-1">Motivo: {observation.reason}</p>
+                              )}
                             </div>
-                          )}
+                          </div>
+                        ) : (
+                          <div className="grid gap-4 md:grid-cols-3">
+                            {observation.gasLevel && (
+                              <div className="flex items-start gap-2">
+                                <Fuel className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="font-medium">Nível de combustível</p>
+                                  <p className="text-sm text-muted-foreground">{observation.gasLevel}</p>
+                                </div>
+                              </div>
+                            )}
 
-                          {observation.needCleaning !== undefined && (
-                            <div className="flex items-start gap-2">
-                              <Sparkles className="h-5 w-5 text-muted-foreground mt-0.5" />
-                              <div>
-                                <p className="font-medium">Necessita limpeza</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {observation.needCleaning ? "Sim" : "Não"}
-                                </p>
+                            {observation.needCleaning !== undefined && (
+                              <div className="flex items-start gap-2">
+                                <Sparkles className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="font-medium">Necessita limpeza</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {observation.needCleaning ? "Sim" : "Não"}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
-                          {observation.considerations && (
-                            <div className="flex items-start gap-2">
-                              <AlertTriangle className="h-5 w-5 text-muted-foreground mt-0.5" />
-                              <div>
-                                <p className="font-medium">Considerações</p>
-                                <p className="text-sm text-muted-foreground">{observation.considerations}</p>
+                            {observation.considerations && (
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="font-medium">Considerações</p>
+                                  <p className="text-sm text-muted-foreground">{observation.considerations}</p>
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>

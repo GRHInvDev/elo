@@ -8,12 +8,12 @@ import { api } from "@/trpc/react"
 
 export function VehicleMetrics() {
   const { data: vehicles, isLoading } = api.vehicle.getAll.useQuery({
-    limit: 1000,
+    limit: 100,
     availble: undefined,
   })
 
   const { data: rents } = api.vehicleRent.getAll.useQuery({
-    limit: 1000,
+    limit: 100,
   })
 
   if (isLoading) {

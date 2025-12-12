@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { MapPin, Car, LucideInfo, LucideGauge, LucideSparkles } from "lucide-react"
+import { MapPin, Car, LucideInfo, LucideGauge, LucideSparkles, Ban } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,7 +31,9 @@ interface FinishRentButtonProps {
 export function FinishRentButton({ rentId, currentKilometers }: FinishRentButtonProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const utils = api.useUtils()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isNoUsageDialogOpen, setIsNoUsageDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [location, setLocation] = useState<GeolocationPosition | null>(null)
   const [locationError, setLocationError] = useState<string | null>(null)
@@ -40,16 +42,41 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   const [gasLevel, setGasLevel] = useState<"Reserva" | "1/4" | "1/2" | "3/4" | "Cheio">()
   const [needCleaning, setNeedCleaning] = useState<boolean>()
   const [considerations, setConsiderations] = useState<string>()
+  const [noUsageReason, setNoUsageReason] = useState<string>("")
   
   const locationRequested = useRef(false)
 
   const finishRent = api.vehicleRent.finish.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Reserva finalizada com sucesso!",
         description: "O veículo foi devolvido com sucesso.",
       })
       setIsDialogOpen(false)
+      // Invalidar queries relacionadas para atualizar a UI
+      await utils.vehicleRent.getMyActiveRent.invalidate()
+      router.refresh()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao finalizar reserva",
+        description: error.message,
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+    },
+  })
+
+  const finishWithoutUsage = api.vehicleRent.finishWithoutUsage.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: "Reserva finalizada sem uso!",
+        description: "O veículo foi devolvido sem alterações de quilometragem.",
+      })
+      setIsNoUsageDialogOpen(false)
+      setNoUsageReason("")
+      // Invalidar queries relacionadas para atualizar a UI
+      await utils.vehicleRent.getMyActiveRent.invalidate()
       router.refresh()
     },
     onError: (error) => {
@@ -176,12 +203,27 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
     })
   }
 
+  const handleConfirmFinishWithoutUsage = () => {
+    setIsSubmitting(true)
+    finishWithoutUsage.mutate({
+      id: rentId,
+      reason: noUsageReason || undefined,
+    })
+  }
+
   return (
     <>
-      <Button onClick={handleFinishRent} className="ml-auto">
-        Finalizar Reserva
-      </Button>
+      <div className="flex gap-2 ml-auto">
+        <Button variant="outline" onClick={() => setIsNoUsageDialogOpen(true)}>
+          <Ban className="h-4 w-4 mr-2" />
+          Sem uso
+        </Button>
+        <Button onClick={handleFinishRent}>
+          Finalizar Reserva
+        </Button>
+      </div>
 
+      {/* Diálogo de finalização com uso */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px] max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
@@ -298,6 +340,56 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
               }
             >
               {isSubmitting ? "Finalizando..." : "Confirmar Devolução"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de finalização sem uso */}
+      <Dialog open={isNoUsageDialogOpen} onOpenChange={setIsNoUsageDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Finalizar sem uso</DialogTitle>
+            <DialogDescription>
+              Confirme que o veículo não foi utilizado. A quilometragem permanecerá inalterada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Atenção:</strong> Ao finalizar sem uso, a quilometragem do veículo ({currentKilometers.toLocaleString()} km) 
+                será mantida e nenhuma informação de combustível será registrada.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="noUsageReason">Motivo (opcional)</Label>
+              <Textarea
+                id="noUsageReason"
+                value={noUsageReason}
+                onChange={(e) => setNoUsageReason(e.target.value)}
+                placeholder="Ex: Viagem cancelada, reunião remarcada..."
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsNoUsageDialogOpen(false)
+                setNoUsageReason("")
+              }} 
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmFinishWithoutUsage}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Finalizando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>
