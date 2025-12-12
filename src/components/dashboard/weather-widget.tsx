@@ -108,26 +108,38 @@ export function WeatherWidget({ className, enterprise }: WeatherWidgetProps) {
   const [cityName, setCityName] = useState<string>("")
 
   useEffect(() => {
-    // Obter localização do usuário
-    if (navigator.geolocation) {
+    // Definir fallback imediatamente baseado na empresa
+    const defaultLocation = getDefaultLocationByEnterprise(enterprise)
+    setLocation(defaultLocation)
+
+    // Tentar obter localização do usuário (opcional)
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      // Timeout de 3 segundos para não ficar esperando muito
+      const timeoutId = setTimeout(() => {
+        // Se demorar muito, manter o fallback
+        console.log("Timeout ao obter localização, usando fallback baseado na empresa")
+      }, 3000)
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          clearTimeout(timeoutId)
+          // Só atualizar se conseguir obter a localização
           setLocation({
             lat: position.coords.latitude,
             lon: position.coords.longitude
           })
         },
         (err) => {
+          clearTimeout(timeoutId)
           console.error("Erro ao obter localização:", err)
-          // Fallback para coordenadas baseadas na empresa
-          const defaultLocation = getDefaultLocationByEnterprise(enterprise)
-          setLocation(defaultLocation)
+          // Manter o fallback que já foi definido
+        },
+        {
+          timeout: 3000, // Timeout de 3 segundos
+          maximumAge: 60000, // Aceitar cache de até 1 minuto
+          enableHighAccuracy: false // Não precisa de alta precisão
         }
       )
-    } else {
-      // Fallback para coordenadas baseadas na empresa
-      const defaultLocation = getDefaultLocationByEnterprise(enterprise)
-      setLocation(defaultLocation)
     }
   }, [enterprise])
 

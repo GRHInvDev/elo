@@ -30,6 +30,7 @@ export default function DashboardPage() {
   // Removido: userRole não é mais necessário com novo sistema
   const userEnterprise = user?.enterprise ?? null
   const userSetor = user?.setor ?? null
+  const isTotem = user?.role_config?.isTotem === true
 
   // Verificar se os campos obrigatórios estão preenchidos
   useEffect(() => {
@@ -158,7 +159,8 @@ export default function DashboardPage() {
                       src="/LOGO BOX.png" 
                       height={20} 
                       width={20} 
-                      className="rounded-sm mr-2 flex-shrink-0 size-5" 
+                      className="rounded-sm mr-2 flex-shrink-0" 
+                      style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
                       alt="Site Box"
                     />
                     <span className="text-xs font-medium">Site Box</span>
@@ -188,7 +190,8 @@ export default function DashboardPage() {
                       src="/central-funcionario.ico" 
                       height={20} 
                       width={20} 
-                      className="rounded-sm mr-2 flex-shrink-0 size-5" 
+                      className="rounded-sm mr-2 flex-shrink-0" 
+                      style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
                       alt="Central do Colaborador"
                     />
                     <span className="text-xs font-medium">Central do Colaborador</span>
@@ -213,7 +216,8 @@ export default function DashboardPage() {
                       src="/umentor.jpg" 
                       height={20} 
                       width={20} 
-                      className="rounded-sm mr-2 flex-shrink-0 size-5" 
+                      className="rounded-sm mr-2 flex-shrink-0" 
+                      style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
                       alt="Umentor"
                     />
                     <span className="text-xs font-medium">Umentor</span>
@@ -224,7 +228,7 @@ export default function DashboardPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <LucideGraduationCap className="size-5 mr-2 flex-shrink-0 text-primary"/>
+                    <LucideGraduationCap className="mr-2 flex-shrink-0 text-primary" style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}/>
                     <span className="text-xs font-medium">CristalUni</span>
                   </Link>
                 </div>
@@ -245,9 +249,10 @@ export default function DashboardPage() {
                   >
                     <Image 
                       src="/LOGO BOX.png" 
-                      height={20} 
-                      width={20} 
-                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      height={24} 
+                      width={24} 
+                      className="rounded-sm mr-3 flex-shrink-0" 
+                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
                       alt="Site Box"
                     />
                     <span className="text-sm font-medium">Site Box</span>
@@ -260,9 +265,10 @@ export default function DashboardPage() {
                   >
                     <Image 
                       src="/icon_cristal.svg" 
-                      height={20} 
-                      width={20} 
-                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      height={24} 
+                      width={24} 
+                      className="rounded-sm mr-3 flex-shrink-0" 
+                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
                       alt="Cristallux"
                     />
                     <span className="text-sm font-medium">Cristallux</span>
@@ -275,9 +281,10 @@ export default function DashboardPage() {
                   >
                     <Image 
                       src="/central-funcionario.ico" 
-                      height={20} 
-                      width={20} 
-                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      height={24} 
+                      width={24} 
+                      className="rounded-sm mr-3 flex-shrink-0" 
+                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
                       alt="Central do Colaborador"
                     />
                     <span className="text-sm font-medium">Central do Colaborador</span>
@@ -297,9 +304,10 @@ export default function DashboardPage() {
                   >
                     <Image 
                       src="/umentor.jpg" 
-                      height={20} 
-                      width={20} 
-                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      height={24} 
+                      width={24} 
+                      className="rounded-sm mr-3 flex-shrink-0" 
+                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
                       alt="Umentor"
                     />
                     <span className="text-sm font-medium">Umentor</span>
@@ -310,7 +318,7 @@ export default function DashboardPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <LucideGraduationCap className="size-6 mr-3 flex-shrink-0 text-primary"/>
+                    <LucideGraduationCap className="mr-3 flex-shrink-0 text-primary" style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}/>
                     <span className="text-sm font-medium">CristalUni</span>
                   </Link>
                 </div>
@@ -318,13 +326,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Card de Ideias */}
-          <div className="bg-muted rounded-lg p-3 md:p-4">
-            <h3 className="text-sm md:text-base font-semibold mb-3 flex items-center gap-2">
-              <span>Ideias</span>
-            </h3>
-            <SuggestionsWrapper />
-          </div>
+          {/* Card de Ideias - Não exibir para usuários Totem */}
+          {!isTotem && (
+            <div className="bg-muted rounded-lg p-3 md:p-4">
+              <h3 className="text-sm md:text-base font-semibold mb-3 flex items-center gap-2">
+                <span>Ideias</span>
+              </h3>
+              <SuggestionsWrapper />
+            </div>
+          )}
         </div>
       </div>
       <div className="w-full px-4 md:px-4 lg:px-8 space-y-4 md:space-y-6">
