@@ -6,6 +6,7 @@ import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { WeatherWidget } from "@/components/dashboard/weather-widget"
+import { type Enterprise } from "@prisma/client"
 
 interface MainCarouselProps {
   itens: {
@@ -13,9 +14,10 @@ interface MainCarouselProps {
     title: string
   }[],
   className?: string
+  enterprise?: Enterprise | null
 }
 
-export function VideosCarousel({ itens, className }: MainCarouselProps) {
+export function VideosCarousel({ itens, className, enterprise }: MainCarouselProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
@@ -36,16 +38,16 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
   return (
     <div className={cn("w-full", className)}>
       {/* Grid estático no desktop - 3 colunas */}
-      <div className="hidden md:grid md:grid-cols-3 mt-8 gap-4 md:gap-6">
+      <div className="hidden md:grid md:grid-cols-3 mt-8 gap-4 md:gap-6 w-full">
         {/* Primeira coluna - Vídeos */}
         {itens.map((item, index) => (
-          <div key={index} className="w-full h-96 aspect-video">
+          <div key={index} className="w-full h-[400px]">
             <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
               <iframe
                 src={item.imageRef}
                 title={item.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                className="size-full aspect-video"
+                className="w-full h-full"
                 allowFullScreen
                 loading="lazy"
               ></iframe>
@@ -54,7 +56,7 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
         ))}
         
         {/* Segunda coluna - Banner */}
-        <div className="w-full h-96 aspect-video">
+        <div className="w-full h-[400px]">
           <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
             <Link className="relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
               <OptimizedImage className="object-cover" fill src="/banners/Banners-intranet-3.png" alt="box"/>
@@ -63,9 +65,9 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
         </div>
 
         {/* Terceira coluna - WeatherWidget */}
-        <div className="w-full h-96 aspect-video">
+        <div className="w-full h-[400px]">
           <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
-            <WeatherWidget className="h-full" />
+            <WeatherWidget className="h-full" enterprise={enterprise} />
           </div>
         </div>
       </div>
@@ -78,13 +80,14 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
           opts={{
             loop: true,
             align: "center",
-            inViewThreshold: 1
+            inViewThreshold: 1,
+            dragFree: true
           }}
         >
-          <CarouselContent className="-ml-2 md:-ml-4">
+          <CarouselContent className="-ml-2 md:-ml-4" style={{ touchAction: 'pan-x pan-y' }}>
             {itens.map((item, index) => (
-              <CarouselItem key={index} className="pl-2 md:pl-4 basis-full">
-                <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg">
+              <CarouselItem key={index} className="pl-2 md:pl-4 basis-full" style={{ touchAction: 'pan-x' }}>
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg" style={{ touchAction: 'pan-x' }}>
                   <iframe
                     src={item.imageRef}
                     title={item.title}
@@ -92,6 +95,7 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
                     className="absolute inset-0 w-full h-full"
                     allowFullScreen
                     loading="lazy"
+                    style={{ touchAction: 'pan-x pinch-zoom' }}
                   ></iframe>
                 </div>
               </CarouselItem>
@@ -105,7 +109,7 @@ export function VideosCarousel({ itens, className }: MainCarouselProps) {
             </CarouselItem>
             <CarouselItem className="pl-2 md:pl-4 basis-full">
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg">
-                <WeatherWidget className="h-full" />
+                <WeatherWidget className="h-full" enterprise={enterprise} />
               </div>
             </CarouselItem>
           </CarouselContent>

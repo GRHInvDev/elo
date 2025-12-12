@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Cloud, CloudRain, Sun, CloudSun, Droplets, Wind, MapPin } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { type Enterprise } from "@prisma/client"
 
 interface WeatherData {
   temperature: number
@@ -16,6 +17,27 @@ interface WeatherData {
 
 interface WeatherWidgetProps {
   className?: string
+  enterprise?: Enterprise | null
+}
+
+// Função para obter coordenadas padrão baseadas na empresa
+const getDefaultLocationByEnterprise = (enterprise: Enterprise | null | undefined): { lat: number; lon: number } => {
+  switch (enterprise) {
+    case "Box":
+    case "RHenz":
+    case "Cristallux":
+      // Santa Cruz do Sul
+      return { lat: -29.7175, lon: -52.4258 }
+    case "Box_Filial":
+      // Venâncio Aires
+      return { lat: -29.6064, lon: -52.1931 }
+    case "Cristallux_Filial":
+      // Cachoeirinha
+      return { lat: -29.9508, lon: -51.0939 }
+    default:
+      // Fallback padrão (Santa Cruz do Sul)
+      return { lat: -29.7175, lon: -52.4258 }
+  }
 }
 
 interface GeocodingResult {
@@ -70,7 +92,7 @@ const getWeatherDescription = (code: number): string => {
   return "Condições variáveis"
 }
 
-export function WeatherWidget({ className }: WeatherWidgetProps) {
+export function WeatherWidget({ className, enterprise }: WeatherWidgetProps) {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -89,15 +111,17 @@ export function WeatherWidget({ className }: WeatherWidgetProps) {
         },
         (err) => {
           console.error("Erro ao obter localização:", err)
-          // Fallback para coordenadas padrão (São Paulo)
-          setLocation({ lat: -23.5505, lon: -46.6333 })
+          // Fallback para coordenadas baseadas na empresa
+          const defaultLocation = getDefaultLocationByEnterprise(enterprise)
+          setLocation(defaultLocation)
         }
       )
     } else {
-      // Fallback para coordenadas padrão (São Paulo)
-      setLocation({ lat: -23.5505, lon: -46.6333 })
+      // Fallback para coordenadas baseadas na empresa
+      const defaultLocation = getDefaultLocationByEnterprise(enterprise)
+      setLocation(defaultLocation)
     }
-  }, [])
+  }, [enterprise])
 
   // Buscar nome da cidade
   useEffect(() => {
@@ -192,6 +216,41 @@ export function WeatherWidget({ className }: WeatherWidgetProps) {
     void fetchWeather()
   }, [location])
 
+  // Valores aleatórios para animações (calculados uma vez) - DEVE VIR ANTES DOS EARLY RETURNS
+  const sunParticles = useMemo(() => 
+    Array.from({ length: 15 }).map(() => ({
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: Math.random() * 3,
+      duration: 3 + Math.random() * 2
+    })), [])
+  
+  const windParticles = useMemo(() =>
+    Array.from({ length: 20 }).map(() => ({
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      duration: 2 + Math.random() * 2,
+      delay: Math.random() * 2,
+      translateX: Math.random() * 50 - 25
+    })), [])
+  
+  const windLines = useMemo(() =>
+    Array.from({ length: 8 }).map((_, i) => ({
+      duration: 3 + Math.random() * 2,
+      delay: i * 0.3
+    })), [])
+  
+  const cloudPositions = useMemo(() =>
+    Array.from({ length: 3 }).map((_, i) => ({
+      top: 10 + i * 15 + Math.random() * 10,
+      delay: i * 2 + Math.random() * 2
+    })), [])
+  
+  const rainDrops = useMemo(() =>
+    Array.from({ length: 30 }).map(() => ({
+      duration: 0.4 + Math.random() * 0.3
+    })), [])
+
   if (loading) {
     return (
       <div className={cn("w-full h-full rounded-2xl overflow-hidden", className)}>
@@ -213,20 +272,144 @@ export function WeatherWidget({ className }: WeatherWidgetProps) {
     return null // Não exibe nada em caso de erro
   }
 
+  // Determinar tipo de clima para animações
+  const isSunny = weather.weatherCode === 0
+  const isMostlyClear = weather.weatherCode === 1
+  const isPartlyCloudy = weather.weatherCode === 2
+  const isCloudy = weather.weatherCode === 3
+  const isRainy = weather.weatherCode >= 51 && weather.weatherCode <= 99
+
+  // Gradiente baseado no clima
+  const getGradientClass = () => {
+    if (isSunny) return "bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 dark:from-yellow-950 dark:via-orange-950 dark:to-yellow-900"
+    if (isMostlyClear || isPartlyCloudy) return "bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 dark:from-blue-950 dark:via-sky-950 dark:to-blue-900"
+    if (isCloudy) return "bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 dark:from-gray-800 dark:via-gray-700 dark:to-gray-900"
+    if (isRainy) return "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900"
+    return "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900"
+  }
+
   return (
-    <div className={cn("w-full h-full rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 relative", className)}>
-      {/* Animação de fundo baseada no clima */}
-      {weather.weatherCode >= 51 && weather.weatherCode <= 99 && (
+    <div className={cn("w-full h-full rounded-2xl overflow-hidden relative", getGradientClass(), className)}>
+      {/* Animação de chuva */}
+      {isRainy && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {Array.from({ length: 30 }).map((_, i) => (
+          {rainDrops.map((drop, i) => (
             <div
               key={i}
               className="absolute w-0.5 h-6 bg-blue-400/40 animate-rain"
               style={{
                 left: `${(i * 3.33) % 100}%`,
                 animationDelay: `${(i * 0.05) % 2}s`,
-                animationDuration: `${0.4 + (Math.random() * 0.3)}s`,
+                animationDuration: `${drop.duration}s`,
                 top: '-10%'
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Animação de raios de sol para dias ensolarados */}
+      {isSunny && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 12 }).map((_, i) => {
+            const angle = (i * 30) * (Math.PI / 180)
+            const radius = 60
+            const x = 50 + Math.cos(angle) * radius
+            const y = 50 + Math.sin(angle) * radius
+            return (
+              <div
+                key={i}
+                className="absolute w-1 h-8 bg-yellow-400/30 rounded-full animate-pulse"
+                style={{
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  transform: `rotate(${i * 30}deg) translateY(-20px)`,
+                  transformOrigin: 'center',
+                  animationDelay: `${i * 0.1}s`,
+                  animationDuration: '2s'
+                }}
+              />
+            )
+          })}
+          {/* Partículas de luz flutuantes */}
+          {sunParticles.map((particle, i) => (
+            <div
+              key={`particle-${i}`}
+              className="absolute w-1 h-1 bg-yellow-300/40 rounded-full animate-float"
+              style={{
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                animationDelay: `${particle.delay}s`,
+                animationDuration: `${particle.duration}s`
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Animação de nuvens e vento para dias nublados */}
+      {(isCloudy || isPartlyCloudy) && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Nuvens se movendo */}
+          {cloudPositions.map((cloud, i) => (
+            <div
+              key={`cloud-${i}`}
+              className="absolute opacity-20"
+              style={{
+                left: `${-20 + i * 40}%`,
+                top: `${cloud.top}%`,
+                animation: `cloudMove ${15 + i * 5}s linear infinite`,
+                animationDelay: `${cloud.delay}s`
+              }}
+            >
+              <Cloud className="size-16 text-gray-400" />
+            </div>
+          ))}
+          {/* Partículas de vento */}
+          {windParticles.map((particle, i) => (
+            <div
+              key={`wind-${i}`}
+              className="absolute w-2 h-2 bg-gray-300/30 rounded-full"
+              style={{
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                animation: `windParticle ${particle.duration}s linear infinite`,
+                animationDelay: `${particle.delay}s`,
+                transform: `translateX(${particle.translateX}px)`
+              }}
+            />
+          ))}
+          {/* Linhas de vento */}
+          {windLines.map((line, i) => (
+            <div
+              key={`wind-line-${i}`}
+              className="absolute h-0.5 bg-gray-300/20 rounded-full"
+              style={{
+                left: `${-10 + i * 15}%`,
+                top: `${20 + (i % 3) * 25}%`,
+                width: '30%',
+                animation: `windLine ${line.duration}s ease-in-out infinite`,
+                animationDelay: `${line.delay}s`
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Animação sutil de sol para dias parcialmente nublados */}
+      {(isMostlyClear || isPartlyCloudy) && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={`sun-ray-${i}`}
+              className="absolute w-0.5 h-6 bg-yellow-300/20 rounded-full animate-pulse"
+              style={{
+                left: '50%',
+                top: '30%',
+                transform: `rotate(${i * 45}deg) translateY(-30px)`,
+                transformOrigin: 'center',
+                animationDelay: `${i * 0.15}s`,
+                animationDuration: '3s'
               }}
             />
           ))}
