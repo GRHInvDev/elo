@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import { Cloud, CloudRain, Sun, CloudSun, Droplets, Wind, MapPin } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { type Enterprise } from "@prisma/client"
+import { Enterprise } from "@prisma/client"
 
 interface WeatherData {
   temperature: number
@@ -22,22 +22,30 @@ interface WeatherWidgetProps {
 
 // Função para obter coordenadas padrão baseadas na empresa
 const getDefaultLocationByEnterprise = (enterprise: Enterprise | null | undefined): { lat: number; lon: number } => {
-  switch (enterprise) {
-    case "Box":
-    case "RHenz":
-    case "Cristallux":
-      // Santa Cruz do Sul
-      return { lat: -29.7175, lon: -52.4258 }
-    case "Box_Filial":
-      // Venâncio Aires
-      return { lat: -29.6064, lon: -52.1931 }
-    case "Cristallux_Filial":
-      // Cachoeirinha
-      return { lat: -29.9508, lon: -51.0939 }
-    default:
-      // Fallback padrão (Santa Cruz do Sul)
-      return { lat: -29.7175, lon: -52.4258 }
+  // Tratar null/undefined primeiro
+  if (!enterprise) {
+    return { lat: -29.7175, lon: -52.4258 } // Fallback padrão (Santa Cruz do Sul)
   }
+
+  // Comparar o valor do enum (Prisma enum é um tipo union de strings literais)
+  // Usar comparação direta com strings, pois o enum Enterprise é equivalente a: "NA" | "Box" | "RHenz" | "Cristallux" | "Box_Filial" | "Cristallux_Filial"
+  if (enterprise === Enterprise.Box || enterprise === Enterprise.RHenz || enterprise === Enterprise.Cristallux) {
+    // Santa Cruz do Sul
+    return { lat: -29.7175, lon: -52.4258 }
+  }
+  
+  if (enterprise === Enterprise.Box_Filial) {
+    // Venâncio Aires
+    return { lat: -29.6064, lon: -52.1931 }
+  }
+  
+  if (enterprise === Enterprise.Cristallux_Filial) {
+    // Cachoeirinha
+    return { lat: -29.9508, lon: -51.0939 }
+  }
+
+  // Fallback padrão (Santa Cruz do Sul)
+  return { lat: -29.7175, lon: -52.4258 }
 }
 
 interface GeocodingResult {
