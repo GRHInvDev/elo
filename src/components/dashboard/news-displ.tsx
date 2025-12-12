@@ -229,10 +229,10 @@ function PostItem({ post }: PostItemProps) {
   return (
     <Card className="w-full max-w-none overflow-hidden hover:shadow-lg transition-shadow duration-300 rounded-2xl">
       <CardContent className="p-0">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:items-stretch">
           {/* Coluna da Imagem */}
           {imageUrls.length > 0 && (
-            <div className="relative h-48 md:h-auto md:min-h-[240px] overflow-hidden bg-muted">
+            <div className="relative h-48 md:h-full overflow-hidden bg-muted">
               <ImageCarousel
                 images={imageUrls}
                 alt={post.title}
