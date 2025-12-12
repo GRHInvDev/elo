@@ -12,8 +12,7 @@ import { routeItems } from "@/const/routes"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
 import { DashboardShell } from "@/components/dashboard-shell"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { WeatherWidget } from "@/components/dashboard/weather-widget"
+import { Separator } from "@/components/ui/separator"
 
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/complete-profile-modal"
@@ -136,95 +135,187 @@ export default function DashboardPage() {
       {/* Links Úteis e Ideias - Dividido em duas colunas */}
       <div className="w-full max-w-6xl md:max-w-[1920px] mx-auto px-4 md:px-4 lg:px-8 mt-4 md:mt-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          {/* Links Úteis */}
+          {/* Links Úteis - Desktop: lado a lado, Mobile: Sites primeiro, depois Treinamento */}
           <div className="bg-muted rounded-lg p-3 md:p-4">
             <div className="flex gap-2 items-center text-sm md:text-base font-semibold mb-3">
               <LinkIcon className="size-4 md:size-5"/>
               <span>Links Úteis</span>
             </div>
-            <Tabs defaultValue="treinamento" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-8 md:h-9 mb-3 rounded-sm">
-                <TabsTrigger value="treinamento" className="text-xs font-medium">
-                  Treinamento
-                </TabsTrigger>
-                <TabsTrigger value="sites" className="text-xs font-medium">
-                  Sites
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="treinamento" className="mt-0 space-y-1.5 md:space-y-2">
-                <Link 
-                  href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} 
-                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Image 
-                    src="/umentor.jpg" 
-                    height={20} 
-                    width={20} 
-                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
-                    alt="Umentor"
-                  />
-                  <span className="text-xs md:text-sm font-medium">Umentor</span>
-                </Link>
-                <Link 
-                  href={'https://cristaluni.com.br'} 
-                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <LucideGraduationCap className="size-5 md:size-6 mr-2 md:mr-3 flex-shrink-0 text-primary"/>
-                  <span className="text-xs md:text-sm font-medium">CristalUni</span>
-                </Link>
-              </TabsContent>
-              <TabsContent value="sites" className="mt-0 space-y-1.5 md:space-y-2">
-                <Link 
-                  href={'https://boxdistribuidor.com.br'} 
-                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Image 
-                    src="/LOGO BOX.png" 
-                    height={20} 
-                    width={20} 
-                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
-                    alt="Site Box"
-                  />
-                  <span className="text-xs md:text-sm font-medium">Site Box</span>
-                </Link>
-                <Link 
-                  href={'https://cristallux.com.br'} 
-                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Image 
-                    src="/icon_cristal.svg" 
-                    height={20} 
-                    width={20} 
-                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
-                    alt="Cristallux"
-                  />
-                  <span className="text-xs md:text-sm font-medium">Cristallux</span>
-                </Link>
-                <Link 
-                  href={'https://centraldofuncionario.com.br/60939'} 
-                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Image 
-                    src="/central-funcionario.ico" 
-                    height={20} 
-                    width={20} 
-                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6" 
-                    alt="Central do Colaborador"
-                  />
-                  <span className="text-xs md:text-sm font-medium">Central do Colaborador</span>
-                </Link>
-              </TabsContent>
-            </Tabs>
+            
+            {/* Mobile: Sites primeiro, Divisor, Treinamento */}
+            <div className="md:hidden space-y-3">
+              {/* Sites */}
+              <div>
+                <h4 className="text-xs font-medium mb-2 text-muted-foreground">Sites</h4>
+                <div className="space-y-1.5">
+                  <Link 
+                    href={'https://boxdistribuidor.com.br'} 
+                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/LOGO BOX.png" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-2 flex-shrink-0 size-5" 
+                      alt="Site Box"
+                    />
+                    <span className="text-xs font-medium">Site Box</span>
+                  </Link>
+                  <Link 
+                    href={'https://cristallux.com.br'} 
+                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/icon_cristal.svg" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-2 flex-shrink-0 size-5" 
+                      alt="Cristallux"
+                    />
+                    <span className="text-xs font-medium">Cristallux</span>
+                  </Link>
+                  <Link 
+                    href={'https://centraldofuncionario.com.br/60939'} 
+                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/central-funcionario.ico" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-2 flex-shrink-0 size-5" 
+                      alt="Central do Colaborador"
+                    />
+                    <span className="text-xs font-medium">Central do Colaborador</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Divisor */}
+              <Separator />
+
+              {/* Treinamento */}
+              <div>
+                <h4 className="text-xs font-medium mb-2 text-muted-foreground">Treinamento</h4>
+                <div className="space-y-1.5">
+                  <Link 
+                    href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} 
+                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/umentor.jpg" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-2 flex-shrink-0 size-5" 
+                      alt="Umentor"
+                    />
+                    <span className="text-xs font-medium">Umentor</span>
+                  </Link>
+                  <Link 
+                    href={'https://cristaluni.com.br'} 
+                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <LucideGraduationCap className="size-5 mr-2 flex-shrink-0 text-primary"/>
+                    <span className="text-xs font-medium">CristalUni</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop: Sites e Treinamento lado a lado */}
+            <div className="hidden md:grid md:grid-cols-2 md:gap-4">
+              {/* Sites */}
+              <div>
+                <h4 className="text-sm font-medium mb-3 text-muted-foreground">Sites</h4>
+                <div className="space-y-2">
+                  <Link 
+                    href={'https://boxdistribuidor.com.br'} 
+                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/LOGO BOX.png" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      alt="Site Box"
+                    />
+                    <span className="text-sm font-medium">Site Box</span>
+                  </Link>
+                  <Link 
+                    href={'https://cristallux.com.br'} 
+                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/icon_cristal.svg" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      alt="Cristallux"
+                    />
+                    <span className="text-sm font-medium">Cristallux</span>
+                  </Link>
+                  <Link 
+                    href={'https://centraldofuncionario.com.br/60939'} 
+                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/central-funcionario.ico" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      alt="Central do Colaborador"
+                    />
+                    <span className="text-sm font-medium">Central do Colaborador</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Treinamento */}
+              <div>
+                <h4 className="text-sm font-medium mb-3 text-muted-foreground">Treinamento</h4>
+                <div className="space-y-2">
+                  <Link 
+                    href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'} 
+                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Image 
+                      src="/umentor.jpg" 
+                      height={20} 
+                      width={20} 
+                      className="rounded-sm mr-3 flex-shrink-0 size-6" 
+                      alt="Umentor"
+                    />
+                    <span className="text-sm font-medium">Umentor</span>
+                  </Link>
+                  <Link 
+                    href={'https://cristaluni.com.br'} 
+                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <LucideGraduationCap className="size-6 mr-3 flex-shrink-0 text-primary"/>
+                    <span className="text-sm font-medium">CristalUni</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Card de Ideias */}
@@ -236,11 +327,11 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      <div className="w-full max-w-6xl md:max-w-[1920px] mx-auto px-4 md:px-4 lg:px-8 space-y-4 md:space-y-6">
+      <div className="w-full px-4 md:px-4 lg:px-8 space-y-4 md:space-y-6">
         {/* Seção de Conteúdo - Video e Clima */}
         {
           videos.length > 0 && (
-            <VideosCarousel className="w-full" itens={videos}/>
+            <VideosCarousel className="w-full" itens={videos} enterprise={userEnterprise} />
           )
         }
       </div>

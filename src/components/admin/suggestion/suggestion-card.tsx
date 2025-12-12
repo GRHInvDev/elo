@@ -28,17 +28,14 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
   const { data: userData } = api.user.me.useQuery()
   const isTotem = userData?.role_config?.isTotem === true
 
+  // Não renderizar nada para usuários Totem
+  if (isTotem) {
+    return null
+  }
+
   return (
     <div
       onClick={() => {
-        if (isTotem) {
-          toast({
-            title: "Acesso restrito",
-            description: "Usuários Totem não podem submeter ideias.",
-            variant: "destructive"
-          })
-          return
-        }
         onOpenModal()
       }}
       className="cursor-pointer bg-muted hover:bg-muted/80 rounded-lg p-3 md:p-4 border hover:shadow-md transition-all duration-200 w-full group"
@@ -187,20 +184,11 @@ export function SuggestionsCard() {
 
   const userSector = userData?.setor ?? "Não informado"
 
+  // Não renderizar nada para usuários Totem
   if (isTotem) {
-    return (
-      <Card className="w-full max-w-2xl mx-auto mt-6">
-        <CardContent className="p-6">
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Caixa de Ideias</h3>
-            <p className="text-sm text-muted-foreground">
-              Usuários Totem não podem submeter ideias. Para enviar sugestões, utilize uma conta de colaborador.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return null
   }
+
   return (
     <Card className="w-full max-w-2xl mx-auto mt-6">
       <Accordion type="single" collapsible className="w-full">
@@ -361,6 +349,13 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
   const { data: userData, isLoading: userLoading } = api.user.me.useQuery()
   const isTotem = userData?.role_config?.isTotem === true
 
+  // Fechar modal automaticamente se for usuário Totem
+  useEffect(() => {
+    if (isTotem && isOpen) {
+      onOpenChange(false)
+    }
+  }, [isTotem, isOpen, onOpenChange])
+
   // Pré-preencher o nome quando os dados do usuário chegarem
   useEffect(() => {
     if (userData) {
@@ -458,16 +453,8 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             <div className="h-20 bg-gray-200 rounded"></div>
           </div>
         ) : isTotem ? (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Usuários Totem não podem submeter ideias. Para enviar sugestões, utilize uma conta de colaborador.
-            </p>
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Fechar
-              </Button>
-            </div>
-          </div>
+          // Não renderizar nada para usuários Totem, apenas fechar o modal
+          null
         ) : (
           <div className="space-y-4 md:space-y-6">
             {/* Informações do usuário */}
