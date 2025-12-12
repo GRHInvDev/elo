@@ -195,7 +195,24 @@ export function VehicleUsageHistory() {
                           {rent.observation && (
                             <div className="mt-2">
                               <p className="text-sm">
-                                <strong>Observações:</strong> {rent.observation as string}
+                                <strong>Observações:</strong>{" "}
+                                {typeof rent.observation === "string" 
+                                  ? rent.observation 
+                                  : (() => {
+                                      const obs = rent.observation as Record<string, unknown>
+                                      // Caso de finalização sem uso
+                                      if (obs.noUsage) {
+                                        return obs.reason 
+                                          ? `Finalizado sem uso. Motivo: ${obs.reason as string}`
+                                          : "Finalizado sem uso"
+                                      }
+                                      // Caso de finalização normal com observações
+                                      const parts: string[] = []
+                                      if (obs.gasLevel) parts.push(`Combustível: ${obs.gasLevel as string}`)
+                                      if (obs.needCleaning) parts.push("Necessita limpeza")
+                                      if (obs.considerations) parts.push(`Considerações: ${obs.considerations as string}`)
+                                      return parts.length > 0 ? parts.join(" | ") : "Sem observações"
+                                    })()}
                               </p>
                             </div>
                           )}

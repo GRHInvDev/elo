@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
-import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema, editVehicleRentSchema } from "@/schemas/vehicle-rent.schema"
+import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema, editVehicleRentSchema, finishRentWithoutUsageSchema } from "@/schemas/vehicle-rent.schema"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailReservaCarro } from "@/lib/mail/html-mock"
 import { canLocateCars } from "@/lib/access-control"
@@ -301,22 +301,6 @@ export const vehicleRentRouter = createTRPCRouter({
         },
       })
 
-      // DEBUG: Log dos resultados do calendário
-      console.log('📊 [DEBUG] getCalendarReservations - Reservas encontradas:', {
-        vehicleId,
-        month,
-        year,
-        totalReservations: reservations.length,
-        reservations: reservations.map(reservation => ({
-          id: reservation.id,
-          startDate: reservation.startDate.toISOString(),
-          possibleEnd: reservation.possibleEnd?.toISOString(),
-          endDate: reservation.endDate?.toISOString(),
-          finished: reservation.finished,
-          userName: `${reservation.user.firstName} ${reservation.user.lastName}`
-        }))
-      })
-
       return reservations
     }),
 
@@ -522,6 +506,92 @@ export const vehicleRentRouter = createTRPCRouter({
       return updatedRent
     })
   }),
+
+  finishWithoutUsage: protectedProcedure
+    .input(finishRentWithoutUsageSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.auth.userId
+
+      // Verificar se a reserva existe e pertence ao usuário
+      const rent = await ctx.db.vehicleRent.findUnique({
+        where: { id: input.id },
+        include: {
+          vehicle: true,
+          user: true,
+        },
+      })
+
+      if (!rent) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Reserva não encontrada",
+        })
+      }
+
+      if (rent.userId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para finalizar esta reserva",
+        })
+      }
+
+      if (rent.finished) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Esta reserva já foi finalizada",
+        })
+      }
+
+      // Finalizar a reserva sem alterar quilometragem
+      return ctx.db.$transaction(async (tx) => {
+        const updatedRent = await tx.vehicleRent.update({
+          where: { id: input.id },
+          data: {
+            endDate: new Date(),
+            finished: true,
+            finalKm: rent.vehicle.kilometers,
+            observation: input.reason ? { reason: input.reason, noUsage: true } : { noUsage: true },
+          },
+          include: {
+            vehicle: true,
+            user: true,
+          },
+        })
+
+        // Apenas liberar o veículo, sem alterar a quilometragem
+        await tx.vehicle.update({
+          where: { id: rent.vehicleId },
+          data: { availble: true },
+        })
+
+        await sendEmail(
+          'frota@boxdistribuidor.com.br',
+          `Reserva ${updatedRent.id} finalizada (sem uso)`,
+          mockEmailReservaCarro(
+            updatedRent.user.firstName ?? '',
+            updatedRent.id,
+            updatedRent.vehicleId,
+            updatedRent.vehicle.model,
+            updatedRent.startDate.toLocaleDateString('pt-BR', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            }),
+            updatedRent.endDate?.toLocaleDateString('pt-BR', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            }) ?? new Date().toLocaleDateString('pt-BR', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            })
+          )
+        )
+
+        return updatedRent
+      })
+    }),
 
   cancel: protectedProcedure.input(vehicleRentIdSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.auth.userId
