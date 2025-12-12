@@ -65,10 +65,10 @@ export function OptimizedImage({
         height={!fill ? height : undefined}
         className={cn(
           "relative z-10",
-          className,
-          imageFit === "contain" ? "object-contain" : "object-cover",
+          imageFit === "contain" ? "object-contain object-center" : "object-cover",
           "transition-opacity duration-300",
-          isLoaded ? "opacity-100" : "opacity-0"
+          isLoaded ? "opacity-100" : "opacity-0",
+          className
         )}
         priority={priority}
         onLoad={handleLoadingComplete}

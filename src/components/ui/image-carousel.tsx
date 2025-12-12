@@ -127,10 +127,13 @@ export function ImageCarousel({
     })
   }, [allowedAspects, aspectRatio])
 
+  // Verificar se deve usar altura total (quando className contém h-full)
+  const shouldUseFullHeight = className?.includes('h-full') ?? false
+
   const renderImage = (image: string, index: number) => (
     <div className={cn(
       "relative w-full overflow-hidden",
-      resolveAspectClass(index),
+      shouldUseFullHeight ? "h-full" : resolveAspectClass(index),
     )}>
       <OptimizedImage
         src={image}
@@ -139,7 +142,9 @@ export function ImageCarousel({
         className={cn(
           imageFit === "contain"
             ? "object-contain object-center"
-            : "object-cover"
+            : shouldUseFullHeight 
+              ? "object-cover object-top"
+              : "object-cover"
         )}
         priority={index === current}
         onLoadingComplete={(img) => handleImageLoad(index, img.target as HTMLImageElement)}
@@ -164,6 +169,7 @@ export function ImageCarousel({
       <div
         className={cn(
           "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none",
+          shouldUseFullHeight && "h-full",
           className
         )}
       >
@@ -176,22 +182,23 @@ export function ImageCarousel({
     <div
       className={cn(
         "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none",
+        shouldUseFullHeight && "h-full",
         className
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Carousel
-        className="w-full"
+        className={cn("w-full", shouldUseFullHeight && "h-full")}
         setApi={setCarouselApi}
         opts={{
           loop: true,
           align: "center",
         }}
       >
-        <CarouselContent>
+        <CarouselContent className={shouldUseFullHeight ? "h-full" : ""}>
           {validImages.map((image, index) => (
-            <CarouselItem key={index} className="w-full">
+            <CarouselItem key={index} className={cn("w-full", shouldUseFullHeight && "h-full")}>
               {renderImage(image, index)}
             </CarouselItem>
           ))}
