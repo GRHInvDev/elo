@@ -193,18 +193,6 @@ export default function DoubtsPage() {
               Não encontrou a resposta que procurava? Entre em contato conosco.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="outline" className="flex-1">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Falar com Suporte
-              </Button>
-              <Button variant="outline" className="flex-1">
-                <Users className="w-4 h-4 mr-2" />
-                Contatar Equipe
-              </Button>
-            </div>
-          </CardContent>
         </Card>
       </div>
     </div>

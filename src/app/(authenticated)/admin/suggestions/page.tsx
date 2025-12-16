@@ -50,6 +50,8 @@ type SuggestionLocal = {
   analystId: string | null
   payment: { status: "paid" | "unpaid"; amount?: number; description?: string } | null
   paymentDate: Date | null
+  editHistory: Record<string, string> | null
+  isTextEdited: boolean
   user: {
     firstName: string | null
     lastName: string | null
@@ -144,6 +146,8 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     analystId: dbSuggestion.analystId,
     payment: dbSuggestion.payment ? dbSuggestion.payment as { status: "paid" | "unpaid"; amount?: number; description?: string } : null,
     paymentDate: (dbSuggestion as any).paymentDate ? new Date((dbSuggestion as any).paymentDate as string) : null,
+    editHistory: (dbSuggestion as any).editHistory ? (dbSuggestion as any).editHistory as Record<string, string> : null,
+    isTextEdited: (dbSuggestion as any).isTextEdited ?? false,
     user: {
       firstName: user.firstName,
       lastName: user.lastName,
@@ -991,6 +995,7 @@ function SuggestionDetailsModal({
   const [paymentAmount, setPaymentAmount] = useState<number | undefined>(undefined)
   const [paymentDescription, setPaymentDescription] = useState("")
   const [paymentDate, setPaymentDate] = useState<Date | null>(null)
+  const [isEditHistoryExpanded, setIsEditHistoryExpanded] = useState(false)
 
   // Carregar valores existentes
   useEffect(() => {
@@ -1167,16 +1172,157 @@ function SuggestionDetailsModal({
           </div>
         </div>
         <div className="md:col-span-2">
-          <div className="text-sm font-medium">Problema</div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="text-sm font-medium">Problema</div>
+            {suggestion.isTextEdited && (
+              <Badge variant="outline" className="text-xs">
+                Texto editado
+              </Badge>
+            )}
+          </div>
           <div className="text-sm text-muted-foreground whitespace-pre-wrap">
             {suggestion.problem ?? "Não informado"}
           </div>
         </div>
         <div className="md:col-span-2">
-          <div className="text-sm font-medium">Solução</div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="text-sm font-medium">Solução</div>
+            {suggestion.isTextEdited && (
+              <Badge variant="outline" className="text-xs">
+                Texto editado
+              </Badge>
+            )}
+          </div>
           <div className="text-sm text-muted-foreground whitespace-pre-wrap">
             {suggestion.description}
           </div>
+          {suggestion.editHistory && (
+            <div className="mt-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Histórico de Edições</div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditHistoryExpanded(!isEditHistoryExpanded)}
+                  className="h-7 px-2 text-xs"
+                >
+                  {isEditHistoryExpanded ? (
+                    <>
+                      <ChevronUp className="h-3 w-3 mr-1" />
+                      Ocultar
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3 w-3 mr-1" />
+                      Mostrar
+                    </>
+                  )}
+                </Button>
+              </div>
+              {isEditHistoryExpanded && (
+                <div className="space-y-4">
+                {(() => {
+                  const history = suggestion.editHistory as Record<string, unknown>
+                  
+                  // Verificar se é estrutura nova (com description/problem) ou antiga
+                  const hasDescriptionHistory = history.description && typeof history.description === "object"
+                  const hasProblemHistory = history.problem && typeof history.problem === "object"
+                  
+                  if (hasDescriptionHistory || hasProblemHistory) {
+                    // Nova estrutura: { description: {...}, problem: {...} }
+                    return (
+                      <>
+                        {hasDescriptionHistory && (
+                          <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                            <div className="text-xs font-semibold text-muted-foreground mb-2">
+                              Solução Proposta
+                            </div>
+                            {(() => {
+                              const descHistory = history.description as Record<string, string>
+                              const entries = Object.entries(descHistory).sort((a, b) => {
+                                if (a[0] === "texto-original") return -1
+                                if (b[0] === "texto-original") return 1
+                                return a[0].localeCompare(b[0])
+                              })
+                              
+                              return entries.map(([key, value], index) => (
+                                <div key={key} className="space-y-1">
+                                  <div className="text-xs font-semibold text-muted-foreground">
+                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                  </div>
+                                  <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
+                                    {value}
+                                  </div>
+                                  {index < entries.length - 1 && (
+                                    <div className="h-px bg-border my-2" />
+                                  )}
+                                </div>
+                              ))
+                            })()}
+                          </div>
+                        )}
+                        {hasProblemHistory && (
+                          <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                            <div className="text-xs font-semibold text-muted-foreground mb-2">
+                              Problema Identificado
+                            </div>
+                            {(() => {
+                              const probHistory = history.problem as Record<string, string>
+                              const entries = Object.entries(probHistory).sort((a, b) => {
+                                if (a[0] === "texto-original") return -1
+                                if (b[0] === "texto-original") return 1
+                                return a[0].localeCompare(b[0])
+                              })
+                              
+                              return entries.map(([key, value], index) => (
+                                <div key={key} className="space-y-1">
+                                  <div className="text-xs font-semibold text-muted-foreground">
+                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                  </div>
+                                  <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
+                                    {value}
+                                  </div>
+                                  {index < entries.length - 1 && (
+                                    <div className="h-px bg-border my-2" />
+                                  )}
+                                </div>
+                              ))
+                            })()}
+                          </div>
+                        )}
+                      </>
+                    )
+                  } else {
+                    // Estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
+                    const entries = Object.entries(history as Record<string, string>).sort((a, b) => {
+                      if (a[0] === "texto-original") return -1
+                      if (b[0] === "texto-original") return 1
+                      return a[0].localeCompare(b[0])
+                    })
+                    
+                    return (
+                      <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                        {entries.map(([key, value], index) => (
+                          <div key={key} className="space-y-1">
+                            <div className="text-xs font-semibold text-muted-foreground">
+                              {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                            </div>
+                            <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
+                              {value}
+                            </div>
+                            {index < entries.length - 1 && (
+                              <div className="h-px bg-border my-2" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
+                })()}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2530,6 +2676,12 @@ function SuggestionItem({
                       >
                         {STATUS_MAPPING[s.status] ?? s.status}
                       </Badge>
+                      {/* Tag de texto editado */}
+                      {s.isTextEdited && (
+                        <Badge variant="outline" className="text-xs">
+                          Texto editado
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2574,7 +2726,14 @@ function SuggestionItem({
                       </div>
                     </div>
                     <div className="md:col-span-2">
-                      <div className="text-sm font-medium">Solução</div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-sm font-medium">Solução</div>
+                        {s.isTextEdited && (
+                          <Badge variant="outline" className="text-xs">
+                            Texto editado
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                         {s.description}
                       </div>

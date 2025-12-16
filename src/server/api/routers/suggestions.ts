@@ -350,6 +350,8 @@ export const suggestionRouter = createTRPCRouter({
           analystId: true,
           payment: true,
           paymentDate: true,
+          editHistory: true,
+          isTextEdited: true,
           createdAt: true,
           user: {
             select: {
@@ -374,17 +376,18 @@ export const suggestionRouter = createTRPCRouter({
   listKanban: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.suggestion.findMany({
       orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        ideaNumber: true,
-        description: true, // Solução proposta
-        problem: true, // Problema identificado
-        submittedName: true,
-        status: true,
-        createdAt: true,
-      },
-    })
-  }),
+        select: {
+          id: true,
+          ideaNumber: true,
+          description: true, // Solução proposta
+          problem: true, // Problema identificado
+          submittedName: true,
+          status: true,
+          isTextEdited: true,
+          createdAt: true,
+        },
+      })
+    }),
 
   // Atualizações do admin (impact/capacity/effort/kpis/status/reason/analyst)
   updateAdmin: adminProcedure
@@ -614,6 +617,214 @@ export const suggestionRouter = createTRPCRouter({
           }
         }
       }
+
+      return updatedSuggestion
+    }),
+
+  // Editar descrição quando status é NEW (Não avaliado)
+  updateDescription: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      description: z.string().trim().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Buscar a ideia atual
+      const suggestion = await ctx.db.suggestion.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          description: true,
+          editHistory: true,
+          isTextEdited: true,
+        },
+      })
+
+      if (!suggestion) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Ideia não encontrada"
+        })
+      }
+
+      // Verificar se o usuário é o autor
+      if (suggestion.userId !== ctx.auth.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você só pode editar suas próprias ideias"
+        })
+      }
+
+      // Verificar se o status permite edição
+      if (suggestion.status !== "NEW") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Apenas ideias com status 'Não avaliado' podem ser editadas"
+        })
+      }
+
+      // Se a descrição não mudou, não fazer nada
+      if (suggestion.description === input.description) {
+        return await ctx.db.suggestion.findUnique({
+          where: { id: input.id },
+        })
+      }
+
+      // Preparar histórico de edições
+      // O histórico pode ter estrutura: { description: {...}, problem: {...} }
+      // ou estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
+      let editHistory: Record<string, unknown> = {}
+      
+      if (!suggestion.editHistory) {
+        // Criar novo histórico com estrutura separada para description e problem
+        editHistory = {
+          description: {
+            "texto-original": suggestion.description,
+          }
+        }
+      } else {
+        // Se já existe histórico, verificar a estrutura
+        const existingHistory = suggestion.editHistory as Record<string, unknown>
+        editHistory = { ...existingHistory }
+        
+        // Se já existe histórico de description
+        if (existingHistory.description && typeof existingHistory.description === "object") {
+          const descriptionHistory = existingHistory.description as Record<string, string>
+          const editKeys = Object.keys(descriptionHistory).filter(key => key.startsWith("edicao-"))
+          const nextEditNumber = editKeys.length + 1
+          descriptionHistory[`edicao-${nextEditNumber}`] = suggestion.description
+          editHistory.description = descriptionHistory
+        } else if (!existingHistory.description) {
+          // Criar histórico de description se não existir
+          editHistory.description = {
+            "texto-original": suggestion.description,
+          }
+        } else {
+          // Migrar estrutura antiga para nova estrutura
+          const oldHistory = existingHistory as Record<string, string>
+          editHistory.description = { ...oldHistory }
+          // Adicionar nova edição
+          const editKeys = Object.keys(oldHistory).filter(key => key.startsWith("edicao-"))
+          const nextEditNumber = editKeys.length + 1
+          ;(editHistory.description as Record<string, string>)[`edicao-${nextEditNumber}`] = suggestion.description
+          // Preservar histórico de problem se existir
+          if (existingHistory.problem) {
+            editHistory.problem = existingHistory.problem
+          }
+        }
+      }
+
+      // Atualizar a ideia
+      const updatedSuggestion = await ctx.db.suggestion.update({
+        where: { id: input.id },
+        data: {
+          description: input.description,
+          editHistory: editHistory as InputJsonValue,
+          isTextEdited: true,
+        },
+      })
+
+      return updatedSuggestion
+    }),
+
+  // Editar problema quando status é NEW (Não avaliado)
+  updateProblem: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      problem: z.string().trim().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Buscar a ideia atual
+      const suggestion = await ctx.db.suggestion.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          problem: true,
+          editHistory: true,
+          isTextEdited: true,
+        },
+      })
+
+      if (!suggestion) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Ideia não encontrada"
+        })
+      }
+
+      // Verificar se o usuário é o autor
+      if (suggestion.userId !== ctx.auth.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você só pode editar suas próprias ideias"
+        })
+      }
+
+      // Verificar se o status permite edição
+      if (suggestion.status !== "NEW") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Apenas ideias com status 'Não avaliado' podem ser editadas"
+        })
+      }
+
+      const newProblem = input.problem ?? null
+      
+      // Se o problema não mudou, não fazer nada
+      if (suggestion.problem === newProblem) {
+        return await ctx.db.suggestion.findUnique({
+          where: { id: input.id },
+        })
+      }
+
+      // Preparar histórico de edições
+      // O histórico pode ter estrutura: { description: {...}, problem: {...} }
+      // ou estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
+      let editHistory: Record<string, unknown> = {}
+      
+      if (!suggestion.editHistory) {
+        // Criar novo histórico com estrutura separada para description e problem
+        editHistory = {
+          problem: {
+            "texto-original": suggestion.problem ?? "",
+          }
+        }
+      } else {
+        // Se já existe histórico, verificar a estrutura
+        const existingHistory = suggestion.editHistory as Record<string, unknown>
+        editHistory = { ...existingHistory }
+        
+        // Se já existe histórico de problem
+        if (existingHistory.problem && typeof existingHistory.problem === "object") {
+          const problemHistory = existingHistory.problem as Record<string, string>
+          const editKeys = Object.keys(problemHistory).filter(key => key.startsWith("edicao-"))
+          const nextEditNumber = editKeys.length + 1
+          problemHistory[`edicao-${nextEditNumber}`] = suggestion.problem ?? ""
+          editHistory.problem = problemHistory
+        } else {
+          // Criar histórico de problem
+          editHistory.problem = {
+            "texto-original": suggestion.problem ?? "",
+          }
+        }
+        // Preservar histórico de description se existir
+        if (existingHistory.description) {
+          editHistory.description = existingHistory.description
+        }
+      }
+
+      // Atualizar a ideia
+      const updatedSuggestion = await ctx.db.suggestion.update({
+        where: { id: input.id },
+        data: {
+          problem: newProblem,
+          editHistory: editHistory as InputJsonValue,
+          isTextEdited: true,
+        },
+      })
 
       return updatedSuggestion
     }),
