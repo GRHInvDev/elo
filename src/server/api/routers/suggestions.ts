@@ -857,6 +857,8 @@ export const suggestionRouter = createTRPCRouter({
           analystId: true,
           payment: true,
           paymentDate: true,
+          editHistory: true,
+          isTextEdited: true,
           createdAt: true,
           user: {
             select: {
