@@ -16,14 +16,21 @@ const createBirthdaySchema = z.object({
  * @returns String ISO 8601 formatada em UTC (ex: "2025-12-31T00:00:00.000Z")
  */
 const normalizeBirthdayDate = (date: Date | string): string => {
-  // Garantir que seja um objeto Date antes de usar os getters UTC
+  // Garantir que seja um objeto Date
   const originalDate = typeof date === 'string' ? new Date(date) : new Date(date)
   
-  // Usar getters UTC para extrair os componentes da data
-  const year = originalDate.getUTCFullYear()
-  const month = originalDate.getUTCMonth() // 0-11
-  const day = originalDate.getUTCDate()
+  // IMPORTANTE: Usar getters LOCAIS para extrair os componentes da data
+  // O date picker HTML retorna datas no timezone local do usuário.
+  // Quando enviamos ao servidor, a data pode ser serializada como ISO string,
+  // mas precisamos preservar o dia/mês/ano que o usuário selecionou.
+  // Usar getters locais garante que extraímos o dia correto, independente
+  // de conversões de timezone que possam ter ocorrido durante a serialização.
+  const year = originalDate.getFullYear()
+  const month = originalDate.getMonth() // 0-11
+  const day = originalDate.getDate()
   
+  // Construir a data UTC usando os componentes locais extraídos
+  // Isso garante que o dia/mês/ano selecionado pelo usuário seja preservado
   const normalizedDate = new Date(Date.UTC(
     year,
     month,
