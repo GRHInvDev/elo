@@ -1,8 +1,10 @@
 import { createTRPCRouter, protectedProcedure, middleware } from "../trpc"
+import type { TRPCContext } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import type { InputJsonValue } from "@prisma/client/runtime/library"
+import { db } from "@/server/db"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
 import type { RolesConfig } from "@/types/role-config"
@@ -56,11 +58,19 @@ const adminProcedure = protectedProcedure.use(adminMiddleware)
 
 // Helper para validar edição de sugestão
 async function validateSuggestionEdit(
-  db: Parameters<typeof protectedProcedure.mutation>[0]["ctx"]["db"],
+  dbInstance: typeof db,
   suggestionId: string,
   userId: string
-) {
-  const suggestion = await db.suggestion.findUnique({
+): Promise<{
+  id: string
+  userId: string
+  status: string
+  description: string
+  problem: string | null
+  editHistory: unknown
+  isTextEdited: boolean
+}> {
+  const suggestion = await dbInstance.suggestion.findUnique({
     where: { id: suggestionId },
     select: {
       id: true,
