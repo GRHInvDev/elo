@@ -609,6 +609,10 @@ model Suggestion {
   contribution Json?
   dateRef      DateTime?
 
+  // Histórico de edições do texto
+  editHistory  Json? // { "texto-original": "...", "edicao-1": "...", "edicao-2": "..." }
+  isTextEdited Boolean @default(false) // Flag para indicar se o texto foi editado
+
   impact   Json?
   capacity Json?
   effort   Json?

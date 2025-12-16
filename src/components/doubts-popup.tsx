@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { HelpCircle, X } from "lucide-react"
+import { HelpCircle } from "lucide-react"
 
 export interface DoubtsPopupProps {
   isOpen: boolean
@@ -67,30 +67,18 @@ export function DoubtsPopup({
 
       {/* Modal com Iframe */}
       <Dialog open={showIframe} onOpenChange={handleCloseIframe}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0">
-          <DialogHeader className="px-6 py-4 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5 text-blue-600" />
-                  Central de Dúvidas
-                </DialogTitle>
-                <DialogDescription>
-                  Navegue pela nossa documentação e encontre respostas para suas dúvidas
-                </DialogDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCloseIframe}
-                className="h-8 w-8 p-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-blue-600" />
+              Central de Dúvidas
+            </DialogTitle>
+            <DialogDescription>
+              Navegue pela nossa documentação e encontre respostas para suas dúvidas
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 h-full">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <iframe
               src="/doubts"
               className="w-full h-full border-0"

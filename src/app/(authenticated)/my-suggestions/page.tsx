@@ -7,10 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Label } from "@/components/ui/label"
-import { Search, Filter, Lightbulb, CheckCircle, Clock, AlertTriangle, XCircle, TrendingUp, Eye, EyeOff } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { Search, Filter, Lightbulb, CheckCircle, Clock, AlertTriangle, XCircle, TrendingUp, Eye, EyeOff, Edit, Save, X, Plus } from "lucide-react"
 import { api } from "@/trpc/react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { toast } from "@/hooks/use-toast"
+import { SuggestionsModal } from "@/components/admin/suggestion/suggestion-card"
 
 const STATUS_MAPPING = {
   "NEW": "Ainda não avaliado",
@@ -81,9 +85,28 @@ const getStatusConfig = (status: string) => {
 export default function MySuggestionsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingField, setEditingField] = useState<"description" | "problem" | null>(null)
+  const [editDescription, setEditDescription] = useState("")
+  const [editProblem, setEditProblem] = useState("")
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   // Buscar Ideias do usuário logado
-  const { data: userSuggestions = [], isLoading } = api.suggestion.getMySuggestions.useQuery()
+  const { data: userSuggestions = [], isLoading, refetch } = api.suggestion.getMySuggestions.useQuery()
+
+  // Mutation para atualizar descrição
+  const updateDescription = api.suggestion.updateDescription.useMutation({
+    onSuccess: () => {
+      void refetch()
+    },
+  })
+
+  // Mutation para atualizar problema
+  const updateProblem = api.suggestion.updateProblem.useMutation({
+    onSuccess: () => {
+      void refetch()
+    },
+  })
 
   // Filtrar Ideias baseado nos critérios
   const filteredSuggestions = useMemo(() => {
@@ -163,18 +186,27 @@ export default function MySuggestionsPage() {
   return (
     <div className="container mx-auto py-6 px-4 max-w-6xl">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-          <Lightbulb className="h-6 w-6 text-red-600 dark:text-red-400" />
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+            <Lightbulb className="h-6 w-6 text-red-600 dark:text-red-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground dark:text-foreground">
+              Minhas ideias
+            </h1>
+            <p className="text-muted-foreground dark:text-muted-foreground">
+              Acompanhe o status das suas ideias enviadas
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground dark:text-foreground">
-            Minhas ideias
-          </h1>
-          <p className="text-muted-foreground dark:text-muted-foreground">
-            Acompanhe o status das suas ideias enviadas
-          </p>
-        </div>
+        <Button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Nova Ideia
+        </Button>
       </div>
 
       {/* Estatísticas Detalhadas */}
@@ -319,6 +351,11 @@ export default function MySuggestionsPage() {
                               <Badge className={statusConfig.color}>
                                 {STATUS_MAPPING[status as keyof typeof STATUS_MAPPING] || status}
                               </Badge>
+                              {getSuggestionProperty<boolean>(suggestion, 'isTextEdited', false) && (
+                                <Badge variant="outline" className="text-xs">
+                                  Texto editado
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground dark:text-muted-foreground break-words line-clamp-2 pr-4">
                               {problem}
@@ -351,17 +388,162 @@ export default function MySuggestionsPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
                           <div className="space-y-3 min-w-0">
                             <div>
-                              <Label className="text-sm font-medium">Problema identificado</Label>
-                              <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
-                                {problem || "Não informado"}
+                              <div className="flex items-center justify-between mb-1">
+                                <Label className="text-sm font-medium">Problema identificado</Label>
+                                {status === "NEW" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const suggestionId = getSuggestionProperty<string>(suggestion, 'id', '')
+                                      const currentProblem = getSuggestionProperty<string>(suggestion, 'problem', '')
+                                      setEditingId(suggestionId)
+                                      setEditingField("problem")
+                                      setEditProblem(currentProblem)
+                                    }}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <Edit className="h-3 w-3 mr-1" />
+                                    Editar
+                                  </Button>
+                                )}
                               </div>
+                              {editingId === getSuggestionProperty<string>(suggestion, 'id', '') && editingField === "problem" ? (
+                                <div className="mt-1 space-y-2">
+                                  <Textarea
+                                    value={editProblem}
+                                    onChange={(e) => setEditProblem(e.target.value)}
+                                    className="min-h-[100px] text-sm"
+                                    placeholder="Descreva o problema identificado..."
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={async () => {
+                                        const suggestionId = getSuggestionProperty<string>(suggestion, 'id', '')
+                                        try {
+                                          await updateProblem.mutateAsync({
+                                            id: suggestionId,
+                                            problem: editProblem || undefined,
+                                          })
+                                          toast({
+                                            title: "Ideia atualizada",
+                                            description: "O problema foi salvo com sucesso.",
+                                          })
+                                          setEditingId(null)
+                                          setEditingField(null)
+                                          setEditProblem("")
+                                        } catch (error) {
+                                          toast({
+                                            title: "Erro ao salvar",
+                                            description: error instanceof Error ? error.message : "Não foi possível salvar a edição.",
+                                            variant: "destructive",
+                                          })
+                                        }
+                                      }}
+                                      disabled={updateProblem.isPending}
+                                    >
+                                      <Save className="h-3 w-3 mr-1" />
+                                      {updateProblem.isPending ? "Salvando..." : "Salvar"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingId(null)
+                                        setEditingField(null)
+                                        setEditProblem("")
+                                      }}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
+                                  {problem || "Não informado"}
+                                </div>
+                              )}
                             </div>
 
                             <div>
-                              <Label className="text-sm font-medium">Solução proposta</Label>
-                              <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
-                                {getSuggestionProperty<string>(suggestion, 'description', 'Não informado')}
+                              <div className="flex items-center justify-between mb-1">
+                                <Label className="text-sm font-medium">Solução proposta</Label>
+                                {status === "NEW" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const suggestionId = getSuggestionProperty<string>(suggestion, 'id', '')
+                                      const currentDescription = getSuggestionProperty<string>(suggestion, 'description', '')
+                                      setEditingId(suggestionId)
+                                      setEditingField("description")
+                                      setEditDescription(currentDescription)
+                                    }}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <Edit className="h-3 w-3 mr-1" />
+                                    Editar
+                                  </Button>
+                                )}
                               </div>
+                              {editingId === getSuggestionProperty<string>(suggestion, 'id', '') && editingField === "description" ? (
+                                <div className="mt-1 space-y-2">
+                                  <Textarea
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    className="min-h-[100px] text-sm"
+                                    placeholder="Descreva sua solução proposta..."
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={async () => {
+                                        const suggestionId = getSuggestionProperty<string>(suggestion, 'id', '')
+                                        try {
+                                          await updateDescription.mutateAsync({
+                                            id: suggestionId,
+                                            description: editDescription,
+                                          })
+                                          toast({
+                                            title: "Ideia atualizada",
+                                            description: "A descrição foi salva com sucesso.",
+                                          })
+                                          setEditingId(null)
+                                          setEditDescription("")
+                                        } catch (error) {
+                                          toast({
+                                            title: "Erro ao salvar",
+                                            description: error instanceof Error ? error.message : "Não foi possível salvar a edição.",
+                                            variant: "destructive",
+                                          })
+                                        }
+                                      }}
+                                      disabled={updateDescription.isPending}
+                                    >
+                                      <Save className="h-3 w-3 mr-1" />
+                                      {updateDescription.isPending ? "Salvando..." : "Salvar"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingId(null)
+                                        setEditingField(null)
+                                        setEditDescription("")
+                                      }}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-1 p-3 bg-muted/50 dark:bg-muted/50 rounded border text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
+                                  {getSuggestionProperty<string>(suggestion, 'description', 'Não informado')}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -501,6 +683,18 @@ export default function MySuggestionsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de criação de nova ideia */}
+      <SuggestionsModal
+        isOpen={isCreateModalOpen}
+        onOpenChange={(open) => {
+          setIsCreateModalOpen(open)
+          if (!open) {
+            // Refazer a query quando o modal fechar para atualizar a lista
+            void refetch()
+          }
+        }}
+      />
     </div>
   )
 }
