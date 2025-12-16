@@ -54,6 +54,131 @@ const adminMiddleware = middleware(async ({ ctx, next }) => {
 // Procedure protegido para admins
 const adminProcedure = protectedProcedure.use(adminMiddleware)
 
+// Helper para validar edição de sugestão
+async function validateSuggestionEdit(
+  db: Parameters<typeof protectedProcedure.mutation>[0]["ctx"]["db"],
+  suggestionId: string,
+  userId: string
+) {
+  const suggestion = await db.suggestion.findUnique({
+    where: { id: suggestionId },
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+      description: true,
+      problem: true,
+      editHistory: true,
+      isTextEdited: true,
+    },
+  })
+
+  if (!suggestion) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Ideia não encontrada"
+    })
+  }
+
+  if (suggestion.userId !== userId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Você só pode editar suas próprias ideias"
+    })
+  }
+
+  if (suggestion.status !== "NEW") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Apenas ideias com status 'Não avaliado' podem ser editadas"
+    })
+  }
+
+  return suggestion
+}
+
+// Helper para atualizar histórico de edições
+function updateEditHistory(
+  existingHistory: unknown,
+  fieldName: "description" | "problem",
+  currentValue: string | null
+): Record<string, unknown> {
+  const normalizedValue = currentValue ?? ""
+  
+  // O histórico pode ter estrutura: { description: {...}, problem: {...} }
+  // ou estrutura antiga (legado): { "texto-original": "...", "edicao-1": "..." }
+  let editHistory: Record<string, unknown> = {}
+  
+  if (!existingHistory) {
+    // Criar novo histórico com estrutura separada para description e problem
+    editHistory = {
+      [fieldName]: {
+        "texto-original": normalizedValue,
+      }
+    }
+  } else {
+    const existing = existingHistory as Record<string, unknown>
+    
+    // Verificar se já tem estrutura explícita (description ou problem)
+    const hasExplicitDescription = existing.description && typeof existing.description === "object"
+    const hasExplicitProblem = existing.problem && typeof existing.problem === "object"
+    
+    // Verificar se é histórico legado não estruturado (tem edicao-* mas não tem description/problem)
+    const hasLegacyEntries = Object.keys(existing).some(key => key.startsWith("edicao-") || key === "texto-original")
+    const isLegacyUnstructured = hasLegacyEntries && !hasExplicitDescription && !hasExplicitProblem
+    
+    const fieldHistory = existing[fieldName]
+    
+    if (fieldHistory && typeof fieldHistory === "object") {
+      // Já existe histórico estruturado do campo - adicionar nova edição
+      const history = fieldHistory as Record<string, string>
+      editHistory = { ...existing }
+      const editKeys = Object.keys(history).filter(key => key.startsWith("edicao-"))
+      const nextEditNumber = editKeys.length + 1
+      history[`edicao-${nextEditNumber}`] = normalizedValue
+      editHistory[fieldName] = history
+      
+      // Preservar o outro campo se existir
+      if (fieldName === "description" && hasExplicitProblem) {
+        editHistory.problem = existing.problem
+      } else if (fieldName === "problem" && hasExplicitDescription) {
+        editHistory.description = existing.description
+      }
+    } else if (isLegacyUnstructured) {
+      // Histórico legado não estruturado - não assumir que pertence ao campo atual
+      // Preservar legado em _legacy e inicializar campo com texto atual
+      editHistory = {
+        [fieldName]: {
+          "texto-original": normalizedValue,
+        },
+        _legacy: existing, // Preservar histórico legado para revisão manual
+      }
+      
+      // Preservar o outro campo se existir explicitamente
+      if (fieldName === "description" && hasExplicitProblem) {
+        editHistory.problem = existing.problem
+      } else if (fieldName === "problem" && hasExplicitDescription) {
+        editHistory.description = existing.description
+      }
+    } else {
+      // Não existe histórico do campo e não é legado - criar novo
+      editHistory = { ...existing }
+      editHistory[fieldName] = {
+        "texto-original": normalizedValue,
+      }
+      
+      // Preservar o outro campo se existir
+      if (fieldName === "description" && hasExplicitProblem) {
+        editHistory.problem = existing.problem
+      } else if (fieldName === "problem" && hasExplicitDescription) {
+        editHistory.description = existing.description
+      }
+    }
+  }
+  
+  return editHistory
+}
+
 export const suggestionRouter = createTRPCRouter({
   // Criar ideia (caixa)
   create: protectedProcedure
@@ -628,41 +753,8 @@ export const suggestionRouter = createTRPCRouter({
       description: z.string().trim().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Buscar a ideia atual
-      const suggestion = await ctx.db.suggestion.findUnique({
-        where: { id: input.id },
-        select: {
-          id: true,
-          userId: true,
-          status: true,
-          description: true,
-          editHistory: true,
-          isTextEdited: true,
-        },
-      })
-
-      if (!suggestion) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Ideia não encontrada"
-        })
-      }
-
-      // Verificar se o usuário é o autor
-      if (suggestion.userId !== ctx.auth.userId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Você só pode editar suas próprias ideias"
-        })
-      }
-
-      // Verificar se o status permite edição
-      if (suggestion.status !== "NEW") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Apenas ideias com status 'Não avaliado' podem ser editadas"
-        })
-      }
+      // Validar edição
+      const suggestion = await validateSuggestionEdit(ctx.db, input.id, ctx.auth.userId)
 
       // Se a descrição não mudou, não fazer nada
       if (suggestion.description === input.description) {
@@ -671,49 +763,8 @@ export const suggestionRouter = createTRPCRouter({
         })
       }
 
-      // Preparar histórico de edições
-      // O histórico pode ter estrutura: { description: {...}, problem: {...} }
-      // ou estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
-      let editHistory: Record<string, unknown> = {}
-      
-      if (!suggestion.editHistory) {
-        // Criar novo histórico com estrutura separada para description e problem
-        editHistory = {
-          description: {
-            "texto-original": suggestion.description,
-          }
-        }
-      } else {
-        // Se já existe histórico, verificar a estrutura
-        const existingHistory = suggestion.editHistory as Record<string, unknown>
-        editHistory = { ...existingHistory }
-        
-        // Se já existe histórico de description
-        if (existingHistory.description && typeof existingHistory.description === "object") {
-          const descriptionHistory = existingHistory.description as Record<string, string>
-          const editKeys = Object.keys(descriptionHistory).filter(key => key.startsWith("edicao-"))
-          const nextEditNumber = editKeys.length + 1
-          descriptionHistory[`edicao-${nextEditNumber}`] = suggestion.description
-          editHistory.description = descriptionHistory
-        } else if (!existingHistory.description) {
-          // Criar histórico de description se não existir
-          editHistory.description = {
-            "texto-original": suggestion.description,
-          }
-        } else {
-          // Migrar estrutura antiga para nova estrutura
-          const oldHistory = existingHistory as Record<string, string>
-          editHistory.description = { ...oldHistory }
-          // Adicionar nova edição
-          const editKeys = Object.keys(oldHistory).filter(key => key.startsWith("edicao-"))
-          const nextEditNumber = editKeys.length + 1
-          ;(editHistory.description as Record<string, string>)[`edicao-${nextEditNumber}`] = suggestion.description
-          // Preservar histórico de problem se existir
-          if (existingHistory.problem) {
-            editHistory.problem = existingHistory.problem
-          }
-        }
-      }
+      // Atualizar histórico de edições
+      const editHistory = updateEditHistory(suggestion.editHistory, "description", suggestion.description)
 
       // Atualizar a ideia
       const updatedSuggestion = await ctx.db.suggestion.update({
@@ -735,41 +786,8 @@ export const suggestionRouter = createTRPCRouter({
       problem: z.string().trim().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Buscar a ideia atual
-      const suggestion = await ctx.db.suggestion.findUnique({
-        where: { id: input.id },
-        select: {
-          id: true,
-          userId: true,
-          status: true,
-          problem: true,
-          editHistory: true,
-          isTextEdited: true,
-        },
-      })
-
-      if (!suggestion) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Ideia não encontrada"
-        })
-      }
-
-      // Verificar se o usuário é o autor
-      if (suggestion.userId !== ctx.auth.userId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Você só pode editar suas próprias ideias"
-        })
-      }
-
-      // Verificar se o status permite edição
-      if (suggestion.status !== "NEW") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Apenas ideias com status 'Não avaliado' podem ser editadas"
-        })
-      }
+      // Validar edição
+      const suggestion = await validateSuggestionEdit(ctx.db, input.id, ctx.auth.userId)
 
       const newProblem = input.problem ?? null
       
@@ -780,41 +798,8 @@ export const suggestionRouter = createTRPCRouter({
         })
       }
 
-      // Preparar histórico de edições
-      // O histórico pode ter estrutura: { description: {...}, problem: {...} }
-      // ou estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
-      let editHistory: Record<string, unknown> = {}
-      
-      if (!suggestion.editHistory) {
-        // Criar novo histórico com estrutura separada para description e problem
-        editHistory = {
-          problem: {
-            "texto-original": suggestion.problem ?? "",
-          }
-        }
-      } else {
-        // Se já existe histórico, verificar a estrutura
-        const existingHistory = suggestion.editHistory as Record<string, unknown>
-        editHistory = { ...existingHistory }
-        
-        // Se já existe histórico de problem
-        if (existingHistory.problem && typeof existingHistory.problem === "object") {
-          const problemHistory = existingHistory.problem as Record<string, string>
-          const editKeys = Object.keys(problemHistory).filter(key => key.startsWith("edicao-"))
-          const nextEditNumber = editKeys.length + 1
-          problemHistory[`edicao-${nextEditNumber}`] = suggestion.problem ?? ""
-          editHistory.problem = problemHistory
-        } else {
-          // Criar histórico de problem
-          editHistory.problem = {
-            "texto-original": suggestion.problem ?? "",
-          }
-        }
-        // Preservar histórico de description se existir
-        if (existingHistory.description) {
-          editHistory.description = existingHistory.description
-        }
-      }
+      // Atualizar histórico de edições
+      const editHistory = updateEditHistory(suggestion.editHistory, "problem", suggestion.problem)
 
       // Atualizar a ideia
       const updatedSuggestion = await ctx.db.suggestion.update({

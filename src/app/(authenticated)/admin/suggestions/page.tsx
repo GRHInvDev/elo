@@ -1227,8 +1227,9 @@ function SuggestionDetailsModal({
                   // Verificar se é estrutura nova (com description/problem) ou antiga
                   const hasDescriptionHistory = history.description && typeof history.description === "object"
                   const hasProblemHistory = history.problem && typeof history.problem === "object"
+                  const hasLegacyHistory = history._legacy && typeof history._legacy === "object"
                   
-                  if (hasDescriptionHistory || hasProblemHistory) {
+                  if (hasDescriptionHistory || hasProblemHistory || hasLegacyHistory) {
                     // Nova estrutura: { description: {...}, problem: {...} }
                     return (
                       <>
@@ -1284,6 +1285,39 @@ function SuggestionDetailsModal({
                                   </div>
                                   {index < entries.length - 1 && (
                                     <div className="h-px bg-border my-2" />
+                                  )}
+                                </div>
+                              ))
+                            })()}
+                          </div>
+                        )}
+                        {hasLegacyHistory && (
+                          <div className="space-y-2 border rounded-lg p-3 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+                            <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 mb-2">
+                              ⚠️ Histórico Legado (Revisão Manual Necessária)
+                            </div>
+                            <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
+                              Este histórico foi preservado de uma versão anterior do sistema. 
+                              Não foi possível determinar automaticamente se pertence a "Solução Proposta" ou "Problema Identificado".
+                            </div>
+                            {(() => {
+                              const legacyHistory = history._legacy as Record<string, string>
+                              const entries = Object.entries(legacyHistory).sort((a, b) => {
+                                if (a[0] === "texto-original") return -1
+                                if (b[0] === "texto-original") return 1
+                                return a[0].localeCompare(b[0])
+                              })
+                              
+                              return entries.map(([key, value], index) => (
+                                <div key={key} className="space-y-1">
+                                  <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400">
+                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                  </div>
+                                  <div className="text-sm text-yellow-900 dark:text-yellow-200 whitespace-pre-wrap border-l-2 border-yellow-300 dark:border-yellow-700 pl-2">
+                                    {value}
+                                  </div>
+                                  {index < entries.length - 1 && (
+                                    <div className="h-px bg-yellow-300 dark:bg-yellow-700 my-2" />
                                   )}
                                 </div>
                               ))
