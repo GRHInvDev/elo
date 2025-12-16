@@ -1298,7 +1298,7 @@ function SuggestionDetailsModal({
                             </div>
                             <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
                               Este histórico foi preservado de uma versão anterior do sistema. 
-                              Não foi possível determinar automaticamente se pertence a "Solução Proposta" ou "Problema Identificado".
+                              Não foi possível determinar automaticamente se pertence a &quot;Solução Proposta&quot; ou &quot;Problema Identificado&quot;.
                             </div>
                             {(() => {
                               const legacyHistory = history._legacy as Record<string, string>
