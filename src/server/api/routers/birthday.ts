@@ -16,20 +16,47 @@ const createBirthdaySchema = z.object({
  * @returns String ISO 8601 formatada em UTC (ex: "2025-12-31T00:00:00.000Z")
  */
 const normalizeBirthdayDate = (date: Date | string): string => {
-  // Garantir que seja um objeto Date
-  const originalDate = typeof date === 'string' ? new Date(date) : new Date(date)
+  let year: number
+  let month: number // 0-11
+  let day: number
+
+  if (typeof date === 'string') {
+    // Se for string, pode ser ISO 8601 ou formato YYYY-MM-DD
+    // Tenta extrair diretamente do formato YYYY-MM-DD primeiro (mais seguro)
+    const dateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (dateMatch) {
+      // Formato YYYY-MM-DD - extrair diretamente sem conversão de timezone
+      year = parseInt(dateMatch[1]!, 10)
+      month = parseInt(dateMatch[2]!, 10) - 1 // Mês é 0-indexed
+      day = parseInt(dateMatch[3]!, 10)
+    } else {
+      // String ISO 8601 completa (ex: "2025-12-15T03:00:00.000Z")
+      // Extrair a parte da data (YYYY-MM-DD) da string ISO
+      const isoDateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})T/)
+      if (isoDateMatch) {
+        // Extrair diretamente da string ISO sem parsear como Date
+        year = parseInt(isoDateMatch[1]!, 10)
+        month = parseInt(isoDateMatch[2]!, 10) - 1
+        day = parseInt(isoDateMatch[3]!, 10)
+      } else {
+        // Fallback: parsear como Date e usar getters locais
+        const parsedDate = new Date(date)
+        year = parsedDate.getFullYear()
+        month = parsedDate.getMonth()
+        day = parsedDate.getDate()
+      }
+    }
+  } else {
+    // Date object - usar getters locais para preservar o dia/mês/ano selecionado
+    // O date picker HTML retorna datas no timezone local do usuário
+    // Quando serializado pelo tRPC, pode ter sido convertido, mas os getters locais
+    // ainda vão pegar o dia correto se a data foi criada corretamente no frontend
+    year = date.getFullYear()
+    month = date.getMonth() // 0-11
+    day = date.getDate()
+  }
   
-  // IMPORTANTE: Usar getters LOCAIS para extrair os componentes da data
-  // O date picker HTML retorna datas no timezone local do usuário.
-  // Quando enviamos ao servidor, a data pode ser serializada como ISO string,
-  // mas precisamos preservar o dia/mês/ano que o usuário selecionou.
-  // Usar getters locais garante que extraímos o dia correto, independente
-  // de conversões de timezone que possam ter ocorrido durante a serialização.
-  const year = originalDate.getFullYear()
-  const month = originalDate.getMonth() // 0-11
-  const day = originalDate.getDate()
-  
-  // Construir a data UTC usando os componentes locais extraídos
+  // Construir a data UTC usando os componentes extraídos
   // Isso garante que o dia/mês/ano selecionado pelo usuário seja preservado
   const normalizedDate = new Date(Date.UTC(
     year,
