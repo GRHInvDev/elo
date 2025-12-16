@@ -198,21 +198,33 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
   }
 
   const onSubmit = async (data: z.infer<typeof createBirthdaySchema>) => {
+    // O date picker HTML retorna uma data local. Para evitar problemas de timezone,
+    // precisamos garantir que o dia/mês/ano selecionado seja preservado.
+    // Criamos uma nova data usando os componentes locais para evitar conversões indesejadas.
     const date = data.data
+    const localDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      12, // Meio-dia para evitar problemas de timezone ao converter
+      0,
+      0,
+      0
+    )
 
     try {
       if (birthday) {
         await updateBirthday.mutateAsync({
           id: birthday.id,
           name: data.name,
-          data: date,
+          data: localDate,
           userId: data.userId === "none" ? undefined : data.userId,
           imageUrl: data.imageUrl,
         })
       } else {
         await createBirthday.mutateAsync({
           name: data.name,
-          data: date,
+          data: localDate,
           userId: data.userId === "none" ? undefined : data.userId,
           imageUrl: data.imageUrl,
         })
