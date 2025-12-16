@@ -21,36 +21,25 @@ export function BirthdayConfettiWrapper() {
   const dateKeyRef = useRef(new Date().toDateString())
 
   // Verifica se hoje é o aniversário do usuário atual
+  // Usa UTC para evitar problemas de timezone, especialmente para datas como 31/12
   const isMyBirthdayToday = useMemo(() => {
     if (!myBirthday || !currentUser) {
       return false
     }
 
     const today = new Date()
-    const currentDay = today.getDate()
-    const currentMonth = today.getMonth()
+    // Usa UTC para evitar problemas de timezone
+    const currentDay = today.getUTCDate()
+    const currentMonth = today.getUTCMonth()
     
     // Atualiza a ref com a data atual
     dateKeyRef.current = today.toDateString()
 
     const birthdayDate = new Date(myBirthday.data)
     const isToday = (
-      birthdayDate.getDate() === currentDay &&
-      birthdayDate.getMonth() === currentMonth
+      birthdayDate.getUTCDate() === currentDay &&
+      birthdayDate.getUTCMonth() === currentMonth
     )
-
-    // eslint-disable-next-line no-console
-    console.log("🔍 BirthdayConfettiWrapper - Verificando aniversário:", {
-      userId: currentUser.id,
-      userName: currentUser.firstName ?? currentUser.email,
-      myBirthday: myBirthday.data.toISOString(),
-      today: today.toISOString(),
-      birthdayDay: birthdayDate.getDate(),
-      birthdayMonth: birthdayDate.getMonth() + 1,
-      currentDay,
-      currentMonth: currentMonth + 1,
-      isMyBirthdayToday: isToday,
-    })
 
     return isToday
   }, [myBirthday, currentUser])

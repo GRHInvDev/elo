@@ -76,10 +76,10 @@ export function BirthdayAdmin() {
                 Novo Aniversário
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingBirthday ? "Editar Aniversário" : "Novo Aniversário"}</DialogTitle>
-                <DialogDescription>
+            <DialogContent className="max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[calc(100vh-2rem)] sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6 !translate-y-[-50%] top-[50%] left-[50%] fixed">
+              <DialogHeader className="space-y-1.5 sm:space-y-2 pb-3 sm:pb-4">
+                <DialogTitle className="text-base sm:text-lg">{editingBirthday ? "Editar Aniversário" : "Novo Aniversário"}</DialogTitle>
+                <DialogDescription className="text-sm">
                   {editingBirthday
                     ? "Edite os dados do aniversário"
                     : "Preencha os dados para adicionar um novo aniversário"}

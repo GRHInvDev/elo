@@ -96,40 +96,30 @@ export function UPLTButton({
             className="hidden"
             id="file-input"
           />
-          <div className="w-full h-32 border-dashed flex items-center justify-center border rounded-md gap-2 cursor-pointer hover:bg-muted hover:border-primary transition-all">
-            {isUploading ? (
-              <>
-                <LucideLoader2 className="animate-spin h-6 w-6" />
-                <span>Fazendo upload...</span>
-              </>
-            ) : files.length > 0 && fileUrl ? (
-              <>
-                <LucideImagePlus className="h-6 w-6 text-green-600" />
-                <span>Imagem carregada</span>
-              </>
-            ) : (
-              <>
-                <LucideUpload className="h-6 w-6" />
-                <span>Arraste ou clique para adicionar imagem</span>
-              </>
-            )}
+          <div className="w-full h-64 border-dashed flex items-center justify-center border rounded-md gap-2 cursor-pointer hover:bg-muted hover:border-primary transition-all">
+            <div className="ml-6">
+              {isUploading ? (
+                  <>
+                      <LucideLoader2 className="animate-spin h-6 w-6" />
+                      <span>Fazendo upload...</span>
+                  </>
+                ) : files.length > 0 && fileUrl ? (
+                  <>
+                    <LucideImagePlus className="h-6 w-6 text-green-600" />
+                    <span>Imagem carregada</span>
+                  </>
+                ) : (
+                  <>
+                    <LucideUpload className="h-6 w-6" />
+                    <span>Arraste ou clique para adicionar imagem</span>
+                  </>
+               )}
+            </div>
           </div>
         </div>
 
         {/* Botões de ação */}
         <div className="flex gap-2">
-          {files.length === 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('file-input')?.click()}
-            >
-              <LucideUpload className="h-4 w-4 mr-2" />
-              Selecionar Arquivo
-            </Button>
-          )}
-
           {files.length > 0 && fileUrl && (
             <Button
               type="button"
