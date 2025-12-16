@@ -16,11 +16,13 @@ const createBirthdaySchema = z.object({
  * @returns String ISO 8601 formatada em UTC (ex: "2025-12-31T00:00:00.000Z")
  */
 const normalizeBirthdayDate = (date: Date | string): string => {
+  // Garantir que seja um objeto Date antes de usar os getters UTC
   const originalDate = typeof date === 'string' ? new Date(date) : new Date(date)
   
-  const year = originalDate.getFullYear()
-  const month = originalDate.getMonth() // 0-11
-  const day = originalDate.getDate()
+  // Usar getters UTC para extrair os componentes da data
+  const year = originalDate.getUTCFullYear()
+  const month = originalDate.getUTCMonth() // 0-11
+  const day = originalDate.getUTCDate()
   
   const normalizedDate = new Date(Date.UTC(
     year,

@@ -30,7 +30,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent } from "@/components/ui/card"
 
 interface Birthday {
   id: string
