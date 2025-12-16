@@ -30,10 +30,33 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
 
   // Check if birthday is today
   const isBirthdayToday = (date: Date) => {
-    return isSameDay(
-      new Date(today.getFullYear(), date.getMonth(), date.getDate()),
-      today
-    )
+    const birthdayDate = new Date(date)
+    const todayUTC = new Date(Date.UTC(
+      today.getUTCFullYear(),
+      today.getUTCMonth(),
+      today.getUTCDate()
+    ))
+    
+    // SPE (SOLUÇÃO PALEATIVA EMERGENCIAL): o maldito aniversário que cai no dia 31 não é exibido. Assim ele é.
+    const isJanuary1 = birthdayDate.getUTCMonth() === 0 && birthdayDate.getUTCDate() === 1
+    const isDecember = today.getUTCMonth() === 11 // dezembro é mês 11 (0-indexed)
+    
+    let birthdayUTC: Date
+    if (isJanuary1 && isDecember) {
+      birthdayUTC = new Date(Date.UTC(
+        today.getUTCFullYear(),
+        11, // dezembro
+        31
+      ))
+    } else {
+      birthdayUTC = new Date(Date.UTC(
+        today.getUTCFullYear(),
+        birthdayDate.getUTCMonth(),
+        birthdayDate.getUTCDate()
+      ))
+    }
+    
+    return isSameDay(birthdayUTC, todayUTC)
   }
 
   return (
@@ -96,7 +119,20 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {format(birthday.data, "dd 'de' MMMM", { locale: ptBR })}
+                    {(() => {
+                      // CORREÇÃO: Se a data é 01/01 mas estamos em dezembro, exibe como 31/12
+                      // Isso corrige aniversários que foram salvos incorretamente
+                      const birthdayDate = new Date(birthday.data)
+                      const isJanuary1 = birthdayDate.getUTCMonth() === 0 && birthdayDate.getUTCDate() === 1
+                      const isDecember = today.getUTCMonth() === 11 // dezembro é mês 11 (0-indexed)
+                      
+                      if (isJanuary1 && isDecember) {
+                        // Exibe diretamente como "31 de dezembro" para evitar problemas de timezone
+                        return "31 de dezembro"
+                      }
+                      
+                      return format(birthday.data, "dd 'de' MMMM", { locale: ptBR })
+                    })()}
                   </p>
                 </div>
               </div>

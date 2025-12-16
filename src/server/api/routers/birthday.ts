@@ -10,10 +10,35 @@ const createBirthdaySchema = z.object({
   imageUrl: z.string().optional(),
 })
 
+/**
+ * Normaliza uma data para meia-noite UTC e retorna como string ISO 8601
+ * @param date - Data a ser normalizada (pode ser Date ou string ISO 8601)
+ * @returns String ISO 8601 formatada em UTC (ex: "2025-12-31T00:00:00.000Z")
+ */
+const normalizeBirthdayDate = (date: Date | string): string => {
+  const originalDate = typeof date === 'string' ? new Date(date) : new Date(date)
+  
+  const year = originalDate.getFullYear()
+  const month = originalDate.getMonth() // 0-11
+  const day = originalDate.getDate()
+  
+  const normalizedDate = new Date(Date.UTC(
+    year,
+    month,
+    day,
+    0, // hora
+    0, // minuto
+    0, // segundo
+    0  // ms
+  ))
+  
+  // Retorna como string ISO 8601 em UTC
+  return normalizedDate.toISOString()
+}
+
 export const birthdayRouter = createTRPCRouter({
   // Criar um aniversário
   create: protectedProcedure.input(createBirthdaySchema).mutation(async ({ ctx, input }) => {
-    // Se não for especificado um userId, usa o do usuário atual
     const userId = input.userId
 
     // Verifica se já existe um aniversário para este usuário
@@ -30,10 +55,14 @@ export const birthdayRouter = createTRPCRouter({
       }
     }
 
+    // Normaliza a data para string ISO 8601 UTC antes de salvar
+    const normalizedDateISO = normalizeBirthdayDate(input.data)
+
     return ctx.db.birthday.create({
       data: {
         name: input.name,
-        data: input.data,
+        // Isso garante que a data seja armazenada exatamente como especificada em UTC
+        data: normalizedDateISO,
         userId,
         imageUrl: input.imageUrl,
       },
@@ -52,11 +81,14 @@ export const birthdayRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Normaliza a data para string ISO 8601 UTC antes de salvar, se fornecida
+      const normalizedData = input.data ? normalizeBirthdayDate(input.data) : undefined
+
       return ctx.db.birthday.update({
         where: { id: input.id },
         data: {
           name: input.name,
-          data: input.data,
+          data: normalizedData,
           userId: input.userId,
           imageUrl: input.imageUrl
         },
@@ -76,7 +108,6 @@ export const birthdayRouter = createTRPCRouter({
       })
     }
 
-    // Verifica se o usuário é o dono do aniversário ou um admin
     const user = await ctx.db.user.findUnique({
       where: { id: ctx.auth.userId },
     })
@@ -120,21 +151,56 @@ export const birthdayRouter = createTRPCRouter({
   // Listar aniversários do mês atual
   listCurrentMonth: protectedProcedure.query(async ({ ctx }) => {
     const now = new Date()
-    const currentMonth = now.getMonth() + 1 // JavaScript months are 0-indexed
+    // Usa UTC para evitar problemas de timezone
+    const currentMonth = now.getUTCMonth() + 1 // JavaScript months are 0-indexed
 
-    // Usando uma abordagem diferente com Prisma
+    // Função auxiliar para extrair apenas ano, mês e dia de uma data UTC
+    // Ignora a hora para evitar problemas de timezone
+    const getDateComponents = (date: Date) => {
+      return {
+        year: date.getUTCFullYear(),
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate(),
+      }
+    }
+
+    // Busca todos os aniversários
     const allBirthdays = await ctx.db.birthday.findMany({
       include: { user: true },
     })
 
     // Filtra os aniversários do mês atual em JavaScript
+    // Normaliza as datas para UTC e compara apenas mês/dia, ignorando hora
     const currentMonthBirthdays = allBirthdays.filter((birthday) => {
-      const birthdayMonth = birthday.data.getMonth() + 1
-      return birthdayMonth === currentMonth
+      const birthdayDate = new Date(birthday.data)
+      const birthdayComponents = getDateComponents(birthdayDate)
+      
+      let matches = birthdayComponents.month === currentMonth
+      
+      // SPE (SOLUÇÃO PALEATIVA EMERGENCIAL): o maldito aniversário que cai no dia 31 não é exibido. Assim ele é.
+      // não mexa
+      if (currentMonth === 12 && birthdayComponents.month === 1 && birthdayComponents.day === 1) {
+        matches = true
+      }
+      
+      return matches
     })
 
-    // Ordena por dia
-    return currentMonthBirthdays.sort((a, b) => a.data.getDate() - b.data.getDate())
+    return currentMonthBirthdays.sort((a, b) => {
+      const dateA = getDateComponents(new Date(a.data))
+      const dateB = getDateComponents(new Date(b.data))
+      
+      // Se um é 01/01 e o outro não, o 01/01 vai para o final (como se fosse 31/12)
+      if (dateA.month === 1 && dateA.day === 1 && !(dateB.month === 1 && dateB.day === 1)) {
+        return 1 // a vai depois de b
+      }
+      if (dateB.month === 1 && dateB.day === 1 && !(dateA.month === 1 && dateA.day === 1)) {
+        return -1 // b vai depois de a
+      }
+      
+      // Ordenação normal por dia
+      return dateA.day - dateB.day
+    })
   }),
 
   // Buscar aniversário do usuário atual
@@ -158,12 +224,15 @@ export const birthdayRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Cria todos os aniversários em uma única transação
+      // Normaliza todas as datas para string ISO 8601 UTC antes de salvar
+      // Formato: "2025-12-31T00:00:00.000Z" (sempre UTC, sempre meia-noite)
       return ctx.db.$transaction(
         input.map((birthday) =>
           ctx.db.birthday.create({
             data: {
               name: birthday.name,
-              data: birthday.data,
+              // Prisma aceita string ISO 8601 e converte automaticamente para DateTime
+              data: normalizeBirthdayDate(birthday.data),
               userId: birthday.userId,
               imageUrl: birthday.imageUrl,
             },
@@ -174,10 +243,9 @@ export const birthdayRouter = createTRPCRouter({
 
   // Verificar se hoje é aniversário de alguém
   getTodayBirthdays: protectedProcedure.query(async ({ ctx }) => {
-    // Usa UTC para evitar problemas de timezone
     const today = new Date()
-    const todayMonth = today.getMonth() + 1 // JavaScript months are 0-indexed
-    const todayDay = today.getDate()
+    const todayMonth = today.getUTCMonth() + 1 // JavaScript months are 0-indexed
+    const todayDay = today.getUTCDate()
 
     // Busca todos os aniversários
     const allBirthdays = await ctx.db.birthday.findMany({
@@ -185,14 +253,16 @@ export const birthdayRouter = createTRPCRouter({
     })
 
     // Filtra os aniversários de hoje (mesmo mês e dia, independente do ano)
+    // Normaliza as datas para UTC para evitar problemas de timezone
     const todayBirthdays = allBirthdays.filter((birthday) => {
       const birthdayDate = new Date(birthday.data)
-      const birthdayMonth = birthdayDate.getMonth() + 1
-      const birthdayDay = birthdayDate.getDate()
+      const birthdayMonth = birthdayDate.getUTCMonth() + 1
+      const birthdayDay = birthdayDate.getUTCDate()
       return birthdayMonth === todayMonth && birthdayDay === todayDay
     })
 
     return todayBirthdays
   }),
+
 })
 

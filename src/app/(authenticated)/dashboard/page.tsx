@@ -45,14 +45,15 @@ export default function DashboardPage() {
     }
 
     const today = new Date()
-    const currentDay = today.getDate()
-    const currentMonth = today.getMonth()
+    // Usa UTC para evitar problemas de timezone, especialmente para datas como 31/12
+    const currentDay = today.getUTCDate()
+    const currentMonth = today.getUTCMonth()
 
     return birthdays.filter((birthday) => {
       const birthdayDate = new Date(birthday.data)
       return (
-        birthdayDate.getDate() === currentDay &&
-        birthdayDate.getMonth() === currentMonth
+        birthdayDate.getUTCDate() === currentDay &&
+        birthdayDate.getUTCMonth() === currentMonth
       )
     })
   }, [birthdays])
