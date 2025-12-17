@@ -1,7 +1,7 @@
 "use client"
 
 import Image, { type ImageProps } from "next/image"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { cn } from "@/lib/utils"
 
 interface OptimizedImageProps {
@@ -30,32 +30,46 @@ export function OptimizedImage({
   imageFit = "cover"
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
+  const [hasError, setHasError] = useState(false)
 
   const handleLoadingComplete = useCallback<NonNullable<ImageProps["onLoad"]>>((img) => {
     setIsLoaded(true)
     onLoadingComplete?.(img)
-  }, [onLoadingComplete])
+  }, [onLoadingComplete, src])
+
+  const handleError = useCallback(() => {
+    setHasError(true)
+  }, [src])
+
+  // Se houver erro, mostrar placeholder
+  if (hasError) {
+    return (
+      <div className={cn("relative w-full h-full bg-red-500/20 flex items-center justify-center", className)}>
+        <div className="text-xs text-red-500 text-center p-4">
+          ❌ Erro ao carregar<br />{src}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="relative overflow-hidden w-full h-full">
-      {/* Imagem de fundo borrada - sempre preenche todo o espaço */}
-      <Image
-        src={src}
-        alt=""
-        fill={fill}
-        width={!fill ? width : undefined}
-        height={!fill ? height : undefined}
-        className={cn(
-          "absolute inset-0 scale-110",
-          `blur-[${blurIntensity}px]`,
-        "object-cover",
-          "transition-opacity duration-500",
-          isLoaded ? "opacity-100" : "opacity-0"
-        )}
-        priority={priority}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-      />
-
+    <div 
+      className="relative w-full h-full" 
+      style={{ 
+        minHeight: fill ? '200px' : undefined,
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Placeholder visível enquanto carrega */}
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className="text-xs text-muted-foreground">
+            Carregando...
+          </div>
+        </div>
+      )}
+      
       {/* Imagem principal */}
       <Image
         src={src}
@@ -64,17 +78,24 @@ export function OptimizedImage({
         width={!fill ? width : undefined}
         height={!fill ? height : undefined}
         className={cn(
-          "relative z-10",
-          imageFit === "contain" ? "object-contain object-center" : "object-cover",
+          imageFit === "contain" 
+            ? "object-contain" 
+            : "object-cover",
           "transition-opacity duration-300",
           isLoaded ? "opacity-100" : "opacity-0",
           className
         )}
+        style={{
+          objectPosition: 'center center'
+        }}
         priority={priority}
         onLoad={handleLoadingComplete}
+        onError={handleError}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        loading={priority ? "eager" : "lazy"}
+        // IMPORTANTE: desabilitar otimização se for URL externa
+        unoptimized={src.startsWith('http')}
       />
     </div>
   )
 }
-

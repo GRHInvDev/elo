@@ -4,7 +4,8 @@ import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
 import { api } from "@/trpc/react"
 import { cn } from "@/lib/utils"
-import { LinkIcon, LucideGraduationCap } from "lucide-react"
+import { LinkIcon, LucideGraduationCap, Coffee, Sparkles } from "lucide-react"
+import { motion } from "framer-motion"
 import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import { NewsDisplay } from "@/components/dashboard/news-displ"
@@ -18,6 +19,17 @@ import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/complete-profile-modal"
 import { WelcomeCard } from "@/components/dashboard/welcome-card"
 import { useState, useEffect, useMemo } from "react"
+
+// Variantes de animação para o footer
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+}
+
+const transitionDefault = {
+  duration: 0.5,
+  ease: [0.4, 0, 0.2, 1] as const
+}
 
 export default function DashboardPage() {
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -354,8 +366,8 @@ export default function DashboardPage() {
     </div>
       {/* Footer com Redes Sociais */}
       <div className="mt-8 lg:mt-12 bg-muted/50 border-t">
-        <div className="max-w-6xl mx-auto px-4 md:px-2 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
             {/* Redes Sociais */}
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
@@ -401,23 +413,52 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Créditos */}
-            <div className="flex items-end justify-center md:justify-end">
-              <div className="text-center md:text-right">
-                <div className="text-sm text-muted-foreground mb-2">
-                  Elo &copy; 2025
-                </div>
-                <div className="flex items-center justify-center md:justify-end gap-2 text-sm">
-                  <span>Built with ❤️ by</span>
-                  <Link
-                    href={'https://allpines.com.br'}
-                    className="flex items-center gap-1 font-bold text-primary hover:underline"
+            {/* Copyright e desenvolvedor */}
+            <div className="flex flex-col items-center md:items-end justify-end space-y-3">
+              <motion.div
+                variants={fadeInUp}
+                transition={transitionDefault}
+                initial="hidden"
+                animate="visible"
+                className="flex flex-col items-center md:items-end gap-2"
+              >
+                <p className="text-muted-foreground text-sm md:text-base text-center md:text-right">
+                  ©️ {new Date().getFullYear()} Elo | Intranet
+                </p>
+
+                {/* Link criativo para a empresa desenvolvedora */}
+                <motion.a
+                  href="https://www.allpines.com.br"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 dark:from-primary/20 dark:via-primary/10 dark:to-primary/20 border border-primary/20 dark:border-primary/30 px-3 py-1.5 text-foreground text-xs transition-all hover:from-primary/20 hover:via-primary/10 hover:to-primary/20 dark:hover:from-primary/30 dark:hover:via-primary/20 dark:hover:to-primary/30 hover:shadow-md hover:border-primary/30 dark:hover:border-primary/40"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span className="text-muted-foreground text-xs">Feito com</span>
+                  <motion.span
+                    animate={{
+                      rotate: [0, -5, 5, -5, 0],
+                      y: [0, -2, 0],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: [0.4, 0, 0.6, 1] as const,
+                    }}
                   >
-                    <Image src="/logoAllpines.webp" height={16} width={16} alt="Allpines" className="rounded"/>
+                    <Coffee className="h-3 w-3 text-amber-500 dark:text-amber-400" />
+                  </motion.span>
+                  <span className="text-muted-foreground text-xs">por</span>
+                  <motion.span
+                    className="font-semibold text-primary text-xs"
+                    whileHover={{ x: 2 }}
+                  >
                     Allpines
-                  </Link>
-                </div>
-              </div>
+                  </motion.span>
+                  <Sparkles className="h-3 w-3 text-primary/70 dark:text-primary/80 transition-transform group-hover:rotate-12" />
+                </motion.a>
+              </motion.div>
             </div>
           </div>
         </div>
