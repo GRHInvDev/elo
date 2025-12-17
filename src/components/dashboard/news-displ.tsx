@@ -63,14 +63,13 @@ function PostItemCompact({ post }: PostItemProps) {
       <CardContent className="p-0 flex flex-col h-full">
         {/* Imagem no topo */}
         {imageUrls.length > 0 && (
-          <div className="relative h-48 md:h-56 overflow-hidden bg-muted">
+          <div className="relative h-56 md:h-56 overflow-hidden">
             <ImageCarousel
               images={imageUrls}
               alt={post.title}
               aspectRatio="auto"
               showArrows={imageUrls.length > 1}
               showDots={imageUrls.length > 1}
-              className="h-full w-full"
               imageFit="cover"
             />
           </div>

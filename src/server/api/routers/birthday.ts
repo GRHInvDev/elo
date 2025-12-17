@@ -23,7 +23,8 @@ const normalizeBirthdayDate = (date: Date | string): string => {
   if (typeof date === 'string') {
     // Se for string, pode ser ISO 8601 ou formato YYYY-MM-DD
     // Tenta extrair diretamente do formato YYYY-MM-DD primeiro (mais seguro)
-    const dateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    const dateRegex = /^(\d{4})-(\d{2})-(\d{2})/
+    const dateMatch = dateRegex.exec(date)
     if (dateMatch) {
       // Formato YYYY-MM-DD - extrair diretamente sem conversão de timezone
       year = parseInt(dateMatch[1]!, 10)
@@ -32,7 +33,8 @@ const normalizeBirthdayDate = (date: Date | string): string => {
     } else {
       // String ISO 8601 completa (ex: "2025-12-15T03:00:00.000Z")
       // Extrair a parte da data (YYYY-MM-DD) da string ISO
-      const isoDateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})T/)
+      const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})T/
+      const isoDateMatch = isoDateRegex.exec(date)
       if (isoDateMatch) {
         // Extrair diretamente da string ISO sem parsear como Date
         year = parseInt(isoDateMatch[1]!, 10)
