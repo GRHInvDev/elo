@@ -31,32 +31,29 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
   // Check if birthday is today
   const isBirthdayToday = (date: Date) => {
     const birthdayDate = new Date(date)
-    const todayUTC = new Date(Date.UTC(
-      today.getUTCFullYear(),
-      today.getUTCMonth(),
-      today.getUTCDate()
-    ))
+    
+    // Obter componentes UTC de hoje
+    const todayYear = today.getFullYear()
+    const todayMonth = today.getMonth()
+    const todayDay = today.getDate()
+    
+    // Obter componentes UTC do aniversário
+    const birthdayYear = birthdayDate.getFullYear()
+    const birthdayMonth = birthdayDate.getMonth()
+    const birthdayDay = birthdayDate.getDate()
     
     // SPE (SOLUÇÃO PALEATIVA EMERGENCIAL): o maldito aniversário que cai no dia 31 não é exibido. Assim ele é.
     const isJanuary1 = birthdayDate.getUTCMonth() === 0 && birthdayDate.getUTCDate() === 1
     const isDecember = today.getUTCMonth() === 11 // dezembro é mês 11 (0-indexed)
     
-    let birthdayUTC: Date
+    // Comparar diretamente os componentes UTC
     if (isJanuary1 && isDecember) {
-      birthdayUTC = new Date(Date.UTC(
-        today.getUTCFullYear(),
-        11, // dezembro
-        31
-      ))
-    } else {
-      birthdayUTC = new Date(Date.UTC(
-        today.getUTCFullYear(),
-        birthdayDate.getUTCMonth(),
-        birthdayDate.getUTCDate()
-      ))
+      // Se é 01/01 e estamos em dezembro, tratar como 31/12
+      return todayMonth === 11 && todayDay === 31
     }
     
-    return isSameDay(birthdayUTC, todayUTC)
+    // Comparar mês e dia (ignorar o ano, pois é aniversário)
+    return birthdayMonth === todayMonth && birthdayDay === todayDay
   }
 
   return (

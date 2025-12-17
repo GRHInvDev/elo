@@ -199,18 +199,18 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
 
   const onSubmit = async (data: z.infer<typeof createBirthdaySchema>) => {
     // O date picker HTML retorna uma data local. Para evitar problemas de timezone,
-    // precisamos garantir que o dia/mês/ano selecionado seja preservado.
-    // Criamos uma nova data usando os componentes locais para evitar conversões indesejadas.
+    // extraímos os componentes locais e criamos uma nova data no meio-dia local.
+    // Isso garante que o dia/mês/ano selecionado seja preservado mesmo após serialização.
     const date = data.data
-    const localDate = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      12, // Meio-dia para evitar problemas de timezone ao converter
-      0,
-      0,
-      0
-    )
+    
+    // Extrair componentes locais (como o usuário selecionou)
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const day = date.getDate()
+    
+    // Criar nova data no meio-dia local para evitar problemas de timezone
+    // Meio-dia garante que mesmo após conversões, o dia permanece o mesmo
+    const localDate = new Date(year, month, day, 12, 0, 0, 0)
 
     try {
       if (birthday) {
