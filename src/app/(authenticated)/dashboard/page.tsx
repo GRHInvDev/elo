@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/complete-profile-modal"
 import { WelcomeCard } from "@/components/dashboard/welcome-card"
+import { EmotionRulerWrapper } from "@/components/emotion-ruler/emotion-ruler-wrapper"
 import { useState, useEffect, useMemo } from "react"
 
 // Variantes de animação para o footer
@@ -57,15 +58,14 @@ export default function DashboardPage() {
     }
 
     const today = new Date()
-    // Usa UTC para evitar problemas de timezone, especialmente para datas como 31/12
-    const currentDay = today.getUTCDate()
-    const currentMonth = today.getUTCMonth()
+    const currentDay = today.getDate()
+    const currentMonth = today.getMonth()
 
     return birthdays.filter((birthday) => {
       const birthdayDate = new Date(birthday.data)
       return (
-        birthdayDate.getUTCDate() === currentDay &&
-        birthdayDate.getUTCMonth() === currentMonth
+        birthdayDate.getDate() === currentDay &&
+        birthdayDate.getMonth() === currentMonth
       )
     })
   }, [birthdays])
@@ -106,6 +106,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen">
+      {/* Modal da Régua de Emoções 
+      <EmotionRulerWrapper />
+      */}
       {/* Card de Boas-vindas para novos colaboradores */}
       <div className="w-full max-w-6xl mx-auto px-4 pt-6 pb-4">
         <WelcomeCard />

@@ -32,17 +32,15 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
   const isBirthdayToday = (date: Date) => {
     const birthdayDate = new Date(date)
     
-    // Obter componentes UTC de hoje
     const todayYear = today.getFullYear()
     const todayMonth = today.getMonth()
     const todayDay = today.getDate()
     
-    // Obter componentes UTC do aniversário
     const birthdayYear = birthdayDate.getFullYear()
     const birthdayMonth = birthdayDate.getMonth()
     const birthdayDay = birthdayDate.getDate()
     
-    // SPE (SOLUÇÃO PALEATIVA EMERGENCIAL): o maldito aniversário que cai no dia 31 não é exibido. Assim ele é.
+    // SPE (SOLUÇÃO PALEATIVA EMERGENCIAL): o maldito aniversário que cai no dia 31 não é exibido. Assim ele é. não alterar para getMonth sem UTC
     const isJanuary1 = birthdayDate.getUTCMonth() === 0 && birthdayDate.getUTCDate() === 1
     const isDecember = today.getUTCMonth() === 11 // dezembro é mês 11 (0-indexed)
     

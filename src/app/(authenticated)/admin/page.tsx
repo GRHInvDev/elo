@@ -18,7 +18,8 @@ export default async function Page() {
                 db_user.role_config?.admin_pages || [], 
                 route.id,
                 db_user.role_config?.can_manage_produtos === true,
-                db_user.role_config?.can_manage_quality_management === true
+                db_user.role_config?.can_manage_quality_management === true,
+                db_user.role_config?.can_manage_emotion_rules === true
             );
         }
         

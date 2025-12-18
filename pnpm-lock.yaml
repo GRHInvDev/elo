@@ -116,6 +116,9 @@ importers:
       ai:
         specifier: ^4.2.10
         version: 4.3.19(react@19.2.1)(zod@3.25.76)
+      animated-fluent-emojis:
+        specifier: ^0.1.2
+        version: 0.1.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       canvas-confetti:
         specifier: ^1.9.4
         version: 1.9.4
@@ -2192,6 +2195,12 @@ packages:
 
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
+
+  animated-fluent-emojis@0.1.2:
+    resolution: {integrity: sha512-JPKvOk8JVwDqPk9tza2c1qSBcufkJJJDQQ87kV1GpikZ0IWVFJkH1S8avAB+/zDUPfDOCatnIfKmrEDPfrycJg==}
+    peerDependencies:
+      react: ^18.3.1
+      react-dom: ^18.3.1
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -6914,6 +6923,11 @@ snapshots:
       fast-json-stable-stringify: 2.1.0
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
+
+  animated-fluent-emojis@0.1.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+    dependencies:
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
 
   ansi-regex@5.0.1: {}
 

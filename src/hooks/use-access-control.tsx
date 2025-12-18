@@ -21,7 +21,13 @@ export function useAccessControl() {
     }
 
     // Usa a função centralizada para verificar acesso
-    return hasAccessToAdminRoute(db_user.role_config.admin_pages || [], route);
+    return hasAccessToAdminRoute(
+      db_user.role_config.admin_pages || [], 
+      route,
+      db_user.role_config.can_manage_produtos === true,
+      db_user.role_config.can_manage_quality_management === true,
+      db_user.role_config.can_manage_emotion_rules === true
+    );
   };
 
   const canViewForms = (): boolean => {
@@ -174,6 +180,16 @@ export function useAccessControl() {
     return db_user.role_config.can_manage_quality_management ?? false;
   };
 
+  const canManageEmotionRules = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, pode gerenciar réguas de emoções
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica para gerenciar réguas de emoções
+    return db_user.role_config.can_manage_emotion_rules ?? false;
+  };
+
   const canViewAnswerWithoutAdminAccess = (): boolean => {
     if (!db_user?.role_config) return false;
 
@@ -197,6 +213,8 @@ export function useAccessControl() {
         return db_user.role_config.can_manage_quality_management ?? false;
       case "can_manage_produtos":
         return db_user.role_config.can_manage_produtos ?? false;
+      case "can_manage_emotion_rules":
+        return db_user.role_config.can_manage_emotion_rules ?? false;
       case "can_manage_extensions":
         return db_user.role_config.can_manage_extensions ?? false;
       case "can_manage_dados_basicos_users":
@@ -227,6 +245,7 @@ export function useAccessControl() {
     canManageExtensions,
     canManageBasicUserData,
     canManageProducts,
+    canManageEmotionRules,
     canManageQualityManagement,
     canViewAnswerWithoutAdminAccess,
     canAccessChat,

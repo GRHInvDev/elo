@@ -71,6 +71,10 @@ model User {
   qualityDocumentsApprovedManager QualityDocument[] @relation("QualityDocumentApprovedManager")
   qualityDocumentAccess QualityDocumentAccess[]
 
+  // Régua de Emoções
+  emotionRulerResponses EmotionRulerResponse[]
+  emotionRulerDailyAccesses EmotionRulerDailyAccess[]
+
   @@map("users")
 }
 
@@ -945,4 +949,78 @@ enum DocRevPeriod {
   TRIMESTRAL
   SEMESTRAL
   ANUAL
+}
+
+// Módulo Régua de Emoções
+model EmotionRuler {
+  id              String                  @id @default(cuid())
+  question        String                  @default("Como você está se sentindo hoje?")
+  isActive        Boolean                 @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+  backgroundColor String?                 // Cor de fundo do layout
+  emotions        EmotionRulerEmotion[]
+  responses       EmotionRulerResponse[]
+  dailyAccesses   EmotionRulerDailyAccess[]
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@map("emotion_rulers")
+}
+
+model EmotionRulerEmotion {
+  id              String        @id @default(cuid())
+  rulerId         String
+  value            Int           // Valor numérico (0-5, onde 0 é extremamente chateado e 5 é extremamente feliz)
+  emoji           String?       // Emoji para este nível (ex: "😢", "😊")
+  color           String        // Cor da emoção (ex: "#FF0000" para vermelho, "#00FF00" para verde)
+  states          String[]      @default([]) // Estados/emoções para este nível (ex: ["frustrado", "chateado", "triste"])
+  order           Int           @default(0) // Ordem na régua
+  ruler           EmotionRuler  @relation(fields: [rulerId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([rulerId, value])
+  @@index([rulerId, order])
+  @@map("emotion_ruler_emotions")
+}
+
+model EmotionRulerResponse {
+  id              String                  @id @default(cuid())
+  userId          String
+  rulerId         String
+  emotionValue    Int                     // Valor da emoção selecionada (0-5)
+  comment         String?                 // Comentário opcional
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruler           EmotionRuler            @relation(fields: [rulerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([rulerId, createdAt])
+  @@index([emotionValue])
+  @@map("emotion_ruler_responses")
+}
+
+model EmotionRulerDailyAccess {
+  id              String        @id @default(cuid())
+  userId          String
+  rulerId         String
+  date            DateTime      @default(now()) @db.Date // Data do acesso (sem hora)
+  accessedAt      DateTime      @default(now()) // Data e hora exata do acesso
+  wasDismissed    Boolean       @default(false) // Se o usuário fechou no X
+  responded       Boolean       @default(false) // Se o usuário respondeu
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruler           EmotionRuler  @relation(fields: [rulerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, rulerId, date])
+  @@index([userId, date])
+  @@index([rulerId, date])
+  @@index([date])
+  @@map("emotion_ruler_daily_accesses")
 }

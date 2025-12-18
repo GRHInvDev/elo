@@ -1,5 +1,4 @@
 import { createTRPCRouter, protectedProcedure, middleware } from "../trpc"
-import type { TRPCContext } from "../trpc"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
