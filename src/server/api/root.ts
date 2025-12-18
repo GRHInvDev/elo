@@ -32,6 +32,7 @@ import { purchaseRegistrationRouter } from "./routers/purchase-registration";
 import { qualityDocumentRouter } from "./routers/quality-document";
 import { qualityEnumRouter } from "./routers/quality-enum";
 import { qualityAccessRouter } from "./routers/quality-access";
+import { emotionRulerRouter } from "./routers/emotion-ruler";
 
 /**
  * This is the primary router for your server.
@@ -71,6 +72,7 @@ export const appRouter = createTRPCRouter({
   qualityDocument: qualityDocumentRouter,
   qualityEnum: qualityEnumRouter,
   qualityAccess: qualityAccessRouter,
+  emotionRuler: emotionRulerRouter,
 });
 
 // export type definition of API

@@ -13,7 +13,7 @@ import { DateRangeCalendar } from "@/components/forms/date-range-calendar"
 import { toast } from "sonner"
 import { format, startOfMonth, endOfMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Calculator, Download, FileText, Eye, FileSpreadsheet } from "lucide-react"
+import { Calculator, FileText, Eye, FileSpreadsheet } from "lucide-react"
 import * as XLSX from "xlsx"
 import {
   Dialog,
@@ -49,7 +49,7 @@ type RateioType = 'proportional' | 'headquarters' | 'branch'
 
 // Constante com os valores do enum Enterprise que representam filiais
 const BRANCH_ENTERPRISES = ['Box_Filial', 'Cristallux_Filial'] as const
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function DREReport({ selectedDate, setSelectedDate }: DREReportProps) {
   const [invoiceValue, setInvoiceValue] = useState<string>("")
   const [startDate, setStartDate] = useState<Date | undefined>(

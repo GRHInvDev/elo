@@ -1,4 +1,4 @@
-import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck } from "lucide-react"
+import { Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck, Heart } from "lucide-react"
 
 export interface AdminRoute {
   id: string
@@ -91,6 +91,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     requiresBasicAdmin: true,
   },
   // {
+  //   id: "/admin/emotion-ruler",
+  //   title: "Régua de Emoções",
+  //   description: "Gerenciar régua de emoções e acompanhar respostas",
+  //   icon: Heart,
+  //   path: "/admin/emotion-ruler",
+  //   requiresBasicAdmin: true,
+  // },
+  // {
   //   id: "/admin/chat",
   //   title: "Gerenciar Chat",
   //   description: "Gerenciar sistema de chat, grupos e configurações",
@@ -117,7 +125,7 @@ export function getAccessibleAdminRoutes(adminPages: string[]): AdminRoute[] {
   })
 }
 
-export function hasAccessToAdminRoute(adminPages: string[], routeId: string, canManageProducts?: boolean, canManageQuality?: boolean): boolean {
+export function hasAccessToAdminRoute(adminPages: string[], routeId: string, canManageProducts?: boolean, canManageQuality?: boolean, canManageEmotionRules?: boolean): boolean {
   // Se é a rota base, verificar se tem qualquer acesso admin
   if (routeId === "/admin") {
     // Tem acesso se tem /admin na lista OU tem qualquer rota que comece com /admin
@@ -134,6 +142,11 @@ export function hasAccessToAdminRoute(adminPages: string[], routeId: string, can
     return true
   }
 
+  // Para /admin/emotion-ruler, verificar também can_manage_emotion_rules se fornecido
+  if (routeId === "/admin/emotion-ruler" && canManageEmotionRules === true) {
+    return true
+  }
+
   // Se não tem acesso ao /admin básico, não pode acessar outras rotas
   // EXCETO se tem a rota específica e permissão específica
   if (!adminPages.includes("/admin")) {
@@ -143,6 +156,10 @@ export function hasAccessToAdminRoute(adminPages: string[], routeId: string, can
     }
     // Permitir se tem can_manage_quality_management e a rota é /admin/quality
     if (routeId === "/admin/quality" && canManageQuality === true) {
+      return true
+    }
+    // Permitir se tem can_manage_emotion_rules e a rota é /admin/emotion-ruler
+    if (routeId === "/admin/emotion-ruler" && canManageEmotionRules === true) {
       return true
     }
     return false

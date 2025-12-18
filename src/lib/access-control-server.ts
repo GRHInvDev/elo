@@ -20,8 +20,9 @@ export async function checkAdminAccess(route: string) {
     const hasAnyAdminRoute = hasAdminPages && db_user.role_config.admin_pages.some((r: string) => r.startsWith("/admin"))
     const hasCanManageProducts = db_user.role_config.can_manage_produtos === true
     const hasCanManageQuality = db_user.role_config.can_manage_quality_management === true
+    const hasCanManageEmotionRules = db_user.role_config.can_manage_emotion_rules === true
     
-    const hasAccess = hasAdminRoute || hasAnyAdminRoute || hasCanManageProducts || hasCanManageQuality
+    const hasAccess = hasAdminRoute || hasAnyAdminRoute || hasCanManageProducts || hasCanManageQuality || hasCanManageEmotionRules
     
     if (!hasAccess) {
       redirect("/dashboard");
@@ -40,11 +41,16 @@ export async function checkAdminAccess(route: string) {
     return db_user;
   }
 
+  if (route === "/admin/emotion-ruler" && db_user.role_config.can_manage_emotion_rules === true) {
+    return db_user;
+  }
+
   if (!hasAccessToAdminRoute(
     db_user.role_config.admin_pages || [], 
     route,
     db_user.role_config.can_manage_produtos === true,
-    db_user.role_config.can_manage_quality_management === true
+    db_user.role_config.can_manage_quality_management === true,
+    db_user.role_config.can_manage_emotion_rules === true
   )) {
     redirect("/dashboard");
   }
