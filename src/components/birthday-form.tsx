@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useMemo } from "react"
 
-import { Loader2, Trash2, Calendar, Image as ImageIcon } from "lucide-react"
+import { Loader2, Trash2, Calendar } from "lucide-react"
 import Image from "next/image"
 
 import { api } from "@/trpc/react"
@@ -62,12 +62,12 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     resolver: zodResolver(createBirthdaySchema),
     defaultValues: birthday ? {
       name: birthday.name,
-      data: new Date(birthday.data),
+      data: birthday.data.toISOString().split('T')[0],
       userId: birthday.userId ?? undefined,
       imageUrl: birthday.imageUrl ?? "",
     } : {
       name: "",
-      data: new Date(),
+      data: new Date().toISOString().split('T')[0], // ✅ Apenas YYYY-MM-DD
       imageUrl: "",
     },
   })
@@ -127,9 +127,14 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     })
   }
 
-  // Data formatada do aniversário salvo
   const savedBirthdayDate = useMemo(() => {
-    return birthday?.data ? format(new Date(birthday.data), "dd/MM/yyyy", { locale: ptBR }) : null
+    if (!birthday?.data) return null
+    // Extrair dia, mês e ano da string ISO ou Date object
+    const date = new Date(birthday.data)
+    const day = String(date.getUTCDate()).padStart(2, '0')
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const year = date.getUTCFullYear()
+    return `${day}/${month}/${year}`
   }, [birthday?.data])
 
   const currentImageUrl = uploadedImageUrl || (!!birthday?.imageUrl ? (birthday.imageUrl || "") : "")
@@ -198,33 +203,25 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
   }
 
   const onSubmit = async (data: z.infer<typeof createBirthdaySchema>) => {
-    // O date picker HTML retorna uma data local. Para evitar problemas de timezone,
-    // extraímos os componentes locais e criamos uma nova data no meio-dia local.
-    // Isso garante que o dia/mês/ano selecionado seja preservado mesmo após serialização.
-    const date = data.data
-    
-    // Extrair componentes locais (como o usuário selecionou)
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const day = date.getDate()
-    
-    // Criar nova data no meio-dia local para evitar problemas de timezone
-    // Meio-dia garante que mesmo após conversões, o dia permanece o mesmo
-    const localDate = new Date(year, month, day, 12, 0, 0, 0)
+    // O input type="date" retorna uma string no formato "YYYY-MM-DD"
+    // Enviamos essa string DIRETAMENTE ao backend sem conversões
+    const dateString = typeof data.data === 'string' 
+      ? data.data 
+      : data.data.toISOString().split('T')[0]
 
     try {
       if (birthday) {
         await updateBirthday.mutateAsync({
           id: birthday.id,
           name: data.name,
-          data: localDate,
+          data: dateString as any,
           userId: data.userId === "none" ? undefined : data.userId,
           imageUrl: data.imageUrl,
         })
       } else {
         await createBirthday.mutateAsync({
           name: data.name,
-          data: localDate,
+          data: dateString as any,
           userId: data.userId === "none" ? undefined : data.userId,
           imageUrl: data.imageUrl,
         })
@@ -257,7 +254,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
             <Input
               id="date"
               type="date"
-              {...register("data", { valueAsDate: true })}
+              {...register("data")}
               className="w-full"
             />
             {birthday && savedBirthdayDate && (
@@ -278,7 +275,6 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
             users={usersForSearch}
             selectedUsers={selectedUserId}
             onSelectionChange={(userIds) => {
-              // Limitar a seleção a apenas um usuário
               setSelectedUserId(userIds.slice(0, 1))
             }}
             placeholder="Buscar colaborador..."

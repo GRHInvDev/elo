@@ -1,6 +1,6 @@
 "use client"
 
-import { format, isSameDay } from "date-fns"
+import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Cake, CalendarDays, Loader2 } from 'lucide-react'
 
@@ -28,30 +28,46 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
       .substring(0, 2)
   }
 
-  // Check if birthday is today
   const isBirthdayToday = (date: Date) => {
     const birthdayDate = new Date(date)
     
-    const todayYear = today.getFullYear()
-    const todayMonth = today.getMonth()
-    const todayDay = today.getDate()
+    const todayMonth = today.getUTCMonth()
+    const todayDay = today.getUTCDate()
     
-    const birthdayYear = birthdayDate.getFullYear()
-    const birthdayMonth = birthdayDate.getMonth()
-    const birthdayDay = birthdayDate.getDate()
+    const birthdayMonth = birthdayDate.getUTCMonth()
+    const birthdayDay = birthdayDate.getUTCDate()
     
-    // SPE (SOLUÇÃO PALEATIVA EMERGENCIAL): o maldito aniversário que cai no dia 31 não é exibido. Assim ele é. não alterar para getMonth sem UTC
-    const isJanuary1 = birthdayDate.getUTCMonth() === 0 && birthdayDate.getUTCDate() === 1
-    const isDecember = today.getUTCMonth() === 11 // dezembro é mês 11 (0-indexed)
+    // SPE: Aniversário em 01/01 conta como 31/12 em dezembro
+    const isJanuary1 = birthdayMonth === 0 && birthdayDay === 1
+    const isDecember = todayMonth === 11 // dezembro é mês 11 (0-indexed)
     
-    // Comparar diretamente os componentes UTC
     if (isJanuary1 && isDecember) {
-      // Se é 01/01 e estamos em dezembro, tratar como 31/12
-      return todayMonth === 11 && todayDay === 31
+      return todayDay === 31
     }
     
-    // Comparar mês e dia (ignorar o ano, pois é aniversário)
     return birthdayMonth === todayMonth && birthdayDay === todayDay
+  }
+
+  const formatBirthdayDate = (date: Date) => {
+    const birthdayDate = new Date(date)
+    
+    // SPE: Se é 01/01 e estamos em dezembro, exibe como 31/12
+    const isJanuary1 = birthdayDate.getUTCMonth() === 0 && birthdayDate.getUTCDate() === 1
+    const isDecember = today.getUTCMonth() === 11
+    
+    if (isJanuary1 && isDecember) {
+      return "31 de dezembro"
+    }
+    
+    const day = birthdayDate.getUTCDate()
+    const month = birthdayDate.getUTCMonth()
+    
+    const monthNames = [
+      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+    ]
+    
+    return `${day} de ${monthNames[month]}`
   }
 
   return (
@@ -83,55 +99,47 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            {birthdays.map((birthday) => (
-              <div
-                key={birthday.id}
-                className={`flex items-center space-x-3 rounded-md p-2 transition-colors ${
-                  isBirthdayToday(birthday.data)
-                    ? "bg-primary/10 dark:bg-primary/20"
-                    : "hover:bg-muted/50"
-                }`}
-              >
-                <Avatar className="h-10 w-10 flex-shrink-0">
-                  {birthday.user?.imageUrl ? (
-                    <AvatarImage
-                      src={birthday.user.imageUrl}
-                      alt={birthday.name}
-                      className="object-contain bg-white"
-                    />
-                  ) : null}
-                  <AvatarFallback className="text-xs">
-                    {getInitials(birthday.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1 min-w-0">
-                  <p className="text-sm font-medium leading-tight truncate">
-                    {birthday.name}
-                    {isBirthdayToday(birthday.data) && (
-                      <Badge className="ml-2 bg-primary text-primary-foreground text-xs">
-                        Hoje!
-                      </Badge>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {(() => {
-                      // CORREÇÃO: Se a data é 01/01 mas estamos em dezembro, exibe como 31/12
-                      // Isso corrige aniversários que foram salvos incorretamente
-                      const birthdayDate = new Date(birthday.data)
-                      const isJanuary1 = birthdayDate.getUTCMonth() === 0 && birthdayDate.getUTCDate() === 1
-                      const isDecember = today.getUTCMonth() === 11 // dezembro é mês 11 (0-indexed)
-                      
-                      if (isJanuary1 && isDecember) {
-                        // Exibe diretamente como "31 de dezembro" para evitar problemas de timezone
-                        return "31 de dezembro"
-                      }
-                      
-                      return format(birthday.data, "dd 'de' MMMM", { locale: ptBR })
-                    })()}
-                  </p>
+            {birthdays.map((birthday) => {
+              const isToday = isBirthdayToday(birthday.data)
+              
+              return (
+                <div
+                  key={birthday.id}
+                  className={cn(
+                    "flex items-center space-x-3 rounded-md p-2 transition-colors",
+                    isToday
+                      ? "bg-primary/10 dark:bg-primary/20"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    {birthday.user?.imageUrl ? (
+                      <AvatarImage
+                        src={birthday.user.imageUrl}
+                        alt={birthday.name}
+                        className="object-contain bg-white"
+                      />
+                    ) : null}
+                    <AvatarFallback className="text-xs">
+                      {getInitials(birthday.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <p className="text-sm font-medium leading-tight truncate">
+                      {birthday.name}
+                      {isToday && (
+                        <Badge className="ml-2 bg-primary text-primary-foreground text-xs">
+                          Hoje!
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBirthdayDate(birthday.data)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </CardContent>
