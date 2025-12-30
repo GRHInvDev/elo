@@ -13,9 +13,14 @@ export const createBirthdaySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato YYYY-MM-DD")
     .refine((dateStr) => {
       // Validar se é uma data válida
-      const [year, month, day] = dateStr.split('-').map(Number)
+      const parts = dateStr.split('-').map(Number)
       
-      // Verificar limites básicos (sem asserções desnecessárias)
+      // Garantir que temos 3 partes (type-safe)
+      if (parts.length !== 3) return false
+      
+      const [year, month, day] = parts as [number, number, number]
+      
+      // Verificar limites básicos
       if (month < 1 || month > 12) return false
       if (day < 1 || day > 31) return false
       
@@ -38,9 +43,14 @@ export const updateBirthdaySchema = z.object({
   data: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato YYYY-MM-DD")
     .refine((dateStr) => {
-      const [year, month, day] = dateStr.split('-').map(Number)
+      const parts = dateStr.split('-').map(Number)
       
-      // Verificar limites básicos (sem asserções desnecessárias)
+      // Garantir que temos 3 partes (type-safe)
+      if (parts.length !== 3) return false
+      
+      const [year, month, day] = parts as [number, number, number]
+      
+      // Verificar limites básicos
       if (month < 1 || month > 12) return false
       if (day < 1 || day > 31) return false
       
