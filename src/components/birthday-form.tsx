@@ -62,7 +62,8 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     resolver: zodResolver(createBirthdaySchema),
     defaultValues: birthday ? {
       name: birthday.name,
-      data: birthday.data.toISOString().split('T')[0],
+      // ✅ CORREÇÃO: Extrair apenas a parte da data (YYYY-MM-DD) da ISO string
+      data: new Date(birthday.data).toISOString().split('T')[0],
       userId: birthday.userId ?? undefined,
       imageUrl: birthday.imageUrl ?? "",
     } : {
@@ -127,6 +128,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     })
   }
 
+  // ✅ CORREÇÃO: Formatar data corretamente extraindo apenas dia/mês/ano
   const savedBirthdayDate = useMemo(() => {
     if (!birthday?.data) return null
     // Extrair dia, mês e ano da string ISO ou Date object
@@ -202,26 +204,23 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
     }
   }
 
+  // ✅ CORREÇÃO PRINCIPAL: Enviar string YYYY-MM-DD diretamente
   const onSubmit = async (data: z.infer<typeof createBirthdaySchema>) => {
-    // O input type="date" retorna uma string no formato "YYYY-MM-DD"
-    // Enviamos essa string DIRETAMENTE ao backend sem conversões
-    const dateString = typeof data.data === 'string' 
-      ? data.data 
-      : data.data.toISOString().split('T')[0]
-
+    // O schema agora garante que data.data é sempre uma string YYYY-MM-DD
+    // Enviamos diretamente ao backend sem conversões ou casting
     try {
       if (birthday) {
         await updateBirthday.mutateAsync({
           id: birthday.id,
           name: data.name,
-          data: dateString as any,
+          data: data.data, // ✅ Já é string YYYY-MM-DD
           userId: data.userId === "none" ? undefined : data.userId,
           imageUrl: data.imageUrl,
         })
       } else {
         await createBirthday.mutateAsync({
           name: data.name,
-          data: dateString as any,
+          data: data.data, // ✅ Já é string YYYY-MM-DD
           userId: data.userId === "none" ? undefined : data.userId,
           imageUrl: data.imageUrl,
         })
