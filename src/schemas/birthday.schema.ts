@@ -39,7 +39,7 @@ export const createBirthdaySchema = z.object({
 export const updateBirthdaySchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Nome é obrigatório").optional(),
-  // ✅ CORREÇÃO: Mesmo formato para update
+  // ✅ CORREÇÃO: Mesmo formato para update 
   data: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato YYYY-MM-DD")
     .refine((dateStr) => {
