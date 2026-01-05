@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { Calendar, Loader2, Plus, Pencil, Trash2 } from "lucide-react"
 
 import { api } from "@/trpc/react"
@@ -51,6 +49,21 @@ export function BirthdayAdmin() {
     if (window.confirm("Tem certeza que deseja remover este aniversário?")) {
       deleteBirthday.mutate({ id })
     }
+  }
+
+  const formatBirthdayDate = (date: Date) => {
+    const birthdayDate = new Date(date)
+    
+    const day = birthdayDate.getUTCDate()
+    const month = birthdayDate.getUTCMonth()
+    const year = birthdayDate.getUTCFullYear()
+    
+    const monthNames = [
+      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+    ]
+    
+    return `${day} de ${monthNames[month]} de ${year}`
   }
 
   return (
@@ -124,7 +137,7 @@ export function BirthdayAdmin() {
                         <p className="font-medium">{birthday.name}</p>
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Calendar className="mr-1 h-4 w-4" />
-                          {format(birthday.data, "PPP", { locale: ptBR })}
+                          {formatBirthdayDate(birthday.data)}
                         </div>
                         {birthday.user && (
                           <p className="text-sm text-muted-foreground">
@@ -168,4 +181,3 @@ export function BirthdayAdmin() {
     </div>
   )
 }
-
