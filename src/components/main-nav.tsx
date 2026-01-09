@@ -13,6 +13,7 @@ import { Separator } from "./ui/separator"
 import { routeItems, type RouteItem } from "@/const/routes"
 import { DialogTitle } from "./ui/dialog"
 import { useAccessControl } from "@/hooks/use-access-control"
+import { api } from "@/trpc/react"
 
 interface SidebarProps {
   className?: string
@@ -23,6 +24,7 @@ interface SidebarProps {
 export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname()
   const { db_user } = useAccessControl()
+  const { data: isOwnerOfAnyForm = false } = api.form.isOwnerOfAnyForm.useQuery()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   const toggleGroup = (title: string) => {
@@ -41,7 +43,7 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
   // Auto-expand groups containing the current route
   useEffect(() => {
-    const routes = routeItems(db_user?.role_config)
+    const routes = routeItems(db_user?.role_config, isOwnerOfAnyForm)
     const groupsToExpand = new Set<string>()
 
     const findActiveGroups = (items: RouteItem[]) => {
@@ -65,7 +67,7 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
     findActiveGroups(routes)
     setExpandedGroups(prev => new Set([...prev, ...groupsToExpand]))
-  }, [pathname, db_user?.role_config])
+  }, [pathname, db_user?.role_config, isOwnerOfAnyForm])
 
   const renderNavItem = (item: RouteItem, level = 0): JSX.Element | null => {
     const hasChildren = item.children && item.children.length > 0
@@ -161,7 +163,7 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
       {/* Navigation Items */}
       <nav className="flex-1 flex flex-col space-y-1 p-4 overflow-y-auto">
-        {routeItems(db_user?.role_config).map((item) => renderNavItem(item))}
+        {routeItems(db_user?.role_config, isOwnerOfAnyForm).map((item) => renderNavItem(item))}
       </nav>
 
       <Separator />

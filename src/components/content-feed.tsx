@@ -627,7 +627,7 @@ function PostItem({ post }: PostItemProps) {
     setShowEmojiPicker(false)
 
     // If user already reacted with this emoji, remove the reaction
-    if (userReaction && userReaction.emoji === emoji.emoji) {
+    if (userReaction?.emoji === emoji.emoji) {
       removeReaction.mutate({ postId: post.id })
     } else {
       // Otherwise add or update the reaction

@@ -26,7 +26,7 @@ export interface RouteItem {
   children?: RouteItem[]
 }
 
-export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
+export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: boolean): RouteItem[] => {
   // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes, Aniversários)
   if (roleConfig && 'isTotem' in roleConfig && roleConfig.isTotem) {
     return [
@@ -132,12 +132,13 @@ export const routeItems = (roleConfig?: RolesConfig | null): RouteItem[] => {
           describe: "Visualizar e acompanhar o status das suas ideias enviadas",
           href: "/my-suggestions",
         },
-        {
+        // Mostrar aba "Solicitações" apenas se o usuário for owner de algum formulário
+        ...(isOwnerOfAnyForm ? [{
           title: "Solicitações",
           icon: LucideFormInput,
           describe: "Página para requisitar processos internos para os setores, como marketing, TI, inovação e compras",
           href: "/forms",
-        },
+        }] : []),
         // {
         //   title: "Régua de Emoções",
         //   icon: Heart,

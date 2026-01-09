@@ -87,6 +87,15 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
           <Label htmlFor="required">Campo obrigatório</Label>
         </div>
 
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="showInResponses"
+            checked={field.showInResponses ?? false}
+            onCheckedChange={(checked) => updateField({ showInResponses: checked === true })}
+          />
+          <Label htmlFor="showInResponses">Exibir em /[id]/responses</Label>
+        </div>
+
         {/* Campos específicos por tipo */}
         {field.type === "text" && (
           <>

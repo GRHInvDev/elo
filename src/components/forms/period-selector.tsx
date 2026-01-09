@@ -63,9 +63,11 @@ export function PeriodSelector({
       const monthEnd = endOfMonth(new Date(selectedYear, selectedMonth, 1))
       
       // Só atualizar se as datas realmente mudaram para evitar loops
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       if (!startDate || startDate.getTime() !== monthStart.getTime()) {
         onStartDateChange(monthStart)
       }
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       if (!endDate || endDate.getTime() !== monthEnd.getTime()) {
         onEndDateChange(monthEnd)
       }

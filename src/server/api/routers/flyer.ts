@@ -98,7 +98,7 @@ export const flyerRouter = createTRPCRouter({
         where: { id: input.id },
       })
 
-      if (!flyer || flyer.authorId !== ctx.auth.userId) {
+      if (flyer?.authorId !== ctx.auth.userId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para editar este encarte",
@@ -118,7 +118,7 @@ export const flyerRouter = createTRPCRouter({
       where: { id: input.id },
     })
 
-    if (!flyer || flyer.authorId !== ctx.auth.userId) {
+    if (flyer?.authorId !== ctx.auth.userId) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Você não tem permissão para deletar este encarte",

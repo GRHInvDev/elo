@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
 import { ResponsesFilters, type ResponsesFiltersState } from "./responses-filters"
+import { ResponseChat } from "./response-chat"
 
 export function ResponsesList({ formId }: { formId: string }) {
   const [filters, setFilters] = useState<ResponsesFiltersState>({
@@ -123,10 +124,11 @@ export function ResponsesList({ formId }: { formId: string }) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="text-sm text-muted-foreground">
                 {(response.responses as unknown[]).length} respostas enviadas
               </div>
+              <ResponseChat responseId={response.id} />
             </CardContent>
             <CardFooter className="flex flex-col md:flex-row gap-y-2 items-end justify-between pt-3 border-t">
               <Link href={`/forms/${formId}/responses/${response.id}`}>
