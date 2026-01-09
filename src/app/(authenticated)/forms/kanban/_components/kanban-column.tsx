@@ -22,6 +22,7 @@ interface KanbanColumnProps {
     onOpenChat?: (responseId: string) => void;
     onMoveToNextStatus?: (responseId: string, currentStatus: ResponseStatus) => void;
     onOpenTagsManager?: () => void;
+    canDrag?: (response: FormResponse) => boolean; // Função para verificar se o card pode ser arrastado
 }
 
 interface ResponseCardProps {
@@ -193,6 +194,7 @@ export function KanbanColumn({
     onOpenChat,
     onMoveToNextStatus,
     onOpenTagsManager,
+    canDrag,
 }: KanbanColumnProps) {
     const getStatusColor = (status: ResponseStatus) => {
         switch (status) {
@@ -218,26 +220,39 @@ export function KanbanColumn({
                         {...provided.droppableProps}
                         className="flex min-h-[600px] max-h-[calc(100vh-300px)] overflow-y-auto flex-col gap-3"
                     >
-                        {responses.map((response, index) => (
-                            <Draggable key={response.id} draggableId={response.id} index={index}>
-                                {(provided) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                    >
-                                        <ResponseCard
-                                            response={response}
-                                            onOpenDetails={onOpenDetails}
-                                            onEdit={onEdit}
-                                            onOpenChat={onOpenChat}
-                                            onMoveToNextStatus={onMoveToNextStatus}
-                                            onOpenTagsManager={onOpenTagsManager}
-                                        />
-                                    </div>
-                                )}
-                            </Draggable>
-                        ))}
+                        {responses.map((response, index) => {
+                            const isDraggable = canDrag ? canDrag(response) : true;
+                            
+                            return (
+                                <Draggable 
+                                    key={response.id} 
+                                    draggableId={response.id} 
+                                    index={index}
+                                    isDragDisabled={!isDraggable}
+                                >
+                                    {(provided, snapshot) => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...(isDraggable ? provided.dragHandleProps : {})}
+                                            style={{
+                                                ...provided.draggableProps.style,
+                                                opacity: snapshot.isDragging ? 0.5 : 1,
+                                            }}
+                                        >
+                                            <ResponseCard
+                                                response={response}
+                                                onOpenDetails={onOpenDetails}
+                                                onEdit={onEdit}
+                                                onOpenChat={onOpenChat}
+                                                onMoveToNextStatus={onMoveToNextStatus}
+                                                onOpenTagsManager={onOpenTagsManager}
+                                            />
+                                        </div>
+                                    )}
+                                </Draggable>
+                            );
+                        })}
                         {provided.placeholder}
                     </div>
                 )}

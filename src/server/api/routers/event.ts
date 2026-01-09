@@ -98,7 +98,7 @@ export const eventRouter = createTRPCRouter({
         where: { id: input.id },
       })
 
-      if (!event || event.authorId !== ctx.auth.userId) {
+      if (event?.authorId !== ctx.auth.userId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para editar este evento",
@@ -116,7 +116,7 @@ export const eventRouter = createTRPCRouter({
       where: { id: input.id },
     })
 
-    if (!event || event.authorId !== ctx.auth.userId) {
+    if (event?.authorId !== ctx.auth.userId) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Você não tem permissão para deletar este evento",

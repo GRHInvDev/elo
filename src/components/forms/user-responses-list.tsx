@@ -15,6 +15,7 @@ import { ResponseDialog } from "@/app/(authenticated)/forms/kanban/_components/r
 import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd"
 import { KanbanColumn } from "@/app/(authenticated)/forms/kanban/_components/kanban-column"
 import type { ResponseStatus, FormResponse } from "@/types/form-responses"
+import { ResponseChat } from "./response-chat"
 import React from "react"
 
 export function UserResponsesList() {
@@ -79,12 +80,23 @@ export function UserResponsesList() {
     COMPLETED: localResponses.filter((response) => response.status === "COMPLETED"),
   }
 
+  // Buscar usuário atual para verificar se pode mover o card
+  const { data: currentUser } = api.user.me.useQuery()
+
   const onDragEnd: OnDragEndResponder = (result) => {
     const { destination, source, draggableId } = result
 
     if (!destination) return
 
     if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return
+    }
+
+    // Verificar se o usuário está tentando mover sua própria solicitação
+    const response = localResponses.find(r => r.id === draggableId)
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+    if (response && currentUser && response.userId === currentUser.id) {
+      // Não permitir que o usuário mova sua própria solicitação
       return
     }
 
@@ -237,7 +249,7 @@ export function UserResponsesList() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     {response.form.description ? (
                       <div className="text-sm text-muted-foreground whitespace-pre-line">
                         {response.form.description.replace(/\\n/g, "\n")}
@@ -245,6 +257,7 @@ export function UserResponsesList() {
                     ) : (
                       <div className="text-sm text-muted-foreground">Sem descrição</div>
                     )}
+                    <ResponseChat responseId={response.id} />
                   </CardContent>
                   <CardFooter className="flex flex-col md:flex-row gap-y-2 justify-between pt-3 border-t">
                     <Link className="w-full md:w-auto" href={`/forms/${response.formId}`}>
@@ -272,18 +285,33 @@ export function UserResponsesList() {
                 status="NOT_STARTED"
                 responses={columns.NOT_STARTED}
                 onOpenDetails={handleKanbanOpenDetails}
+                canDrag={(response) => {
+                  // Não permitir que o usuário arraste sua própria solicitação
+                  // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+                  return !(currentUser && response.userId === currentUser.id)
+                }}
               />
               <KanbanColumn
                 title="Em Progresso"
                 status="IN_PROGRESS"
                 responses={columns.IN_PROGRESS}
                 onOpenDetails={handleKanbanOpenDetails}
+                // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+                canDrag={(response) => {
+                  // Não permitir que o usuário arraste sua própria solicitação
+                  return !(currentUser?.id === response.userId)
+                }}
               />
               <KanbanColumn
                 title="Concluído"
                 status="COMPLETED"
                 responses={columns.COMPLETED}
+                // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
                 onOpenDetails={handleKanbanOpenDetails}
+                canDrag={(response) => {
+                  // Não permitir que o usuário arraste sua própria solicitação
+                  return !(currentUser?.id === response.userId)
+                }}
               />
             </div>
           </DragDropContext>

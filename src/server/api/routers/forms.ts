@@ -481,5 +481,23 @@ export const formsRouter = createTRPCRouter({
             role_config: user.role_config as RolesConfig,
         }));
     }),
-    
+
+    // Verificar se o usuário é owner de algum formulário
+    isOwnerOfAnyForm: protectedProcedure
+    .query(async ({ ctx }) => {
+        const userId = ctx.auth.userId;
+        
+        // Buscar formulários onde o usuário é owner (criador ou está em ownerIds)
+        const form = await ctx.db.form.findFirst({
+            where: {
+                OR: [
+                    { userId: userId },
+                    { ownerIds: { has: userId } }
+                ]
+            },
+            select: { id: true }
+        });
+
+        return !!form;
+    }),
 });
