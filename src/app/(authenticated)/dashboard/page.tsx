@@ -57,7 +57,9 @@ export default function DashboardPage() {
       return []
     }
 
+    // Ajustar para usar o dia anterior (dia 09 ao invés do dia 10)
     const today = new Date()
+    today.setDate(today.getDate() - 1) // SPE - FAMOSA GAMBIARRA
     const currentDay = today.getDate()
     const currentMonth = today.getMonth()
 

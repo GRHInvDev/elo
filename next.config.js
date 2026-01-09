@@ -49,8 +49,6 @@ const config = {
       },
     ];
   },
-  // Configuração para permitir pacotes externos em Server Components / edge
-  serverExternalPackages: ["socket.io", "socket.io-client"],
 };
 
 export default config;
