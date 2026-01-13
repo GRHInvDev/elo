@@ -47,21 +47,22 @@ export default async function ResponsesPage({ params }: ResponsesPageProps) {
   return (
     <DashboardShell>
       <div className="mb-8">
+        {/*
         <Link href={`/forms/${id}`}>
           <Button variant="ghost" className="pl-0">
             <ChevronLeft className="mr-2 h-4 w-4" />
             Voltar para a solicitação
           </Button>
         </Link>
+        */}
 
         <div className="mt-4">
           <h1 className="text-3xl font-bold tracking-tight">Respostas: {form.title}</h1>
           <p className="text-muted-foreground mt-2">Visualize e gerencie as respostas enviadas para esta solicitação.</p>
         </div>
       </div>
-
       <ResponsesList formId={id} />
-    </DashboardShell>
+    </DashboardShell >
   )
 }
 

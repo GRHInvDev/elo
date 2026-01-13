@@ -61,10 +61,10 @@ export const formResponseRouter = createTRPCRouter({
             }
           }
         })
-        
+
         if (form) {
           const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
-          
+
           // Criar notificações in-app
           if (recipients.length > 0) {
             const now = new Date()
@@ -86,7 +86,7 @@ export const formResponseRouter = createTRPCRouter({
 
           // Enviar emails para todos os donos do formulário
           const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
-          
+
           if (ownerUserIds.length > 0) {
             const ownerUsers = await ctx.db.user.findMany({
               where: { id: { in: ownerUserIds } },
@@ -101,7 +101,7 @@ export const formResponseRouter = createTRPCRouter({
             // Enviar email para cada dono do formulário
             for (const owner of ownerUsers) {
               if (owner.email) {
-                const ownerName = owner.firstName 
+                const ownerName = owner.firstName
                   ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                   : (owner.email ?? 'Usuário')
 
@@ -146,7 +146,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // eslint-disable-next-line @typescript-eslint/consistent-type-imports
       const roleConfig = (currentUser?.role_config ?? {}) as import("@/types/role-config").RolesConfig // não questione, just aceite
-      
+
       // Verificar se é sudo ou tem permissão can_create_solicitacoes
       if (!roleConfig.sudo && !(roleConfig.can_create_solicitacoes ?? false)) {
         throw new TRPCError({
@@ -206,7 +206,7 @@ export const formResponseRouter = createTRPCRouter({
       // Criar notificações e enviar emails
       try {
         const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== input.userId)
-        
+
         // Criar notificações in-app
         if (recipients.length > 0) {
           const now = new Date()
@@ -228,7 +228,7 @@ export const formResponseRouter = createTRPCRouter({
 
         // Enviar emails para todos os donos do formulário
         const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== input.userId)
-        
+
         if (ownerUserIds.length > 0) {
           const ownerUsers = await ctx.db.user.findMany({
             where: { id: { in: ownerUserIds } },
@@ -243,7 +243,7 @@ export const formResponseRouter = createTRPCRouter({
           // Enviar email para cada dono do formulário
           for (const owner of ownerUsers) {
             if (owner.email) {
-              const ownerName = owner.firstName 
+              const ownerName = owner.firstName
                 ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                 : (owner.email ?? 'Usuário')
 
@@ -280,6 +280,8 @@ export const formResponseRouter = createTRPCRouter({
         userIds: z.array(z.string()).optional(),
         setores: z.array(z.string()).optional(),
         hasResponse: z.boolean().optional(),
+        take: z.number().optional(),
+        skip: z.number().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -325,7 +327,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // Filtro por usuários e setores
       const userIdsToFilter: string[] = []
-      
+
       if (input?.userIds && input.userIds.length > 0) {
         userIdsToFilter.push(...input.userIds)
       }
@@ -350,7 +352,7 @@ export const formResponseRouter = createTRPCRouter({
         } else {
           // Se não for owner e os filtros não incluem o usuário atual, retornar vazio
           if (!uniqueUserIds.includes(ctx.auth.userId)) {
-            return []
+            return { items: [], totalCount: 0 }
           }
         }
       }
@@ -368,7 +370,7 @@ export const formResponseRouter = createTRPCRouter({
           if (responseIdsWithChat.length > 0) {
             responseIdsFilter = responseIdsWithChat
           } else {
-            return []
+            return { items: [], totalCount: 0 }
           }
         } else {
           if (responseIdsWithChat.length > 0) {
@@ -391,22 +393,44 @@ export const formResponseRouter = createTRPCRouter({
         ? { createdAt: "asc" }
         : { createdAt: "desc" }
 
-      return await ctx.db.formResponse.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              imageUrl: true,
-              setor: true,
+      const [items, totalCount] = await Promise.all([
+        ctx.db.formResponse.findMany({
+          where,
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                imageUrl: true,
+                setor: true,
+              },
+            },
+            FormResponseChat: {
+              take: 2,
+              orderBy: { createdAt: "desc" },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    imageUrl: true,
+                  },
+                },
+              },
             },
           },
-        },
-        orderBy,
-      })
+          orderBy,
+          take: input.take,
+          skip: input.skip,
+        }),
+        ctx.db.formResponse.count({ where }),
+      ])
+
+      return { items, totalCount }
     }),
 
   listKanBan: protectedProcedure
@@ -451,7 +475,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // Filtro por usuários e setores
       const userIdsToFilter: string[] = []
-      
+
       if (input?.userIds && input.userIds.length > 0) {
         userIdsToFilter.push(...input.userIds)
       }
@@ -1029,14 +1053,14 @@ export const formResponseRouter = createTRPCRouter({
     }),
 
   // ========== TAGS MANAGEMENT ==========
-  
+
   // Listar todas as tags
   getAllTags: protectedProcedure.query(async ({ ctx }) => {
     const config = await ctx.db.globalConfig.findFirst()
     if (!config?.formResponseTags) {
       return []
     }
-    
+
     const tags = config.formResponseTags as unknown as Array<{
       id: string
       nome: string
@@ -1045,7 +1069,7 @@ export const formResponseRouter = createTRPCRouter({
       countVezesUsadas: number
       ativa: boolean
     }>
-    
+
     return tags.filter(tag => tag.ativa)
   }),
 
@@ -1124,7 +1148,7 @@ export const formResponseRouter = createTRPCRouter({
           formResponseTags: [] as unknown as InputJsonValue,
         },
       })
-      
+
       if (!config.formResponseTags) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -1150,9 +1174,9 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Verificar se nome já existe (se estiver mudando)
-      if (input.nome && tags.some((tag) => 
-        tag.nome.toLowerCase() === input.nome!.toLowerCase() && 
-        tag.id !== input.id && 
+      if (input.nome && tags.some((tag) =>
+        tag.nome.toLowerCase() === input.nome!.toLowerCase() &&
+        tag.id !== input.id &&
         tag.ativa
       )) {
         throw new TRPCError({
@@ -1210,7 +1234,7 @@ export const formResponseRouter = createTRPCRouter({
           formResponseTags: [] as unknown as InputJsonValue,
         },
       })
-      
+
       if (!config.formResponseTags) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -1237,7 +1261,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // Obter tags atuais da resposta
       const currentTags = (response.tags as unknown as string[]) || []
-      
+
       // Se a tag já está aplicada, não fazer nada
       if (currentTags.includes(input.tagId)) {
         return { success: true, message: "Tag já estava aplicada" }

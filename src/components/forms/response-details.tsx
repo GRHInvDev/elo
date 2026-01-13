@@ -9,9 +9,10 @@ interface ResponseDetailsProps {
   formFields: Field[]
 }
 
-export function ResponseDetails({ responseData }: ResponseDetailsProps) {
+export function ResponseDetails({ responseData, formFields }: ResponseDetailsProps) {
   // Obter o primeiro objeto de resposta (normalmente só há um)
   const responseObj = responseData[0]
+  const fieldsToShow = formFields
 
   // Função auxiliar para converter \n em quebras de linha
   const renderTextWithLineBreaks = (text: string) => {

@@ -4,23 +4,34 @@ import { useState } from "react"
 import { api } from "@/trpc/react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Eye, FileText, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Eye, FileText, Loader2, MessageSquare } from "lucide-react"
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
 import { ResponsesFilters, type ResponsesFiltersState } from "./responses-filters"
 import { ResponseChat } from "./response-chat"
+import { ResponseDetails } from "./response-details"
+import type { Field } from "@/lib/form-types"
 
 export function ResponsesList({ formId }: { formId: string }) {
+  const [page, setPage] = useState(1)
+  const pageSize = 15
+
   const [filters, setFilters] = useState<ResponsesFiltersState>({
     userIds: [],
     setores: [],
   })
 
-  const { data: responses, isLoading } = api.formResponse.listByForm.useQuery({
+  // Resetar página quando filtros mudarem
+  const onFiltersChange = (newFilters: ResponsesFiltersState) => {
+    setFilters(newFilters)
+    setPage(1)
+  }
+
+  const { data, isLoading } = api.formResponse.listByForm.useQuery({
     formId,
     startDate: filters.startDate,
     endDate: filters.endDate,
@@ -28,7 +39,12 @@ export function ResponsesList({ formId }: { formId: string }) {
     userIds: filters.userIds.length > 0 ? filters.userIds : undefined,
     setores: filters.setores.length > 0 ? filters.setores : undefined,
     hasResponse: filters.hasResponse,
+    take: pageSize,
+    skip: (page - 1) * pageSize,
   })
+
+  const responses = data?.items
+  const totalCount = data?.totalCount ?? 0
 
   const { data: form } = api.form.getById.useQuery({ id: formId })
   const { data: currentUser } = api.user.me.useQuery()
@@ -45,7 +61,7 @@ export function ResponsesList({ formId }: { formId: string }) {
   if (!responses || responses.length === 0) {
     return (
       <>
-        <ResponsesFilters filters={filters} onFiltersChange={setFilters} />
+        <ResponsesFilters filters={filters} onFiltersChange={onFiltersChange} />
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium">Nenhuma resposta encontrada</h3>
@@ -90,9 +106,43 @@ export function ResponsesList({ formId }: { formId: string }) {
     }
   }
 
+  function paginacao() {
+    const from = (page - 1) * pageSize + 1
+    const to = Math.min(page * pageSize, totalCount)
+
+    return (
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Mostrando {from}-{to} de {totalCount} respostas
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={to >= totalCount}
+          >
+            Próximo
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <ResponsesFilters filters={filters} onFiltersChange={setFilters} />
+      {paginacao()}
+      <ResponsesFilters filters={filters} onFiltersChange={onFiltersChange} />
       <div className="grid grid-cols-1 gap-6">
         {responses.map((response) => (
           <Card key={response.id}>
@@ -110,10 +160,56 @@ export function ResponsesList({ formId }: { formId: string }) {
                       {response.user.firstName
                         ? `${response.user.firstName} ${response.user.lastName ?? ""}`
                         : response.user.email}
+                      {" - "}{response.user.setor}
                     </CardTitle>
                     <CardDescription>
-                      Enviado {formatDistanceToNow(new Date(response.createdAt), { addSuffix: true, locale: ptBR })}
+                      Enviado {formatDistanceToNow(new Date(response.createdAt), { addSuffix: true, locale: ptBR })} <br />
+                      Solicitação: <strong>{Object.values(response.responses[0] || {})[3]}</strong> <br />
                     </CardDescription>
+                    <CardContent className="pt-2 px-0">
+                      {((response as any).FormResponseChat || (response as any).formResponseChat) ? (
+                        (response as any).FormResponseChat?.length > 0 || (response as any).formResponseChat?.length > 0 ? (
+                          <div className="mt-2 space-y-2">
+                            <p className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 uppercase tracking-wider">
+                              <MessageSquare className="h-3 w-3" />
+                              Últimas mensagens
+                            </p>
+                            <div className="space-y-1.5">
+                              {[...((response as any).FormResponseChat || (response as any).formResponseChat)].reverse().map((chat: any) => (
+                                <div key={chat.id} className="flex items-start gap-2 bg-muted/30 p-2 rounded-md border border-muted/50">
+                                  <Avatar className="h-5 w-5 shrink-0">
+                                    <AvatarImage src={chat.user.imageUrl ?? ""} />
+                                    <AvatarFallback className="text-[8px]">
+                                      {chat.user.firstName?.[0] ?? chat.user.email[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-center gap-2">
+                                      <p className="text-[10px] font-bold truncate">
+                                        {chat.user.firstName ?? chat.user.email}
+                                      </p>
+                                      <span className="text-[9px] text-muted-foreground shrink-0 font-medium">
+                                        {format(new Date(chat.createdAt), "HH:mm", { locale: ptBR })}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground line-clamp-1 italic leading-tight">
+                                      "{chat.message}"
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground italic mt-2">Nenhuma mensagem no chat ainda.</p>
+                        )
+                      ) : (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          <p className="text-[10px] text-muted-foreground italic">Carregando mensagens...</p>
+                        </div>
+                      )}
+                    </CardContent>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -124,13 +220,7 @@ export function ResponsesList({ formId }: { formId: string }) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                {(response.responses as unknown[]).length} respostas enviadas
-              </div>
-              <ResponseChat responseId={response.id} />
-            </CardContent>
-            <CardFooter className="flex flex-col md:flex-row gap-y-2 items-end justify-between pt-3 border-t">
+            < CardFooter className="flex flex-col md:flex-row gap-y-2 items-end justify-between pt-3 border-t" >
               <Link href={`/forms/${formId}/responses/${response.id}`}>
                 <Button variant="outline" size="sm">
                   <Eye className="h-4 w-4 mr-1" />
@@ -146,9 +236,10 @@ export function ResponsesList({ formId }: { formId: string }) {
               )}
             </CardFooter>
           </Card>
-        ))}
-      </div>
-    </div>
+        ))
+        }
+      </div >
+    </div >
   )
 }
 
