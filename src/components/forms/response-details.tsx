@@ -7,19 +7,9 @@ import { Separator } from "@/components/ui/separator"
 interface ResponseDetailsProps {
   responseData: Record<string, string | number | File[] | null | undefined | string[]>[]
   formFields: Field[]
-  showOnlyMarkedFields?: boolean // Se true, mostra apenas campos com showInResponses = true
 }
 
-export function ResponseDetails({ responseData, formFields, showOnlyMarkedFields = false }: ResponseDetailsProps) {
-  if (!responseData || responseData.length === 0) {
-    return <p className="text-muted-foreground">Nenhuma resposta encontrada.</p>
-  }
-
-  // Filtrar campos se showOnlyMarkedFields for true
-  const fieldsToShow = showOnlyMarkedFields
-    ? formFields.filter(field => field.showInResponses === true)
-    : formFields
-
+export function ResponseDetails({ responseData }: ResponseDetailsProps) {
   // Obter o primeiro objeto de resposta (normalmente só há um)
   const responseObj = responseData[0]
 

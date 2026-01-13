@@ -17,7 +17,6 @@ export interface BaseField {
   placeholder?: string
   required?: boolean
   helpText?: string
-  showInResponses?: boolean // Se true, o campo será exibido na página /[id]/responses
 }
 
 export interface TextField extends BaseField {
