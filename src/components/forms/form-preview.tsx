@@ -81,6 +81,9 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
         if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
         if (!field.required) schema = schema.optional()
         break
+      case "dynamic":
+        schema = z.string().optional()
+        break
     }
 
     schemaObj[field.name] = schema
@@ -237,6 +240,14 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
                 }}
                 disabled={readOnly}
               />
+            )}
+
+            {field.type === "dynamic" && (
+              <div className="p-3 bg-muted rounded-md border border-dashed border-muted-foreground/50">
+                <p className="text-sm text-muted-foreground flex items-center gap-2 italic">
+                  <span>[O sistema coletará seu {field.dynamicType === "user_name" ? "nome" : "setor"} automaticamente]</span>
+                </p>
+              </div>
             )}
 
             {field.helpText && <p className="text-sm text-muted-foreground">{field.helpText}</p>}

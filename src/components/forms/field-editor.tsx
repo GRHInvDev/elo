@@ -15,7 +15,7 @@ interface FieldEditorProps {
 
 export function FieldEditor({ field, onChange }: FieldEditorProps) {
   const updateField = (updates: Partial<Field>) => {
-    onChange({ ...field, ...updates })
+    onChange({ ...field, ...updates } as Field)
   }
 
   const addOption = () => {
@@ -28,7 +28,7 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
   const updateOption = (index: number, key: "label" | "value", value: string) => {
     if (field.type === "combobox" && field.options) {
       const options = [...field.options]
-      options[index] = { value: `${index+1} - ${options[index]?.label ?? ""}`, label: options[index]?.label ?? "" ,  [key]: value ?? "" }
+      options[index] = { value: `${index + 1} - ${options[index]?.label ?? ""}`, label: options[index]?.label ?? "", [key]: value ?? "" }
       updateField({ options })
     }
   }
@@ -86,7 +86,7 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
           />
           <Label htmlFor="required">Campo obrigatório</Label>
         </div>
-        
+
         {/* Campos específicos por tipo */}
         {field.type === "text" && (
           <>
@@ -301,6 +301,28 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
               <Label htmlFor="multiple-files">Permitir múltiplos arquivos</Label>
             </div>
           </>
+        )}
+
+        {field.type === "dynamic" && (
+          <div className="grid gap-2">
+            <Label htmlFor="dynamicType">Tipo de dado dinâmico</Label>
+            <Select
+              value={field.dynamicType ?? "user_name"}
+              onValueChange={(value) => {
+                const label = value === "user_name" ? "Nome do Usuário" : "Setor";
+                updateField({ dynamicType: value as any, label });
+              }}
+            >
+              <SelectTrigger id="dynamicType">
+                <SelectValue placeholder="Selecione o tipo de dado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user_name">Nome do Usuário</SelectItem>
+                <SelectItem value="user_sector">Setor do Usuário</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Este campo será preenchido automaticamente pelo sistema.</p>
+          </div>
         )}
 
         <div className="grid gap-2">

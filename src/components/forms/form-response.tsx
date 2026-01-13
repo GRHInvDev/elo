@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import type { Field } from "@/lib/form-types"
+import { useState, useEffect } from "react"
+import type { Field, DynamicField } from "@/lib/form-types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -94,6 +94,9 @@ export function FormResponseComponent({
         if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
         if (!field.required) schema = schema.optional()
         break
+      case "dynamic":
+        schema = z.string().optional()
+        break
     }
 
     schemaObj[field.name] = schema
@@ -111,6 +114,26 @@ export function FormResponseComponent({
     resolver: zodResolver(formSchema),
     defaultValues: existingResponse ?? {},
   })
+
+  // Buscar dados do usuário para preencher campos dinâmicos
+  const { data: userData } = api.user.me.useQuery()
+
+  // Preencher campos dinâmicos automaticamente
+  useEffect(() => {
+    if (userData) {
+      fields.forEach((field) => {
+        if (field.type === "dynamic") {
+          let value = ""
+          if (field.dynamicType === "user_name") {
+            value = userData.firstName ? `${userData.firstName} ${userData.lastName ?? ""}`.trim() : userData.email
+          } else if (field.dynamicType === "user_sector") {
+            value = userData.setor ?? "Nenhum setor informado"
+          }
+          setValue(field.name, value)
+        }
+      })
+    }
+  }, [userData, fields, setValue])
 
   const submitResponse = api.formResponse.create.useMutation({
     onSuccess: async () => {
@@ -281,6 +304,19 @@ export function FormResponseComponent({
                 setValue(field.name, field.multipleFiles ? e.target.files : (e.target.files?.[0] ?? null))
               }}
             />
+          )}
+
+          {field.type === "dynamic" && (
+            <div className="p-3 bg-muted rounded-md border border-muted-foreground/30">
+              <p className="text-sm font-medium">
+                {watch(field.name) || (
+                  <span className="text-muted-foreground italic">
+                    Coletando seu {field.dynamicType === "user_name" ? "nome" : "setor"}...
+                  </span>
+                )}
+              </p>
+              <input type="hidden" {...register(field.name)} />
+            </div>
           )}
 
           {field.helpText && <ReactMarkdown remarkPlugins={[remarkGfm]}>{field.helpText}</ReactMarkdown>}
