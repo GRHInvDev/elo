@@ -1,5 +1,5 @@
 "use client"
-import type { Field, FormattedType } from "@/lib/form-types"
+import type { DynamicType, Field, FormattedType } from "@/lib/form-types"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -310,7 +310,7 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
               value={field.dynamicType ?? "user_name"}
               onValueChange={(value) => {
                 const label = value === "user_name" ? "Nome do Usuário" : "Setor";
-                updateField({ dynamicType: value as any, label });
+                updateField({ dynamicType: value as DynamicType, label });
               }}
             >
               <SelectTrigger id="dynamicType">

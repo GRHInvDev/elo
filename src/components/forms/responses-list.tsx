@@ -12,9 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
 import { ResponsesFilters, type ResponsesFiltersState } from "./responses-filters"
-import { ResponseChat } from "./response-chat"
-import { ResponseDetails } from "./response-details"
-import type { Field } from "@/lib/form-types"
+import type { FormResponse, ChatMessage } from "@/types/form-responses"
 
 export function ResponsesList({ formId }: { formId: string }) {
   const [page, setPage] = useState(1)
@@ -43,7 +41,7 @@ export function ResponsesList({ formId }: { formId: string }) {
     skip: (page - 1) * pageSize,
   })
 
-  const responses = data?.items
+  const responses = (data?.items ?? []) as FormResponse[]
   const totalCount = data?.totalCount ?? 0
 
   const { data: form } = api.form.getById.useQuery({ id: formId })
@@ -139,6 +137,19 @@ export function ResponsesList({ formId }: { formId: string }) {
     )
   }
 
+  function formatResponseValue(value: unknown): string {
+    if (value === null || value === undefined) return "Não informado"
+    if (typeof value === "string") return value
+    if (typeof value === "number" || typeof value === "boolean") return String(value)
+    if (Array.isArray(value)) {
+      return value.map((v) => formatResponseValue(v)).join(", ")
+    }
+    if (typeof value === "object") {
+      return JSON.stringify(value)
+    }
+    return String(value as string | number | boolean | symbol | bigint)
+  }
+
   return (
     <div className="space-y-6">
       {paginacao()}
@@ -164,18 +175,18 @@ export function ResponsesList({ formId }: { formId: string }) {
                     </CardTitle>
                     <CardDescription>
                       Enviado {formatDistanceToNow(new Date(response.createdAt), { addSuffix: true, locale: ptBR })} <br />
-                      Solicitação: <strong>{Object.values(response.responses[0] || {})[3]}</strong> <br />
+                      Solicitação: <strong>{formatResponseValue(Object.values(response.responses[0] ?? {})[3])}</strong> <br />
                     </CardDescription>
                     <CardContent className="pt-2 px-0">
-                      {((response as any).FormResponseChat || (response as any).formResponseChat) ? (
-                        (response as any).FormResponseChat?.length > 0 || (response as any).formResponseChat?.length > 0 ? (
+                      {!!(response.FormResponseChat || response.formResponseChat) ? (
+                        (response.FormResponseChat?.length ?? 0) > 0 || (response.formResponseChat?.length ?? 0) > 0 ? (
                           <div className="mt-2 space-y-2">
                             <p className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 uppercase tracking-wider">
                               <MessageSquare className="h-3 w-3" />
                               Últimas mensagens
                             </p>
                             <div className="space-y-1.5">
-                              {[...((response as any).FormResponseChat || (response as any).formResponseChat)].reverse().map((chat: any) => (
+                              {[...(response.FormResponseChat ?? response.formResponseChat ?? [])].reverse().map((chat: ChatMessage) => (
                                 <div key={chat.id} className="flex items-start gap-2 bg-muted/30 p-2 rounded-md border border-muted/50">
                                   <Avatar className="h-5 w-5 shrink-0">
                                     <AvatarImage src={chat.user.imageUrl ?? ""} />
@@ -193,7 +204,7 @@ export function ResponsesList({ formId }: { formId: string }) {
                                       </span>
                                     </div>
                                     <p className="text-[11px] text-muted-foreground line-clamp-1 italic leading-tight">
-                                      "{chat.message}"
+                                      &quot;{chat.message}&quot;
                                     </p>
                                   </div>
                                 </div>

@@ -16,8 +16,6 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createBirthdaySchema } from "@/schemas/birthday.schema"
 import type { z } from "zod"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 import { UserSearch } from "@/components/forms/user-search"
 import {
   AlertDialog,
@@ -225,7 +223,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
           imageUrl: data.imageUrl,
         })
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // O erro já é tratado no hook de mutação
     }
@@ -307,7 +305,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
               }}
             />
           </div>
-          
+
           {currentImageUrl && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Preview da imagem</Label>
@@ -324,9 +322,9 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
-          <Button 
-            type="submit" 
-            disabled={isLoading || isSubmitting} 
+          <Button
+            type="submit"
+            disabled={isLoading || isSubmitting}
             className="flex-1 w-full sm:w-auto min-h-[44px]"
           >
             {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -334,7 +332,7 @@ export function BirthdayForm({ birthday, onSuccess }: BirthdayFormProps) {
               {birthday ? "Salvar Alterações" : "Adicionar Aniversário"}
             </span>
           </Button>
-          
+
           {birthday && (
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <AlertDialogTrigger asChild>

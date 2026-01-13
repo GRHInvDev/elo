@@ -1,20 +1,21 @@
-import { LucideCalendar, 
-  LucideCar, 
-  LucideFormInput, 
-  LucideLayoutDashboard, 
-  LucideMapPin, 
-  LucideNewspaper, 
-  LucideShoppingCart, 
-  LucideTerminalSquare, 
-  LucideUtensils, 
-  LucideLightbulb, 
-  LucidePhone, 
+import {
+  LucideCalendar,
+  LucideCar,
+  LucideFormInput,
+  LucideLayoutDashboard,
+  LucideMapPin,
+  LucideNewspaper,
+  LucideShoppingCart,
+  LucideTerminalSquare,
+  LucideUtensils,
+  LucideLightbulb,
+  LucidePhone,
   LucideMegaphone,
   SearchCheck,
   Book,
   FileText,
   LucideCake,
-  Heart,
+  // Heart,
 } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
@@ -120,7 +121,7 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
         },
       ],
     },
-   
+
     {
       title: "Formulários",
       icon: FileText,
@@ -165,7 +166,7 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
     //   href: "/quality",
     // },
   ]
-  
+
   // Verificar acesso admin usando role_config granular
   // Usuário tem acesso admin se:
   // 1. É sudo
@@ -175,10 +176,10 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
   const hasAdminPages = Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages?.length && roleConfig?.admin_pages?.length > 0
   const hasAnyAdminRoute = hasAdminPages && roleConfig?.admin_pages.some((route: string) => route.startsWith("/admin"))
   const hasCanManageProducts = roleConfig?.can_manage_produtos === true
-  const hasAdminAccess = !!roleConfig?.sudo || 
-                        (hasAdminPages && roleConfig?.admin_pages?.includes("/admin")) ||
-                        hasAnyAdminRoute ||
-                        hasCanManageProducts
+  const hasAdminAccess = !!roleConfig?.sudo ||
+    (hasAdminPages && roleConfig?.admin_pages?.includes("/admin")) ||
+    hasAnyAdminRoute ||
+    hasCanManageProducts
 
   if (hasAdminAccess) {
     items.push({

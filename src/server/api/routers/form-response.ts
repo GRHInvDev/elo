@@ -397,6 +397,14 @@ export const formResponseRouter = createTRPCRouter({
         ctx.db.formResponse.findMany({
           where,
           include: {
+            form: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                userId: true,
+              },
+            },
             user: {
               select: {
                 id: true,

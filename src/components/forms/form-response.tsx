@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { Field, DynamicField } from "@/lib/form-types"
+import type { Field } from "@/lib/form-types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -125,7 +125,7 @@ export function FormResponseComponent({
         if (field.type === "dynamic") {
           let value = ""
           if (field.dynamicType === "user_name") {
-            value = userData.firstName ? `${userData.firstName} ${userData.lastName ?? ""}`.trim() : userData.email
+            value = userData.firstName ? `${userData.firstName} ${userData.lastName ?? ""}`.trim() : (userData.email ?? "")
           } else if (field.dynamicType === "user_sector") {
             value = userData.setor ?? "Nenhum setor informado"
           }
@@ -309,7 +309,9 @@ export function FormResponseComponent({
           {field.type === "dynamic" && (
             <div className="p-3 bg-muted rounded-md border border-muted-foreground/30">
               <p className="text-sm font-medium">
-                {watch(field.name) || (
+                {watch(field.name) ? (
+                  watch(field.name)
+                ) : (
                   <span className="text-muted-foreground italic">
                     Coletando seu {field.dynamicType === "user_name" ? "nome" : "setor"}...
                   </span>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { availableEmojis, emojiToId } from "@/lib/emoji-utils"
 import { getEmojiImageUrl } from "@/lib/emoji-image-map"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -48,7 +49,7 @@ export function AnimatedEmojiPicker({
         >
           {imageUrl ? (
             <>
-              <img
+              <Image
                 src={imageUrl}
                 alt={value ?? "Emoji"}
                 width={48}
@@ -73,7 +74,7 @@ export function AnimatedEmojiPicker({
                 }}
               />
               {value && (
-                <span 
+                <span
                   className="emoji-fallback-preview text-2xl hidden absolute inset-0 flex items-center justify-center"
                 >
                   {value}
@@ -124,7 +125,7 @@ export function AnimatedEmojiPicker({
                         if (imageUrl) {
                           return (
                             <>
-                              <img
+                              <Image
                                 src={imageUrl}
                                 alt={emojiItem.label}
                                 width={56}
@@ -151,7 +152,7 @@ export function AnimatedEmojiPicker({
                                   }
                                 }}
                               />
-                              <span 
+                              <span
                                 className="emoji-fallback text-4xl hidden absolute inset-0 flex items-center justify-center"
                                 style={{ fontSize: '56px' }}
                               >

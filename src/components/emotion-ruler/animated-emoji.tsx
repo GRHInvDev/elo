@@ -3,6 +3,7 @@
 import { emojiToId } from "@/lib/emoji-utils"
 import { getEmojiImageUrl } from "@/lib/emoji-image-map"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 interface AnimatedEmojiProps {
   emoji: string | null | undefined
@@ -38,25 +39,25 @@ export function AnimatedEmoji({
     if (imageUrl) {
       return (
         <div className={cn("flex items-center justify-center", className)}>
-          <img
+          <Image
             src={imageUrl}
             alt={normalizedEmoji}
             width={size}
             height={size}
             className="object-contain"
-                onError={(e) => {
-                  // Se a imagem falhar, mostra o emoji Unicode como fallback
-                  const target = e.target as HTMLImageElement
-                  target.style.display = 'none'
-                  const parent = target.parentElement
-                  if (parent) {
-                    const fallback = document.createElement('span')
-                    fallback.className = className ?? ''
-                    fallback.style.fontSize = `${size}px`
-                    fallback.textContent = normalizedEmoji
-                    parent.appendChild(fallback)
-                  }
-                }}
+            onError={(e) => {
+              // Se a imagem falhar, mostra o emoji Unicode como fallback
+              const target = e.target as HTMLImageElement
+              target.style.display = 'none'
+              const parent = target.parentElement
+              if (parent) {
+                const fallback = document.createElement('span')
+                fallback.className = className ?? ''
+                fallback.style.fontSize = `${size}px`
+                fallback.textContent = normalizedEmoji
+                parent.appendChild(fallback)
+              }
+            }}
           />
         </div>
       )
