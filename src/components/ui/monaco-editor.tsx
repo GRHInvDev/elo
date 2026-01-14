@@ -8,14 +8,15 @@
 
 import { useEffect, useRef, useState } from "react"
 import Editor, { type Monaco } from "@monaco-editor/react"
+import { useTheme } from "next-themes"
 import type { editor } from "monaco-editor"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { 
-  Bold, 
-  Italic, 
-  List, 
-  ListOrdered, 
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
   Link as LinkIcon,
   Heading1,
   Heading2,
@@ -83,6 +84,18 @@ export function MonacoEditor({
   const [mounted, setMounted] = useState(false)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
+  const { theme, resolvedTheme } = useTheme()
+
+  useEffect(() => {
+    if (monacoRef.current && theme) {
+      const currentTheme = resolvedTheme || theme
+      if (currentTheme === "dark") {
+        monacoRef.current.editor.setTheme("custom-dark")
+      } else {
+        monacoRef.current.editor.setTheme("vs-light")
+      }
+    }
+  }, [theme, resolvedTheme])
 
   useEffect(() => {
     setMounted(true)
@@ -129,19 +142,26 @@ export function MonacoEditor({
       ],
     })
 
-    // Configurar tema dark
-    monaco.editor.setTheme("vs-dark")
-
-    // Configurar cor de fundo preta
+    // Função que identifica tema do app e configura o monaco editor
+    function temaSetado(currentTheme: string) {
+      if (currentTheme === "dark") {
+        monaco.editor.setTheme("custom-dark")
+      } else {
+        monaco.editor.setTheme("vs-light")
+      }
+    }
+    // Configurar cor de fundo customizada
     monaco.editor.defineTheme("custom-dark", {
       base: "vs-dark",
       inherit: true,
       rules: [],
       colors: {
-        "editor.background": "#000000",
+        "editor.background": "#414141ff",
       },
     })
-    monaco.editor.setTheme("custom-dark")
+
+    // Definir tema inicial
+    temaSetado(resolvedTheme || theme || "dark")
 
     // Funções auxiliares para formatação
     const getSelectedText = (): string | null => {
@@ -160,7 +180,7 @@ export function MonacoEditor({
       if (!model) return
 
       const selectedText = model.getValueInRange(selection)
-      const newText = selectedText 
+      const newText = selectedText
         ? `${before}${selectedText}${after}`
         : `${before}${after}`
 
@@ -269,7 +289,7 @@ export function MonacoEditor({
         const column = Number(position.column)
         const line = model.getLineContent(lineNumber)
         const textBeforeCursor = line.substring(0, column - 1)
-        
+
         // Verificar se está digitando um slash command
         const regex = /\/(\w*)$/
         const match = regex.exec(textBeforeCursor)
@@ -292,7 +312,7 @@ export function MonacoEditor({
               endColumn: column,
             },
           }))
-        
+
         return { suggestions }
       },
       triggerCharacters: ["/"],
@@ -301,7 +321,7 @@ export function MonacoEditor({
 
   const getSelectedText = (): string | null => {
     if (!editorRef.current) return null
-    
+
     const selection = editorRef.current.getSelection()
     if (!selection || selection.isEmpty()) return null
 
@@ -321,7 +341,7 @@ export function MonacoEditor({
     if (!model) return
 
     const selectedText = model.getValueInRange(selection)
-    const newText = selectedText 
+    const newText = selectedText
       ? `${before}${selectedText}${after}`
       : `${before}${after}`
 
@@ -388,7 +408,7 @@ export function MonacoEditor({
     return (
       <div
         className={cn(
-          "flex items-center justify-center border rounded-md bg-black",
+          "flex items-center justify-center border rounded-md bg-background",
           className
         )}
         style={{ height }}
@@ -399,9 +419,9 @@ export function MonacoEditor({
   }
 
   return (
-    <div className={cn("border rounded-md overflow-hidden bg-black", className)}>
+    <div className={cn("border rounded-md overflow-hidden bg-background", className)}>
       {showToolbar && !readOnly && (
-        <div className="flex items-center gap-1 p-2 border-b bg-black/50">
+        <div className="flex items-center gap-1 p-2 border-b bg-white dark:bg-zinc-900">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

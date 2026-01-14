@@ -78,6 +78,7 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
       case "textarea":
         schema = z.string()
         if (field.required) schema = schema.min(1, "Este campo é obrigatório")
+        if (field.minLength) schema = schema.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
         if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
         if (!field.required) schema = schema.optional()
         break

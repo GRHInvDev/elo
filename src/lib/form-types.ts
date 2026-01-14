@@ -59,6 +59,7 @@ export interface FileField extends BaseField {
 export interface TextareaField extends BaseField {
   type: "textarea"
   rows?: number
+  minLength?: number
   maxLength?: number
 }
 

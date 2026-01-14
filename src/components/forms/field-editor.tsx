@@ -192,7 +192,7 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
         )}
 
         {field.type === "textarea" && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="rows">Linhas</Label>
               <Input
@@ -207,19 +207,35 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
                 }
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="textareaMaxLength">Tamanho máximo</Label>
-              <Input
-                id="textareaMaxLength"
-                type="number"
-                min={0}
-                value={field.maxLength ?? ""}
-                onChange={(e) =>
-                  updateField({
-                    maxLength: e.target.value ? Number.parseInt(e.target.value) : undefined,
-                  })
-                }
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="textareaMinLength">Tamanho mínimo</Label>
+                <Input
+                  id="textareaMinLength"
+                  type="number"
+                  min={0}
+                  value={field.minLength ?? ""}
+                  onChange={(e) =>
+                    updateField({
+                      minLength: e.target.value ? Number.parseInt(e.target.value) : undefined,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="textareaMaxLength">Tamanho máximo</Label>
+                <Input
+                  id="textareaMaxLength"
+                  type="number"
+                  min={0}
+                  value={field.maxLength ?? ""}
+                  onChange={(e) =>
+                    updateField({
+                      maxLength: e.target.value ? Number.parseInt(e.target.value) : undefined,
+                    })
+                  }
+                />
+              </div>
             </div>
           </div>
         )}
