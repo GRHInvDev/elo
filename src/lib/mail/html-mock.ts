@@ -1,7 +1,7 @@
 export const mockEmailRespostaFormulario = (
-    nomeAutor: string,
-    idFormulario: string,
-    nomeFormulario: string,
+  nomeAutor: string,
+  idFormulario: string,
+  nomeFormulario: string,
 ) => (`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -54,11 +54,11 @@ export const mockEmailRespostaFormulario = (
 `)
 
 export const mockEmailSituacaoFormulario = (
-    nomeUsuario: string,
-    status: string,
-    idResponse: string,
-    idFormulario: string,
-    nomeFormulario: string,
+  nomeUsuario: string,
+  status: string,
+  idResponse: string,
+  idFormulario: string,
+  nomeFormulario: string,
 ) => (`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -110,13 +110,71 @@ export const mockEmailSituacaoFormulario = (
 </html>
 `)
 
+export const mockEmailTagFormulario = (
+  nomeUsuario: string,
+  executorNome: string,
+  tagName: string,
+  idResponse: string,
+  idFormulario: string,
+  nomeFormulario: string,
+) => (`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #f4f4f4;
+                    margin: 0;
+                    padding: 20px;
+                }
+                .container {
+                    background-color: #ffffff;
+                    border-radius: 5px;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                    padding: 20px;
+                    max-width: 600px;
+                    margin: auto;
+                }
+                h1 {
+                    color: #333;
+                }
+                p {
+                    color: #555;
+                }
+                .footer {
+                    margin-top: 20px;
+                    font-size: 12px;
+                    color: #aaa;
+                }
+            </style>
+        </head>
+    <body>
+        <div class="container">
+            <h1>Olá, ${nomeUsuario}!</h1>
+            <p>${executorNome} adicionou sua solicitação no formulário "${nomeFormulario}" para a tag "${tagName}".</p>
+            <p>Por favor, clique no link abaixo para conferir:</p>
+            <p><a href="https://intranet.boxdistribuidor.com.br/forms/${idFormulario}/responses/${idResponse}" style="color: #007BFF;">Ver solicitação</a></p>
+
+            <div class="footer">
+                <p>Atenciosamente,</p>
+                <p>Equipe de suporte</p>
+                <p>elo</p>
+            </div>
+        </div>
+    </body>
+</html>
+`)
+
 export const mockEmailReservaCarro = (
-    nomeUsuario: string,
-    idReserva: string,
-    idVeiculo: string,
-    modeloVeiculo: string,
-    dataInicio: string,
-    dataFim: string,
+  nomeUsuario: string,
+  idReserva: string,
+  idVeiculo: string,
+  modeloVeiculo: string,
+  dataInicio: string,
+  dataFim: string,
 ) => (`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -174,13 +232,13 @@ export const mockEmailReservaCarro = (
 `)
 
 export const mockEmailPedidoComida = (
-    nomeUsuario: string,
-    nomeRestaurante: string,
-    nomePrato: string,
-    preco: number,
-    dataPedido: string,
-    observacoes: string | null,
-    opcionais: string[] = [],
+  nomeUsuario: string,
+  nomeRestaurante: string,
+  nomePrato: string,
+  preco: number,
+  dataPedido: string,
+  observacoes: string | null,
+  opcionais: string[] = [],
 ) => (`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -251,14 +309,14 @@ export const mockEmailPedidoComida = (
 `)
 
 export const mockEmailPedidosRestaurante = (
-    nomeRestaurante: string,
-    dataPedidos: string,
-    pedidos: Array<{
-        nomeUsuario: string;
-        prato: string;
-        observacoes: string | null;
-        opcionais?: string[];
-    }>,
+  nomeRestaurante: string,
+  dataPedidos: string,
+  pedidos: Array<{
+    nomeUsuario: string;
+    prato: string;
+    observacoes: string | null;
+    opcionais?: string[];
+  }>,
 ) => (`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -466,8 +524,8 @@ export const mockEmailPedidosRestaurante = (
                                     <td data-label="Prato">${pedido.prato}</td>
                                     <td data-label="Opcionais">
                                         ${(pedido.opcionais && pedido.opcionais.length > 0)
-                                            ? `<ul class='opcionais-list'>${pedido.opcionais.map(opc => `<li>${opc}</li>`).join('')}</ul>`
-                                            : '<span class="no-data">-</span>'}
+    ? `<ul class='opcionais-list'>${pedido.opcionais.map(opc => `<li>${opc}</li>`).join('')}</ul>`
+    : '<span class="no-data">-</span>'}
                                     </td>
                                     <td data-label="Observações">${pedido.observacoes ?? '<span class="no-data">-</span>'}</td>
                                 </tr>
@@ -485,13 +543,13 @@ export const mockEmailPedidosRestaurante = (
     </html>
 `)
 export type GroupedEmailOrder = {
-    num: number;
-    data: string;
-    func: string;
-    prato: string;
-    opc: string | null | undefined;
-    obs: string | null;
-    };
+  num: number;
+  data: string;
+  func: string;
+  prato: string;
+  opc: string | null | undefined;
+  obs: string | null;
+};
 
 export const mockEmailNotificacaoSugestao = (
   nomeUsuario: string,
@@ -618,100 +676,100 @@ export const mockEmailNotificacaoSugestao = (
   </html>
 `);
 
-  function normalizeStr(s: string) {
-    return s
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
-  }
-  
-  function getGroupKey(p: GroupedEmailOrder) {
-    const opcRaw = (p.opc ?? "").trim();
-    if (!opcRaw) return `${p.prato} sem adicional`;
-  
-    // Quebra por vírgula e limpa
-    const tokens = opcRaw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  
-    // Dedupe e normalização de pares chave:valor (ex.: "Feijão: Sim") - seja la o que for dedupe
-    const map = new Map<
-  string,
+function normalizeStr(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getGroupKey(p: GroupedEmailOrder) {
+  const opcRaw = (p.opc ?? "").trim();
+  if (!opcRaw) return `${p.prato} sem adicional`;
+
+  // Quebra por vírgula e limpa
+  const tokens = opcRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Dedupe e normalização de pares chave:valor (ex.: "Feijão: Sim") - seja la o que for dedupe
+  const map = new Map<
+    string,
     { display: string; value: string }
-    >();
-  
-    for (const tok of tokens) {
-      const parts = tok.split(":");
-      const kRaw = parts[0]?.trim();
-      const vRaw = parts.slice(1).join(":").trim(); // suporta "Observação: algo: extra"
-      if (!kRaw || !vRaw) continue;
-  
-      const kNorm = normalizeStr(kRaw);
-      const display =
-        kNorm === "feijao" ? "Feijão" : kNorm === "salada" ? "Salada" : kRaw;
-  
-      const vBase = normalizeStr(vRaw);
-      const v = vBase.startsWith("s")
-        ? "Sim"
-        : vBase.startsWith("n")
+  >();
+
+  for (const tok of tokens) {
+    const parts = tok.split(":");
+    const kRaw = parts[0]?.trim();
+    const vRaw = parts.slice(1).join(":").trim(); // suporta "Observação: algo: extra"
+    if (!kRaw || !vRaw) continue;
+
+    const kNorm = normalizeStr(kRaw);
+    const display =
+      kNorm === "feijao" ? "Feijão" : kNorm === "salada" ? "Salada" : kRaw;
+
+    const vBase = normalizeStr(vRaw);
+    const v = vBase.startsWith("s")
+      ? "Sim"
+      : vBase.startsWith("n")
         ? "Não"
         : vRaw;
-  
-      if (map.has(kNorm)) {
-        // Se já existir, prioriza "Sim" se houver conflito/duplicata
-        const prev = map.get(kNorm)!;
-        const newVal = prev.value === "Sim" || v === "Sim" ? "Sim" : v;
-        map.set(kNorm, { display, value: newVal });
-      } else {
-        map.set(kNorm, { display, value: v });
-      }
+
+    if (map.has(kNorm)) {
+      // Se já existir, prioriza "Sim" se houver conflito/duplicata
+      const prev = map.get(kNorm)!;
+      const newVal = prev.value === "Sim" || v === "Sim" ? "Sim" : v;
+      map.set(kNorm, { display, value: newVal });
+    } else {
+      map.set(kNorm, { display, value: v });
     }
-  
-    // Completa pares esperados: se só veio Salada, assume Feijão: Não; e vice-versa
-    const hasFeijao = map.has("feijao");
-    const hasSalada = map.has("salada");
-    if (hasFeijao && !hasSalada) map.set("salada", { display: "Salada", value: "Não" });
-    if (hasSalada && !hasFeijao) map.set("feijao", { display: "Feijão", value: "Não" });
-  
-    // Se tudo é "Não", trata como "sem adicional"
-    const entries = Array.from(map.values());
-    const allNo = entries.length > 0 && entries.every((e) => e.value === "Não");
-    if (allNo) return `${p.prato} sem adicional`;
-  
-    // Ordena: Feijão, Salada, depois demais chaves em ordem alfabética
-    const ordered: Array<{ display: string; value: string }> = [
-      ...(["feijao", "salada"] as const)
-        .filter((k) => map.has(k))
-        .map((k) => map.get(k)!),
-      ...Array.from(map.entries())
-        .filter(([k]) => k !== "feijao" && k !== "salada")
-        .sort((a, b) =>
-          a[1].display.localeCompare(b[1].display, "pt-BR", {
-            sensitivity: "base",
-          }),
-        )
-        .map(([, v]) => v),
-    ];
-  
-    const normalized = ordered
-      .map(({ display, value }) => `${display}: ${value}`)
-      .join(", ");
-  
-    return `${p.prato} com ${normalized}`;
   }
-  
-  function groupPedidosByPratoOpc(pedidos: GroupedEmailOrder[]) {
-    const groups = new Map<string, GroupedEmailOrder[]>();
-    for (const p of pedidos) {
-      const key = getGroupKey(p);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(p);
-    }
-    return groups;
+
+  // Completa pares esperados: se só veio Salada, assume Feijão: Não; e vice-versa
+  const hasFeijao = map.has("feijao");
+  const hasSalada = map.has("salada");
+  if (hasFeijao && !hasSalada) map.set("salada", { display: "Salada", value: "Não" });
+  if (hasSalada && !hasFeijao) map.set("feijao", { display: "Feijão", value: "Não" });
+
+  // Se tudo é "Não", trata como "sem adicional"
+  const entries = Array.from(map.values());
+  const allNo = entries.length > 0 && entries.every((e) => e.value === "Não");
+  if (allNo) return `${p.prato} sem adicional`;
+
+  // Ordena: Feijão, Salada, depois demais chaves em ordem alfabética
+  const ordered: Array<{ display: string; value: string }> = [
+    ...(["feijao", "salada"] as const)
+      .filter((k) => map.has(k))
+      .map((k) => map.get(k)!),
+    ...Array.from(map.entries())
+      .filter(([k]) => k !== "feijao" && k !== "salada")
+      .sort((a, b) =>
+        a[1].display.localeCompare(b[1].display, "pt-BR", {
+          sensitivity: "base",
+        }),
+      )
+      .map(([, v]) => v),
+  ];
+
+  const normalized = ordered
+    .map(({ display, value }) => `${display}: ${value}`)
+    .join(", ");
+
+  return `${p.prato} com ${normalized}`;
+}
+
+function groupPedidosByPratoOpc(pedidos: GroupedEmailOrder[]) {
+  const groups = new Map<string, GroupedEmailOrder[]>();
+  for (const p of pedidos) {
+    const key = getGroupKey(p);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
   }
-      
+  return groups;
+}
+
 export const mockEmailPedidoProduto = (
   nomeUsuario: string,
   nomeProduto: string,
@@ -1433,23 +1491,23 @@ export const mockEmailChatMensagemFormulario = (
   </html>
 `)
 
-  export const emailPedidosRestauranteAgrupado = (
-    nomeRestaurante: string,
-    dataPedidos: string,
-    pedidos: GroupedEmailOrder[],
-  ) => {
-    const groups = groupPedidosByPratoOpc(pedidos);
-    const totalPedidos = pedidos.length;
-  
-    const totalsHtml = Array.from(groups.entries())
-      .map(([key, arr]) => `<li><strong>Total de pedidos de ${key}:</strong> ${arr.length}</li>`)
-      .join("");
-  
-    const sectionsHtml = Array.from(groups.entries())
-      .map(([key, arr]) => {
-        const itemsHtml = arr
-          .map(
-            (p) => `
+export const emailPedidosRestauranteAgrupado = (
+  nomeRestaurante: string,
+  dataPedidos: string,
+  pedidos: GroupedEmailOrder[],
+) => {
+  const groups = groupPedidosByPratoOpc(pedidos);
+  const totalPedidos = pedidos.length;
+
+  const totalsHtml = Array.from(groups.entries())
+    .map(([key, arr]) => `<li><strong>Total de pedidos de ${key}:</strong> ${arr.length}</li>`)
+    .join("");
+
+  const sectionsHtml = Array.from(groups.entries())
+    .map(([key, arr]) => {
+      const itemsHtml = arr
+        .map(
+          (p) => `
               <div class="pedido">
                 <div><strong>Pedido:</strong> ${p.num}</div>
                 <div><strong>Data:</strong> ${p.data}</div>
@@ -1459,10 +1517,10 @@ export const mockEmailChatMensagemFormulario = (
                 <div><strong>Observações:</strong> ${p.obs ?? "-"}</div>
               </div>
             `,
-          )
-          .join("");
-  
-        return `
+        )
+        .join("");
+
+      return `
           <section class="group">
             <h2>${key}</h2>
             <div class="group-count">Total de pedidos de ${key}: ${arr.length}</div>
@@ -1471,10 +1529,10 @@ export const mockEmailChatMensagemFormulario = (
             </div>
           </section>
         `;
-      })
-      .join("");
-  
-    return `
+    })
+    .join("");
+
+  return `
     <!DOCTYPE html>
     <html lang="pt-BR">
       <head>
@@ -1521,7 +1579,7 @@ export const mockEmailChatMensagemFormulario = (
       </body>
     </html>
     `;
-  };
+};
 
 export const mockEmailAtualizacaoStatusPedido = (
   nomeUsuario: string,
@@ -1553,7 +1611,7 @@ export const mockEmailAtualizacaoStatusPedido = (
   }).join('')
 
   const totalGeralFormatado = totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  
+
   const statusColor = status === "Em Andamento" ? "#ffc107" : "#28a745"
   const statusBgColor = status === "Em Andamento" ? "#fff3cd" : "#d4edda"
   const statusBorderColor = status === "Em Andamento" ? "#ffc107" : "#28a745"
@@ -1690,10 +1748,10 @@ export const mockEmailAtualizacaoStatusPedido = (
           <div class="status-box">
             <h2>Olá, ${nomeUsuario}!</h2>
             <p>Seu pedido teve o status atualizado para: <strong>${status}</strong></p>
-            ${status === "Em Andamento" 
-              ? "<p>Seu pedido está sendo preparado e em breve estará disponível para retirada.</p>"
-              : "<p>Seu pedido foi processado e está pronto para retirada!</p>"
-            }
+            ${status === "Em Andamento"
+      ? "<p>Seu pedido está sendo preparado e em breve estará disponível para retirada.</p>"
+      : "<p>Seu pedido foi processado e está pronto para retirada!</p>"
+    }
           </div>
 
           <div class="order-details">
