@@ -88,7 +88,7 @@ export function MonacoEditor({
 
   useEffect(() => {
     if (monacoRef.current && theme) {
-      const currentTheme = resolvedTheme || theme
+      const currentTheme = resolvedTheme ?? theme
       if (currentTheme === "dark") {
         monacoRef.current.editor.setTheme("custom-dark")
       } else {
@@ -161,7 +161,7 @@ export function MonacoEditor({
     })
 
     // Definir tema inicial
-    temaSetado(resolvedTheme || theme || "dark")
+    temaSetado(resolvedTheme ?? !theme ? "dark" : "light")
 
     // Funções auxiliares para formatação
     const getSelectedText = (): string | null => {

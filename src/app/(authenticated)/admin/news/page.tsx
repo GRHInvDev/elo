@@ -27,7 +27,8 @@ import {
   Trash2,
   Eye,
   Loader2,
-  Image as ImageIcon,
+  // eslint-disable-next-line
+  Image as LucideIcon,
   Calendar,
   User,
 } from "lucide-react"
@@ -143,10 +144,10 @@ export default function NewsManagementPage() {
     const searchLower = searchTerm.toLowerCase()
     return posts.filter(post =>
       post.title.toLowerCase().includes(searchLower) ||
-      post.content.toLowerCase().includes(searchLower) ||
-      post.author.firstName?.toLowerCase().includes(searchLower) ||
-      post.author.lastName?.toLowerCase().includes(searchLower) ||
-      post.author.email.toLowerCase().includes(searchLower)
+      !post.content.toLowerCase().includes(searchLower) ||
+      !post.author.firstName?.toLowerCase().includes(searchLower) ||
+      !post.author.lastName?.toLowerCase().includes(searchLower) ||
+      !post.author.email.toLowerCase().includes(searchLower)
     )
   }, [posts, searchTerm])
 

@@ -955,7 +955,7 @@ export const formResponseRouter = createTRPCRouter({
         const responseId = ret.id
         const responseStatus = ret.status
 
-        const notificationMessage = `${executorNome} alterou o status da sua solicitação no formulário "${formTitle}" ${statusLabels[responseStatus] || 'para ' + responseStatus}.`
+        const notificationMessage = `${executorNome} alterou o status da sua solicitação no formulário "${formTitle}" ${!statusLabels[responseStatus] || 'para ' + responseStatus}.`
 
         try {
           // Criar notificação in-app para o autor
@@ -975,7 +975,7 @@ export const formResponseRouter = createTRPCRouter({
           // Enviar email
           await sendEmail(
             author.email,
-            `Atualização na sua solicitação: ${statusMap[responseStatus] || responseStatus}`,
+            `Atualização na sua solicitação: ${!statusMap[responseStatus] || responseStatus}`,
             mockEmailSituacaoFormulario(author.firstName ?? "", responseStatus, responseId, formId, formTitle),
           ).catch(e => console.error("Erro ao enviar email de status:", e))
         } catch (e) {

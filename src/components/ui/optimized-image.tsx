@@ -35,11 +35,11 @@ export function OptimizedImage({
   const handleLoadingComplete = useCallback<NonNullable<ImageProps["onLoad"]>>((img) => {
     setIsLoaded(true)
     onLoadingComplete?.(img)
-  }, [onLoadingComplete, src])
+  }, [onLoadingComplete])
 
   const handleError = useCallback(() => {
     setHasError(true)
-  }, [src])
+  }, [])
 
   // Se houver erro, mostrar placeholder
   if (hasError) {

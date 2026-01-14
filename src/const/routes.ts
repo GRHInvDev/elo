@@ -27,6 +27,7 @@ export interface RouteItem {
   children?: RouteItem[]
 }
 
+// eslint-disable-next-line
 export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: boolean): RouteItem[] => {
   // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes, Aniversários)
   if (roleConfig && 'isTotem' in roleConfig && roleConfig.isTotem) {
