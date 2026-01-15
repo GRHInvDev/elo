@@ -5,7 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { HelpCircle, Search, BookOpen, MessageCircle, Settings, FileText, Users } from "lucide-react"
+import { HelpCircle, Search, BookOpen, MessageCircle, Settings, FileText } from "lucide-react"
 import { useState } from "react"
 
 const faqData = [

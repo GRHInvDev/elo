@@ -69,9 +69,19 @@ export const api = {
       const caller = await createServerCaller();
       return caller.formResponse.getById({ responseId });
     },
-    listByForm: async (formId: string) => {
+    listByForm: async (input: {
+      formId: string;
+      startDate?: Date;
+      endDate?: Date;
+      priority?: "ASC" | "DESC";
+      userIds?: string[];
+      setores?: string[];
+      hasResponse?: boolean;
+      take?: number;
+      skip?: number;
+    }) => {
       const caller = await createServerCaller();
-      return caller.formResponse.listByForm({ formId });
+      return caller.formResponse.listByForm(input);
     }
   },
   booking: {

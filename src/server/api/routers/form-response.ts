@@ -5,7 +5,7 @@ import type { ResponseStatus } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
-import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario } from "@/lib/mail/html-mock"
+import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario, mockEmailTagFormulario } from "@/lib/mail/html-mock"
 
 /**
  * Gera o próximo número sequencial para um novo chamado
@@ -61,10 +61,10 @@ export const formResponseRouter = createTRPCRouter({
             }
           }
         })
-        
+
         if (form) {
           const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
-          
+
           // Criar notificações in-app
           if (recipients.length > 0) {
             const now = new Date()
@@ -86,7 +86,7 @@ export const formResponseRouter = createTRPCRouter({
 
           // Enviar emails para todos os donos do formulário
           const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
-          
+
           if (ownerUserIds.length > 0) {
             const ownerUsers = await ctx.db.user.findMany({
               where: { id: { in: ownerUserIds } },
@@ -101,7 +101,7 @@ export const formResponseRouter = createTRPCRouter({
             // Enviar email para cada dono do formulário
             for (const owner of ownerUsers) {
               if (owner.email) {
-                const ownerName = owner.firstName 
+                const ownerName = owner.firstName
                   ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                   : (owner.email ?? 'Usuário')
 
@@ -146,7 +146,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // eslint-disable-next-line @typescript-eslint/consistent-type-imports
       const roleConfig = (currentUser?.role_config ?? {}) as import("@/types/role-config").RolesConfig // não questione, just aceite
-      
+
       // Verificar se é sudo ou tem permissão can_create_solicitacoes
       if (!roleConfig.sudo && !(roleConfig.can_create_solicitacoes ?? false)) {
         throw new TRPCError({
@@ -206,7 +206,7 @@ export const formResponseRouter = createTRPCRouter({
       // Criar notificações e enviar emails
       try {
         const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== input.userId)
-        
+
         // Criar notificações in-app
         if (recipients.length > 0) {
           const now = new Date()
@@ -228,7 +228,7 @@ export const formResponseRouter = createTRPCRouter({
 
         // Enviar emails para todos os donos do formulário
         const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== input.userId)
-        
+
         if (ownerUserIds.length > 0) {
           const ownerUsers = await ctx.db.user.findMany({
             where: { id: { in: ownerUserIds } },
@@ -243,7 +243,7 @@ export const formResponseRouter = createTRPCRouter({
           // Enviar email para cada dono do formulário
           for (const owner of ownerUsers) {
             if (owner.email) {
-              const ownerName = owner.firstName 
+              const ownerName = owner.firstName
                 ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                 : (owner.email ?? 'Usuário')
 
@@ -280,6 +280,8 @@ export const formResponseRouter = createTRPCRouter({
         userIds: z.array(z.string()).optional(),
         setores: z.array(z.string()).optional(),
         hasResponse: z.boolean().optional(),
+        take: z.number().optional(),
+        skip: z.number().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -325,7 +327,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // Filtro por usuários e setores
       const userIdsToFilter: string[] = []
-      
+
       if (input?.userIds && input.userIds.length > 0) {
         userIdsToFilter.push(...input.userIds)
       }
@@ -350,7 +352,7 @@ export const formResponseRouter = createTRPCRouter({
         } else {
           // Se não for owner e os filtros não incluem o usuário atual, retornar vazio
           if (!uniqueUserIds.includes(ctx.auth.userId)) {
-            return []
+            return { items: [], totalCount: 0 }
           }
         }
       }
@@ -368,7 +370,7 @@ export const formResponseRouter = createTRPCRouter({
           if (responseIdsWithChat.length > 0) {
             responseIdsFilter = responseIdsWithChat
           } else {
-            return []
+            return { items: [], totalCount: 0 }
           }
         } else {
           if (responseIdsWithChat.length > 0) {
@@ -391,22 +393,52 @@ export const formResponseRouter = createTRPCRouter({
         ? { createdAt: "asc" }
         : { createdAt: "desc" }
 
-      return await ctx.db.formResponse.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              imageUrl: true,
-              setor: true,
+      const [items, totalCount] = await Promise.all([
+        ctx.db.formResponse.findMany({
+          where,
+          include: {
+            form: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                userId: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                imageUrl: true,
+                setor: true,
+              },
+            },
+            FormResponseChat: {
+              take: 2,
+              orderBy: { createdAt: "desc" },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    imageUrl: true,
+                  },
+                },
+              },
             },
           },
-        },
-        orderBy,
-      })
+          orderBy,
+          take: input.take,
+          skip: input.skip,
+        }),
+        ctx.db.formResponse.count({ where }),
+      ])
+
+      return { items, totalCount }
     }),
 
   listKanBan: protectedProcedure
@@ -451,7 +483,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // Filtro por usuários e setores
       const userIdsToFilter: string[] = []
-      
+
       if (input?.userIds && input.userIds.length > 0) {
         userIdsToFilter.push(...input.userIds)
       }
@@ -890,25 +922,65 @@ export const formResponseRouter = createTRPCRouter({
         },
         include: {
           form: true,
+          user: true, // Incluir autor para notificação
         },
       })
 
-      const user = await ctx.db.user.findUnique({
-        where: { id: response.userId },
+      const executor = await ctx.db.user.findUnique({
+        where: { id: currentUserId },
+        select: { firstName: true, lastName: true, email: true }
       })
 
-      if (ret && user && ret.form) {
-        const form = ret.form as { id: string; title: string | null }
+      const executorNome = executor?.firstName
+        ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`
+        : (executor?.email ?? 'Um administrador')
+
+      const statusMap: Record<string, string> = {
+        'NOT_STARTED': 'Não Iniciado',
+        'IN_PROGRESS': 'Em Andamento',
+        'COMPLETED': 'Finalizado'
+      }
+
+      const statusLabels: Record<string, string> = {
+        'NOT_STARTED': 'como Não Iniciado',
+        'IN_PROGRESS': 'para Em Andamento',
+        'COMPLETED': 'como Finalizado'
+      }
+
+      if (ret && ret.user && ret.form) {
+        const author = ret.user
+        const form = ret.form as { id: string; title: string | null; userId: string }
         const formTitle = form.title ?? "Formulário"
         const formId = form.id
         const responseId = ret.id
         const responseStatus = ret.status
 
-        await sendEmail(
-          user.email,
-          `Resposta ao formulário "${formTitle}"`,
-          mockEmailSituacaoFormulario(user.firstName ?? "", responseStatus, responseId, formId, formTitle),
-        )
+        const notificationMessage = `${executorNome} alterou o status da sua solicitação no formulário "${formTitle}" ${!statusLabels[responseStatus] || 'para ' + responseStatus}.`
+
+        try {
+          // Criar notificação in-app para o autor
+          await ctx.db.notification.create({
+            data: {
+              title: 'Status da solicitação alterado',
+              message: notificationMessage,
+              type: 'INFO',
+              channel: 'IN_APP',
+              userId: response.userId,
+              entityId: responseId,
+              entityType: 'form_response',
+              actionUrl: `/forms/${form.userId}`,
+            }
+          })
+
+          // Enviar email
+          await sendEmail(
+            author.email,
+            `Atualização na sua solicitação: ${!statusMap[responseStatus] || responseStatus}`,
+            mockEmailSituacaoFormulario(author.firstName ?? "", responseStatus, responseId, formId, formTitle),
+          ).catch(e => console.error("Erro ao enviar email de status:", e))
+        } catch (e) {
+          console.error("Erro ao processar notificações de status:", e)
+        }
       }
 
       return ret
@@ -1029,14 +1101,14 @@ export const formResponseRouter = createTRPCRouter({
     }),
 
   // ========== TAGS MANAGEMENT ==========
-  
+
   // Listar todas as tags
   getAllTags: protectedProcedure.query(async ({ ctx }) => {
     const config = await ctx.db.globalConfig.findFirst()
     if (!config?.formResponseTags) {
       return []
     }
-    
+
     const tags = config.formResponseTags as unknown as Array<{
       id: string
       nome: string
@@ -1045,7 +1117,7 @@ export const formResponseRouter = createTRPCRouter({
       countVezesUsadas: number
       ativa: boolean
     }>
-    
+
     return tags.filter(tag => tag.ativa)
   }),
 
@@ -1124,7 +1196,7 @@ export const formResponseRouter = createTRPCRouter({
           formResponseTags: [] as unknown as InputJsonValue,
         },
       })
-      
+
       if (!config.formResponseTags) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -1150,9 +1222,9 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Verificar se nome já existe (se estiver mudando)
-      if (input.nome && tags.some((tag) => 
-        tag.nome.toLowerCase() === input.nome!.toLowerCase() && 
-        tag.id !== input.id && 
+      if (input.nome && tags.some((tag) =>
+        tag.nome.toLowerCase() === input.nome!.toLowerCase() &&
+        tag.id !== input.id &&
         tag.ativa
       )) {
         throw new TRPCError({
@@ -1210,7 +1282,7 @@ export const formResponseRouter = createTRPCRouter({
           formResponseTags: [] as unknown as InputJsonValue,
         },
       })
-      
+
       if (!config.formResponseTags) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -1237,7 +1309,7 @@ export const formResponseRouter = createTRPCRouter({
 
       // Obter tags atuais da resposta
       const currentTags = (response.tags as unknown as string[]) || []
-      
+
       // Se a tag já está aplicada, não fazer nada
       if (currentTags.includes(input.tagId)) {
         return { success: true, message: "Tag já estava aplicada" }
@@ -1253,12 +1325,16 @@ export const formResponseRouter = createTRPCRouter({
       }
 
       // Atualizar resposta e tags globais
-      await Promise.all([
+      const [updatedResponse] = await Promise.all([
         ctx.db.formResponse.update({
           where: { id: input.responseId },
           data: {
             tags: updatedTags as unknown as InputJsonValue,
           },
+          include: {
+            user: true,
+            form: true,
+          }
         }),
         ctx.db.globalConfig.update({
           where: { id: config.id },
@@ -1267,6 +1343,49 @@ export const formResponseRouter = createTRPCRouter({
           },
         }),
       ])
+
+      // Notificar o autor da resposta
+      try {
+        const executor = await ctx.db.user.findUnique({
+          where: { id: ctx.auth.userId },
+          select: { firstName: true, lastName: true, email: true }
+        })
+        const executorNome = executor?.firstName
+          ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`
+          : (executor?.email ?? 'Um administrador')
+
+        const notificationMessage = `${executorNome} adicionou sua solicitação para tag "${tag.nome}".`
+
+        await ctx.db.notification.create({
+          data: {
+            title: 'Tag adicionada à sua solicitação',
+            message: notificationMessage,
+            type: 'INFO',
+            channel: 'IN_APP',
+            userId: updatedResponse.userId,
+            entityId: updatedResponse.id,
+            entityType: 'form_response',
+            actionUrl: `/forms/${updatedResponse.form.userId}`,
+          }
+        })
+
+        if (updatedResponse.user.email) {
+          await sendEmail(
+            updatedResponse.user.email,
+            `Tag adicionada: ${tag.nome}`,
+            mockEmailTagFormulario(
+              updatedResponse.user.firstName ?? "Usuário",
+              executorNome,
+              tag.nome,
+              updatedResponse.id,
+              updatedResponse.formId,
+              updatedResponse.form.title ?? 'Formulário'
+            )
+          ).catch(e => console.error("Erro ao enviar email de tag:", e))
+        }
+      } catch (e) {
+        console.error("Erro ao notificar aplicação de tag:", e)
+      }
 
       return { success: true }
     }),
@@ -1294,12 +1413,52 @@ export const formResponseRouter = createTRPCRouter({
       const currentTags = (response.tags as unknown as string[]) || []
       const updatedTags = currentTags.filter(tagId => tagId !== input.tagId)
 
-      await ctx.db.formResponse.update({
-        where: { id: input.responseId },
-        data: {
-          tags: updatedTags as unknown as InputJsonValue,
-        },
-      })
+      const [updatedResponse] = await Promise.all([
+        ctx.db.formResponse.update({
+          where: { id: input.responseId },
+          data: {
+            tags: updatedTags as unknown as InputJsonValue,
+          },
+          include: {
+            user: true,
+            form: true,
+          }
+        }),
+      ])
+
+      // Notificar o autor da resposta
+      try {
+        const executor = await ctx.db.user.findUnique({
+          where: { id: ctx.auth.userId },
+          select: { firstName: true, lastName: true, email: true }
+        })
+        const executorNome = executor?.firstName
+          ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`
+          : (executor?.email ?? 'Um administrador')
+
+        // Buscar nome da tag
+        const config = await ctx.db.globalConfig.findFirst()
+        const tags = (config?.formResponseTags as unknown as Array<{ id: string, nome: string }>) || []
+        const tag = tags.find(t => t.id === input.tagId)
+        const tagName = tag?.nome ?? 'Tag'
+
+        const notificationMessage = `${executorNome} removeu sua solicitação da tag "${tagName}".`
+
+        await ctx.db.notification.create({
+          data: {
+            title: 'Tag removida da sua solicitação',
+            message: notificationMessage,
+            type: 'INFO',
+            channel: 'IN_APP',
+            userId: updatedResponse.userId,
+            entityId: updatedResponse.id,
+            entityType: 'form_response',
+            actionUrl: `/forms/${updatedResponse.form.userId}`,
+          }
+        })
+      } catch (e) {
+        console.error("Erro ao notificar remoção de tag:", e)
+      }
 
       return { success: true }
     }),

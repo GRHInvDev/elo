@@ -1,7 +1,7 @@
 "use client"
 
 import Image, { type ImageProps } from "next/image"
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
 
 interface OptimizedImageProps {
@@ -25,7 +25,7 @@ export function OptimizedImage({
   className,
   priority = false,
   fill = false,
-  blurIntensity = 8,
+  // blurIntensity = 8,
   onLoadingComplete,
   imageFit = "cover"
 }: OptimizedImageProps) {
@@ -35,11 +35,11 @@ export function OptimizedImage({
   const handleLoadingComplete = useCallback<NonNullable<ImageProps["onLoad"]>>((img) => {
     setIsLoaded(true)
     onLoadingComplete?.(img)
-  }, [onLoadingComplete, src])
+  }, [onLoadingComplete])
 
   const handleError = useCallback(() => {
     setHasError(true)
-  }, [src])
+  }, [])
 
   // Se houver erro, mostrar placeholder
   if (hasError) {
@@ -53,9 +53,9 @@ export function OptimizedImage({
   }
 
   return (
-    <div 
-      className="relative w-full h-full" 
-      style={{ 
+    <div
+      className="relative w-full h-full"
+      style={{
         minHeight: fill ? '200px' : undefined,
         position: 'relative',
         overflow: 'hidden'
@@ -69,7 +69,7 @@ export function OptimizedImage({
           </div>
         </div>
       )}
-      
+
       {/* Imagem principal */}
       <Image
         src={src}
@@ -78,8 +78,8 @@ export function OptimizedImage({
         width={!fill ? width : undefined}
         height={!fill ? height : undefined}
         className={cn(
-          imageFit === "contain" 
-            ? "object-contain" 
+          imageFit === "contain"
+            ? "object-contain"
             : "object-cover",
           "transition-opacity duration-300",
           isLoaded ? "opacity-100" : "opacity-0",

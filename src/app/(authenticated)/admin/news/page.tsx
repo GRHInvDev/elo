@@ -27,7 +27,8 @@ import {
   Trash2,
   Eye,
   Loader2,
-  Image as ImageIcon,
+  // eslint-disable-next-line
+  Image as LucideIcon,
   Calendar,
   User,
 } from "lucide-react"
@@ -60,6 +61,16 @@ export default function NewsManagementPage() {
   const [loading, setLoading] = useState(false)
   const [createContent, setCreateContent] = useState("")
   const [editContent, setEditContent] = useState("")
+  const [editorHeight, setEditorHeight] = useState("500px")
+
+  useEffect(() => {
+    const handleResize = () => {
+      setEditorHeight(window.innerWidth < 640 ? "300px" : "500px")
+    }
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   const { isSudo, hasAdminAccess } = useAccessControl()
   const { toast } = useToast()
@@ -130,12 +141,13 @@ export default function NewsManagementPage() {
     if (!posts) return []
     if (!searchTerm) return posts
 
+    const searchLower = searchTerm.toLowerCase()
     return posts.filter(post =>
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      !!!post.author.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      !!!post.author.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.author.email.toLowerCase().includes(searchTerm.toLowerCase())
+      post.title.toLowerCase().includes(searchLower) ||
+      !post.content.toLowerCase().includes(searchLower) ||
+      !post.author.firstName?.toLowerCase().includes(searchLower) ||
+      !post.author.lastName?.toLowerCase().includes(searchLower) ||
+      !post.author.email.toLowerCase().includes(searchLower)
     )
   }, [posts, searchTerm])
 
@@ -159,7 +171,7 @@ export default function NewsManagementPage() {
       published: true,
       imageUrl: fileUrl,
     })
-    
+
     // Limpar o conteúdo após criar
     setCreateContent("")
   }
@@ -196,12 +208,12 @@ export default function NewsManagementPage() {
   if (!hasAccess) {
     return (
       <DashboardShell>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
+        <div className="flex items-center justify-center min-h-[40vh] px-4">
+          <div className="text-center max-w-md">
             <Newspaper className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">Acesso Negado</h3>
-            <p className="text-muted-foreground">
-              Você não tem permissão para acessar esta página.
+            <h3 className="mt-4 text-xl font-bold">Acesso Negado</h3>
+            <p className="mt-2 text-muted-foreground">
+              Você não tem permissão para acessar esta página de gerenciamento de notícias.
             </p>
           </div>
         </div>
@@ -212,7 +224,7 @@ export default function NewsManagementPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Gerenciamento de Notícias</h2>
             <p className="text-muted-foreground">
@@ -222,16 +234,16 @@ export default function NewsManagementPage() {
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Notícia
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleCreatePost}>
-                <DialogHeader>
-                  <DialogTitle>Criar Nova Notícia</DialogTitle>
-                  <DialogDescription>
+            <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+              <form onSubmit={handleCreatePost} className="space-y-6">
+                <DialogHeader className="space-y-2">
+                  <DialogTitle className="text-xl sm:text-2xl">Criar Nova Notícia</DialogTitle>
+                  <DialogDescription className="text-sm">
                     Compartilhe uma novidade importante com a equipe. Use Markdown para formatar o conteúdo.
                   </DialogDescription>
                 </DialogHeader>
@@ -270,7 +282,7 @@ export default function NewsManagementPage() {
                     <MonacoEditor
                       value={createContent}
                       onChange={(value) => setCreateContent(value ?? "")}
-                      height="500px"
+                      height={editorHeight}
                       language="markdown"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -278,10 +290,11 @@ export default function NewsManagementPage() {
                     </p>
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-col gap-2 sm:flex-row">
                   <Button
                     type="submit"
                     disabled={createPost.isPending || loading || !createContent.trim()}
+                    className="w-full sm:w-auto"
                   >
                     {createPost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Publicar
@@ -293,48 +306,48 @@ export default function NewsManagementPage() {
         </div>
 
         {/* Insights/estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-2">
-                <Newspaper className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Total de Notícias</span>
+                <Newspaper className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total</span>
               </div>
-              <div className="text-2xl font-bold">{filteredPosts.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">{filteredPosts.length}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Total de Visualizações</span>
+                <Eye className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Views</span>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-xl sm:text-2xl font-bold">
                 {filteredPosts.reduce((sum, post) => sum + (post.viewCount), 0)}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Total de Autores</span>
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Autores</span>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-xl sm:text-2xl font-bold">
                 {new Set(filteredPosts.map(post => post.authorId)).size}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Média Visualizações</span>
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Média</span>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-xl sm:text-2xl font-bold">
                 {filteredPosts.length > 0
                   ? Math.round(filteredPosts.reduce((sum, post) => sum + (post.viewCount), 0) / filteredPosts.length)
                   : 0
@@ -344,30 +357,30 @@ export default function NewsManagementPage() {
           </Card>
         </div>
 
-        {/* Campo de busca */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
+        <Card className="border-none sm:border shadow-none sm:shadow-sm">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+              <Search className="h-5 w-5 shrink-0" />
               Buscar Notícias
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Digite o título, conteúdo ou autor para filtrar as notícias
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
+          <CardContent className="px-4 sm:px-6 pb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <Label htmlFor="search">Busca</Label>
+                <Label htmlFor="search" className="mb-1.5 inline-block text-xs font-medium uppercase tracking-wider text-muted-foreground sm:text-sm">Busca</Label>
                 <Input
                   id="search"
                   placeholder="Digite para buscar..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-muted/50 border-none sm:border-input focus-visible:ring-1"
                 />
               </div>
               <div className="flex items-end">
-                <Button variant="outline" onClick={() => setSearchTerm("")}>
+                <Button variant="outline" onClick={() => setSearchTerm("")} className="w-full sm:w-auto font-medium">
                   Limpar
                 </Button>
               </div>
@@ -376,117 +389,117 @@ export default function NewsManagementPage() {
         </Card>
 
         {/* Lista de posts */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Newspaper className="h-5 w-5" />
-              Notícias ({filteredPosts.length})
-            </CardTitle>
-            <CardDescription>
-              {isLoading ? "Carregando notícias..." : `${filteredPosts.length} notícia(s) encontrada(s)`}
-            </CardDescription>
+        <Card className="rounded-md border">
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Newspaper className="h-5 w-5" />
+                  Notícias ({filteredPosts.length})
+                </CardTitle>
+                <CardDescription>
+                  {isLoading ? "Carregando notícias..." : `${filteredPosts.length} notícia(s) encontrada(s)`}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-muted-foreground mt-2">Carregando notícias...</p>
-              </div>
-            ) : filteredPosts.length > 0 ? (
-              <div className="space-y-4">
-                {filteredPosts.map((post) => (
-                  <Card key={post.id} className="overflow-hidden">
-                    <CardContent className="p-6">
-                      <div className="flex gap-4">
-                        {/* Imagem do post */}
-                        <div className="flex-shrink-0">
-                          {(post.imageUrl ?? ((post as PostWithImages).images?.length ?? 0) > 0) ? (
-                            <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted">
-                              <Image
-                                src={
-                                  (post as PostWithImages).images?.[0]?.imageUrl ?? post.imageUrl ?? "/placeholder.svg"
-                                }
-                                alt={post.title}
-                                fill
-                                className="object-cover"
-                              />
-                              {((post as PostWithImages).images?.length ?? 0) > 1 && (
-                                <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 py-0.5 rounded">
-                                  +{((post as PostWithImages).images?.length ?? 0) - 1}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center">
-                              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
 
-                        {/* Conteúdo do post */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-lg truncate">{post.title}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                                {post.content}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Metadados */}
-                          <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <User className="h-4 w-4" />
-                              {post.author.firstName} {post.author.lastName}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Eye className="h-4 w-4" />
-                              {post.viewCount} visualizações
-                            </div>
-                          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredPosts.length > 0 ? (
+            <div className="divide-y p-0">
+              {filteredPosts.map((post) => (
+                <div key={post.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-start gap-4 flex-1">
+                    {/* Imagem Thumbnail */}
+                    <div className="flex-shrink-0">
+                      {(post.imageUrl ?? ((post as PostWithImages).images?.length ?? 0) > 0) ? (
+                        <div className="relative h-16 w-16 sm:h-12 sm:w-12 rounded-md overflow-hidden bg-muted border">
+                          <Image
+                            src={
+                              (post as PostWithImages).images?.[0]?.imageUrl ?? post.imageUrl ?? "/placeholder.svg"
+                            }
+                            alt={post.title}
+                            fill
+                            className="object-cover"
+                          />
                         </div>
-
-                        {/* Ações */}
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingPost(post)}
-                          >
-                            <Edit3 className="h-4 w-4 mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeletePost(post.id)}
-                            disabled={deletePost.isPending}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            {deletePost.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 mr-1" />
-                            )}
-                            Excluir
-                          </Button>
+                      ) : (
+                        <div className="h-16 w-16 sm:h-12 sm:w-12 rounded-md bg-muted border flex items-center justify-center">
+                          <Newspaper className="h-6 w-6 sm:h-5 sm:w-5 text-muted-foreground/50" />
                         </div>
+                      )}
+                    </div>
+
+                    {/* Conteúdo Resumido */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-base sm:text-sm leading-tight text-foreground line-clamp-1">
+                          {post.title}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+                      <div className="flex items-center gap-x-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span className="truncate max-w-[100px]">{post.author.firstName}</span>
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(post.createdAt, "dd/MM/yy", { locale: ptBR })}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {post.viewCount}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex items-center gap-2 self-end sm:self-auto pt-2 sm:pt-0">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setEditingPost(post)}
+                      title="Editar"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDeletePost(post.id)}
+                      disabled={deletePost.isPending}
+                      title="Excluir"
+                    >
+                      {deletePost.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 px-4">
+              <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+                <Search className="h-6 w-6 text-muted-foreground" />
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchTerm ? "Nenhuma notícia encontrada para este filtro." : "Nenhuma notícia publicada ainda."}
-              </div>
-            )}
-          </CardContent>
+              <h3 className="text-base font-medium">Nenhuma notícia encontrada</h3>
+              <p className="text-muted-foreground text-sm mt-1">
+                {searchTerm ? "Tente buscar por outros termos." : "Crie uma nova notícia para começar."}
+              </p>
+            </div>
+          )}
         </Card>
 
         {/* Dialog de edição */}
@@ -496,12 +509,12 @@ export default function NewsManagementPage() {
             setEditContent("")
           }
         }}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
             {editingPost && (
-              <form onSubmit={handleUpdatePost}>
-                <DialogHeader>
-                  <DialogTitle>Editar Notícia</DialogTitle>
-                  <DialogDescription>
+              <form onSubmit={handleUpdatePost} className="space-y-6">
+                <DialogHeader className="space-y-2">
+                  <DialogTitle className="text-xl sm:text-2xl">Editar Notícia</DialogTitle>
+                  <DialogDescription className="text-sm">
                     Faça alterações nesta notícia. Use Markdown para formatar o conteúdo.
                   </DialogDescription>
                 </DialogHeader>
@@ -541,7 +554,7 @@ export default function NewsManagementPage() {
                     <MonacoEditor
                       value={editContent}
                       onChange={(value) => setEditContent(value ?? "")}
-                      height="500px"
+                      height={editorHeight}
                       language="markdown"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -549,10 +562,11 @@ export default function NewsManagementPage() {
                     </p>
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-col gap-2 sm:flex-row">
                   <Button
                     type="submit"
                     disabled={updatePost.isPending || loading || !editContent.trim()}
+                    className="w-full sm:w-auto"
                   >
                     {updatePost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Atualizar

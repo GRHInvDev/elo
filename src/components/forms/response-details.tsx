@@ -5,23 +5,14 @@ import type { Field } from "@/lib/form-types"
 import { Separator } from "@/components/ui/separator"
 
 interface ResponseDetailsProps {
-  responseData: Record<string, string | number | File[] | null | undefined | string[]>[]
+  responseData: Record<string, unknown>[]
   formFields: Field[]
-  showOnlyMarkedFields?: boolean // Se true, mostra apenas campos com showInResponses = true
 }
 
-export function ResponseDetails({ responseData, formFields, showOnlyMarkedFields = false }: ResponseDetailsProps) {
-  if (!responseData || responseData.length === 0) {
-    return <p className="text-muted-foreground">Nenhuma resposta encontrada.</p>
-  }
-
-  // Filtrar campos se showOnlyMarkedFields for true
-  const fieldsToShow = showOnlyMarkedFields
-    ? formFields.filter(field => field.showInResponses === true)
-    : formFields
-
+export function ResponseDetails({ responseData, formFields }: ResponseDetailsProps) {
   // Obter o primeiro objeto de resposta (normalmente só há um)
   const responseObj = responseData[0]
+  const fieldsToShow = formFields
 
   // Função auxiliar para converter \n em quebras de linha
   const renderTextWithLineBreaks = (text: string) => {
@@ -78,6 +69,8 @@ export function ResponseDetails({ responseData, formFields, showOnlyMarkedFields
         return JSON.stringify(value)
       case "textarea":
       case "text":
+      case "dynamic":
+      case "formatted":
         // Para campos de texto, converter \n em quebras de linha
         if (typeof value === "string") {
           return renderTextWithLineBreaks(value)
@@ -113,7 +106,7 @@ export function ResponseDetails({ responseData, formFields, showOnlyMarkedFields
           <div key={field.id} className="space-y-2">
             <div className="flex flex-col">
               <h3 className="font-medium">{field.label}</h3>
-              <div className="mt-1 text-sm">{renderValue(field.name, field.type, value)}</div>
+              <div className="mt-1 text-sm">{renderValue(field.name, field.type, value as string)}</div>
             </div>
             <Separator />
           </div>

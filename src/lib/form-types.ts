@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from "uuid"
 
-export type FieldType = "text" | "number" | "checkbox" | "formatted" | "combobox" | "file" | "textarea"
+export type FieldType = "text" | "number" | "checkbox" | "formatted" | "combobox" | "file" | "textarea" | "dynamic"
+
+export type DynamicType = "user_name" | "user_sector"
 
 export type FormattedType = "cpf" | "cnpj" | "phone" | "email"
 
@@ -17,7 +19,6 @@ export interface BaseField {
   placeholder?: string
   required?: boolean
   helpText?: string
-  showInResponses?: boolean // Se true, o campo será exibido na página /[id]/responses
 }
 
 export interface TextField extends BaseField {
@@ -58,10 +59,16 @@ export interface FileField extends BaseField {
 export interface TextareaField extends BaseField {
   type: "textarea"
   rows?: number
+  minLength?: number
   maxLength?: number
 }
 
-export type Field = TextField | NumberField | CheckboxField | FormattedField | ComboboxField | FileField | TextareaField
+export interface DynamicField extends BaseField {
+  type: "dynamic"
+  dynamicType: DynamicType
+}
+
+export type Field = TextField | NumberField | CheckboxField | FormattedField | ComboboxField | FileField | TextareaField | DynamicField
 
 export function getFieldTypeLabel(type: FieldType): string {
   switch (type) {
@@ -79,6 +86,8 @@ export function getFieldTypeLabel(type: FieldType): string {
       return "Arquivo"
     case "textarea":
       return "Texto Longo"
+    case "dynamic":
+      return "Dado Dinâmico"
     default:
       return type
   }
@@ -137,6 +146,13 @@ export function createDefaultField(type: FieldType): Field {
         ...baseField,
         type: "textarea",
         rows: 3,
+      }
+    case "dynamic":
+      return {
+        ...baseField,
+        type: "dynamic",
+        dynamicType: "user_name",
+        label: "Nome do Usuário",
       }
     default:
       return {

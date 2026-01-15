@@ -3,12 +3,12 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import type { InputJsonValue } from "@prisma/client/runtime/library"
-import { db } from "@/server/db"
+import type { db } from "@/server/db"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
 import type { RolesConfig } from "@/types/role-config"
 
-const StatusEnum = z.enum(["NEW","IN_REVIEW","APPROVED","IN_PROGRESS","DONE","NOT_IMPLEMENTED"])
+const StatusEnum = z.enum(["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"])
 
 const ScoreItem = z.object({
   text: z.string().max(2000).optional(),
@@ -33,10 +33,10 @@ const adminMiddleware = middleware(async ({ ctx, next }) => {
 
   const roleConfig = user?.role_config as RolesConfig;
   const hasAdminAccess = roleConfig?.sudo || (Array.isArray(roleConfig?.admin_pages) && roleConfig.admin_pages.includes("/admin"));
-  
+
   if (!user || !hasAdminAccess) {
     throw new TRPCError({
-      code: "FORBIDDEN", 
+      code: "FORBIDDEN",
       message: "Acesso negado. Apenas administradores podem acessar esta funcionalidade.",
     })
   }
@@ -113,11 +113,11 @@ function updateEditHistory(
   currentValue: string | null
 ): Record<string, unknown> {
   const normalizedValue = currentValue ?? ""
-  
+
   // O histórico pode ter estrutura: { description: {...}, problem: {...} }
   // ou estrutura antiga (legado): { "texto-original": "...", "edicao-1": "..." }
   let editHistory: Record<string, unknown> = {}
-  
+
   if (!existingHistory) {
     // Criar novo histórico com estrutura separada para description e problem
     editHistory = {
@@ -127,17 +127,17 @@ function updateEditHistory(
     }
   } else {
     const existing = existingHistory as Record<string, unknown>
-    
+
     // Verificar se já tem estrutura explícita (description ou problem)
     const hasExplicitDescription = existing.description && typeof existing.description === "object"
     const hasExplicitProblem = existing.problem && typeof existing.problem === "object"
-    
+
     // Verificar se é histórico legado não estruturado (tem edicao-* mas não tem description/problem)
     const hasLegacyEntries = Object.keys(existing).some(key => key.startsWith("edicao-") || key === "texto-original")
     const isLegacyUnstructured = hasLegacyEntries && !hasExplicitDescription && !hasExplicitProblem
-    
+
     const fieldHistory = existing[fieldName]
-    
+
     if (fieldHistory && typeof fieldHistory === "object") {
       // Já existe histórico estruturado do campo - adicionar nova edição
       const history = fieldHistory as Record<string, string>
@@ -146,7 +146,7 @@ function updateEditHistory(
       const nextEditNumber = editKeys.length + 1
       history[`edicao-${nextEditNumber}`] = normalizedValue
       editHistory[fieldName] = history
-      
+
       // Preservar o outro campo se existir
       if (fieldName === "description" && hasExplicitProblem) {
         editHistory.problem = existing.problem
@@ -162,7 +162,7 @@ function updateEditHistory(
         },
         _legacy: existing, // Preservar histórico legado para revisão manual
       }
-      
+
       // Preservar o outro campo se existir explicitamente
       if (fieldName === "description" && hasExplicitProblem) {
         editHistory.problem = existing.problem
@@ -175,7 +175,7 @@ function updateEditHistory(
       editHistory[fieldName] = {
         "texto-original": normalizedValue,
       }
-      
+
       // Preservar o outro campo se existir
       if (fieldName === "description" && hasExplicitProblem) {
         editHistory.problem = existing.problem
@@ -184,7 +184,7 @@ function updateEditHistory(
       }
     }
   }
-  
+
   return editHistory
 }
 
@@ -197,7 +197,7 @@ export const suggestionRouter = createTRPCRouter({
       description: z.string().trim().min(1), // Solução proposta
       problem: z.string().trim().optional(), // Problema identificado
       contribution: z.object({
-        type: z.enum(["IDEIA_INOVADORA","SUGESTAO_MELHORIA","SOLUCAO_PROBLEMA","OUTRO"]),
+        type: z.enum(["IDEIA_INOVADORA", "SUGESTAO_MELHORIA", "SOLUCAO_PROBLEMA", "OUTRO"]),
         other: z.string().trim().optional(),
       }),
     }))
@@ -246,7 +246,7 @@ export const suggestionRouter = createTRPCRouter({
       description: z.string().trim().min(1), // Solução proposta
       problem: z.string().trim().min(1), // Problema identificado
       contribution: z.object({
-        type: z.enum(["IDEIA_INOVADORA","SUGESTAO_MELHORIA","SOLUCAO_PROBLEMA","OUTRO"]),
+        type: z.enum(["IDEIA_INOVADORA", "SUGESTAO_MELHORIA", "SOLUCAO_PROBLEMA", "OUTRO"]),
         other: z.string().trim().optional(),
       }),
       impact: z.object({
@@ -285,18 +285,18 @@ export const suggestionRouter = createTRPCRouter({
       const capacityScore = input.capacity?.score ?? null
       const effortScore = input.effort?.score ?? null
 
-      const finalScore = 
+      const finalScore =
         [impactScore, capacityScore, effortScore].every((v) => typeof v === "number")
           ? (impactScore! + capacityScore! - effortScore!)
           : null
 
-      const finalClassification = 
+      const finalClassification =
         typeof finalScore === "number"
           ? (finalScore >= 15
-              ? { label: "Aprovar para Gestores", range: "15-20" }
-              : finalScore >= 10
-                ? { label: "Ajustar e incubar", range: "10-14" }
-                : { label: "Descartar com justificativa clara", range: "0-9" })
+            ? { label: "Aprovar para Gestores", range: "15-20" }
+            : finalScore >= 10
+              ? { label: "Ajustar e incubar", range: "10-14" }
+              : { label: "Descartar com justificativa clara", range: "0-9" })
           : null
 
       // Validar se o usuário existe (se fornecido)
@@ -340,7 +340,7 @@ export const suggestionRouter = createTRPCRouter({
       if (!userIdToAssign) {
         const UNASSIGNED_USER_ID = "Não atribuído"
         const UNASSIGNED_USER_EMAIL = "sistema@elo.boxdistribuidor"
-        
+
         const unassignedUser = await ctx.db.user.upsert({
           where: {
             email: UNASSIGNED_USER_EMAIL
@@ -510,18 +510,18 @@ export const suggestionRouter = createTRPCRouter({
   listKanban: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.suggestion.findMany({
       orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          ideaNumber: true,
-          description: true, // Solução proposta
-          problem: true, // Problema identificado
-          submittedName: true,
-          status: true,
-          isTextEdited: true,
-          createdAt: true,
-        },
-      })
-    }),
+      select: {
+        id: true,
+        ideaNumber: true,
+        description: true, // Solução proposta
+        problem: true, // Problema identificado
+        submittedName: true,
+        status: true,
+        isTextEdited: true,
+        createdAt: true,
+      },
+    })
+  }),
 
   // Atualizações do admin (impact/capacity/effort/kpis/status/reason/analyst)
   updateAdmin: adminProcedure
@@ -563,10 +563,10 @@ export const suggestionRouter = createTRPCRouter({
       const finalClassification =
         typeof finalScore === "number"
           ? (finalScore >= 15
-              ? { label: "Aprovar para Gestores", range: "15-20" }
-              : finalScore >= 10
-                ? { label: "Ajustar e incubar", range: "10-14" }
-                : { label: "Descartar com justificativa clara", range: "0-9" })
+            ? { label: "Aprovar para Gestores", range: "15-20" }
+            : finalScore >= 10
+              ? { label: "Ajustar e incubar", range: "10-14" }
+              : { label: "Descartar com justificativa clara", range: "0-9" })
           : null
 
       // Buscar dados da ideia e usuário antes da atualização
@@ -799,7 +799,7 @@ export const suggestionRouter = createTRPCRouter({
       const suggestion = await validateSuggestionEdit(ctx.db, input.id, ctx.auth.userId)
 
       const newProblem = input.problem ?? null
-      
+
       // Se o problema não mudou, não fazer nada
       if (suggestion.problem === newProblem) {
         return await ctx.db.suggestion.findUnique({

@@ -1,41 +1,20 @@
 export type ResponseStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
 
-export interface FormResponse {
+export interface UserBasicInfo {
     id: string
-    number: number | null // Número sequencial do chamado (#0000001) - null para registros antigos
+    firstName: string | null
+    lastName: string | null
+    email: string
+    imageUrl: string | null
+    setor?: string | null
+}
+
+export interface FormBasicInfo {
+    id: string
+    title: string | null
+    description: string | null
     userId: string
-    formId: string
-    responses: unknown[]
-    status: ResponseStatus
-    statusComment: string | null
-    tags?: string[] | null // IDs das tags aplicadas
-    createdAt: Date
-    updatedAt: Date
-    // Campos derivados (Kanban)
-    lastChatAt?: Date | null
-    myLastViewedAt?: Date | null
-    hasNewMessages?: boolean
-    form: {
-        id: string
-        title: string
-        description: string | null
-        userId: string
-        user: {
-            id: string
-            firstName: string | null
-            lastName: string | null
-            email: string
-            imageUrl: string | null
-        }
-    }
-    user: {
-        id: string
-        firstName: string | null
-        lastName: string | null
-        email: string
-        imageUrl: string | null
-        setor?: string | null
-    }
+    user?: UserBasicInfo
 }
 
 export interface ChatMessage {
@@ -43,14 +22,38 @@ export interface ChatMessage {
     userId: string
     formResponseId: string
     message: string
-    createdAt: Date
-    updatedAt: Date
-    user: {
-        id: string
-        firstName: string | null
-        lastName: string | null
-        email: string
-        imageUrl: string | null
-        setor?: string | null
-    }
+    createdAt: Date | string
+    updatedAt: Date | string
+    user: UserBasicInfo
+}
+
+export interface FormResponse {
+    id: string
+    number: number | null
+    userId: string
+    formId: string
+    responses: Record<string, unknown>[]
+    status: ResponseStatus
+    statusComment: string | null
+    tags?: string[] | null
+    createdAt: Date | string
+    updatedAt: Date | string
+    lastChatAt?: Date | string | null
+    myLastViewedAt?: Date | string | null
+    hasNewMessages?: boolean
+
+    // Relations (Prisma returns these based on include)
+    form: FormBasicInfo
+    user: UserBasicInfo
+    FormResponseChat?: ChatMessage[]
+
+    // Legacy/Alternative names
+    formResponseChat?: ChatMessage[]
+}
+
+/**
+ * Type helper for FormResponse with Chat included
+ */
+export type FormResponseWithChat = FormResponse & {
+    FormResponseChat: ChatMessage[]
 }

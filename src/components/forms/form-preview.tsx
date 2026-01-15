@@ -78,8 +78,12 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
       case "textarea":
         schema = z.string()
         if (field.required) schema = schema.min(1, "Este campo é obrigatório")
+        if (field.minLength) schema = schema.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
         if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
         if (!field.required) schema = schema.optional()
+        break
+      case "dynamic":
+        schema = z.string().optional()
         break
     }
 
@@ -237,6 +241,14 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
                 }}
                 disabled={readOnly}
               />
+            )}
+
+            {field.type === "dynamic" && (
+              <div className="p-3 bg-muted rounded-md border border-dashed border-muted-foreground/50">
+                <p className="text-sm text-muted-foreground flex items-center gap-2 italic">
+                  <span>[O sistema coletará seu {field.dynamicType === "user_name" ? "nome" : "setor"} automaticamente]</span>
+                </p>
+              </div>
             )}
 
             {field.helpText && <p className="text-sm text-muted-foreground">{field.helpText}</p>}

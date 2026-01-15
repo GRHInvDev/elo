@@ -43,7 +43,7 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
   // Auto-expand groups containing the current route
   useEffect(() => {
-    const routes = routeItems(db_user?.role_config, isOwnerOfAnyForm)
+    const routes = routeItems(db_user?.role_config)
     const groupsToExpand = new Set<string>()
 
     const findActiveGroups = (items: RouteItem[]) => {
@@ -187,7 +187,7 @@ export function MainNav() {
     <>
       {/* Mobile navigation */}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTitle className="hidden"/>
+        <DialogTitle className="hidden" />
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 p-0 md:hidden">
             <Menu className="h-5 w-5" />

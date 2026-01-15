@@ -13,6 +13,7 @@ const fieldTypes = [
   { type: "combobox", label: "Combobox" },
   { type: "file", label: "Arquivo" },
   { type: "textarea", label: "Texto Longo" },
+  { type: "dynamic", label: "Dado Dinâmico" },
 ] as const
 
 interface FieldTypeSelectorProps {

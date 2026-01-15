@@ -184,7 +184,6 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
             <ResponseDetails 
               responseData={response.responses as Record<string, string | number | string[] | File[] | null | undefined>[]} 
               formFields={response.form.fields as unknown as Field[]}
-              showOnlyMarkedFields={true}
             />
           </CardContent>
         </Card>

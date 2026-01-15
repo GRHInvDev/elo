@@ -8,7 +8,6 @@ import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/dashboard-shell"
-import { auth } from "@clerk/nextjs/server"
 import { FormDescription } from "@/components/forms/form-description"
 import { CreateManualResponseButtonWrapper } from "@/components/forms/create-manual-response-button-wrapper"
 import { canEditForm } from "@/lib/access-control"
@@ -25,9 +24,9 @@ interface FormPageProps {
 }
 
 export default async function FormPage({ params }: FormPageProps) {
-  const {id} = await params;
+  const { id } = await params;
   const form = await api.form.getById(id)
-  const user = await auth();
+  // const user = await auth();
   const userData = await api.user.me()
 
   // Verificar se o usuário tem permissão para acessar este formulário
@@ -38,7 +37,7 @@ export default async function FormPage({ params }: FormPageProps) {
 
   // Verificar acesso considerando privacidade
   const roleConfig = userData.role_config;
-  
+
   // Se é TOTEM, não pode ver
   if (roleConfig?.isTotem) {
     redirect("/forms")
@@ -91,27 +90,27 @@ export default async function FormPage({ params }: FormPageProps) {
                 Respostas
               </Button>
             </Link>
-              {
-                canEditForm(
-                  userData.role_config,
-                  userData.id,
-                  form.id,
-                  {
-                    userId: form.userId,
-                    ownerIds: form.ownerIds,
-                    isPrivate: form.isPrivate,
-                    allowedUsers: form.allowedUsers,
-                    allowedSectors: form.allowedSectors,
-                  },
-                  userData.setor
-                ) &&
-                <Link href={`/forms/${form.id}/edit`}>
-                  <Button variant="outline" className="col-span-1 w-full">
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Editar
-                  </Button>
-                </Link>
-              }
+            {
+              canEditForm(
+                userData.role_config,
+                userData.id,
+                form.id,
+                {
+                  userId: form.userId,
+                  ownerIds: form.ownerIds,
+                  isPrivate: form.isPrivate,
+                  allowedUsers: form.allowedUsers,
+                  allowedSectors: form.allowedSectors,
+                },
+                userData.setor
+              ) &&
+              <Link href={`/forms/${form.id}/edit`}>
+                <Button variant="outline" className="col-span-1 w-full">
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+              </Link>
+            }
             <Link href={`/forms/${form.id}/respond`}>
               <Button className="col-span-1 w-full">
                 <FileText className="mr-2 h-4 w-4" />

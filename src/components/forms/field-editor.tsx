@@ -1,5 +1,5 @@
 "use client"
-import type { Field, FormattedType } from "@/lib/form-types"
+import type { DynamicType, Field, FormattedType } from "@/lib/form-types"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -15,7 +15,7 @@ interface FieldEditorProps {
 
 export function FieldEditor({ field, onChange }: FieldEditorProps) {
   const updateField = (updates: Partial<Field>) => {
-    onChange({ ...field, ...updates })
+    onChange({ ...field, ...updates } as Field)
   }
 
   const addOption = () => {
@@ -28,7 +28,7 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
   const updateOption = (index: number, key: "label" | "value", value: string) => {
     if (field.type === "combobox" && field.options) {
       const options = [...field.options]
-      options[index] = { value: `${index+1} - ${options[index]?.label ?? ""}`, label: options[index]?.label ?? "" ,  [key]: value ?? "" }
+      options[index] = { value: `${index + 1} - ${options[index]?.label ?? ""}`, label: options[index]?.label ?? "", [key]: value ?? "" }
       updateField({ options })
     }
   }
@@ -85,15 +85,6 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
             onCheckedChange={(checked) => updateField({ required: checked === true })}
           />
           <Label htmlFor="required">Campo obrigatório</Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="showInResponses"
-            checked={field.showInResponses ?? false}
-            onCheckedChange={(checked) => updateField({ showInResponses: checked === true })}
-          />
-          <Label htmlFor="showInResponses">Exibir em /[id]/responses</Label>
         </div>
 
         {/* Campos específicos por tipo */}
@@ -201,7 +192,7 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
         )}
 
         {field.type === "textarea" && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="rows">Linhas</Label>
               <Input
@@ -216,19 +207,35 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
                 }
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="textareaMaxLength">Tamanho máximo</Label>
-              <Input
-                id="textareaMaxLength"
-                type="number"
-                min={0}
-                value={field.maxLength ?? ""}
-                onChange={(e) =>
-                  updateField({
-                    maxLength: e.target.value ? Number.parseInt(e.target.value) : undefined,
-                  })
-                }
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="textareaMinLength">Tamanho mínimo</Label>
+                <Input
+                  id="textareaMinLength"
+                  type="number"
+                  min={0}
+                  value={field.minLength ?? ""}
+                  onChange={(e) =>
+                    updateField({
+                      minLength: e.target.value ? Number.parseInt(e.target.value) : undefined,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="textareaMaxLength">Tamanho máximo</Label>
+                <Input
+                  id="textareaMaxLength"
+                  type="number"
+                  min={0}
+                  value={field.maxLength ?? ""}
+                  onChange={(e) =>
+                    updateField({
+                      maxLength: e.target.value ? Number.parseInt(e.target.value) : undefined,
+                    })
+                  }
+                />
+              </div>
             </div>
           </div>
         )}
@@ -310,6 +317,28 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
               <Label htmlFor="multiple-files">Permitir múltiplos arquivos</Label>
             </div>
           </>
+        )}
+
+        {field.type === "dynamic" && (
+          <div className="grid gap-2">
+            <Label htmlFor="dynamicType">Tipo de dado dinâmico</Label>
+            <Select
+              value={field.dynamicType ?? "user_name"}
+              onValueChange={(value) => {
+                const label = value === "user_name" ? "Nome do Usuário" : "Setor";
+                updateField({ dynamicType: value as DynamicType, label });
+              }}
+            >
+              <SelectTrigger id="dynamicType">
+                <SelectValue placeholder="Selecione o tipo de dado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user_name">Nome do Usuário</SelectItem>
+                <SelectItem value="user_sector">Setor do Usuário</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Este campo será preenchido automaticamente pelo sistema.</p>
+          </div>
         )}
 
         <div className="grid gap-2">
