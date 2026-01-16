@@ -97,7 +97,7 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
           <FormResponseComponent
             formId={formId}
             fields={fields}
-            existingResponse={response.responses[0] as Record<string, unknown>}
+            existingResponse={response.responses[0]!}
             onSubmit={handleSubmit}
             isEditing={true}
             isSubmitting={updateResponse.isPending}
