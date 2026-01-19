@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
-import { UPLTButton } from "./ui/uplt-button"
+import { UPLTButton } from "@/components/ui/uplt-button"
 import { useAccessControl } from "@/hooks/use-access-control"
 
 export function CreateFlyerButton() {
@@ -86,14 +86,14 @@ export function CreateFlyerButton() {
           title: "Enviando imagem",
           description: "Aguarde enquanto enviamos a imagem...",
         })
-        
+
         await sendRef.current()
-        
+
         // Se após o upload ainda não temos a URL, aguardar um pouco
         if (!fileUrl) {
           await new Promise(resolve => setTimeout(resolve, 1000))
         }
-        
+
         return true
       } catch (error) {
         toast({
@@ -106,14 +106,14 @@ export function CreateFlyerButton() {
         setLoading(false)
       }
     }
-    
+
     return imageUploaded // Já está carregada
   }
 
   // Função para enviar o formulário
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    
+
     if (!title || !description) {
       toast({
         title: "Campos obrigatórios",
@@ -122,13 +122,13 @@ export function CreateFlyerButton() {
       })
       return
     }
-    
+
     setLoading(true)
-    
+
     try {
       // Primeiro, garantir que a imagem está carregada
       const imageReady = await handleImageUpload()
-      
+
       if (!imageReady || !fileUrl) {
         toast({
           title: "Imagem não carregada",
@@ -138,7 +138,7 @@ export function CreateFlyerButton() {
         setLoading(false)
         return
       }
-      
+
       // Agora podemos criar o flyer com todos os dados disponíveis
       await createFlyer.mutateAsync({
         title,
@@ -193,31 +193,31 @@ export function CreateFlyerButton() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="title">Título</Label>
-              <Input 
-                id="title" 
+              <Input
+                id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Digite o título do encarte" 
-                required 
+                placeholder="Digite o título do encarte"
+                required
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="iframe">Link do PDF</Label>
-              <Input 
-                id="iframe" 
+              <Input
+                id="iframe"
                 value={iframe}
                 onChange={(e) => setIframe(e.target.value)}
-                placeholder="Digite o valor src do iframe" 
+                placeholder="Digite o valor src do iframe"
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Descrição</Label>
-              <Textarea 
-                id="description" 
+              <Textarea
+                id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Digite a descrição do encarte" 
-                required 
+                placeholder="Digite a descrição do encarte"
+                required
               />
             </div>
           </div>
@@ -226,7 +226,7 @@ export function CreateFlyerButton() {
             <UPLTButton
               sendRef={sendRef}
               onImageUrlGenerated={handleImageUrlGenerated}
-              onUploadBegin={()=>{
+              onUploadBegin={() => {
                 toast({
                   title: "Anexando imagem",
                   description: "Estamos anexando sua imagem.",
@@ -244,8 +244,8 @@ export function CreateFlyerButton() {
               <p className="text-sm text-green-600">✓ Imagem carregada com sucesso</p>
             )}
           </div>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={!isFormValid || createFlyer.isPending || loading}
           >
             {(createFlyer.isPending || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useTheme } from "next-themes"
 
-import { type Room, RoomDialog } from "@/components/room-dialog"
+import { type Room, RoomDialog } from "@/components/rooms/room-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,7 +22,7 @@ export function RoomMap({ className, filial, ...props }: RoomMapProps) {
   const filteredRooms = rooms
   const floorRooms = filteredRooms?.filter((room) => room.floor === selectedFloor)
   const floors = filteredRooms ? Array.from(new Set(filteredRooms.map((room) => room.floor))).sort((a, b) => a - b) : []
-  
+
   if (isLoading) {
     return (
       <div className={className}>
@@ -104,7 +104,7 @@ export function RoomMap({ className, filial, ...props }: RoomMapProps) {
                     width: number
                     height: number
                   }
-                  const isAvailable = !room.bookings?.filter(({start, end})=>{
+                  const isAvailable = !room.bookings?.filter(({ start, end }) => {
                     const hoje = new Date();
                     return hoje >= start && hoje <= end;
                   })?.length
@@ -114,32 +114,31 @@ export function RoomMap({ className, filial, ...props }: RoomMapProps) {
                       <TooltipTrigger asChild>
                         <g
                           onClick={() => setSelectedRoom({
-                          ...room,
-                          description: room.description ?? undefined,
+                            ...room,
+                            description: room.description ?? undefined,
                           })}
-                          className={`cursor-pointer transition-colors ${
-                          isAvailable ? "hover:fill-primary/20" : "hover:fill-muted/30"
-                          }`}
+                          className={`cursor-pointer transition-colors ${isAvailable ? "hover:fill-primary/20" : "hover:fill-muted/30"
+                            }`}
                           style={{
-                          fill: isAvailable ? "hsl(var(--background))" : "hsl(var(--secondary))",
+                            fill: isAvailable ? "hsl(var(--background))" : "hsl(var(--secondary))",
                           }}
                         >
                           <rect
-                          x={coordinates.x}
-                          y={coordinates.y}
-                          width={coordinates.width}
-                          height={coordinates.height}
-                          stroke={theme === "dark" ? "#ffffff" : "#000000"}
-                          strokeWidth="1"
+                            x={coordinates.x}
+                            y={coordinates.y}
+                            width={coordinates.width}
+                            height={coordinates.height}
+                            stroke={theme === "dark" ? "#ffffff" : "#000000"}
+                            strokeWidth="1"
                           />
                           <text
-                          x={coordinates.x + coordinates.width / 2}
-                          y={coordinates.y + coordinates.height / 2}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          className="text-xs fill-foreground pointer-events-none"
+                            x={coordinates.x + coordinates.width / 2}
+                            y={coordinates.y + coordinates.height / 2}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="text-xs fill-foreground pointer-events-none"
                           >
-                          {room.name}
+                            {room.name}
                           </text>
                         </g>
                       </TooltipTrigger>

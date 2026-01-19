@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -53,14 +53,14 @@ export default function ExtensionManagementPage() {
 
     return Object.entries(extensionsBySector).map(([sector, users]) => ({
       sector,
-      users: (users as Array<{ 
-        id: string; 
-        email: string; 
-        firstName: string | null; 
-        lastName: string | null; 
-        setor: string; 
-        extension: bigint | null; 
-        emailExtension: string | null 
+      users: (users as Array<{
+        id: string;
+        email: string;
+        firstName: string | null;
+        lastName: string | null;
+        setor: string;
+        extension: bigint | null;
+        emailExtension: string | null
       }>) ?? [],
       totalUsers: users?.length,
     }))
@@ -581,9 +581,9 @@ export default function ExtensionManagementPage() {
                       </Avatar>
                       <div>
                         <div className="font-medium">{customExtension.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {customExtension.email ?? "Sem email"}
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          {customExtension.email ?? "Sem email"}
+                        </div>
                         {customExtension.description && (
                           <div className="text-xs text-muted-foreground mt-1">
                             {customExtension.description}
@@ -718,7 +718,7 @@ export default function ExtensionManagementPage() {
                   </div>
                 ))}
               </div>
-              
+
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />

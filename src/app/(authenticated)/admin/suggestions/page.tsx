@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -22,7 +22,7 @@ import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, Chevron
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { DoubtsPopup } from "@/components/doubts-popup"
+import { DoubtsPopup } from "@/components/ui/doubts-popup"
 
 // Usar tipos derivados do tRPC para garantir type safety
 type DBSuggestion = RouterOutputs["suggestion"]["list"][number]
@@ -76,7 +76,7 @@ type ClassificationModal = {
 
 const STATUS_MAPPING = {
   "NEW": "Ainda não avaliado",
-  "IN_REVIEW": "Em avaliação", 
+  "IN_REVIEW": "Em avaliação",
   "APPROVED": "Em orçamento",
   "IN_PROGRESS": "Em execução",
   "DONE": "Concluído",
@@ -234,9 +234,8 @@ function UserSelector({
                   }}
                 >
                   <Check
-                    className={`mr-2 h-4 w-4 ${
-                      value === user.id ? "opacity-100" : "opacity-0"
-                    }`}
+                    className={`mr-2 h-4 w-4 ${value === user.id ? "opacity-100" : "opacity-0"
+                      }`}
                   />
                   <div className="flex flex-col">
                     <span className="font-medium">
@@ -313,8 +312,8 @@ function ClassificationInlineField({
   // Filtrar classificações similares baseado no input usando busca dinâmica
   const filteredClassifications = inputValue.length > 0
     ? getSimilarClassifications(inputValue, type).filter(item =>
-        item.label.toLowerCase() !== inputValue.toLowerCase().trim()
-      ).slice(0, 5) // Limitar a 5 Ideias
+      item.label.toLowerCase() !== inputValue.toLowerCase().trim()
+    ).slice(0, 5) // Limitar a 5 Ideias
     : []
 
   const handleInputChange = (value: string) => {
@@ -430,9 +429,8 @@ function ClassificationInlineField({
                   <button
                     key={item.id}
                     type="button"
-                    className={`w-full px-3 py-2 text-left hover:bg-muted text-sm ${
-                      index === selectedSuggestionIndex ? 'bg-muted' : ''
-                    }`}
+                    className={`w-full px-3 py-2 text-left hover:bg-muted text-sm ${index === selectedSuggestionIndex ? 'bg-muted' : ''
+                      }`}
                     onClick={() => selectExistingClassification(item)}
                   >
                     <div className="flex justify-between items-center">
@@ -807,7 +805,7 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
     if (!inputValue.trim()) return
 
     // Verificar se já existe um KPI com este nome exato
-    const existingKpi = similarKpis.find(k => 
+    const existingKpi = similarKpis.find(k =>
       k.name.toLowerCase() === inputValue.toLowerCase().trim()
     )
 
@@ -935,11 +933,10 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
                   return (
                     <div
                       key={kpi.id}
-                      className={`p-2 rounded cursor-pointer text-sm transition-colors ${
-                        isAlreadyLinked 
-                          ? 'bg-muted/50 text-muted-foreground cursor-not-allowed'
-                          : 'hover:bg-muted'
-                      }`}
+                      className={`p-2 rounded cursor-pointer text-sm transition-colors ${isAlreadyLinked
+                        ? 'bg-muted/50 text-muted-foreground cursor-not-allowed'
+                        : 'hover:bg-muted'
+                        }`}
                       onClick={() => !isAlreadyLinked && handleSelectExisting(kpi)}
                     >
                       <div className="font-medium">{kpi.name}</div>
@@ -1026,12 +1023,12 @@ function SuggestionDetailsModal({
       setEffortText("")
       setEffortScore(0)
     }
-    
+
     // Carregar responsável e status atual
     setResponsibleUser(suggestion.analystId ?? null)
     setNewStatus(STATUS_MAPPING[suggestion.status] ?? suggestion.status)
     setRejectionReason(suggestion.rejectionReason ?? "")
-    
+
     // Carregar dados de pagamento
     if (suggestion.payment) {
       setPaymentStatus(suggestion.payment.status)
@@ -1042,7 +1039,7 @@ function SuggestionDetailsModal({
   }, [suggestion])
 
   const utils = api.useUtils()
-  
+
   const updateMutation = api.suggestion.updateAdmin.useMutation({
     onSuccess: () => {
       toast({ title: "Ideia atualizada", description: "Classificações salvas com sucesso." })
@@ -1165,9 +1162,9 @@ function SuggestionDetailsModal({
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">
               {contribType === "IDEIA_INOVADORA" ? "Ideia inovadora" :
-               contribType === "SUGESTAO_MELHORIA" ? "Ideia de melhoria" :
-               contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
-               contribType === "OUTRO" ? `Outro: ${contribOther ?? ""}` : "-"}
+                contribType === "SUGESTAO_MELHORIA" ? "Ideia de melhoria" :
+                  contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
+                    contribType === "OUTRO" ? `Outro: ${contribOther ?? ""}` : "-"}
             </Badge>
           </div>
         </div>
@@ -1221,138 +1218,138 @@ function SuggestionDetailsModal({
               </div>
               {isEditHistoryExpanded && (
                 <div className="space-y-4">
-                {(() => {
-                  const history = suggestion.editHistory as Record<string, unknown>
-                  
-                  // Verificar se é estrutura nova (com description/problem) ou antiga
-                  const hasDescriptionHistory = history.description && typeof history.description === "object"
-                  const hasProblemHistory = history.problem && typeof history.problem === "object"
-                  const hasLegacyHistory = history._legacy && typeof history._legacy === "object"
-                  
-                  if (hasDescriptionHistory || hasProblemHistory || hasLegacyHistory) {
-                    // Nova estrutura: { description: {...}, problem: {...} }
-                    return (
-                      <>
-                        {hasDescriptionHistory && (
-                          <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                            <div className="text-xs font-semibold text-muted-foreground mb-2">
-                              Solução Proposta
-                            </div>
-                            {(() => {
-                              const descHistory = history.description as Record<string, string>
-                              const entries = Object.entries(descHistory).sort((a, b) => {
-                                if (a[0] === "texto-original") return -1
-                                if (b[0] === "texto-original") return 1
-                                return a[0].localeCompare(b[0])
-                              })
-                              
-                              return entries.map(([key, value], index) => (
-                                <div key={key} className="space-y-1">
-                                  <div className="text-xs font-semibold text-muted-foreground">
-                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                  {(() => {
+                    const history = suggestion.editHistory as Record<string, unknown>
+
+                    // Verificar se é estrutura nova (com description/problem) ou antiga
+                    const hasDescriptionHistory = history.description && typeof history.description === "object"
+                    const hasProblemHistory = history.problem && typeof history.problem === "object"
+                    const hasLegacyHistory = history._legacy && typeof history._legacy === "object"
+
+                    if (hasDescriptionHistory || hasProblemHistory || hasLegacyHistory) {
+                      // Nova estrutura: { description: {...}, problem: {...} }
+                      return (
+                        <>
+                          {hasDescriptionHistory && (
+                            <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                              <div className="text-xs font-semibold text-muted-foreground mb-2">
+                                Solução Proposta
+                              </div>
+                              {(() => {
+                                const descHistory = history.description as Record<string, string>
+                                const entries = Object.entries(descHistory).sort((a, b) => {
+                                  if (a[0] === "texto-original") return -1
+                                  if (b[0] === "texto-original") return 1
+                                  return a[0].localeCompare(b[0])
+                                })
+
+                                return entries.map(([key, value], index) => (
+                                  <div key={key} className="space-y-1">
+                                    <div className="text-xs font-semibold text-muted-foreground">
+                                      {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                    </div>
+                                    <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
+                                      {value}
+                                    </div>
+                                    {index < entries.length - 1 && (
+                                      <div className="h-px bg-border my-2" />
+                                    )}
                                   </div>
-                                  <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
-                                    {value}
-                                  </div>
-                                  {index < entries.length - 1 && (
-                                    <div className="h-px bg-border my-2" />
-                                  )}
-                                </div>
-                              ))
-                            })()}
-                          </div>
-                        )}
-                        {hasProblemHistory && (
-                          <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                            <div className="text-xs font-semibold text-muted-foreground mb-2">
-                              Problema Identificado
+                                ))
+                              })()}
                             </div>
-                            {(() => {
-                              const probHistory = history.problem as Record<string, string>
-                              const entries = Object.entries(probHistory).sort((a, b) => {
-                                if (a[0] === "texto-original") return -1
-                                if (b[0] === "texto-original") return 1
-                                return a[0].localeCompare(b[0])
-                              })
-                              
-                              return entries.map(([key, value], index) => (
-                                <div key={key} className="space-y-1">
-                                  <div className="text-xs font-semibold text-muted-foreground">
-                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                          )}
+                          {hasProblemHistory && (
+                            <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                              <div className="text-xs font-semibold text-muted-foreground mb-2">
+                                Problema Identificado
+                              </div>
+                              {(() => {
+                                const probHistory = history.problem as Record<string, string>
+                                const entries = Object.entries(probHistory).sort((a, b) => {
+                                  if (a[0] === "texto-original") return -1
+                                  if (b[0] === "texto-original") return 1
+                                  return a[0].localeCompare(b[0])
+                                })
+
+                                return entries.map(([key, value], index) => (
+                                  <div key={key} className="space-y-1">
+                                    <div className="text-xs font-semibold text-muted-foreground">
+                                      {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                    </div>
+                                    <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
+                                      {value}
+                                    </div>
+                                    {index < entries.length - 1 && (
+                                      <div className="h-px bg-border my-2" />
+                                    )}
                                   </div>
-                                  <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
-                                    {value}
+                                ))
+                              })()}
+                            </div>
+                          )}
+                          {hasLegacyHistory && (
+                            <div className="space-y-2 border rounded-lg p-3 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+                              <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 mb-2">
+                                ⚠️ Histórico Legado (Revisão Manual Necessária)
+                              </div>
+                              <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
+                                Este histórico foi preservado de uma versão anterior do sistema.
+                                Não foi possível determinar automaticamente se pertence a &quot;Solução Proposta&quot; ou &quot;Problema Identificado&quot;.
+                              </div>
+                              {(() => {
+                                const legacyHistory = history._legacy as Record<string, string>
+                                const entries = Object.entries(legacyHistory).sort((a, b) => {
+                                  if (a[0] === "texto-original") return -1
+                                  if (b[0] === "texto-original") return 1
+                                  return a[0].localeCompare(b[0])
+                                })
+
+                                return entries.map(([key, value], index) => (
+                                  <div key={key} className="space-y-1">
+                                    <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400">
+                                      {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                    </div>
+                                    <div className="text-sm text-yellow-900 dark:text-yellow-200 whitespace-pre-wrap border-l-2 border-yellow-300 dark:border-yellow-700 pl-2">
+                                      {value}
+                                    </div>
+                                    {index < entries.length - 1 && (
+                                      <div className="h-px bg-yellow-300 dark:bg-yellow-700 my-2" />
+                                    )}
                                   </div>
-                                  {index < entries.length - 1 && (
-                                    <div className="h-px bg-border my-2" />
-                                  )}
-                                </div>
-                              ))
-                            })()}
-                          </div>
-                        )}
-                        {hasLegacyHistory && (
-                          <div className="space-y-2 border rounded-lg p-3 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
-                            <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 mb-2">
-                              ⚠️ Histórico Legado (Revisão Manual Necessária)
+                                ))
+                              })()}
                             </div>
-                            <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
-                              Este histórico foi preservado de uma versão anterior do sistema. 
-                              Não foi possível determinar automaticamente se pertence a &quot;Solução Proposta&quot; ou &quot;Problema Identificado&quot;.
+                          )}
+                        </>
+                      )
+                    } else {
+                      // Estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
+                      const entries = Object.entries(history as Record<string, string>).sort((a, b) => {
+                        if (a[0] === "texto-original") return -1
+                        if (b[0] === "texto-original") return 1
+                        return a[0].localeCompare(b[0])
+                      })
+
+                      return (
+                        <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                          {entries.map(([key, value], index) => (
+                            <div key={key} className="space-y-1">
+                              <div className="text-xs font-semibold text-muted-foreground">
+                                {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                              </div>
+                              <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
+                                {value}
+                              </div>
+                              {index < entries.length - 1 && (
+                                <div className="h-px bg-border my-2" />
+                              )}
                             </div>
-                            {(() => {
-                              const legacyHistory = history._legacy as Record<string, string>
-                              const entries = Object.entries(legacyHistory).sort((a, b) => {
-                                if (a[0] === "texto-original") return -1
-                                if (b[0] === "texto-original") return 1
-                                return a[0].localeCompare(b[0])
-                              })
-                              
-                              return entries.map(([key, value], index) => (
-                                <div key={key} className="space-y-1">
-                                  <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400">
-                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
-                                  </div>
-                                  <div className="text-sm text-yellow-900 dark:text-yellow-200 whitespace-pre-wrap border-l-2 border-yellow-300 dark:border-yellow-700 pl-2">
-                                    {value}
-                                  </div>
-                                  {index < entries.length - 1 && (
-                                    <div className="h-px bg-yellow-300 dark:bg-yellow-700 my-2" />
-                                  )}
-                                </div>
-                              ))
-                            })()}
-                          </div>
-                        )}
-                      </>
-                    )
-                  } else {
-                    // Estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
-                    const entries = Object.entries(history as Record<string, string>).sort((a, b) => {
-                      if (a[0] === "texto-original") return -1
-                      if (b[0] === "texto-original") return 1
-                      return a[0].localeCompare(b[0])
-                    })
-                    
-                    return (
-                      <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                        {entries.map(([key, value], index) => (
-                          <div key={key} className="space-y-1">
-                            <div className="text-xs font-semibold text-muted-foreground">
-                              {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
-                            </div>
-                            <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
-                              {value}
-                            </div>
-                            {index < entries.length - 1 && (
-                              <div className="h-px bg-border my-2" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  }
-                })()}
+                          ))}
+                        </div>
+                      )
+                    }
+                  })()}
                 </div>
               )}
             </div>
@@ -1496,7 +1493,7 @@ function SuggestionDetailsModal({
       {/* Seção de Gestão */}
       <div className="space-y-6">
         <h3 className="text-lg font-semibold">Gestão da Ideia</h3>
-        
+
         {/* Responsável pela Devolutiva */}
         <div className="space-y-3">
           <Label className="text-base font-medium">Responsável pela Devolutiva</Label>
@@ -1550,7 +1547,7 @@ function SuggestionDetailsModal({
             <h4 className="text-base font-medium text-green-800 dark:text-green-200">
               💰 Gestão de Pagamento
             </h4>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Status do Pagamento */}
               <div className="space-y-3">
@@ -1632,7 +1629,7 @@ function SuggestionDetailsModal({
           <Button
             onClick={handleSave}
             disabled={updateMutation.isPending}
-            >
+          >
             {updateMutation.isPending ? "Salvando..." : "Salvar Classificações"}
           </Button>
         </div>
@@ -1657,7 +1654,7 @@ export default function AdminSuggestionsPage() {
 
   const updateMutation = api.suggestion.updateAdmin.useMutation({
     onSuccess: () => {
-              toast({ title: "Avaliação salva", description: "Ideia atualizada com sucesso." })
+      toast({ title: "Avaliação salva", description: "Ideia atualizada com sucesso." })
       void refetch()
     },
     onError: (error) => {
@@ -1857,7 +1854,7 @@ export default function AdminSuggestionsPage() {
     STATUS.forEach((s) => (map[s] = []))
     for (const s of sortedSuggestions) {
       const statusLabel = STATUS_MAPPING[s.status] ?? s.status
-      ;(map[statusLabel] ?? (map[statusLabel] = [])).push(s)
+        ; (map[statusLabel] ?? (map[statusLabel] = [])).push(s)
     }
     return map
   }, [sortedSuggestions])
@@ -2328,7 +2325,7 @@ export default function AdminSuggestionsPage() {
                           <Draggable draggableId={s.id} index={index} key={s.id}>
                             {(prov) => (
                               <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
-                                <Card 
+                                <Card
                                   className="bg-background/80 cursor-pointer hover:bg-background/90 transition-colors"
                                   onClick={() => openSuggestionModal(s)}
                                 >
@@ -2367,11 +2364,10 @@ export default function AdminSuggestionsPage() {
                                       {s.payment && (
                                         <Badge
                                           variant="outline"
-                                          className={`text-[10px] px-1 py-0 font-medium flex-shrink-0 ${
-                                            s.payment.status === "paid"
-                                              ? "bg-green-50 text-green-700 border-green-200"
-                                              : "bg-orange-50 text-orange-700 border-orange-200"
-                                          }`}
+                                          className={`text-[10px] px-1 py-0 font-medium flex-shrink-0 ${s.payment.status === "paid"
+                                            ? "bg-green-50 text-green-700 border-green-200"
+                                            : "bg-orange-50 text-orange-700 border-orange-200"
+                                            }`}
                                         >
                                           {s.payment.status === "paid" ? "✓ Pago" : "⏳ Não Pago"}
                                         </Badge>
@@ -2384,8 +2380,8 @@ export default function AdminSuggestionsPage() {
                           </Draggable>
                         )
                       })}
-                     </div>
-                     {provided.placeholder}
+                    </div>
+                    {provided.placeholder}
                   </div>
                 )}
               </Droppable>
@@ -2532,11 +2528,11 @@ function IdeasAccordion({
 }) {
   // Estado local para as justificativas
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({})
-  
+
   const handleRejectionReasonChange = (suggestionId: string, value: string) => {
     setRejectionReasons(prev => ({ ...prev, [suggestionId]: value }))
   }
-  
+
   // Mutation para enviar notificação de rejeição
   const sendRejectionNotification = api.suggestion.sendRejectionNotification.useMutation({
     onSuccess: () => {
@@ -2674,365 +2670,363 @@ function SuggestionItem({
 
 
   return (
-          <AccordionItem key={s.id} value={s.id} className="border rounded-lg">
-            <AccordionTrigger className="px-4">
-              <div className="w-full">
-                <div className="flex flex-col gap-2">
-                  <div className="font-semibold">
-                    #{formatIdeaNumber(s.ideaNumber)} — {(s.problem ?? "Sem problema definido").substring(0, 60)}...
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs text-muted-foreground">
-                      Nome: {nomeExibicao}
-                    {setorExibido && (
-                      <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
-                        {setorExibido}
-                      </span>
-                    )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Tag de status baseada na pontuação */}
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                          getStatusFromScore(s) === 'Ajustar' ? 'border-yellow-300 text-yellow-700 bg-yellow-50' :
-                          getStatusFromScore(s) === 'Aprovar' ? 'border-green-300 text-green-700 bg-green-50' :
-                          getStatusFromScore(s) === 'Prioritário' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                          'border-gray-300 text-gray-700 bg-gray-50'
-                        }`}
-                      >
-                        {getStatusFromScore(s)}
-                      </Badge>
-                      {/* Tag de status atual */}
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${getStatusColor(STATUS_MAPPING[s.status] ?? s.status)}`}
-                      >
-                        {STATUS_MAPPING[s.status] ?? s.status}
-                      </Badge>
-                      {/* Tag de texto editado */}
-                      {s.isTextEdited && (
-                        <Badge variant="outline" className="text-xs">
-                          Texto editado
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+    <AccordionItem key={s.id} value={s.id} className="border rounded-lg">
+      <AccordionTrigger className="px-4">
+        <div className="w-full">
+          <div className="flex flex-col gap-2">
+            <div className="font-semibold">
+              #{formatIdeaNumber(s.ideaNumber)} — {(s.problem ?? "Sem problema definido").substring(0, 60)}...
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">
+                Nome: {nomeExibicao}
+                {setorExibido && (
+                  <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
+                    {setorExibido}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Tag de status baseada na pontuação */}
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${getStatusFromScore(s) === 'Ajustar' ? 'border-yellow-300 text-yellow-700 bg-yellow-50' :
+                    getStatusFromScore(s) === 'Aprovar' ? 'border-green-300 text-green-700 bg-green-50' :
+                      getStatusFromScore(s) === 'Prioritário' ? 'border-blue-300 text-blue-700 bg-blue-50' :
+                        'border-gray-300 text-gray-700 bg-gray-50'
+                    }`}
+                >
+                  {getStatusFromScore(s)}
+                </Badge>
+                {/* Tag de status atual */}
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${getStatusColor(STATUS_MAPPING[s.status] ?? s.status)}`}
+                >
+                  {STATUS_MAPPING[s.status] ?? s.status}
+                </Badge>
+                {/* Tag de texto editado */}
+                {s.isTextEdited && (
+                  <Badge variant="outline" className="text-xs">
+                    Texto editado
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent>
+        <Card className="border-0 shadow-none">
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <div className="text-sm font-medium">Data</div>
+                <div className="text-sm text-muted-foreground">
+                  {s.dateRef ? new Date(s.dateRef).toLocaleDateString('pt-BR') :
+                    new Date(s.createdAt).toLocaleDateString('pt-BR')}
                 </div>
               </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <Card className="border-0 shadow-none">
-                <CardContent className="p-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-sm font-medium">Data</div>
-                      <div className="text-sm text-muted-foreground">
-                        {s.dateRef ? new Date(s.dateRef).toLocaleDateString('pt-BR') : 
-                         new Date(s.createdAt).toLocaleDateString('pt-BR')}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">Setor</div>
-                      <div className="flex flex-wrap gap-2">
-                        {setorExibido ? (
-                          <Badge variant="secondary">{setorExibido}</Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground italic">Setor oculto</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <div className="text-sm font-medium">Tipo de contribuição</div>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline">
-                          {contribType === "IDEIA_INOVADORA" ? "Ideia inovadora" :
-                           contribType === "SUGESTAO_MELHORIA" ? "Ideia de melhoria" :
-                           contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
-                           contribType === "OUTRO" ? `Outro: ${contribOther ?? ""}` : "-"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <div className="text-sm font-medium">Problema</div>
-                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {s.problem ?? "Não informado"}
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="text-sm font-medium">Solução</div>
-                        {s.isTextEdited && (
-                          <Badge variant="outline" className="text-xs">
-                            Texto editado
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {s.description}
-                      </div>
+              <div>
+                <div className="text-sm font-medium">Setor</div>
+                <div className="flex flex-wrap gap-2">
+                  {setorExibido ? (
+                    <Badge variant="secondary">{setorExibido}</Badge>
+                  ) : (
+                    <span className="text-sm text-muted-foreground italic">Setor oculto</span>
+                  )}
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm font-medium">Tipo de contribuição</div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">
+                    {contribType === "IDEIA_INOVADORA" ? "Ideia inovadora" :
+                      contribType === "SUGESTAO_MELHORIA" ? "Ideia de melhoria" :
+                        contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
+                          contribType === "OUTRO" ? `Outro: ${contribOther ?? ""}` : "-"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-sm font-medium">Problema</div>
+                <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {s.problem ?? "Não informado"}
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="text-sm font-medium">Solução</div>
+                  {s.isTextEdited && (
+                    <Badge variant="outline" className="text-xs">
+                      Texto editado
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {s.description}
+                </div>
+              </div>
+            </div>
+
+            {/* Seção de Classificações */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Classificações</h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <ClassificationInlineField
+                  label="Impacto"
+                  score={impactScore}
+                  value={s.impact}
+                  type="impact"
+                  pool={[]}
+                  onSave={(classification) => update(s.id, { impact: classification })}
+                  createClassification={api.classification.create.useMutation({
+                    onSuccess: () => {
+                      toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
+                    },
+                    onError: (error) => {
+                      toast({ title: "Erro", description: error.message, variant: "destructive" })
+                    }
+                  })}
+                  getSimilarClassifications={getSimilarClassifications}
+                />
+                <ClassificationInlineField
+                  label="Capacidade"
+                  score={capacityScore}
+                  value={s.capacity}
+                  type="capacity"
+                  pool={[]}
+                  onSave={(classification) => update(s.id, { capacity: classification })}
+                  createClassification={api.classification.create.useMutation({
+                    onSuccess: () => {
+                      toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
+                    },
+                    onError: (error) => {
+                      toast({ title: "Erro", description: error.message, variant: "destructive" })
+                    }
+                  })}
+                  getSimilarClassifications={getSimilarClassifications}
+                />
+                <ClassificationInlineField
+                  label="Esforço"
+                  score={effortScore}
+                  value={s.effort}
+                  type="effort"
+                  pool={[]}
+                  onSave={(classification) => update(s.id, { effort: classification })}
+                  createClassification={api.classification.create.useMutation({
+                    onSuccess: () => {
+                      toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
+                    },
+                    onError: (error) => {
+                      toast({ title: "Erro", description: error.message, variant: "destructive" })
+                    }
+                  })}
+                  getSimilarClassifications={getSimilarClassifications}
+                />
+              </div>
+
+              {/* KPIs de Sucesso */}
+              <div className="space-y-3 border-t pt-4">
+                <h4 className="text-sm font-medium">KPIs de Sucesso</h4>
+                <KpiInlineField
+                  suggestionId={s.id}
+                  currentKpis={suggestionKpis}
+                  onKpisChange={(newKpis) => {
+                    // Atualizar localmente a lista de KPIs
+                    update(s.id, { kpiIds: newKpis.map(k => k.id) })
+                  }}
+                />
+              </div>
+
+              {/* Pontuação Final e Recomendação */}
+              <div className="p-3 rounded-lg border">
+                <div className="text-sm font-medium mb-2">
+                  Pontuação Final: {pontuacao} pontos
+                </div>
+                <div className="text-xs text-muted-foreground mb-3">
+                  Impacto ({impactScore}) + Capacidade ({capacityScore}) - Esforço ({effortScore}) = {pontuacao}
+                </div>
+
+                {/* Recomendação baseada na pontuação */}
+                <div className={`p-2 rounded-md text-xs font-medium ${pontuacao >= 0 && pontuacao <= 9
+                  ? 'bg-red-100 text-red-800 border border-red-200'
+                  : pontuacao >= 10 && pontuacao <= 14
+                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                    : pontuacao >= 15 && pontuacao <= 20
+                      ? 'bg-green-100 text-green-800 border border-green-200'
+                      : 'bg-gray-100 text-gray-800 border border-gray-200'
+                  }`}>
+
+                  {pontuacao >= 10 && pontuacao <= 14 && "🟡 Ajustes e incubar"}
+                  {pontuacao >= 15 && pontuacao <= 20 && "🟢 Aprovar para gestores"}
+                  {pontuacao > 20 && "🚀 Aprovação imediata"}
+                  {pontuacao < 0 && "❌ Revisar pontuação"}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm">Status</label>
+                <Select
+                  value={STATUS_MAPPING[s.status]}
+                  onValueChange={(v) => {
+                    if (v !== STATUS_MAPPING[s.status]) {
+                      onStatusChange(s.id, v)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS.map((st) => (
+                      <SelectItem key={st} value={st}>
+                        {st}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Campo de motivo expandível para "Não implementado" */}
+              {isReasonFieldExpanded && (
+                <div className="md:col-span-2 space-y-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div>
+                    <label className="text-sm font-medium text-red-700 dark:text-red-300">
+                      Motivo da não implementação <span className="text-red-500">*</span>
+                    </label>
+                    <Textarea
+                      rows={3}
+                      placeholder="Descreva o motivo detalhado da não implementação desta ideia..."
+                      className="mt-2 border-red-200 focus:border-red-300"
+                      value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
+                      onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
+                      maxLength={1000}
+                    />
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        Campo obrigatório para ideias não implementadas (mínimo 10 caracteres).
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(rejectionReasons[s.id] ?? s.rejectionReason ?? "").length}/1000
+                      </p>
                     </div>
                   </div>
-
-                  {/* Seção de Classificações */}
-                  <div className="space-y-4">
-                      <h4 className="text-sm font-medium">Classificações</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <ClassificationInlineField
-                        label="Impacto"
-                        score={impactScore}
-                        value={s.impact}
-                        type="impact"
-                        pool={[]}
-                        onSave={(classification) => update(s.id, { impact: classification })}
-                        createClassification={api.classification.create.useMutation({
-                          onSuccess: () => {
-                            toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
-                          },
-                          onError: (error) => {
-                            toast({ title: "Erro", description: error.message, variant: "destructive" })
-                          }
-                        })}
-                        getSimilarClassifications={getSimilarClassifications}
-                      />
-                      <ClassificationInlineField
-                        label="Capacidade"
-                        score={capacityScore}
-                        value={s.capacity}
-                        type="capacity"
-                        pool={[]}
-                        onSave={(classification) => update(s.id, { capacity: classification })}
-                        createClassification={api.classification.create.useMutation({
-                          onSuccess: () => {
-                            toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
-                          },
-                          onError: (error) => {
-                            toast({ title: "Erro", description: error.message, variant: "destructive" })
-                          }
-                        })}
-                        getSimilarClassifications={getSimilarClassifications}
-                      />
-                      <ClassificationInlineField
-                        label="Esforço"
-                        score={effortScore}
-                        value={s.effort}
-                        type="effort"
-                        pool={[]}
-                        onSave={(classification) => update(s.id, { effort: classification })}
-                        createClassification={api.classification.create.useMutation({
-                          onSuccess: () => {
-                            toast({ title: "Classificação criada", description: "Nova classificação adicionada com sucesso." })
-                          },
-                          onError: (error) => {
-                            toast({ title: "Erro", description: error.message, variant: "destructive" })
-                          }
-                        })}
-                        getSimilarClassifications={getSimilarClassifications}
-                      />
-                    </div>
-
-                    {/* KPIs de Sucesso */}
-                    <div className="space-y-3 border-t pt-4">
-                        <h4 className="text-sm font-medium">KPIs de Sucesso</h4>
-                      <KpiInlineField
-                        suggestionId={s.id}
-                        currentKpis={suggestionKpis}
-                        onKpisChange={(newKpis) => {
-                          // Atualizar localmente a lista de KPIs
-                          update(s.id, { kpiIds: newKpis.map(k => k.id) })
-                        }}
-                      />
-                    </div>
-
-                    {/* Pontuação Final e Recomendação */}
-                    <div className="p-3 rounded-lg border">
-                      <div className="text-sm font-medium mb-2">
-                        Pontuação Final: {pontuacao} pontos
-                      </div>
-                      <div className="text-xs text-muted-foreground mb-3">
-                        Impacto ({impactScore}) + Capacidade ({capacityScore}) - Esforço ({effortScore}) = {pontuacao}
-                      </div>
-
-                      {/* Recomendação baseada na pontuação */}
-                      <div className={`p-2 rounded-md text-xs font-medium ${
-                        pontuacao >= 0 && pontuacao <= 9
-                          ? 'bg-red-100 text-red-800 border border-red-200'
-                          : pontuacao >= 10 && pontuacao <= 14
-                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                          : pontuacao >= 15 && pontuacao <= 20
-                          ? 'bg-green-100 text-green-800 border border-green-200'
-                          : 'bg-gray-100 text-gray-800 border border-gray-200'
-                      }`}>
-
-                        {pontuacao >= 10 && pontuacao <= 14 && "🟡 Ajustes e incubar"}
-                        {pontuacao >= 15 && pontuacao <= 20 && "🟢 Aprovar para gestores"}
-                        {pontuacao > 20 && "🚀 Aprovação imediata"}
-                        {pontuacao < 0 && "❌ Revisar pontuação"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm">Status</label>
-                      <Select
-                        value={STATUS_MAPPING[s.status]}
-                        onValueChange={(v) => {
-                          if (v !== STATUS_MAPPING[s.status]) {
-                            onStatusChange(s.id, v)
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUS.map((st) => (
-                            <SelectItem key={st} value={st}>
-                              {st}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Campo de motivo expandível para "Não implementado" */}
-                    {isReasonFieldExpanded && (
-                      <div className="md:col-span-2 space-y-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                        <div>
-                          <label className="text-sm font-medium text-red-700 dark:text-red-300">
-                            Motivo da não implementação <span className="text-red-500">*</span>
-                          </label>
-                          <Textarea
-                            rows={3}
-                            placeholder="Descreva o motivo detalhado da não implementação desta ideia..."
-                            className="mt-2 border-red-200 focus:border-red-300"
-                            value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
-                            onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
-                            maxLength={1000}
-                          />
-                          <div className="flex justify-between items-center mt-1">
-                            <p className="text-xs text-red-600 dark:text-red-400">
-                              Campo obrigatório para ideias não implementadas (mínimo 10 caracteres).
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {(rejectionReasons[s.id] ?? s.rejectionReason ?? "").length}/1000
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onCancelReasonField(s.id)}
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => onSaveReasonAndChangeStatus(s.id, rejectionReasons[s.id] ?? s.rejectionReason ?? "")}
-                            disabled={!rejectionReasons[s.id]?.trim() || (rejectionReasons[s.id]?.trim()?.length ?? 0) < 10}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Confirmar e Mover
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    <div>
-                      <label className="text-sm">Responsável pela devolutiva</label>
-                      <UserSelector
-                        value={s.analystId}
-                        onValueChange={(userId: string | null) => {
-                          update(s.id, { analystId: userId })
-                        }}
-                        adminOnly={true}
-                        placeholder="Selecionar responsável..."
-                      />
-                    </div>
-
-                    {/* Mostrar campo de motivo sempre que o status for "NOT_IMPLEMENTED" */}
-                    {s.status === "NOT_IMPLEMENTED" && (
-                      <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm font-medium text-red-700">
-                          Motivo da não implementação <span className="text-red-500">*</span>
-                        </label>
-                        <Textarea
-                          rows={4}
-                          value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
-                          onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
-                          placeholder="Digite o motivo detalhado da não implementação desta ideia..."
-                          className="border-red-200 focus:border-red-300"
-                          required
-                        />
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-red-600">
-                            Campo obrigatório para ideias não implementadas
-                          </div>
-                                                    <Button
-                            size="sm"
-                            onClick={() => saveRejectionReason(s.id)}
-                            className="w-fit bg-red-600 hover:bg-red-700"
-                            disabled={
-                              s.status !== "NOT_IMPLEMENTED" ||
-                              sendRejectionNotification.isPending ||
-                              (!rejectionReasons[s.id]?.trim() && !s.rejectionReason?.trim())
-                            }
-                          >
-                            {sendRejectionNotification.isPending ? "Enviando..." : "Salvar Motivo"}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end">
+                  <div className="flex gap-2 justify-end">
                     <Button
-                      onClick={() => {
-                        // Validação: se status for "NOT_IMPLEMENTED", verificar justificativa
-                        if (s.status === "NOT_IMPLEMENTED" && !s.rejectionReason && !rejectionReasons[s.id]?.trim()) {
-                          toast({
-                            title: "Justificativa obrigatória",
-                            description: "Use o botão 'Salvar Motivo' para fornecer a justificativa e enviar a notificação.",
-                            variant: "destructive"
-                          })
-                          return
-                        }
-                        
-                        // Salvar as classificações
-                        updateMutation.mutate({
-                          id: s.id,
-                          impact: s.impact ? { text: s.impact.label || "", score: s.impact.score || 1 } : undefined,
-                          capacity: s.capacity ? { text: s.capacity.label || "", score: s.capacity.score || 1 } : undefined,
-                          effort: s.effort ? { text: s.effort.label || "", score: s.effort.score || 1 } : undefined,
-                          ...(s.analystId && { analystId: s.analystId }), // Preservar o responsável atual
-                        }, {
-                          onSuccess: () => {
-                            toast({ title: "Avaliação salva", description: `Ideia #${formatIdeaNumber(s.ideaNumber)} atualizada.` })
-                          },
-                          onError: (error) => {
-                            toast({
-                              title: "Erro ao salvar",
-                              description: error.message,
-                              variant: "destructive"
-                            })
-                          }
-                        })
-                      }}
-                      disabled={
-                        s.status === "NOT_IMPLEMENTED" &&
-                        !s.rejectionReason &&
-                        !rejectionReasons[s.id]?.trim()
-                      }
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onCancelReasonField(s.id)}
                     >
-                      Salvar avaliação
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => onSaveReasonAndChangeStatus(s.id, rejectionReasons[s.id] ?? s.rejectionReason ?? "")}
+                      disabled={!rejectionReasons[s.id]?.trim() || (rejectionReasons[s.id]?.trim()?.length ?? 0) < 10}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Confirmar e Mover
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </AccordionContent>
-          </AccordionItem>
+                </div>
+              )}
+              <div>
+                <label className="text-sm">Responsável pela devolutiva</label>
+                <UserSelector
+                  value={s.analystId}
+                  onValueChange={(userId: string | null) => {
+                    update(s.id, { analystId: userId })
+                  }}
+                  adminOnly={true}
+                  placeholder="Selecionar responsável..."
+                />
+              </div>
+
+              {/* Mostrar campo de motivo sempre que o status for "NOT_IMPLEMENTED" */}
+              {s.status === "NOT_IMPLEMENTED" && (
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-sm font-medium text-red-700">
+                    Motivo da não implementação <span className="text-red-500">*</span>
+                  </label>
+                  <Textarea
+                    rows={4}
+                    value={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
+                    onChange={(e) => handleRejectionReasonChange(s.id, e.target.value)}
+                    placeholder="Digite o motivo detalhado da não implementação desta ideia..."
+                    className="border-red-200 focus:border-red-300"
+                    required
+                  />
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-red-600">
+                      Campo obrigatório para ideias não implementadas
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => saveRejectionReason(s.id)}
+                      className="w-fit bg-red-600 hover:bg-red-700"
+                      disabled={
+                        s.status !== "NOT_IMPLEMENTED" ||
+                        sendRejectionNotification.isPending ||
+                        (!rejectionReasons[s.id]?.trim() && !s.rejectionReason?.trim())
+                      }
+                    >
+                      {sendRejectionNotification.isPending ? "Enviando..." : "Salvar Motivo"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  // Validação: se status for "NOT_IMPLEMENTED", verificar justificativa
+                  if (s.status === "NOT_IMPLEMENTED" && !s.rejectionReason && !rejectionReasons[s.id]?.trim()) {
+                    toast({
+                      title: "Justificativa obrigatória",
+                      description: "Use o botão 'Salvar Motivo' para fornecer a justificativa e enviar a notificação.",
+                      variant: "destructive"
+                    })
+                    return
+                  }
+
+                  // Salvar as classificações
+                  updateMutation.mutate({
+                    id: s.id,
+                    impact: s.impact ? { text: s.impact.label || "", score: s.impact.score || 1 } : undefined,
+                    capacity: s.capacity ? { text: s.capacity.label || "", score: s.capacity.score || 1 } : undefined,
+                    effort: s.effort ? { text: s.effort.label || "", score: s.effort.score || 1 } : undefined,
+                    ...(s.analystId && { analystId: s.analystId }), // Preservar o responsável atual
+                  }, {
+                    onSuccess: () => {
+                      toast({ title: "Avaliação salva", description: `Ideia #${formatIdeaNumber(s.ideaNumber)} atualizada.` })
+                    },
+                    onError: (error) => {
+                      toast({
+                        title: "Erro ao salvar",
+                        description: error.message,
+                        variant: "destructive"
+                      })
+                    }
+                  })
+                }}
+                disabled={
+                  s.status === "NOT_IMPLEMENTED" &&
+                  !s.rejectionReason &&
+                  !rejectionReasons[s.id]?.trim()
+                }
+              >
+                Salvar avaliação
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </AccordionContent>
+    </AccordionItem>
   )
 }
 
@@ -3145,13 +3139,13 @@ function ClassificationManagementModal({
 
   const addNewItem = () => {
     if (!newLabel.trim()) return
-    
+
     void createClassification.mutate({
       label: newLabel.trim(),
       score: newScore,
       type: getDBType()
     })
-    
+
     setNewLabel("")
     setNewScore(0)
   }
@@ -3164,7 +3158,7 @@ function ClassificationManagementModal({
 
   const saveEdit = () => {
     if (!editingItem || !newLabel.trim()) return
-    
+
     if (editingItem?.id) {
       void updateClassification.mutate({
         id: editingItem.id,
@@ -3172,7 +3166,7 @@ function ClassificationManagementModal({
         score: newScore
       })
     }
-    
+
     setEditingItem(null)
     setNewLabel("")
     setNewScore(0)
@@ -3190,10 +3184,10 @@ function ClassificationManagementModal({
     const updateData = { [activeTab]: { label: item.label, score: item.score } }
     update(suggestionId, updateData as Partial<SuggestionLocal>)
     onClose()
-    
-    toast({ 
-      title: "Classificação aplicada", 
-      description: `${item.label} (${item.score} pontos) foi aplicado para ${getTypeName().toLowerCase()}.` 
+
+    toast({
+      title: "Classificação aplicada",
+      description: `${item.label} (${item.score} pontos) foi aplicado para ${getTypeName().toLowerCase()}.`
     })
   }
 
@@ -3206,7 +3200,7 @@ function ClassificationManagementModal({
         <DialogHeader>
           <DialogTitle>Gerenciar Classificações</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* Abas para os tipos de classificação */}
           <div className="flex space-x-1 border-b">
@@ -3214,11 +3208,10 @@ function ClassificationManagementModal({
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                  activeTab === tab
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
               >
                 {tab === 'impact' ? 'Impacto' : tab === 'capacity' ? 'Capacidade' : 'Esforço'}
               </button>
@@ -3232,11 +3225,10 @@ function ClassificationManagementModal({
             </h4>
             <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
               {currentPool.map((item) => (
-                <div 
+                <div
                   key={item.id}
-                  className={`p-3 border rounded-lg cursor-pointer hover:bg-muted transition-colors ${
-                    currentValue?.label === item.label ? 'border-primary bg-primary/10' : ''
-                  }`}
+                  className={`p-3 border rounded-lg cursor-pointer hover:bg-muted transition-colors ${currentValue?.label === item.label ? 'border-primary bg-primary/10' : ''
+                    }`}
                   onClick={() => selectItem(item)}
                 >
                   <div className="flex justify-between items-center">
@@ -3287,44 +3279,44 @@ function ClassificationManagementModal({
                   placeholder={`Ex: ${activeTab === 'impact' ? 'Alto impacto' : activeTab === 'capacity' ? 'Alta capacidade' : 'Baixo esforço'}`}
                 />
               </div>
-                             <div>
-                 <Label htmlFor="score">Pontuação</Label>
-                 <Select value={newScore.toString()} onValueChange={(v) => setNewScore(parseInt(v))}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="0" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {Array.from({ length: 11 }, (_, i) => i).map((score) => (
-                       <SelectItem key={score} value={score.toString()}>
-                         {score}
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
+              <div>
+                <Label htmlFor="score">Pontuação</Label>
+                <Select value={newScore.toString()} onValueChange={(v) => setNewScore(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="0" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i).map((score) => (
+                      <SelectItem key={score} value={score.toString()}>
+                        {score}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-2">
                 {editingItem ? (
                   <>
-                    <Button 
-                      onClick={saveEdit} 
+                    <Button
+                      onClick={saveEdit}
                       disabled={!newLabel.trim() || updateClassification.isPending}
                     >
                       {updateClassification.isPending ? "Salvando..." : "Salvar alterações"}
                     </Button>
-                    <Button 
-                      variant="outline" 
-                                             onClick={() => {
-                         setEditingItem(null)
-                         setNewLabel("")
-                         setNewScore(0)
-                       }}
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingItem(null)
+                        setNewLabel("")
+                        setNewScore(0)
+                      }}
                     >
                       Cancelar
                     </Button>
                   </>
                 ) : (
-                  <Button 
-                    onClick={addNewItem} 
+                  <Button
+                    onClick={addNewItem}
                     disabled={!newLabel.trim() || createClassification.isPending}
                   >
                     <Plus className="w-4 h-4 mr-2" />

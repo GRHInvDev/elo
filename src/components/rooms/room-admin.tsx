@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { type Room } from "./room-dialog"
-import { Card } from "./ui/card"
+import { Card } from "../ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface DrawingState {
@@ -287,7 +287,7 @@ export function RoomAdmin() {
                             key={room.id}
                             className="opacity-30"
                             onClick={() => {
-                              setEditingRoom({...room, description: room.description ?? undefined})
+                              setEditingRoom({ ...room, description: room.description ?? undefined })
                               setOpen(true)
                             }}
                           >
@@ -355,7 +355,7 @@ export function RoomAdmin() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setEditingRoom({...room, description: room.description ?? undefined})
+                      setEditingRoom({ ...room, description: room.description ?? undefined })
                       setOpen(true)
                     }}
                   >

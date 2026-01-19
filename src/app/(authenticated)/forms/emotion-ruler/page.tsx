@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -92,7 +92,7 @@ export default function EmotionRulerPage() {
 
   // Ordenar emoções por valor
   const sortedEmotions = (Array.isArray(ruler.emotions) ? ruler.emotions : []).sort((a, b) => a.value - b.value)
-  
+
   // Debug: verificar se os emojis estão sendo carregados
   if (process.env.NODE_ENV === 'development') {
     console.log('Emoções carregadas:', sortedEmotions.map(e => ({ value: e.value, emoji: e.emoji })))
@@ -132,6 +132,10 @@ export default function EmotionRulerPage() {
           <h1 className="text-3xl font-bold tracking-tight mt-4">
             Régua de Emoções
           </h1>
+          <p className="text-muted-foreground text-sm mt-2">
+            As informações compartilhadas aqui serão utilizadas apenas para análise e cuidado com a saúde e o bem-estar no trabalho, sendo acessadas exclusivamente por pessoas autorizadas e protegidas conforme a legislação vigente.
+          </p>
+          <br />
           <p className="text-muted-foreground mt-2">
             {ruler.question}
           </p>
@@ -144,7 +148,7 @@ export default function EmotionRulerPage() {
               <div className="w-full flex flex-col md:flex-row gap-1 rounded-lg overflow-hidden border-2 border-border bg-background">
                 {sortedEmotions.map((emotion, index) => {
                   const isSelected = selectedValue === emotion.value
-                  
+
                   return (
                     <motion.button
                       key={emotion.id}
@@ -161,16 +165,16 @@ export default function EmotionRulerPage() {
                         backgroundColor: emotion.color,
                       }}
                       initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ 
-                        opacity: 1, 
+                      animate={{
+                        opacity: 1,
                         scale: 1,
                       }}
-                      transition={{ 
+                      transition={{
                         delay: index * 0.1,
                         duration: 0.3,
                         ease: "easeOut"
                       }}
-                      whileHover={{ 
+                      whileHover={{
                         scale: 1.02,
                         transition: { duration: 0.2 }
                       }}
@@ -189,7 +193,7 @@ export default function EmotionRulerPage() {
                           }}
                           transition={{
                             scale: { duration: 0.2 },
-                            rotate: { 
+                            rotate: {
                               duration: 0.5,
                               times: [0, 0.25, 0.5, 0.75, 1]
                             }

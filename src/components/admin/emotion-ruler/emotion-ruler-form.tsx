@@ -299,7 +299,7 @@ export function EmotionRulerForm({
                       className="h-9"
                     />
                   </div>
-                  
+
                   {/* Emoji Animado */}
                   <div className="flex flex-col">
                     <Label className="text-xs mb-2 h-5 flex items-center">Emoji Animado</Label>
@@ -312,7 +312,7 @@ export function EmotionRulerForm({
                       />
                     </div>
                   </div>
-                  
+
                   {/* Cor */}
                   <div className="flex flex-col">
                     <Label className="text-xs mb-2 h-5 flex items-center">Cor</Label>

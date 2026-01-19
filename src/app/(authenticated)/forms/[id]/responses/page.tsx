@@ -1,7 +1,7 @@
 import { api } from "@/trpc/server"
 import { notFound, redirect } from "next/navigation"
 import { ResponsesList } from "@/components/forms/responses-list"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {

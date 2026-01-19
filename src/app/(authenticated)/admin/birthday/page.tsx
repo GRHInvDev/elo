@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
-import { DashboardShell } from "@/components/dashboard-shell"
-import { BirthdayAdmin } from "@/components/birthday-admin"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
+import { BirthdayAdmin } from "@/components/birthday/birthday-admin"
 import { checkAdminAccess } from "@/lib/access-control-server"
 
 export const metadata: Metadata = {

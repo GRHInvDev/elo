@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { Car, Calendar, ArrowLeft, MapPin, Users, Clock, Fuel, Sparkles, AlertTriangle, LucideUser } from "lucide-react"
 import { api } from "@/trpc/server"
 import { Badge } from "@/components/ui/badge"
-import { RentVehicleButton } from "@/components/rent-vehicle-button"
+import { RentVehicleButton } from "@/components/vehicles/rent-vehicle-button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { format } from "date-fns"
@@ -176,7 +176,7 @@ export default async function VehicleDetailsPage({
                           </div>
                         </div>
                       )}
-                      
+
                       {rent.possibleEnd && (
                         <div className="flex items-start gap-2">
                           <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />

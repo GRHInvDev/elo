@@ -1,6 +1,5 @@
 import {
-  Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck
-  // ,Heart 
+  Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck, Heart
 } from "lucide-react"
 
 export interface AdminRoute {
@@ -93,14 +92,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     path: "/admin/quality",
     requiresBasicAdmin: true,
   },
-  // {
-  //   id: "/admin/emotion-ruler",
-  //   title: "Régua de Emoções",
-  //   description: "Gerenciar régua de emoções e acompanhar respostas",
-  //   icon: Heart,
-  //   path: "/admin/emotion-ruler",
-  //   requiresBasicAdmin: true,
-  // },
+  {
+    id: "/admin/emotion-ruler",
+    title: "Régua de Emoções",
+    description: "Gerenciar régua de emoções e acompanhar respostas",
+    icon: Heart,
+    path: "/admin/emotion-ruler",
+    requiresBasicAdmin: true,
+  },
   // {
   //   id: "/admin/chat",
   //   title: "Gerenciar Chat",

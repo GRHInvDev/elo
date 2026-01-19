@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { api } from "@/trpc/server"
-import { RentForm } from "@/components/rent-form"
+import { RentForm } from "@/components/vehicles/rent-form"
 import { currentUser } from "@clerk/nextjs/server"
 
 
@@ -9,9 +9,9 @@ export default async function RentVehiclePage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const {id} = await params;
+  const { id } = await params;
   let user;
-  
+
   try {
     user = await currentUser();
   } catch (error) {

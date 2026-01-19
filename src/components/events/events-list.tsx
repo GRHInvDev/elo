@@ -16,15 +16,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import { Loader2, LucideEllipsis, LucidePencil, LucideTrash2 } from "lucide-react"
-import { Button } from "./ui/button"
-import { Label } from "./ui/label"
-import { Input } from "./ui/input"
-import { Textarea } from "./ui/textarea"
+import { Button } from "../ui/button"
+import { Label } from "../ui/label"
+import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
+import { UpdateEventDialogProps } from "@/types/event"
 
 export function EventsList() {
   const { data: events, isLoading } = api.event.list.useQuery()
@@ -35,7 +36,7 @@ export function EventsList() {
   });
 
   const utils = api.useUtils();
-  
+
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -65,9 +66,11 @@ export function EventsList() {
     )
   }
 
+  const eventosOrdenados = [...events].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {events.map((event) => (
+      {eventosOrdenados.map((event) => (
         <Card key={event.id}>
           <CardHeader className="flex justify-between flex-row">
             <div className="space-y-1">
@@ -87,17 +90,17 @@ export function EventsList() {
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button size="icon" variant="ghost">
-                        <LucideEllipsis className="size-3" /> 
+                        <LucideEllipsis className="size-3" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-36 flex flex-col p-1">
                       <UpdateEventDialog {...event} />
-                      <Button size="sm" disabled={deleteEvent.isPending} className="text-red-500 hover:text-red-800" variant="ghost" onClick={()=>{deleteEvent.mutate({id: event.id}) }}>
+                      <Button size="sm" disabled={deleteEvent.isPending} className="text-red-500 hover:text-red-800" variant="ghost" onClick={() => { deleteEvent.mutate({ id: event.id }) }}>
                         {
-                        deleteEvent.isPending ? 
-                          <Loader2 className="size-4 animate-spin" />
+                          deleteEvent.isPending ?
+                            <Loader2 className="size-4 animate-spin" />
                             :
-                          <LucideTrash2 className="size-4"/>
+                            <LucideTrash2 className="size-4" />
                         }
                         Excluir
                       </Button>
@@ -116,15 +119,6 @@ export function EventsList() {
   )
 }
 
-interface UpdateEventDialogProps {
-  id: string,
-  title: string,
-  description: string,
-  location: string,
-  startDate: Date,
-  endDate: Date,
-} 
-
 function formatDateForInput(date: Date): string {
   // Format: YYYY-MM-DDThh:mm
   const year = date.getFullYear();
@@ -132,7 +126,7 @@ function formatDateForInput(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
@@ -143,7 +137,7 @@ function UpdateEventDialog({
   location,
   startDate,
   endDate
-}:UpdateEventDialogProps){
+}: UpdateEventDialogProps) {
   const utils = api.useUtils();
   const [open, setOpen] = useState(false)
   const { toast } = useToast()

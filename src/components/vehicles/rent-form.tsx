@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { type Vehicle, type VehicleRent } from "@prisma/client"
-import { Input } from "./ui/input"
+import { Input } from "../ui/input"
 
 interface RentFormProps {
   vehicle: Vehicle
@@ -134,7 +134,7 @@ export function RentForm({ vehicle, isModal = false, editMode = false, existingR
       return
     }
 
-    if(!endDate || endDate <= new Date() || (scheduledDate && endDate <= scheduledDate)){
+    if (!endDate || endDate <= new Date() || (scheduledDate && endDate <= scheduledDate)) {
       toast({
         title: "Data inválida",
         description: "A data de devolução deve ser posterior à data atual ou à data de agendamento.",
@@ -143,8 +143,8 @@ export function RentForm({ vehicle, isModal = false, editMode = false, existingR
       setIsSubmitting(false)
       return
     }
-    
-    if(!driver || driver.trim().length <= 2){
+
+    if (!driver || driver.trim().length <= 2) {
       toast({
         title: "Nome do motorista inválido",
         description: "É necessário informar o motorista.",
@@ -154,7 +154,7 @@ export function RentForm({ vehicle, isModal = false, editMode = false, existingR
       return
     }
 
-    if(!destiny || destiny.trim().length <= 2){
+    if (!destiny || destiny.trim().length <= 2) {
       toast({
         title: "Destino inválido",
         description: "É necessário informar o destino.",
@@ -248,39 +248,39 @@ export function RentForm({ vehicle, isModal = false, editMode = false, existingR
             </div>
             <p className="text-sm text-muted-foreground">O veículo será reservado para a data e hora selecionadas.</p>
           </div>
-        ):(
+        ) : (
           <>
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span>Data de início: {new Date().toLocaleDateString()}</span>
             </div>
             <div className="flex items-center gap-2 text-sm mb-6">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>Hora de início: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span>Hora de início: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
             </div>
           </>
         )}
         <div className="space-y-2">
-            <div className="space-y-2">
-              <Label htmlFor="date-time">Data e hora prevista para devolução</Label>
-              <DateTimePicker date={endDate} setDate={setEndDate} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date-time">Quem vai estar dirigindo?</Label>
-              <Input required value={driver} onChange={(e)=>setDriver(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date-time">Haverão passageiros na viagem? Se sim, colocar todos os nomes.</Label>
-              <Input value={passangers} onChange={(e)=>setPassangers(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date-time">Qual é o destino previsto?</Label>
-              <Input required value={destiny} onChange={(e)=>setDestiny(e.target.value)} />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Para devolver o veículo, acesse seu perfil e finalize a reserva.
-            </p>
+          <div className="space-y-2">
+            <Label htmlFor="date-time">Data e hora prevista para devolução</Label>
+            <DateTimePicker date={endDate} setDate={setEndDate} />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="date-time">Quem vai estar dirigindo?</Label>
+            <Input required value={driver} onChange={(e) => setDriver(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="date-time">Haverão passageiros na viagem? Se sim, colocar todos os nomes.</Label>
+            <Input value={passangers} onChange={(e) => setPassangers(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="date-time">Qual é o destino previsto?</Label>
+            <Input required value={destiny} onChange={(e) => setDestiny(e.target.value)} />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Para devolver o veículo, acesse seu perfil e finalize a reserva.
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center justify-end gap-4">

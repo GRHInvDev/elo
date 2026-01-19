@@ -2,15 +2,15 @@
 
 import type React from "react"
 import { useState } from "react"
-import { MainNav, Sidebar } from "@/components/main-nav"
-import { UserNav } from "@/components/user-nav"
-import { SettingsMenu } from "@/components/settings-menu"
+import { MainNav, Sidebar } from "@/components/ui/main-nav"
+import { UserNav } from "@/components/ui/user-nav"
+import { SettingsMenu } from "@/components/ui/settings-menu"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
-import { AnimatedBackground } from "@/components/animated-background"
+import { AnimatedBackground } from "@/components/ui/animated-background"
 import { AnimationProvider } from "@/contexts/animation-context"
-import { BirthdayConfettiWrapper } from "@/components/birthday-confetti-wrapper"
+import { BirthdayConfettiWrapper } from "@/components/birthday/birthday-confetti-wrapper"
 
 export default function AuthenticatedLayoutClient({
   children,

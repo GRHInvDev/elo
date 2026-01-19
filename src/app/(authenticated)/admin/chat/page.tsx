@@ -1,6 +1,6 @@
 "use client"
 
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -181,7 +181,7 @@ export default function ChatManagementPage() {
             </CardContent>
           </Card>
 
-    
+
         </div>
 
         {/* Últimas Atividades */}

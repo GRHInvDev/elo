@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { FormBuilderWithSave } from "@/components/forms/form-builder-with-save"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { checkFormCreationAccess } from "@/lib/access-control-server"
 
 export const metadata = {

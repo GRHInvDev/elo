@@ -17,16 +17,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { useToast } from "@/hooks/use-toast"
 import { useRef, useState } from "react"
 import { Loader2, LucideEllipsis, LucidePencil, LucideTrash2 } from "lucide-react"
-import { Button } from "./ui/button"
-import { Label } from "./ui/label"
-import { Input } from "./ui/input"
-import { Textarea } from "./ui/textarea"
-import { UPLTButton } from "./ui/uplt-button"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Button } from "../ui/button"
+import { Label } from "../ui/label"
+import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
+import { UPLTButton } from "../ui/uplt-button"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 
 export function FlyersList() {
   const { data: flyers, isLoading } = api.flyer.list.useQuery()
@@ -91,17 +91,17 @@ export function FlyersList() {
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button size="icon" variant="ghost">
-                          <LucideEllipsis className="size-3" /> 
+                          <LucideEllipsis className="size-3" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-36 flex flex-col p-1">
-                        <UpdateFlyerDialog {...{...flyer, iframe: flyer.iframe ?? undefined}} />
-                        <Button size="sm" disabled={deleteFlyer.isPending} className="text-red-500 hover:text-red-800" variant="ghost" onClick={()=>{deleteFlyer.mutate({id: flyer.id}) }}>
+                        <UpdateFlyerDialog {...{ ...flyer, iframe: flyer.iframe ?? undefined }} />
+                        <Button size="sm" disabled={deleteFlyer.isPending} className="text-red-500 hover:text-red-800" variant="ghost" onClick={() => { deleteFlyer.mutate({ id: flyer.id }) }}>
                           {
-                          deleteFlyer.isPending ? 
-                            <Loader2 className="size-4 animate-spin" />
+                            deleteFlyer.isPending ?
+                              <Loader2 className="size-4 animate-spin" />
                               :
-                            <LucideTrash2 className="size-4"/>
+                              <LucideTrash2 className="size-4" />
                           }
                           Excluir
                         </Button>
@@ -121,18 +121,18 @@ export function FlyersList() {
                 flyer.iframe ? (
                   <Dialog>
                     <DialogTrigger asChild>
-                    <Image  className="rounded-md cursor-pointer" src={flyer.imageUrl || "/placeholder.svg"} alt={flyer.title} width={300} height={300} />
+                      <Image className="rounded-md cursor-pointer" src={flyer.imageUrl || "/placeholder.svg"} alt={flyer.title} width={300} height={300} />
                     </DialogTrigger>
                     <DialogContent className="block h-full w-screen pb-4 max-w-screen">
                       <DialogHeader className="max-h-44 mb-4 min-h-0">
                         <DialogTitle>{flyer.title}</DialogTitle>
                       </DialogHeader>
                       {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */}
-                      <iframe src={flyer.iframe} className="w-full h-full"/>
+                      <iframe src={flyer.iframe} className="w-full h-full" />
                     </DialogContent>
                   </Dialog>
                 ) : (
-                  <Image  className="rounded-md" src={flyer.imageUrl || "/placeholder.svg"} alt={flyer.title} width={300} height={300} />
+                  <Image className="rounded-md" src={flyer.imageUrl || "/placeholder.svg"} alt={flyer.title} width={300} height={300} />
                 )
               }
             </div>
@@ -150,7 +150,7 @@ interface UpdateFlyerDialogProps {
   description: string,
   imageUrl: string,
   iframe?: string
-} 
+}
 
 
 function UpdateFlyerDialog({
@@ -159,7 +159,7 @@ function UpdateFlyerDialog({
   description,
   imageUrl,
   iframe
-}:UpdateFlyerDialogProps){
+}: UpdateFlyerDialogProps) {
   const utils = api.useUtils();
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
@@ -187,22 +187,22 @@ function UpdateFlyerDialog({
 
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-      e.preventDefault()
-      setLoading(true)
-      const formData = new FormData(e.currentTarget)
-      if(sendRef.current) await sendRef.current().then(async ()=>{
-        await updateFlyer.mutateAsync({
-          id,
-          title: formData.get("title") as string,
-          description: formData.get("description") as string,
-          iframe: formData.get("iframe") as string,
-          imageUrl: fileUrl === "" ? imageUrl : fileUrl,
-          published: true,
-        })
+    e.preventDefault()
+    setLoading(true)
+    const formData = new FormData(e.currentTarget)
+    if (sendRef.current) await sendRef.current().then(async () => {
+      await updateFlyer.mutateAsync({
+        id,
+        title: formData.get("title") as string,
+        description: formData.get("description") as string,
+        iframe: formData.get("iframe") as string,
+        imageUrl: fileUrl === "" ? imageUrl : fileUrl,
+        published: true,
       })
-      
-      setLoading(false)
-    }
+    })
+
+    setLoading(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -234,14 +234,14 @@ function UpdateFlyerDialog({
             <div className="grid gap-2">
               <Label htmlFor="image">imagem</Label>
               <UPLTButton
-                onImageUrlGenerated={(ufsUrl)=>{
+                onImageUrlGenerated={(ufsUrl) => {
                   setFileUrl(ufsUrl)
                 }}
                 sendRef={sendRef}
                 onClientUploadComplete={(res) => {
                   setFileUrl(res.at(0)?.ufsUrl ?? "")
                   console.log(fileUrl)
-                  toast({title: "Imagem carregada!", description: "Sua imagem foi carregada com sucesso!"});
+                  toast({ title: "Imagem carregada!", description: "Sua imagem foi carregada com sucesso!" });
                 }}
                 onUploadError={(error: Error) => {
                   // Do something with the error.

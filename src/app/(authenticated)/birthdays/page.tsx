@@ -1,5 +1,5 @@
-import { DashboardShell } from "@/components/dashboard-shell"
-import { MonthlyBirthdays } from "@/components/monthly-birthdays"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
+import { MonthlyBirthdays } from "@/components/birthday/monthly-birthdays"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Cake } from "lucide-react"
 

@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { RoomMap } from "@/components/room-map"
-import { RoomCalendar } from "@/components/room-calendar"
-import { AvailableRooms } from "@/components/avalible-rooms"
-import { MyBookings } from "@/components/my-bookings"
+import { RoomMap } from "@/components/rooms/room-map"
+import { RoomCalendar } from "@/components/rooms/room-calendar"
+import { AvailableRooms } from "@/components/rooms/avalible-rooms"
+import { MyBookings } from "@/components/birthday/my-bookings"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const FILIAIS = ["SCS", "CAC", "VA"]

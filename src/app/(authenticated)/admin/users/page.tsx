@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,13 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
-import { 
-  Users, 
-  Search, 
-  Settings, 
-  Shield, 
-  Edit3, 
-  Key, 
+import {
+  Users,
+  Search,
+  Settings,
+  Shield,
+  Edit3,
+  Key,
   X,
   Save,
   User,
@@ -154,9 +154,9 @@ export default function UsersManagementPage() {
                 className="pl-10"
               />
               {searchTerm && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
                   onClick={() => setSearchTerm("")}
                 >
@@ -242,8 +242,8 @@ export default function UsersManagementPage() {
                   Usuários ({total})
                 </CardTitle>
                 <CardDescription>
-                  {isLoading 
-                    ? "Carregando usuários..." 
+                  {isLoading
+                    ? "Carregando usuários..."
                     : `${total} usuário(s) encontrado(s)${offset > 0 ? ` (mostrando ${offset + 1}-${Math.min(offset + limit, total)})` : ""}`}
                 </CardDescription>
               </div>
@@ -259,8 +259,8 @@ export default function UsersManagementPage() {
               <>
                 <div className="space-y-4">
                   {users.map((user) => (
-                    <UserManagementCard 
-                      key={user.id} 
+                    <UserManagementCard
+                      key={user.id}
                       user={{
                         ...user,
                         role_config: user.role_config as RolesConfig
@@ -270,7 +270,7 @@ export default function UsersManagementPage() {
                     />
                   ))}
                 </div>
-                
+
                 {/* Paginação */}
                 {(offset > 0 || hasMore) && (
                   <div className="flex items-center justify-between mt-6 pt-4 border-t">
@@ -301,7 +301,7 @@ export default function UsersManagementPage() {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 {searchTerm || selectedSector !== "all" || selectedEnterprise !== "all" || isAdminFilter !== "all"
-                  ? "Nenhum usuário encontrado para estes filtros." 
+                  ? "Nenhum usuário encontrado para estes filtros."
                   : "Nenhum usuário encontrado."}
               </div>
             )}
@@ -336,10 +336,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const [formSearch, setFormSearch] = useState("")
   const [showPermissionAutocomplete, setShowPermissionAutocomplete] = useState(false)
   const [showFormAutocomplete, setShowFormAutocomplete] = useState(false)
-  
+
   const { isSudo, canManageBasicUserData } = useAccessControl()
   const canEditBasicOnly = canManageBasicUserData() && !isSudo
-  
+
   // Função auxiliar para obter o nome do setor
   const getSetorLabel = (setorValue: string | null | undefined): string => {
     if (!setorValue) return "Não informado"
@@ -394,7 +394,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     const currentAdminPages = permissionsData.admin_pages || []
     const hasAdminRoute = currentAdminPages.includes("/admin")
     const hasProductsRoute = currentAdminPages.includes("/admin/products")
-    
+
     if (permissionsData.can_manage_produtos) {
       // Se can_manage_produtos está true, garantir que /admin e /admin/products estão na lista
       const newRoutes = [...currentAdminPages]
@@ -404,7 +404,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       if (!hasProductsRoute) {
         newRoutes.push("/admin/products")
       }
-      
+
       if (newRoutes.length !== currentAdminPages.length) {
         setPermissionsData({
           ...permissionsData,
@@ -421,7 +421,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   }, [permissionsData.can_manage_produtos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { toast } = useToast()
-  
+
   const updateBasicInfo = api.user.updateBasicInfo.useMutation({
     onSuccess: () => {
       toast({
@@ -555,12 +555,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             ...permissionsData,
             admin_pages: newRoutes
           }
-          
+
           // Se está removendo /admin/products, também remover can_manage_produtos
           if (routeId === "/admin/products") {
             updatedPermissions.can_manage_produtos = false
           }
-          
+
           setPermissionsData(updatedPermissions)
           return newRoutes
         })
@@ -574,12 +574,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             ...permissionsData,
             admin_pages: newRoutes
           }
-          
+
           // Se está adicionando /admin/products, também adicionar can_manage_produtos
           if (routeId === "/admin/products") {
             updatedPermissions.can_manage_produtos = true
           }
-          
+
           setPermissionsData(updatedPermissions)
           return newRoutes
         })
@@ -590,12 +590,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             ...permissionsData,
             admin_pages: newRoutes
           }
-          
+
           // Se está adicionando /admin/products, também adicionar can_manage_produtos
           if (routeId === "/admin/products") {
             updatedPermissions.can_manage_produtos = true
           }
-          
+
           setPermissionsData(updatedPermissions)
           return newRoutes
         })
@@ -846,8 +846,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           id="sudo"
                           checked={permissionsData.sudo}
                           onCheckedChange={(checked) => {
-                            setPermissionsData({ 
-                              ...permissionsData, 
+                            setPermissionsData({
+                              ...permissionsData,
                               sudo: checked === true,
                               admin_pages: checked === true ? ["/admin", "/food", "/rooms", "/ideas", "/birthday"] : []
                             });
@@ -857,14 +857,14 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           Super Admin (Acesso Total)
                         </Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-900">
                         <Checkbox
                           id="isTotem"
                           checked={permissionsData.isTotem ?? false}
                           onCheckedChange={(checked) => {
-                            setPermissionsData({ 
-                              ...permissionsData, 
+                            setPermissionsData({
+                              ...permissionsData,
                               isTotem: checked === true
                             });
                           }}
@@ -885,7 +885,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <Key className="h-4 w-4 text-muted-foreground" />
                           <Label className="text-sm font-semibold">Permissões de Criação</Label>
                         </div>
-                        
+
                         {/* Barra de pesquisa com autocomplete */}
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
@@ -913,7 +913,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                               <X className="h-4 w-4" />
                             </Button>
                           )}
-                          
+
                           {/* Autocomplete */}
                           {showPermissionAutocomplete && permissionSearch && (
                             <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
@@ -929,7 +929,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                                 "Visualizar/Responder pedidos sem acesso admin",
                                 "Adicionar pedidos manuais de alimentação"
                               ]
-                                .filter(permission => 
+                                .filter(permission =>
                                   permission.toLowerCase().includes(permissionSearch.toLowerCase())
                                 )
                                 .slice(0, 5)
@@ -957,13 +957,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                                 "Gerenciar produtos da loja",
                                 "Visualizar/Responder pedidos sem acesso admin",
                                 "Adicionar pedidos manuais de alimentação"
-                              ].filter(permission => 
+                              ].filter(permission =>
                                 permission.toLowerCase().includes(permissionSearch.toLowerCase())
                               ).length === 0 && (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">
-                                  Nenhuma sugestão encontrada
-                                </div>
-                              )}
+                                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                                    Nenhuma sugestão encontrada
+                                  </div>
+                                )}
                             </div>
                           )}
                         </div>
@@ -1086,12 +1086,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                               }
                             }
                           ]
-                            .filter(permission => 
-                              !permissionSearch || 
+                            .filter(permission =>
+                              !permissionSearch ||
                               permission.label.toLowerCase().includes(permissionSearch.toLowerCase())
                             )
                             .map((permission) => (
-                              <div 
+                              <div
                                 key={permission.id}
                                 className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
                               >
@@ -1134,12 +1134,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   <div>
                     <Label className="text-xs text-muted-foreground">Tipo de Usuário</Label>
                     <p className="text-sm font-medium mt-1">
-                      {permissionsData.sudo ? "Super Admin (Acesso Total)" : 
-                       permissionsData.isTotem ? "Usuário TOTEM (Acesso Limitado)" :
-                       "Usuário Padrão (Pode visualizar tudo)"}
+                      {permissionsData.sudo ? "Super Admin (Acesso Total)" :
+                        permissionsData.isTotem ? "Usuário TOTEM (Acesso Limitado)" :
+                          "Usuário Padrão (Pode visualizar tudo)"}
                     </p>
                   </div>
-                  
+
                   {!permissionsData.sudo && !permissionsData.isTotem && (
                     <div>
                       <Label className="text-xs text-muted-foreground">Permissões de Criação</Label>
@@ -1175,17 +1175,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <Badge variant="secondary">Adicionar Pedidos Manuais</Badge>
                         )}
                         {!permissionsData.can_create_form &&
-                         !permissionsData.can_create_event &&
-                         !permissionsData.can_create_flyer &&
-                         !permissionsData.can_create_booking &&
-                         !permissionsData.can_locate_cars &&
-                         !permissionsData.can_view_dre_report &&
-                         !permissionsData.can_manage_extensions &&
-                         !permissionsData.can_manage_produtos &&
-                         !permissionsData.can_view_answer_without_admin_access &&
-                         !permissionsData.can_view_add_manual_ped && (
-                          <span className="text-sm text-muted-foreground">Apenas visualização</span>
-                        )}
+                          !permissionsData.can_create_event &&
+                          !permissionsData.can_create_flyer &&
+                          !permissionsData.can_create_booking &&
+                          !permissionsData.can_locate_cars &&
+                          !permissionsData.can_view_dre_report &&
+                          !permissionsData.can_manage_extensions &&
+                          !permissionsData.can_manage_produtos &&
+                          !permissionsData.can_view_answer_without_admin_access &&
+                          !permissionsData.can_view_add_manual_ped && (
+                            <span className="text-sm text-muted-foreground">Apenas visualização</span>
+                          )}
                       </div>
                     </div>
                   )}
@@ -1207,7 +1207,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   <div>
                     <Label className="text-sm font-semibold">Configurar Acesso às Páginas Admin</Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Selecione quais páginas administrativas o usuário pode acessar. 
+                      Selecione quais páginas administrativas o usuário pode acessar.
                       <strong> /admin é obrigatório para acessar qualquer outra página.</strong>
                     </p>
                   </div>
@@ -1219,11 +1219,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       const IconComponent = route.icon
 
                       return (
-                        <div 
-                          key={route.id} 
-                          className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${
-                            isDisabled ? 'opacity-50 bg-muted/30' : hasAccess ? 'bg-primary/5 border-primary/20' : 'hover:bg-muted/50'
-                          }`}
+                        <div
+                          key={route.id}
+                          className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${isDisabled ? 'opacity-50 bg-muted/30' : hasAccess ? 'bg-primary/5 border-primary/20' : 'hover:bg-muted/50'
+                            }`}
                         >
                           <Checkbox
                             id={`route_${route.id}`}
@@ -1235,8 +1234,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
                               <IconComponent className="h-4 w-4 text-muted-foreground" />
-                              <Label 
-                                htmlFor={`route_${route.id}`} 
+                              <Label
+                                htmlFor={`route_${route.id}`}
                                 className={`font-medium cursor-pointer ${isDisabled ? 'text-muted-foreground' : ''}`}
                               >
                                 {route.title}
@@ -1260,8 +1259,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   </div>
 
                   <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         setIsEditing(false)
                         setAdminRoutesData((user.role_config as ExtendedRolesConfig)?.admin_pages || [])
@@ -1294,7 +1293,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           const route = ADMIN_ROUTES.find(r => r.id === routeId)
                           if (!route) return null
                           const IconComponent = route.icon
-                          
+
                           return (
                             <Badge key={routeId} variant="secondary" className="flex items-center gap-1">
                               <IconComponent className="h-3 w-3" />
@@ -1355,12 +1354,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       <X className="h-4 w-4" />
                     </Button>
                   )}
-                  
+
                   {/* Autocomplete */}
                   {showFormAutocomplete && formSearch && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-20 max-h-48 overflow-y-auto">
                       {allForms
-                        .filter(form => 
+                        .filter(form =>
                           form.title.toLowerCase().includes(formSearch.toLowerCase())
                         )
                         .slice(0, 5)
@@ -1377,69 +1376,69 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                             {form.title}
                           </button>
                         ))}
-                      {allForms.filter(form => 
+                      {allForms.filter(form =>
                         form.title.toLowerCase().includes(formSearch.toLowerCase())
                       ).length === 0 && (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">
-                          Nenhuma solicitação encontrada
-                        </div>
-                      )}
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            Nenhuma solicitação encontrada
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-2 max-h-[400px] overflow-y-auto border rounded-md p-2">
                   {allForms
-                    .filter(form => 
-                      !formSearch || 
+                    .filter(form =>
+                      !formSearch ||
                       form.title.toLowerCase().includes(formSearch.toLowerCase())
                     )
                     .map((form) => {
-                    const isHidden = (user.role_config as ExtendedRolesConfig)?.hidden_forms?.includes(form.id) ?? false
-                    const isInVisibleList = (user.role_config as ExtendedRolesConfig)?.visible_forms?.includes(form.id) ?? false
-                    const hasRestrictiveList = ((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0
+                      const isHidden = (user.role_config as ExtendedRolesConfig)?.hidden_forms?.includes(form.id) ?? false
+                      const isInVisibleList = (user.role_config as ExtendedRolesConfig)?.visible_forms?.includes(form.id) ?? false
+                      const hasRestrictiveList = ((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0
 
-                    let status = "Visível"
-                    let statusColor = "text-green-600"
-                    if (isHidden) {
-                      status = "Oculto"
-                      statusColor = "text-red-600"
-                    } else if (hasRestrictiveList && !isInVisibleList) {
-                      status = "Restrito"
-                      statusColor = "text-yellow-600"
-                    }
+                      let status = "Visível"
+                      let statusColor = "text-green-600"
+                      if (isHidden) {
+                        status = "Oculto"
+                        statusColor = "text-red-600"
+                      } else if (hasRestrictiveList && !isInVisibleList) {
+                        status = "Restrito"
+                        statusColor = "text-yellow-600"
+                      }
 
-                    return (
-                      <div key={form.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{form.title}</div>
-                          <div className={`text-xs font-medium ${statusColor}`}>Status: {status}</div>
+                      return (
+                        <div key={form.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{form.title}</div>
+                            <div className={`text-xs font-medium ${statusColor}`}>Status: {status}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {status !== "Visível" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleToggleFormVisibility(form.id, 'show')}
+                                disabled={updateFormVisibility.isPending}
+                              >
+                                Mostrar
+                              </Button>
+                            )}
+                            {status === "Visível" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleToggleFormVisibility(form.id, 'hide')}
+                                disabled={updateFormVisibility.isPending}
+                              >
+                                Ocultar
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {status !== "Visível" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleFormVisibility(form.id, 'show')}
-                              disabled={updateFormVisibility.isPending}
-                            >
-                              Mostrar
-                            </Button>
-                          )}
-                          {status === "Visível" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleFormVisibility(form.id, 'hide')}
-                              disabled={updateFormVisibility.isPending}
-                            >
-                              Ocultar
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
                 </div>
 
                 {((user.role_config as ExtendedRolesConfig)?.hidden_forms?.length ?? 0) > 0 && (

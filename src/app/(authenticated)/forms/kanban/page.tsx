@@ -10,7 +10,7 @@ import { ResponseDialog } from "./_components/response-dialog"
 import { KanbanFilters, type KanbanFiltersState } from "./_components/kanban-filters"
 import { TagsManagerModal } from "./_components/tags-manager-modal"
 import type { FormResponse } from "@/types/form-responses"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Tags } from "lucide-react"
 import { EditResponseModal } from "@/components/forms/edit-response-modal"
@@ -159,10 +159,10 @@ export default function KanbanPage() {
             <div className="mb-8">
                 <div className="flex items-center justify-between">
                     <div>
-                <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
-                <p className="text-muted-foreground mt-2">
-                    Visualize e organize as respostas recebidas nos seus formulários.
-                </p>
+                        <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
+                        <p className="text-muted-foreground mt-2">
+                            Visualize e organize as respostas recebidas nos seus formulários.
+                        </p>
                     </div>
                     <Button
                         variant="outline"
