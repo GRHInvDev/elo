@@ -92,14 +92,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     path: "/admin/quality",
     requiresBasicAdmin: true,
   },
-  {
-    id: "/admin/emotion-ruler",
-    title: "Régua de Emoções",
-    description: "Gerenciar régua de emoções e acompanhar respostas",
-    icon: Heart,
-    path: "/admin/emotion-ruler",
-    requiresBasicAdmin: true,
-  },
+  // {
+  //   id: "/admin/emotion-ruler",
+  //   title: "Régua de Emoções",
+  //   description: "Gerenciar régua de emoções e acompanhar respostas",
+  //   icon: Heart,
+  //   path: "/admin/emotion-ruler",
+  //   requiresBasicAdmin: true,
+  // },
   // {
   //   id: "/admin/chat",
   //   title: "Gerenciar Chat",

@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/ui/complete-profile-modal"
 import { WelcomeCard } from "@/components/dashboard/welcome-card"
-import { EmotionRulerWrapper } from "@/components/emotion-ruler/emotion-ruler-wrapper"
+// import { EmotionRulerWrapper } from "@/components/emotion-ruler/emotion-ruler-wrapper"
 import { useState, useEffect, useMemo } from "react"
 
 // Variantes de animação para o footer
@@ -109,7 +109,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       {/* Modal da Régua de Emoções */}
-      <EmotionRulerWrapper />
+      {/* <EmotionRulerWrapper /> */}
       {/* Card de Boas-vindas para novos colaboradores */}
       <div className="w-full max-w-6xl mx-auto px-4 pt-6 pb-4">
         <WelcomeCard />
