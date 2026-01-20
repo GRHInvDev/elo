@@ -138,7 +138,7 @@ export default function DashboardPage() {
           </h1>
           <div className="grid grid-cols-2 gap-3 mb-6">
             {
-              routeItems(user?.role_config, false, user?.novidades).map((m, i) => m.title !== "Dashboard" && m.href && (
+              routeItems(user?.role_config, false, user?.novidades === true).map((m, i) => m.title !== "Dashboard" && m.href && (
                 <div key={i} className="col-span-1">
                   <Link href={m.href} className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-3 rounded-lg gap-x-2 text-sm">
                     <m.icon className="size-4" />
