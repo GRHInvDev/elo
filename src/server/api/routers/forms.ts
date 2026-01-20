@@ -6,215 +6,42 @@ import { type InputJsonValue } from "@prisma/client/runtime/library";
 import type { RolesConfig } from "@/types/role-config";
 
 
+
 export const formsRouter = createTRPCRouter({
     create: protectedProcedure
-    .input(z.object({
-        title: z.string().min(1, "O nome é obrigatório."),
-        description: z.string().optional(),
-        fields: z.custom<Field[]>(),
-        isPrivate: z.boolean().default(false),
-        allowedUsers: z.array(z.string()).default([]),
-        allowedSectors: z.array(z.string()).default([]),
-        ownerIds: z.array(z.string()).default([]),
-    }))
-    .mutation(async ({ ctx, input })=>{
-        // Criar o formulário
-        const form = await ctx.db.form.create({
-            data: {
-                title: input.title,
-                description: input.description,
-                fields: input.fields as unknown as InputJsonValue[], 
-                userId: ctx.auth.userId,
-                isPrivate: input.isPrivate,
-                allowedUsers: input.allowedUsers,
-                allowedSectors: input.allowedSectors,
-                ownerIds: input.ownerIds,
-            }
-        });
-
-        // Se é privado, configurar visibilidade para todos os usuários permitidos e setores
-        if (input.isPrivate) {
-            // Buscar todos os usuários que devem ter acesso
-            const usersToUpdate = new Set<string>();
-            
-            // Adicionar usuários específicos
-            input.allowedUsers.forEach(userId => usersToUpdate.add(userId));
-            
-            // Adicionar usuários dos setores permitidos
-            if (input.allowedSectors.length > 0) {
-                const usersFromSectors = await ctx.db.user.findMany({
-                    where: {
-                        setor: { in: input.allowedSectors }
-                    },
-                    select: { id: true }
-                });
-                usersFromSectors.forEach(user => usersToUpdate.add(user.id));
-            }
-
-            // Atualizar role_config para todos os outros usuários (esconder o formulário)
-            const allUsers = await ctx.db.user.findMany({
-                select: { id: true, role_config: true }
-            });
-
-            for (const user of allUsers) {
-                // Pular se é o criador ou tem acesso
-                if (user.id === ctx.auth.userId || usersToUpdate.has(user.id)) {
-                    continue;
+        .input(z.object({
+            title: z.string().min(1, "O nome é obrigatório."),
+            description: z.string().optional(),
+            fields: z.custom<Field[]>(),
+            isPrivate: z.boolean().default(false),
+            allowedUsers: z.array(z.string()).default([]),
+            allowedSectors: z.array(z.string()).default([]),
+            ownerIds: z.array(z.string()).default([]),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const form = await ctx.db.form.create({
+                data: {
+                    title: input.title,
+                    description: input.description,
+                    fields: input.fields as unknown as InputJsonValue[],
+                    userId: ctx.auth.userId,
+                    isPrivate: input.isPrivate,
+                    allowedUsers: input.allowedUsers,
+                    allowedSectors: input.allowedSectors,
+                    ownerIds: input.ownerIds,
                 }
-
-                const currentConfig = (user.role_config as RolesConfig) || {
-                    sudo: false,
-                    admin_pages: [],
-                    can_create_form: false,
-                    can_create_event: false,
-                    can_create_flyer: false,
-                    can_create_booking: false,
-                    can_locate_cars: false,
-                    can_view_dre_report: false,
-                };
-
-                // Adicionar formulário à lista de ocultos
-                const hiddenForms = currentConfig.hidden_forms ?? [];
-                if (!hiddenForms.includes(form.id)) {
-                    const newConfig = {
-                        ...currentConfig,
-                        hidden_forms: [...hiddenForms, form.id]
-                    };
-
-                    await ctx.db.user.update({
-                        where: { id: user.id },
-                        data: { role_config: newConfig }
-                    });
-                }
-            }
-        }
-
-        return form;
-    }),
-
-    update: protectedProcedure
-    .input(z.object({
-        id: z.string(),
-        title: z.string().min(1, "O nome é obrigatório."),
-        description: z.string().optional(),
-        fields: z.custom<Field[]>(),
-        isPrivate: z.boolean().optional(),
-        allowedUsers: z.array(z.string()).optional(),
-        allowedSectors: z.array(z.string()).optional(),
-        ownerIds: z.array(z.string()).optional(),
-    }))
-    .mutation(async ({ ctx, input })=>{
-        // Buscar o formulário existente para verificar permissões
-        const existingForm = await ctx.db.form.findUnique({
-            where: { id: input.id },
-            select: {
-                userId: true,
-                ownerIds: true,
-                isPrivate: true,
-                allowedUsers: true,
-                allowedSectors: true,
-            }
-        });
-
-        if (!existingForm) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Formulário não encontrado",
             });
-        }
 
-        // Buscar dados do usuário atual
-        const currentUser = await ctx.db.user.findUnique({
-            where: { id: ctx.auth.userId },
-            select: {
-                id: true,
-                setor: true,
-                role_config: true,
-            }
-        });
-
-        if (!currentUser) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Usuário não encontrado",
-            });
-        }
-
-        const roleConfig = currentUser.role_config as RolesConfig | null;
-
-        // Verificar se o usuário pode editar este formulário
-        // 1. Se é o criador do formulário, sempre pode editar
-        const isCreator = existingForm.userId === currentUser.id;
-        
-        // 2. Se está na lista de owners, pode editar
-        const isOwner = existingForm.ownerIds?.includes(currentUser.id) ?? false;
-        
-        // 3. Se tem permissão can_create_form, pode editar qualquer formulário
-        const canCreate = roleConfig?.sudo ?? roleConfig?.can_create_form ?? false;
-        
-        // 4. Se tem acesso às respostas do formulário, pode editar
-        let hasAccessToResponses = false;
-        if (!isCreator && !isOwner && !canCreate) {
-            // Verificar se o formulário é privado
-            if (existingForm.isPrivate) {
-                // Verificar se o formulário está na lista de ocultos
-                const isHidden = roleConfig?.hidden_forms?.includes(input.id) ?? false;
-                
-                if (!isHidden) {
-                    // Verificar se o usuário está na lista de usuários permitidos
-                    const isAllowedUser = existingForm.allowedUsers?.includes(currentUser.id) ?? false;
-                    
-                    // Verificar se o usuário está em um setor permitido
-                    const isAllowedSector = existingForm.allowedSectors?.includes(currentUser.setor ?? "") ?? false;
-                    
-                    hasAccessToResponses = isAllowedUser || isAllowedSector;
-                }
-            } else {
-                // Se o formulário não é privado, todos têm acesso (exceto TOTEMs)
-                hasAccessToResponses = !roleConfig?.isTotem;
-            }
-        }
-
-        // Se não tem nenhuma das permissões, lançar erro
-        if (!isCreator && !isOwner && !canCreate && !hasAccessToResponses) {
-            throw new TRPCError({
-                code: "FORBIDDEN",
-                message: "Você não tem permissão para editar este formulário",
-            });
-        }
-
-        const form = await ctx.db.form.update({
-            data: {
-                title: input.title,
-                description: input.description,
-                fields: input.fields as unknown as InputJsonValue[], 
-                // Não alterar userId - o criador do formulário não deve mudar
-                ...(input.isPrivate !== undefined ? { isPrivate: input.isPrivate } : {}),
-                ...(input.allowedUsers !== undefined ? { allowedUsers: input.allowedUsers } : {}),
-                ...(input.allowedSectors !== undefined ? { allowedSectors: input.allowedSectors } : {}),
-                ...(input.ownerIds ? { ownerIds: input.ownerIds } : {}),
-            },
-            where: {
-                id: input.id
-            }
-        });
-
-        // Se a configuração de privacidade foi alterada, atualizar role_config dos usuários
-        if (input.isPrivate !== undefined) {
+            // Se é privado, configurar visibilidade para todos os usuários permitidos e setores
             if (input.isPrivate) {
-                // Mesma lógica da criação para formulários privados
+                // Buscar todos os usuários que devem ter acesso
                 const usersToUpdate = new Set<string>();
-                
-                // Adicionar o criador do formulário (sempre tem acesso)
-                usersToUpdate.add(ctx.auth.userId);
-                
-                // Adicionar usuários específicos se fornecidos
-                if (input.allowedUsers && input.allowedUsers.length > 0) {
-                    input.allowedUsers.forEach(userId => usersToUpdate.add(userId));
-                }
-                
-                // Adicionar usuários dos setores permitidos se fornecidos
-                if (input.allowedSectors && input.allowedSectors.length > 0) {
+
+                // Adicionar usuários específicos
+                input.allowedUsers.forEach(userId => usersToUpdate.add(userId));
+
+                // Adicionar usuários dos setores permitidos
+                if (input.allowedSectors.length > 0) {
                     const usersFromSectors = await ctx.db.user.findMany({
                         where: {
                             setor: { in: input.allowedSectors }
@@ -224,24 +51,248 @@ export const formsRouter = createTRPCRouter({
                     usersFromSectors.forEach(user => usersToUpdate.add(user.id));
                 }
 
-                const allUsers = await ctx.db.user.findMany({
+                // Atualizar role_config para todos os outros usuários (esconder o formulário)
+                // Otimização: Identificar usuários afetados e realizar atualização em lote
+                const usersToHideForm = await ctx.db.user.findMany({
+                    where: {
+                        AND: [
+                            { id: { not: ctx.auth.userId } },
+                            { id: { notIn: Array.from(usersToUpdate) } }
+                        ]
+                    },
                     select: { id: true, role_config: true }
                 });
 
-                for (const user of allUsers) {
-                    if (user.id === ctx.auth.userId || usersToUpdate.has(user.id)) {
-                        // Para usuários com acesso, remover da lista de ocultos
-                        const currentConfig = (user.role_config as RolesConfig) || {
-                            sudo: false,
-                            admin_pages: [],
-                            can_create_form: false,
-                            can_create_event: false,
-                            can_create_flyer: false,
-                            can_create_booking: false,
-                            can_locate_cars: false,
-                        };
+                const updates = usersToHideForm.map(user => {
+                    const currentConfig = (user.role_config as RolesConfig) || {
+                        sudo: false,
+                        admin_pages: [],
+                        can_create_form: false,
+                        can_create_event: false,
+                        can_create_flyer: false,
+                        can_create_booking: false,
+                        can_locate_cars: false,
+                        can_view_dre_report: false,
+                    };
 
-                        if (currentConfig.hidden_forms?.includes(input.id)) {
+                    const hiddenForms = currentConfig.hidden_forms ?? [];
+                    if (!hiddenForms.includes(form.id)) {
+                        const newConfig = {
+                            ...currentConfig,
+                            hidden_forms: [...hiddenForms, form.id]
+                        };
+                        return ctx.db.user.update({
+                            where: { id: user.id },
+                            data: { role_config: newConfig }
+                        });
+                    }
+                    return null;
+                }).filter((update): update is NonNullable<typeof update> => update !== null);
+                if (updates.length > 0) {
+                    // Executar atualizações em transação para atomicidade
+                    // Se houver muitos usuários, idealmente processar em chunks, mas aqui faremos em uma transação única
+                    await ctx.db.$transaction(updates);
+                }
+            }
+
+            return form;
+        }),
+
+    update: protectedProcedure
+        .input(z.object({
+            id: z.string(),
+            title: z.string().min(1, "O nome é obrigatório."),
+            description: z.string().optional(),
+            fields: z.custom<Field[]>(),
+            isPrivate: z.boolean().optional(),
+            allowedUsers: z.array(z.string()).optional(),
+            allowedSectors: z.array(z.string()).optional(),
+            ownerIds: z.array(z.string()).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            // Buscar o formulário existente para verificar permissões
+            const existingForm = await ctx.db.form.findUnique({
+                where: { id: input.id },
+                select: {
+                    userId: true,
+                    ownerIds: true,
+                    isPrivate: true,
+                    allowedUsers: true,
+                    allowedSectors: true,
+                }
+            });
+
+            if (!existingForm) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Formulário não encontrado",
+                });
+            }
+
+            // Buscar dados do usuário atual
+            const currentUser = await ctx.db.user.findUnique({
+                where: { id: ctx.auth.userId },
+                select: {
+                    id: true,
+                    setor: true,
+                    role_config: true,
+                }
+            });
+
+            if (!currentUser) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Usuário não encontrado",
+                });
+            }
+
+            const roleConfig = currentUser.role_config as RolesConfig | null;
+
+            // Verificar se o usuário pode editar este formulário
+            // 1. Se é o criador do formulário, sempre pode editar
+            const isCreator = existingForm.userId === currentUser.id;
+
+            // 2. Se está na lista de owners, pode editar
+            const isOwner = existingForm.ownerIds?.includes(currentUser.id) ?? false;
+
+            // 3. Se tem permissão can_create_form, pode editar qualquer formulário
+            const canCreate = (roleConfig?.sudo ?? false) || (roleConfig?.can_create_form ?? false);
+
+            // 4. Se tem acesso às respostas do formulário, pode editar
+            let hasAccessToResponses = false;
+            if (!isCreator && !isOwner && !canCreate) {
+                // Verificar se o formulário é privado
+                if (existingForm.isPrivate) {
+                    // Verificar se o formulário está na lista de ocultos
+                    const isHidden = roleConfig?.hidden_forms?.includes(input.id) ?? false;
+
+                    if (!isHidden) {
+                        // Verificar se o usuário está na lista de usuários permitidos
+                        const isAllowedUser = existingForm.allowedUsers?.includes(currentUser.id) ?? false;
+
+                        // Verificar se o usuário está em um setor permitido
+                        const isAllowedSector = existingForm.allowedSectors?.includes(currentUser.setor ?? "") ?? false;
+
+                        hasAccessToResponses = isAllowedUser || isAllowedSector;
+                    }
+                } else {
+                    // Se o formulário não é privado, todos têm acesso (exceto TOTEMs)
+                    hasAccessToResponses = !roleConfig?.isTotem;
+                }
+            }
+
+            // Se não tem nenhuma das permissões, lançar erro
+            if (!isCreator && !isOwner && !canCreate && !hasAccessToResponses) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Você não tem permissão para editar este formulário",
+                });
+            }
+
+            const form = await ctx.db.form.update({
+                data: {
+                    title: input.title,
+                    description: input.description,
+                    fields: input.fields as unknown as InputJsonValue[],
+                    // Não alterar userId - o criador do formulário não deve mudar
+                    ...(input.isPrivate !== undefined ? { isPrivate: input.isPrivate } : {}),
+                    ...(input.allowedUsers !== undefined ? { allowedUsers: input.allowedUsers } : {}),
+                    ...(input.allowedSectors !== undefined ? { allowedSectors: input.allowedSectors } : {}),
+                    ...(input.ownerIds !== undefined ? { ownerIds: input.ownerIds } : {}),
+                },
+                where: {
+                    id: input.id
+                }
+            });
+
+            // Se a configuração de privacidade foi alterada, atualizar role_config dos usuários
+            if (input.isPrivate !== undefined) {
+                if (input.isPrivate) {
+                    // Mesma lógica da criação para formulários privados
+                    const usersToUpdate = new Set<string>();
+
+                    // Adicionar o criador do formulário (sempre tem acesso)
+                    usersToUpdate.add(ctx.auth.userId);
+
+                    // Adicionar usuários específicos se fornecidos
+                    if (input.allowedUsers && input.allowedUsers.length > 0) {
+                        input.allowedUsers.forEach(userId => usersToUpdate.add(userId));
+                    }
+
+                    // Adicionar usuários dos setores permitidos se fornecidos
+                    if (input.allowedSectors && input.allowedSectors.length > 0) {
+                        const usersFromSectors = await ctx.db.user.findMany({
+                            where: {
+                                setor: { in: input.allowedSectors }
+                            },
+                            select: { id: true }
+                        });
+                        usersFromSectors.forEach(user => usersToUpdate.add(user.id));
+                    }
+
+                    const allUsers = await ctx.db.user.findMany({
+                        select: { id: true, role_config: true }
+                    });
+
+                    for (const user of allUsers) {
+                        if (user.id === ctx.auth.userId || usersToUpdate.has(user.id)) {
+                            // Para usuários com acesso, remover da lista de ocultos
+                            const currentConfig = (user.role_config as RolesConfig) || {
+                                sudo: false,
+                                admin_pages: [],
+                                can_create_form: false,
+                                can_create_event: false,
+                                can_create_flyer: false,
+                                can_create_booking: false,
+                                can_locate_cars: false,
+                            };
+
+                            if (currentConfig.hidden_forms?.includes(input.id)) {
+                                const newConfig = {
+                                    ...currentConfig,
+                                    hidden_forms: currentConfig.hidden_forms.filter(id => id !== input.id)
+                                };
+
+                                await ctx.db.user.update({
+                                    where: { id: user.id },
+                                    data: { role_config: newConfig }
+                                });
+                            }
+                        } else {
+                            // Para outros usuários, adicionar à lista de ocultos
+                            const currentConfig = (user.role_config as RolesConfig) || {
+                                sudo: false,
+                                admin_pages: [],
+                                can_create_form: false,
+                                can_create_event: false,
+                                can_create_flyer: false,
+                                can_create_booking: false,
+                                can_locate_cars: false,
+                            };
+
+                            const hiddenForms = currentConfig.hidden_forms ?? [];
+                            if (!hiddenForms.includes(input.id)) {
+                                const newConfig = {
+                                    ...currentConfig,
+                                    hidden_forms: [...hiddenForms, input.id]
+                                };
+
+                                await ctx.db.user.update({
+                                    where: { id: user.id },
+                                    data: { role_config: newConfig }
+                                });
+                            }
+                        }
+                    }
+                } else if (!input.isPrivate) {
+                    // Se tornou público, remover de todas as listas de ocultos
+                    const allUsers = await ctx.db.user.findMany({
+                        select: { id: true, role_config: true }
+                    });
+
+                    for (const user of allUsers) {
+                        const currentConfig = (user.role_config as RolesConfig);
+                        if (currentConfig?.hidden_forms?.includes(input.id)) {
                             const newConfig = {
                                 ...currentConfig,
                                 hidden_forms: currentConfig.hidden_forms.filter(id => id !== input.id)
@@ -252,252 +303,353 @@ export const formsRouter = createTRPCRouter({
                                 data: { role_config: newConfig }
                             });
                         }
-                    } else {
-                        // Para outros usuários, adicionar à lista de ocultos
-                        const currentConfig = (user.role_config as RolesConfig) || {
-                            sudo: false,
-                            admin_pages: [],
-                            can_create_form: false,
-                            can_create_event: false,
-                            can_create_flyer: false,
-                            can_create_booking: false,
-                            can_locate_cars: false,
-                        };
-
-                        const hiddenForms = currentConfig.hidden_forms ?? [];
-                        if (!hiddenForms.includes(input.id)) {
-                            const newConfig = {
-                                ...currentConfig,
-                                hidden_forms: [...hiddenForms, input.id]
-                            };
-
-                            await ctx.db.user.update({
-                                where: { id: user.id },
-                                data: { role_config: newConfig }
-                            });
-                        }
                     }
                 }
-            } else if (!input.isPrivate) {
-                // Se tornou público, remover de todas as listas de ocultos
-                const allUsers = await ctx.db.user.findMany({
+            }
+
+            return form;
+        }),
+
+    delete: protectedProcedure
+        .input(z.object({
+            id: z.string(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const form = await ctx.db.form.findUnique({
+                where: { id: input.id }
+            });
+
+            if (!form) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Formulário não encontrado",
+                });
+            }
+
+            const userId = ctx.auth.userId;
+
+            // Buscar o usuário para verificar role_config (admin check)
+            const caller = await ctx.db.user.findUnique({
+                where: { id: userId },
+                select: { role_config: true }
+            });
+            const roleConfig = caller?.role_config as RolesConfig | null;
+            const isSuperAdmin = (roleConfig?.sudo ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false);
+
+            const canDelete =
+                form.userId === userId ||
+                form.ownerIds.includes(userId) ||
+                isSuperAdmin;
+
+            if (!canDelete) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Você não tem permissão para excluir este formulário",
+                });
+            }
+
+            return await ctx.db.$transaction(async (tx) => {
+                // Remove references from hidden_forms and visible_forms
+                const usersWithRef = await tx.user.findMany({
+                    where: {
+                        OR: [
+                            { role_config: { path: ['hidden_forms'], array_contains: input.id } },
+                            { role_config: { path: ['visible_forms'], array_contains: input.id } }
+                        ]
+                    },
                     select: { id: true, role_config: true }
                 });
 
-                for (const user of allUsers) {
-                    const currentConfig = (user.role_config as RolesConfig);
-                    if (currentConfig?.hidden_forms?.includes(input.id)) {
-                        const newConfig = {
-                            ...currentConfig,
-                            hidden_forms: currentConfig.hidden_forms.filter(id => id !== input.id)
-                        };
+                for (const user of usersWithRef) {
+                    const rc = user.role_config as RolesConfig;
+                    const newHidden = rc.hidden_forms?.filter(id => id !== input.id);
+                    const newVisible = rc.visible_forms?.filter(id => id !== input.id);
 
-                        await ctx.db.user.update({
+                    if (newHidden?.length !== rc.hidden_forms?.length || newVisible?.length !== rc.visible_forms?.length) {
+                        await tx.user.update({
                             where: { id: user.id },
-                            data: { role_config: newConfig }
+                            data: {
+                                role_config: {
+                                    ...rc,
+                                    hidden_forms: newHidden,
+                                    visible_forms: newVisible
+                                }
+                            }
                         });
                     }
                 }
-            }
-        }
 
-        return form;
-    }),
-
-    delete: protectedProcedure
-    .input(z.object({
-        id: z.string(),
-    }))
-    .mutation(async ({ ctx, input })=>{
-        return await ctx.db.form.delete({
-            where: {
-                id: input.id
-            }
-        })
-    }),
+                return await tx.form.delete({
+                    where: {
+                        id: input.id
+                    }
+                });
+            });
+        }),
 
     list: protectedProcedure
-    .query( async ({ ctx }) => {
-        // Buscar dados do usuário atual
-        const currentUser = await ctx.db.user.findUnique({
-            where: { id: ctx.auth.userId },
-            select: { 
-                id: true, 
-                setor: true, 
-                role_config: true 
+        .query(async ({ ctx }) => {
+            // Buscar dados do usuário atual
+            const currentUser = await ctx.db.user.findUnique({
+                where: { id: ctx.auth.userId },
+                select: {
+                    id: true,
+                    setor: true,
+                    role_config: true
+                }
+            });
+
+            if (!currentUser) {
+                return [];
             }
-        });
 
-        if (!currentUser) {
-            return [];
-        }
+            // Buscar todos os formulários
+            const allForms = await ctx.db.form.findMany({
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                        }
+                    }
+                }
+            });
 
-        // Buscar todos os formulários
-        const allForms = await ctx.db.form.findMany({
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
+            // Filtrar formulários baseado na visibilidade e permissões do role_config
+            const roleConfig = currentUser.role_config as RolesConfig;
+
+            return allForms.filter(form => {
+                // TOTEMs não podem ver nenhum formulário
+                if (roleConfig?.isTotem) {
+                    return false;
+                }
+
+                // Se é o criador do formulário, sempre pode ver
+                if (form.userId === currentUser.id) {
+                    return true;
+                }
+
+                // Se o usuário tem formulários específicos bloqueados
+                if (roleConfig?.hidden_forms?.includes(form.id)) {
+                    return false;
+                }
+
+                // Se o usuário tem uma lista específica de formulários permitidos
+                if (roleConfig?.visible_forms && roleConfig.visible_forms.length > 0) {
+                    return roleConfig.visible_forms.includes(form.id);
+                }
+
+                // Por padrão, todos podem ver todos os formulários (exceto os bloqueados)
+                return true;
+            });
+        }),
+
+    getById: protectedProcedure
+        .input(z.object({
+            id: z.string()
+        }))
+        .query(async ({ ctx, input }) => {
+            const form = await ctx.db.form.findUnique({
+                where: {
+                    id: input.id
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            imageUrl: true, // Assuming avatarUrl is imageUrl based on other files
+                            // Add other safe fields if necessary
+                        }
+                    }
+                }
+            });
+
+            if (!form) return null;
+
+            const userId = ctx.auth.userId;
+            // Enforce visibility rules
+            if (form.isPrivate) {
+                if (form.userId !== userId && !form.ownerIds.includes(userId)) {
+                    // Check specific access
+                    if (!form.allowedUsers.includes(userId)) {
+                        // Check sector access
+                        const user = await ctx.db.user.findUnique({
+                            where: { id: userId },
+                            select: { setor: true, role_config: true }
+                        });
+
+                        const roleConfig = user?.role_config as RolesConfig | null;
+                        const isHidden = roleConfig?.hidden_forms?.includes(form.id) ?? false;
+                        const isVisible = roleConfig?.visible_forms?.includes(form.id) ?? false;
+
+                        if (!isVisible && isHidden) return null;
+
+                        // Se não tem acesso explícito
+                        if (!user?.role_config && !form.allowedSectors.includes(user?.setor ?? "")) {
+                            const canView =
+                                (roleConfig?.visible_forms?.includes(form.id) ?? false) ||
+                                (!(roleConfig?.hidden_forms?.includes(form.id) ?? false) && !(roleConfig?.isTotem ?? false) &&
+                                    (form.allowedSectors.includes(user?.setor ?? "") || form.allowedUsers.includes(userId)));
+
+                            if (!canView && !(roleConfig?.sudo ?? false) && !(roleConfig?.can_create_form ?? false)) { // Admins podem ver
+                                return null;
+                            }
+                        }
                     }
                 }
             }
-        });
 
-        // Filtrar formulários baseado na visibilidade e permissões do role_config
-        const roleConfig = currentUser.role_config as RolesConfig;
-        
-        return allForms.filter(form => {
-            // TOTEMs não podem ver nenhum formulário
-            if (roleConfig?.isTotem) {
-                return false;
-            }
-
-            // Se é o criador do formulário, sempre pode ver
-            if (form.userId === currentUser.id) {
-                return true;
-            }
-
-            // Se o usuário tem formulários específicos bloqueados
-            if (roleConfig?.hidden_forms?.includes(form.id)) {
-                return false;
-            }
-
-            // Se o usuário tem uma lista específica de formulários permitidos
-            if (roleConfig?.visible_forms && roleConfig.visible_forms.length > 0) {
-                return roleConfig.visible_forms.includes(form.id);
-            }
-
-            // Por padrão, todos podem ver todos os formulários (exceto os bloqueados)
-            return true;
-        });
-    }),
-
-    getById: protectedProcedure
-    .input(z.object({
-        id: z.string()
-    }))
-    .query( async ({ ctx, input }) => {
-        return await ctx.db.form.findUnique({
-            where: {
-                id: input.id
-            },
-            include: {
-                user: true
-            }
-        })
-    }),
+            return form;
+        }),
 
     // Gerenciamento de visibilidade via role_config
     updateFormVisibility: protectedProcedure
-    .input(z.object({
-        userId: z.string(),
-        formId: z.string(),
-        action: z.enum(['show', 'hide', 'restrict_to_list']),
-    }))
-    .mutation(async ({ ctx, input }) => {
-        const user = await ctx.db.user.findUnique({
-            where: { id: input.userId },
-            select: { role_config: true }
-        });
+        .input(z.object({
+            userId: z.string(),
+            formId: z.string(),
+            action: z.enum(['show', 'hide', 'restrict_to_list']),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.auth.userId;
+            // Authorization guard
+            if (input.userId !== userId) {
+                const caller = await ctx.db.user.findUnique({
+                    where: { id: userId },
+                    select: { role_config: true }
+                });
+                const roleConfig = caller?.role_config as RolesConfig | null;
+                const isAdmin = (roleConfig?.sudo ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false); // Simplified admin check
 
-        if (!user) {
-            throw new Error("Usuário não encontrado");
-        }
-
-        const currentConfig = (user.role_config as RolesConfig) || {
-            sudo: false,
-            admin_pages: [],
-            can_create_form: false,
-            can_create_event: false,
-            can_create_flyer: false,
-            can_create_booking: false,
-            can_locate_cars: false,
-        };
-
-        const newConfig = { ...currentConfig };
-
-        if (input.action === 'hide') {
-            // Adicionar à lista de formulários ocultos
-            const hiddenForms = newConfig.hidden_forms ?? [];
-            if (!hiddenForms.includes(input.formId)) {
-                newConfig.hidden_forms = [...hiddenForms, input.formId];
-            }
-            // Remover da lista de visíveis se estiver lá
-            if (newConfig.visible_forms) {
-                newConfig.visible_forms = newConfig.visible_forms.filter(id => id !== input.formId);
-            }
-        } else if (input.action === 'show') {
-            // Remover da lista de ocultos
-            if (newConfig.hidden_forms) {
-                newConfig.hidden_forms = newConfig.hidden_forms.filter(id => id !== input.formId);
-            }
-            // Se tem lista restritiva, adicionar à lista de visíveis
-            if (newConfig.visible_forms && newConfig.visible_forms.length > 0) {
-                if (!newConfig.visible_forms.includes(input.formId)) {
-                    newConfig.visible_forms = [...newConfig.visible_forms, input.formId];
+                if (!isAdmin) {
+                    throw new TRPCError({
+                        code: "FORBIDDEN",
+                        message: "Você não tem permissão para alterar a visibilidade de outros usuários",
+                    });
                 }
             }
-        } else if (input.action === 'restrict_to_list') {
-            // Criar lista restritiva com apenas este formulário
-            newConfig.visible_forms = [input.formId];
-            // Remover da lista de ocultos se estiver lá
-            if (newConfig.hidden_forms) {
-                newConfig.hidden_forms = newConfig.hidden_forms.filter(id => id !== input.formId);
+            const user = await ctx.db.user.findUnique({
+                where: { id: input.userId },
+                select: { role_config: true }
+            });
+
+            if (!user) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Usuário não encontrado' });
             }
-        }
 
-        await ctx.db.user.update({
-            where: { id: input.userId },
-            data: { role_config: newConfig }
-        });
+            const currentConfig = (user.role_config as RolesConfig) || {
+                sudo: false,
+                admin_pages: [],
+                can_create_form: false,
+                can_create_event: false,
+                can_create_flyer: false,
+                can_create_booking: false,
+                can_locate_cars: false,
+            };
 
-        return { success: true };
-    }),
+            const newConfig = { ...currentConfig };
+
+            if (input.action === 'hide') {
+                // Adicionar à lista de formulários ocultos
+                const hiddenForms = newConfig.hidden_forms ?? [];
+                if (!hiddenForms.includes(input.formId)) {
+                    newConfig.hidden_forms = [...hiddenForms, input.formId];
+                }
+                // Remover da lista de visíveis se estiver lá
+                if (newConfig.visible_forms) {
+                    newConfig.visible_forms = newConfig.visible_forms.filter(id => id !== input.formId);
+                }
+            } else if (input.action === 'show') {
+                // Remover da lista de ocultos
+                if (newConfig.hidden_forms) {
+                    newConfig.hidden_forms = newConfig.hidden_forms.filter(id => id !== input.formId);
+                }
+                // Se tem lista restritiva, adicionar à lista de visíveis
+                if (newConfig.visible_forms && newConfig.visible_forms.length > 0) {
+                    if (!newConfig.visible_forms.includes(input.formId)) {
+                        newConfig.visible_forms = [...newConfig.visible_forms, input.formId];
+                    }
+                }
+            } else if (input.action === 'restrict_to_list') {
+                // Criar lista restritiva com apenas este formulário
+                newConfig.visible_forms = [input.formId];
+                // Remover da lista de ocultos se estiver lá
+                if (newConfig.hidden_forms) {
+                    newConfig.hidden_forms = newConfig.hidden_forms.filter(id => id !== input.formId);
+                }
+            }
+
+            await ctx.db.user.update({
+                where: { id: input.userId },
+                data: { role_config: newConfig }
+            });
+
+            return { success: true };
+        }),
 
     getUsersForFormVisibility: protectedProcedure
-    .query(async ({ ctx }) => {
-        const users = await ctx.db.user.findMany({
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                setor: true,
-                role_config: true,
-            },
-            orderBy: {
-                firstName: 'asc'
-            }
-        });
+        .query(async ({ ctx }) => {
+            const userId = ctx.auth.userId;
+            // Check authorization
+            const caller = await ctx.db.user.findUnique({
+                where: { id: userId },
+                select: { role_config: true }
+            });
+            const roleConfig = caller?.role_config as RolesConfig | null;
+            const isAuthorized = (roleConfig?.sudo ?? false) || (roleConfig?.can_create_form ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false);
 
-        return users.map(user => ({
-            id: user.id,
-            name: `${user.firstName} ${user.lastName}`.trim() || user.email,
-            email: user.email,
-            setor: user.setor,
-            role_config: user.role_config as RolesConfig,
-        }));
-    }),
+            const users = await ctx.db.user.findMany({
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    // Check permissions to include sensitive data
+                    ...(isAuthorized ? {
+                        email: true,
+                        setor: true,
+                        role_config: true,
+                    } : {}),
+                },
+                orderBy: {
+                    firstName: 'asc'
+                }
+            });
+
+            return users.map(user => ({
+                id: user.id,
+                name: `${user.firstName} ${user.lastName}`.trim(),
+                // Conditionally return sensitive fields
+                ...(isAuthorized ? {
+                    email: user.email,
+                    setor: user.setor,
+                    role_config: user.role_config as RolesConfig,
+                } : {
+                    email: undefined,
+                    setor: undefined,
+                    role_config: undefined, // Or omit entirely if type allows optional
+                }),
+            }));
+        }),
 
     // Verificar se o usuário é owner de algum formulário
     isOwnerOfAnyForm: protectedProcedure
-    .query(async ({ ctx }) => {
-        const userId = ctx.auth.userId;
-        
-        // Buscar formulários onde o usuário é owner (criador ou está em ownerIds)
-        const form = await ctx.db.form.findFirst({
-            where: {
-                OR: [
-                    { userId: userId },
-                    { ownerIds: { has: userId } }
-                ]
-            },
-            select: { id: true }
-        });
+        .query(async ({ ctx }) => {
+            const userId = ctx.auth.userId;
 
-        return !!form;
-    }),
+            // Buscar formulários onde o usuário é owner (criador ou está em ownerIds)
+            const form = await ctx.db.form.findFirst({
+                where: {
+                    OR: [
+                        { userId: userId },
+                        { ownerIds: { has: userId } }
+                    ]
+                },
+                select: { id: true }
+            });
+
+            return !!form;
+        }),
 });

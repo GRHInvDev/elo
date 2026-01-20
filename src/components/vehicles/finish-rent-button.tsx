@@ -20,8 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Textarea } from "./ui/textarea"
-import { Switch } from "./ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 
 interface FinishRentButtonProps {
   rentId: string
@@ -43,7 +43,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
   const [needCleaning, setNeedCleaning] = useState<boolean>()
   const [considerations, setConsiderations] = useState<string>()
   const [noUsageReason, setNoUsageReason] = useState<string>("")
-  
+
   const locationRequested = useRef(false)
 
   const finishRent = api.vehicleRent.finish.useMutation({
@@ -176,7 +176,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
       return
     }
 
-    if(!gasLevel){
+    if (!gasLevel) {
       toast({
         title: "Nível de combustível inválido",
         variant: "destructive",
@@ -286,7 +286,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
               <Label htmlFor="finalKilometers">Nível de combustível</Label>
               <div className="flex items-center gap-2">
                 <LucideGauge className="h-5 w-5 text-muted-foreground" />
-                <Select name="userId" defaultValue={"Reserva"} value={gasLevel} onValueChange={(v: "Reserva" | "1/4" | "1/2" | "3/4" | "Cheio") =>setGasLevel(v)}>
+                <Select name="userId" defaultValue={"Reserva"} value={gasLevel} onValueChange={(v: "Reserva" | "1/4" | "1/2" | "3/4" | "Cheio") => setGasLevel(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma opção" />
                   </SelectTrigger>
@@ -314,14 +314,14 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
               <Label>Necessita de limpeza?</Label>
               <div className="flex items-center gap-2">
                 <LucideSparkles className="h-5 w-5 text-muted-foreground" />
-                <Switch checked={needCleaning} onCheckedChange={(e)=>setNeedCleaning(e)}/>
+                <Switch checked={needCleaning} onCheckedChange={(e) => setNeedCleaning(e)} />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="finalKilometers">Considerações</Label>
               <div className="flex items-center gap-2">
                 <LucideInfo className="h-5 w-5 text-muted-foreground" />
-                <Textarea value={considerations} onChange={(e)=>setConsiderations(e.target.value)}/>
+                <Textarea value={considerations} onChange={(e) => setConsiderations(e.target.value)} />
               </div>
               <p className="text-muted-foreground text-wrap">Diga se há algum problema com o veículo ou é necessário fazer algum serviço</p>
             </div>
@@ -358,7 +358,7 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
           <div className="space-y-4 py-4">
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Atenção:</strong> Ao finalizar sem uso, a quilometragem do veículo ({currentKilometers.toLocaleString()} km) 
+                <strong>Atenção:</strong> Ao finalizar sem uso, a quilometragem do veículo ({currentKilometers.toLocaleString()} km)
                 será mantida e nenhuma informação de combustível será registrada.
               </p>
             </div>
@@ -375,12 +375,12 @@ export function FinishRentButton({ rentId, currentKilometers }: FinishRentButton
           </div>
 
           <DialogFooter className="flex gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setIsNoUsageDialogOpen(false)
                 setNoUsageReason("")
-              }} 
+              }}
               disabled={isSubmitting}
             >
               Cancelar

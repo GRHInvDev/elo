@@ -5,7 +5,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { FormBuilderWithSave } from "@/components/forms/form-builder-with-save"
 import { type Field } from "@/lib/form-types"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { checkFormEditAccess } from "@/lib/access-control-server"
 
 export const metadata = {

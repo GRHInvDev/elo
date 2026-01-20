@@ -45,7 +45,7 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
       const convertedResponse = responseData as unknown as FormResponse
       setResponse(convertedResponse)
       // @ts-expect-error - JsonValue to Field conversion
-      setFields(formData.fields as Field[])
+      setFields(formData.fields)
       setIsLoading(false)
     } else if (isOpen && !isResponseLoading) {
       setIsLoading(false)
@@ -97,7 +97,7 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
           <FormResponseComponent
             formId={formId}
             fields={fields}
-            existingResponse={response.responses[0] as Record<string, unknown>}
+            existingResponse={response.responses[0]}
             onSubmit={handleSubmit}
             isEditing={true}
             isSubmitting={updateResponse.isPending}

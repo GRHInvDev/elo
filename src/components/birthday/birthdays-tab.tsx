@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { MonthlyBirthdays } from "@/components/monthly-birthdays"
+import { MonthlyBirthdays } from "@/components/birthday/monthly-birthdays"
 
 export function BirthdaysTab(): JSX.Element {
   return (

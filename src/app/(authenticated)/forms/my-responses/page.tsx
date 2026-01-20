@@ -4,7 +4,7 @@ import Link from "next/link"
 import { UserResponsesList } from "@/components/forms/user-responses-list"
 import { Suspense } from "react"
 import { ResponsesSkeleton } from "@/components/forms/responses-skeleton"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 
 export const metadata = {
   title: "Minhas solicitações",

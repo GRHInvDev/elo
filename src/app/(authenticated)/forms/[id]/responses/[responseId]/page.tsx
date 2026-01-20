@@ -12,7 +12,7 @@ import { StatusUpdateButton } from "@/components/forms/status-update-button"
 import { ResponseDetails } from "@/components/forms/response-details"
 import { EditResponseButton } from "@/components/forms/edit-response-button"
 import { type Field } from "@/lib/form-types"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { canAccessForm } from "@/lib/access-control"
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
@@ -29,7 +29,7 @@ interface ResponseDetailsPageProps {
 }
 
 export default async function ResponseDetailsPage({ params }: ResponseDetailsPageProps) {
-  const {id, responseId} = await params;
+  const { id, responseId } = await params;
 
   const userData = await api.user.me()
   const form = await api.form.getById(id)
@@ -181,8 +181,8 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
             <CardDescription>Detalhes das respostas enviadas pelo usuário</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponseDetails 
-              responseData={response.responses as Record<string, string | number | string[] | File[] | null | undefined>[]} 
+            <ResponseDetails
+              responseData={response.responses as Record<string, string | number | string[] | File[] | null | undefined>[]}
               formFields={response.form.fields as unknown as Field[]}
             />
           </CardContent>

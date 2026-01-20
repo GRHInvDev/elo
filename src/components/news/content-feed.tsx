@@ -37,74 +37,24 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
-import { BirthdaysTab } from "./birthdays-tab"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BirthdaysTab } from "@/components/birthday/birthdays-tab"
 import { useAuth } from "@clerk/nextjs"
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { Theme, EmojiClickData } from "emoji-picker-react"
 import { useTheme } from "next-themes"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
-import { MultipleImageUpload } from "./ui/multiple-image-upload"
-import { ImageCarousel } from "./ui/image-carousel"
-import { OptimizedImage } from "./ui/optimized-image"
-import { ImageViewer } from "./ui/image-viewer"
-import { LazyIframe } from "./ui/lazy-iframe"
-import { MonacoEditor } from "./ui/monaco-editor"
-import { MarkdownRenderer } from "./ui/markdown-renderer"
-
-// Define interfaces específicas para os tipos de dados
-interface AuthorWithRoleConfig {
-  firstName: string | null
-  lastName: string | null
-  imageUrl: string | null
-  role_config: RolesConfig
-  enterprise?: string
-}
-
-interface PostWithAuthor {
-  id: string
-  title: string
-  content: string
-  authorId: string
-  imageUrl: string | null
-  images?: Array<{ imageUrl: string }>
-  createdAt: Date
-  author: AuthorWithRoleConfig
-}
-
-interface EventWithAuthor {
-  id: string
-  title: string
-  description: string
-  location: string
-  startDate: Date
-  endDate: Date
-  authorId: string
-  published: boolean
-  createdAt: Date
-  author: AuthorWithRoleConfig
-}
-
-interface FlyerWithAuthor {
-  id: string
-  title: string
-  description: string
-  imageUrl: string
-  iframe: string | null
-  authorId: string
-  published: boolean
-  createdAt: Date
-  author: AuthorWithRoleConfig
-}
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { MultipleImageUpload } from "@/components/ui/multiple-image-upload"
+import { ImageCarousel } from "@/components/ui/image-carousel"
+import { OptimizedImage } from "@/components/ui/optimized-image"
+import { ImageViewer } from "@/components/ui/image-viewer"
+import { LazyIframe } from "@/components/ui/lazy-iframe"
+import { MonacoEditor } from "@/components/ui/monaco-editor"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import type { PostWithAuthor, EventWithAuthor, FlyerWithAuthor, ContentFeedProps } from "@/types/content-feed"
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })
-
-interface ContentFeedProps {
-  className?: string
-  postsPerPage?: number
-  enablePagination?: boolean
-}
 
 /**
  * Renders a content feed with tabs for posts, events, flyers, and birthdays, and provides a dialog to create new Markdown-formatted posts.
@@ -195,7 +145,7 @@ export function ContentFeed({
       imageUrl: fileUrl, // Mantido para compatibilidade
       images: images.length > 0 ? images : undefined, // Novas imagens múltiplas
     })
-    
+
     // Limpar o conteúdo após criar
     setPostContent("")
     setImages([])
@@ -652,9 +602,9 @@ function PostItem({ post }: PostItemProps) {
   // Get top 3 emojis
   const topEmojis = reactionCounts
     ? Object.entries(reactionCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([emoji]) => emoji)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([emoji]) => emoji)
     : []
 
   // Count total reactions
@@ -752,7 +702,7 @@ function PostItem({ post }: PostItemProps) {
                       : []
                 }
                 alt={post.title}
-                  aspectRatio="auto"
+                aspectRatio="auto"
                 showArrows={true}
                 showDots={true}
               />

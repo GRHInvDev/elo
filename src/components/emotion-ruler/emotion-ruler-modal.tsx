@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { X } from "lucide-react"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -119,17 +118,9 @@ export function EmotionRulerModal({
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-xl md:text-2xl mb-2 pr-2">{question}</DialogTitle>
               <DialogDescription className="text-sm md:text-base">
-                Selecione na régua abaixo como você está se sentindo hoje
+                Selecione na régua o com base na pergunta!
               </DialogDescription>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="flex-shrink-0"
-            >
-              <X className="h-5 w-5" />
-            </Button>
           </div>
         </DialogHeader>
 
@@ -141,7 +132,7 @@ export function EmotionRulerModal({
             <div className="w-full flex flex-col md:flex-row gap-1 rounded-lg overflow-hidden border-2 border-border bg-background">
               {sortedEmotions.map((emotion, index) => {
                 const isSelected = selectedValue === emotion.value
-                
+
                 return (
                   <motion.button
                     key={emotion.id}
@@ -158,16 +149,16 @@ export function EmotionRulerModal({
                       backgroundColor: emotion.color,
                     }}
                     initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ 
-                      opacity: 1, 
+                    animate={{
+                      opacity: 1,
                       scale: 1,
                     }}
-                    transition={{ 
+                    transition={{
                       delay: index * 0.1,
                       duration: 0.3,
                       ease: "easeOut"
                     }}
-                    whileHover={{ 
+                    whileHover={{
                       scale: 1.02,
                       transition: { duration: 0.2 }
                     }}
@@ -186,7 +177,7 @@ export function EmotionRulerModal({
                         }}
                         transition={{
                           scale: { duration: 0.2 },
-                          rotate: { 
+                          rotate: {
                             duration: 0.5,
                             times: [0, 0.25, 0.5, 0.75, 1]
                           }
@@ -214,7 +205,7 @@ export function EmotionRulerModal({
                           "text-xs font-medium md:mt-2 whitespace-nowrap",
                           "md:text-center",
                           isSelected
-                            ? "font-bold text-foreground drop-shadow-sm"
+                            ? "font-bold drop-shadow-sm"
                             : "text-foreground/80"
                         )}
                         animate={{
@@ -255,7 +246,7 @@ export function EmotionRulerModal({
                     const selectedEmotion = sortedEmotions.find((e) => e.value === selectedValue)
                     if (!selectedEmotion || selectedEmotion.states.length === 0) {
                       return (
-                        <p className="text-sm text-muted-foreground text-center">
+                        <p className="text-sm text-center">
                           Nenhum estado configurado para este nível
                         </p>
                       )
@@ -293,6 +284,9 @@ export function EmotionRulerModal({
               rows={3}
               className="resize-none"
             />
+            <Label className="text-muted-foreground text-sm mt-6">
+              As informações compartilhadas aqui serão utilizadas apenas para análise e cuidado com a saúde e o bem-estar no trabalho, sendo acessadas exclusivamente por pessoas autorizadas e protegidas conforme a legislação vigente.
+            </Label>
           </div>
         </div>
 
@@ -308,6 +302,6 @@ export function EmotionRulerModal({
           </div>
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   )
 }

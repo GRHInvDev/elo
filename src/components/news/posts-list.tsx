@@ -10,7 +10,7 @@ import remarkGfm from "remark-gfm"
 import { api } from "@/trpc/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import Image from "next/image"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { type AppRouter } from "@/server/api/root"
@@ -185,12 +185,12 @@ function PostContent({ post, isActive }: { post: SafePost; isActive: boolean }) 
     if (!isActive || scrollSpeed <= 0) return; // Apenas inicia o scroll se ativo e necessário
     const interval = setInterval(() => {
       if (scrollRef.current) {
-        scrollRef.current.scrollBy({ top: Math.floor(scrollSpeed*10), behavior: "smooth" });
+        scrollRef.current.scrollBy({ top: Math.floor(scrollSpeed * 10), behavior: "smooth" });
         console.log(scrollSpeed)
       }
     }, 250);
-  
-      return () => clearInterval(interval); // Para o scroll ao mudar de slide
+
+    return () => clearInterval(interval); // Para o scroll ao mudar de slide
   }, [isActive, scrollSpeed]);
 
   return (
@@ -204,10 +204,10 @@ function PostContent({ post, isActive }: { post: SafePost; isActive: boolean }) 
           <div>
             <p className="text-lg font-medium text-foreground flex items-center">
               {post.author.firstName}{" "}
-              {post.author.role_config && 
-               typeof post.author.role_config === 'object' && 
-               'sudo' in post.author.role_config && 
-               post.author.role_config.sudo ? (
+              {post.author.role_config &&
+                typeof post.author.role_config === 'object' &&
+                'sudo' in post.author.role_config &&
+                post.author.role_config.sudo ? (
                 <LucideVerified className="ml-2 text-blue-500 size-6" />
               ) : (
                 <LucideLink className="-rotate-45 ml-2 size-4 text-muted-foreground" />
@@ -228,16 +228,16 @@ function PostContent({ post, isActive }: { post: SafePost; isActive: boolean }) 
         </ReactMarkdown>
       </div>
       {
-        post.reactionCount > 0 &&(
+        post.reactionCount > 0 && (
           <div className="rounded-full p-2 bg-muted border max-w-fit flex items-center place-self-end">
             <span className="mr-2">{post.reactionCount}</span>
-            {post.reactions.map((r, i)=>(
+            {post.reactions.map((r, i) => (
               <div key={i} className="relative" style={{ marginLeft: i > 0 ? "-10px" : "0", zIndex: 3 - i }}>
                 {r.emoji}
               </div>
             ))}
           </div>
-        ) 
+        )
       }
     </div>
   );

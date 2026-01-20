@@ -5,7 +5,7 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { FormResponseComponent } from "@/components/forms/form-response"
 import { type Field } from "@/lib/form-types"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { FormDescription } from "@/components/forms/form-description"
 import { canAccessForm } from "@/lib/access-control"
 
@@ -21,7 +21,7 @@ interface RespondFormPageProps {
 }
 
 export default async function RespondFormPage({ params }: RespondFormPageProps) {
-  const {id} = await params;
+  const { id } = await params;
   const form = await api.form.getById(id)
   const userData = await api.user.me()
 

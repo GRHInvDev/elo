@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -91,22 +91,22 @@ export default function ExtensionListPage() {
   // Verificar permissões
   const { canManageExtensions } = useAccessControl()
 
-interface ListaSetores {
+  interface ListaSetores {
     sector: string;
     users: {
-        id: string;
-        email: string;
-        firstName: string | null;
-        lastName: string | null;
-        setor: string;
-        extension: bigint | null;
-        emailExtension: string | null;
-        nameExtension: string | null;
-        setorExtension: string | null;
-        enterprise: Enterprise;
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      setor: string;
+      extension: bigint | null;
+      emailExtension: string | null;
+      nameExtension: string | null;
+      setorExtension: string | null;
+      enterprise: Enterprise;
     }[];
     totalUsers: number;
-}
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: extensionsBySector, isLoading, refetch: refetchExtensions } = api.user.listExtensions.useQuery()
@@ -239,19 +239,19 @@ interface ListaSetores {
     if (!extensionsBySector) return []
 
     return Object.entries(extensionsBySector).map(([sector, users]) => {
-      const typedUsers = (users as Array<{ 
-        id: string; 
-        email: string; 
-        firstName: string | null; 
-        lastName: string | null; 
-        setor: string; 
-        extension: bigint | null; 
+      const typedUsers = (users as Array<{
+        id: string;
+        email: string;
+        firstName: string | null;
+        lastName: string | null;
+        setor: string;
+        extension: bigint | null;
         emailExtension: string | null;
         nameExtension: string | null;
         setorExtension: string | null;
         enterprise: Enterprise;
       }>) ?? []
-      
+
       return {
         sector,
         users: typedUsers,
@@ -605,95 +605,95 @@ interface ListaSetores {
             </Button>
             {canManageExtensions() && (
               <Dialog open={isAddContactOpen} onOpenChange={setIsAddContactOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Contato
-                </Button>
-              </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Contato Manual</DialogTitle>
-                <DialogDescription>
-                  Adicione um contato personalizado à lista de ramais.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="contact-name">Nome *</Label>
-                  <Input
-                    id="contact-name"
-                    value={contactForm.name}
-                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                    placeholder="Nome do contato"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contact-email">Email (opcional)</Label>
-                  <Input
-                    id="contact-email"
-                    type="email"
-                    value={contactForm.email}
-                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contact-extension">Ramal/Telefone *</Label>
-                  <Input
-                    id="contact-extension"
-                    type="number"
-                    min="1"
-                    max="99999999999"
-                    value={contactForm.extension}
-                    onChange={(e) => setContactForm({ ...contactForm, extension: e.target.value })}
-                    placeholder="1234 ou 11987654321"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contact-setor">Setor (opcional)</Label>
-                  <Select
-                    value={contactForm.setor}
-                    onValueChange={(value) => setContactForm({ ...contactForm, setor: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um setor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sem setor</SelectItem>
-                      {availableSectors.map((sector) => (
-                        <SelectItem key={sector} value={sector}>
-                          {sector}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="contact-description">Descrição (opcional)</Label>
-                  <Textarea
-                    id="contact-description"
-                    value={contactForm.description}
-                    onChange={(e) => setContactForm({ ...contactForm, description: e.target.value })}
-                    placeholder="Descrição ou observações"
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddContactOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleAddContact}
-                  disabled={createCustomExtension.isPending || !contactForm.name.trim() || !contactForm.extension.trim()}
-                >
-                  {createCustomExtension.isPending ? "Adicionando..." : "Adicionar Contato"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          )}
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Contato
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Contato Manual</DialogTitle>
+                    <DialogDescription>
+                      Adicione um contato personalizado à lista de ramais.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="contact-name">Nome *</Label>
+                      <Input
+                        id="contact-name"
+                        value={contactForm.name}
+                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                        placeholder="Nome do contato"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contact-email">Email (opcional)</Label>
+                      <Input
+                        id="contact-email"
+                        type="email"
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contact-extension">Ramal/Telefone *</Label>
+                      <Input
+                        id="contact-extension"
+                        type="number"
+                        min="1"
+                        max="99999999999"
+                        value={contactForm.extension}
+                        onChange={(e) => setContactForm({ ...contactForm, extension: e.target.value })}
+                        placeholder="1234 ou 11987654321"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contact-setor">Setor (opcional)</Label>
+                      <Select
+                        value={contactForm.setor}
+                        onValueChange={(value) => setContactForm({ ...contactForm, setor: value === "none" ? "" : value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um setor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem setor</SelectItem>
+                          {availableSectors.map((sector) => (
+                            <SelectItem key={sector} value={sector}>
+                              {sector}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="contact-description">Descrição (opcional)</Label>
+                      <Textarea
+                        id="contact-description"
+                        value={contactForm.description}
+                        onChange={(e) => setContactForm({ ...contactForm, description: e.target.value })}
+                        placeholder="Descrição ou observações"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddContactOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleAddContact}
+                      disabled={createCustomExtension.isPending || !contactForm.name.trim() || !contactForm.extension.trim()}
+                    >
+                      {createCustomExtension.isPending ? "Adicionando..." : "Adicionar Contato"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           {/* Modal para editar contato */}
@@ -893,307 +893,307 @@ interface ListaSetores {
 
         {/* Visualização da Tabela Completa */}
         <div className="space-y-6">
-            {/* Controles de Filtro */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filtros e Ordenação
-                </CardTitle>
-                <CardDescription>
-                  Configure filtros e ordenação para a tabela de ramais
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {/* Filtro por Nome */}
-                  <div>
-                    <Label htmlFor="table-name-filter">Nome</Label>
-                    <div className="relative">
-                      <Input
-                        id="table-name-filter"
-                        placeholder="Filtrar por nome..."
-                        value={tableFilters.nameFilter}
-                        onChange={(e) => setTableFilters(prev => ({ ...prev, nameFilter: e.target.value }))}
-                        className="pr-8"
-                      />
-                      {tableFilters.nameFilter && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1 h-6 w-6 p-0"
-                          onClick={() => setTableFilters(prev => ({ ...prev, nameFilter: '' }))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Filtro por Email */}
-                  <div>
-                    <Label htmlFor="table-email-filter">Email</Label>
-                    <div className="relative">
-                      <Input
-                        id="table-email-filter"
-                        placeholder="Filtrar por email..."
-                        value={tableFilters.emailFilter}
-                        onChange={(e) => setTableFilters(prev => ({ ...prev, emailFilter: e.target.value }))}
-                        className="pr-8"
-                      />
-                      {tableFilters.emailFilter && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1 h-6 w-6 p-0"
-                          onClick={() => setTableFilters(prev => ({ ...prev, emailFilter: '' }))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Filtro por Ramal */}
-                  <div>
-                    <Label htmlFor="table-extension-filter">Ramal</Label>
-                    <div className="relative">
-                      <Input
-                        id="table-extension-filter"
-                        placeholder="Filtrar por ramal..."
-                        value={tableFilters.extensionFilter}
-                        onChange={(e) => setTableFilters(prev => ({ ...prev, extensionFilter: e.target.value }))}
-                        className="pr-8"
-                      />
-                      {tableFilters.extensionFilter && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-1 h-6 w-6 p-0"
-                          onClick={() => setTableFilters(prev => ({ ...prev, extensionFilter: '' }))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Filtro por Setor */}
-                  <div>
-                    <Label htmlFor="table-setor-filter">Setor</Label>
-                    <Select
-                      value={tableFilters.setorFilter || 'all'}
-                      onValueChange={(value) =>
-                        setTableFilters(prev => ({ ...prev, setorFilter: value === 'all' ? '' : value }))
-                      }
-                    >
-                      <SelectTrigger id="table-setor-filter" className="w-full">
-                        <SelectValue placeholder="Selecione um setor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os setores</SelectItem>
-                        {availableSectors.map((sector) => (
-                          <SelectItem key={sector} value={sector}>
-                            {sector}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Filtro por empresa */}
-                  <div>
-                    <Label htmlFor="table-enterprise-filter">Empresa</Label>
-                    <Select
-                      value={tableFilters.enterpriseFilter || 'all'}
-                      onValueChange={(value) =>
-                        setTableFilters(prev => ({ ...prev, enterpriseFilter: value === 'all' ? '' : value }))
-                      }
-                    >
-                      <SelectTrigger id="table-enterprise-filter" className="w-full">
-                        <SelectValue placeholder="Selecione uma empresa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as empresas</SelectItem>
-                        {enterprises.map((enterprise) => (
-                          <SelectItem key={enterprise} value={enterprise}>
-                            {enterprise}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Controles de Ordenação */}
-                <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium">Ordenar por:</Label>
-                    <Select
-                      value={tableFilters.sortBy}
-                      onValueChange={(value: 'name' | 'email' | 'extension' | 'setor') =>
-                        setTableFilters(prev => ({ ...prev, sortBy: value }))
-                      }
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="name">Nome</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="extension">Ramal</SelectItem>
-                        <SelectItem value="setor">Setor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setTableFilters(prev => ({
-                      ...prev,
-                      sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc'
-                    }))}
-                    className="flex items-center gap-2"
-                  >
-                    {tableFilters.sortOrder === 'asc' ? (
-                      <>
-                        <ArrowUp className="h-4 w-4" />
-                        Crescente
-                      </>
-                    ) : (
-                      <>
-                        <ArrowDown className="h-4 w-4" />
-                        Decrescente
-                      </>
+          {/* Controles de Filtro */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtros e Ordenação
+              </CardTitle>
+              <CardDescription>
+                Configure filtros e ordenação para a tabela de ramais
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Filtro por Nome */}
+                <div>
+                  <Label htmlFor="table-name-filter">Nome</Label>
+                  <div className="relative">
+                    <Input
+                      id="table-name-filter"
+                      placeholder="Filtrar por nome..."
+                      value={tableFilters.nameFilter}
+                      onChange={(e) => setTableFilters(prev => ({ ...prev, nameFilter: e.target.value }))}
+                      className="pr-8"
+                    />
+                    {tableFilters.nameFilter && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1 h-6 w-6 p-0"
+                        onClick={() => setTableFilters(prev => ({ ...prev, nameFilter: '' }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     )}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setTableFilters({
-                      sortBy: 'name',
-                      sortOrder: 'asc',
-                      nameFilter: '',
-                      emailFilter: '',
-                      extensionFilter: '',
-                      setorFilter: '',
-                      enterpriseFilter: '',
-                    })}
-                    className="flex items-center gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Limpar Filtros
-                  </Button>
-
-                  <div className="ml-auto text-sm text-muted-foreground">
-                    {filteredAndSortedContacts.length} resultado{filteredAndSortedContacts.length !== 1 ? 's' : ''} encontrado{filteredAndSortedContacts.length !== 1 ? 's' : ''}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Todos os Contatos de Ramal
-                </CardTitle>
-                <CardDescription>
-                  Visualização completa de todos os ramais organizados em tabela
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Setor</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Ramal</TableHead>
-                      <TableHead>Email</TableHead>
-                      {canManageExtensions() && <TableHead className="w-20">Ações</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAndSortedContacts.length > 0 ? (
-                      filteredAndSortedContacts.map(contact => (
-                        <TableRow key={`${contact.type}-${contact.id}`}>
-                          <TableCell>{contact.setor}</TableCell>
-                          <TableCell className="font-medium">
-                            {contact.name}
-                          </TableCell>
-                          <TableCell>{contact.enterprise}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="default"
-                              className="font-mono"
-                            >
-                              {contact.extension}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{contact.email ?? 'Sem email'}</TableCell>
-                          {canManageExtensions() && (
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    if (contact.type === 'Colaborador') {
-                                      // Para usuários, preciso encontrar o usuário completo
-                                      const user = sectorsList
-                                        .flatMap(sector => sector.users)
-                                        .find(u => u.id === contact.id);
-                                      if (user) {
-                                        handleEditUser(user);
-                                      }
-                                    } else {
-                                      // Para contatos manuais
-                                      const customContact = customExtensions?.find(c => c.id === contact.id);
-                                      if (customContact) {
-                                        handleEditContact(customContact);
-                                      }
-                                    }
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    handleDeleteContact({
-                                      id: contact.id,
-                                      name: contact.name,
-                                      extension: contact.extension,
-                                      email: contact.email,
-                                      setor: contact.setor,
-                                      type: contact.type,
-                                    });
-                                  }}
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={canManageExtensions() ? 5 : 4} className="text-center py-8 text-muted-foreground">
-                          Nenhum contato encontrado com os filtros aplicados.
+                {/* Filtro por Email */}
+                <div>
+                  <Label htmlFor="table-email-filter">Email</Label>
+                  <div className="relative">
+                    <Input
+                      id="table-email-filter"
+                      placeholder="Filtrar por email..."
+                      value={tableFilters.emailFilter}
+                      onChange={(e) => setTableFilters(prev => ({ ...prev, emailFilter: e.target.value }))}
+                      className="pr-8"
+                    />
+                    {tableFilters.emailFilter && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1 h-6 w-6 p-0"
+                        onClick={() => setTableFilters(prev => ({ ...prev, emailFilter: '' }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filtro por Ramal */}
+                <div>
+                  <Label htmlFor="table-extension-filter">Ramal</Label>
+                  <div className="relative">
+                    <Input
+                      id="table-extension-filter"
+                      placeholder="Filtrar por ramal..."
+                      value={tableFilters.extensionFilter}
+                      onChange={(e) => setTableFilters(prev => ({ ...prev, extensionFilter: e.target.value }))}
+                      className="pr-8"
+                    />
+                    {tableFilters.extensionFilter && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1 h-6 w-6 p-0"
+                        onClick={() => setTableFilters(prev => ({ ...prev, extensionFilter: '' }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filtro por Setor */}
+                <div>
+                  <Label htmlFor="table-setor-filter">Setor</Label>
+                  <Select
+                    value={tableFilters.setorFilter || 'all'}
+                    onValueChange={(value) =>
+                      setTableFilters(prev => ({ ...prev, setorFilter: value === 'all' ? '' : value }))
+                    }
+                  >
+                    <SelectTrigger id="table-setor-filter" className="w-full">
+                      <SelectValue placeholder="Selecione um setor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os setores</SelectItem>
+                      {availableSectors.map((sector) => (
+                        <SelectItem key={sector} value={sector}>
+                          {sector}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por empresa */}
+                <div>
+                  <Label htmlFor="table-enterprise-filter">Empresa</Label>
+                  <Select
+                    value={tableFilters.enterpriseFilter || 'all'}
+                    onValueChange={(value) =>
+                      setTableFilters(prev => ({ ...prev, enterpriseFilter: value === 'all' ? '' : value }))
+                    }
+                  >
+                    <SelectTrigger id="table-enterprise-filter" className="w-full">
+                      <SelectValue placeholder="Selecione uma empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as empresas</SelectItem>
+                      {enterprises.map((enterprise) => (
+                        <SelectItem key={enterprise} value={enterprise}>
+                          {enterprise}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Controles de Ordenação */}
+              <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">Ordenar por:</Label>
+                  <Select
+                    value={tableFilters.sortBy}
+                    onValueChange={(value: 'name' | 'email' | 'extension' | 'setor') =>
+                      setTableFilters(prev => ({ ...prev, sortBy: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Nome</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="extension">Ramal</SelectItem>
+                      <SelectItem value="setor">Setor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTableFilters(prev => ({
+                    ...prev,
+                    sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc'
+                  }))}
+                  className="flex items-center gap-2"
+                >
+                  {tableFilters.sortOrder === 'asc' ? (
+                    <>
+                      <ArrowUp className="h-4 w-4" />
+                      Crescente
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDown className="h-4 w-4" />
+                      Decrescente
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTableFilters({
+                    sortBy: 'name',
+                    sortOrder: 'asc',
+                    nameFilter: '',
+                    emailFilter: '',
+                    extensionFilter: '',
+                    setorFilter: '',
+                    enterpriseFilter: '',
+                  })}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar Filtros
+                </Button>
+
+                <div className="ml-auto text-sm text-muted-foreground">
+                  {filteredAndSortedContacts.length} resultado{filteredAndSortedContacts.length !== 1 ? 's' : ''} encontrado{filteredAndSortedContacts.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Todos os Contatos de Ramal
+              </CardTitle>
+              <CardDescription>
+                Visualização completa de todos os ramais organizados em tabela
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Setor</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Ramal</TableHead>
+                    <TableHead>Email</TableHead>
+                    {canManageExtensions() && <TableHead className="w-20">Ações</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedContacts.length > 0 ? (
+                    filteredAndSortedContacts.map(contact => (
+                      <TableRow key={`${contact.type}-${contact.id}`}>
+                        <TableCell>{contact.setor}</TableCell>
+                        <TableCell className="font-medium">
+                          {contact.name}
                         </TableCell>
+                        <TableCell>{contact.enterprise}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="default"
+                            className="font-mono"
+                          >
+                            {contact.extension}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{contact.email ?? 'Sem email'}</TableCell>
+                        {canManageExtensions() && (
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (contact.type === 'Colaborador') {
+                                    // Para usuários, preciso encontrar o usuário completo
+                                    const user = sectorsList
+                                      .flatMap(sector => sector.users)
+                                      .find(u => u.id === contact.id);
+                                    if (user) {
+                                      handleEditUser(user);
+                                    }
+                                  } else {
+                                    // Para contatos manuais
+                                    const customContact = customExtensions?.find(c => c.id === contact.id);
+                                    if (customContact) {
+                                      handleEditContact(customContact);
+                                    }
+                                  }
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  handleDeleteContact({
+                                    id: contact.id,
+                                    name: contact.name,
+                                    extension: contact.extension,
+                                    email: contact.email,
+                                    setor: contact.setor,
+                                    type: contact.type,
+                                  });
+                                }}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={canManageExtensions() ? 5 : 4} className="text-center py-8 text-muted-foreground">
+                        Nenhum contato encontrado com os filtros aplicados.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </DashboardShell>

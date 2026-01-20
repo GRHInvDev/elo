@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { currentUser } from "@clerk/nextjs/server"
-import { DashboardShell } from "@/components/dashboard-shell"
-import { FlyersList } from "@/components/flyers-list"
-import { CreateFlyerButton } from "@/components/create-flyer-button"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
+import { FlyersList } from "@/components/flyers/flyers-list"
+import { CreateFlyerButton } from "@/components/flyers/create-flyer-button"
 import { api } from "@/trpc/server"
 import { canCreateFlyer } from "@/lib/access-control"
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default async function FlyersPage() {
   let user;
-  
+
   try {
     user = await currentUser();
   } catch (error) {
@@ -44,8 +44,8 @@ export default async function FlyersPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Encartes</h2>
           <p className="text-muted-foreground">
-            {canCreate 
-              ? "Confira os encartes disponíveis e crie novos encartes" 
+            {canCreate
+              ? "Confira os encartes disponíveis e crie novos encartes"
               : "Confira os encartes disponíveis"
             }
           </p>

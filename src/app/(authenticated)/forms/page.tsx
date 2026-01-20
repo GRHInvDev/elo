@@ -6,7 +6,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { FormsList } from "@/components/forms/forms-list"
 import { Suspense } from "react"
 import { FormsSkeleton } from "@/components/forms/forms-skeleton"
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { api } from "@/trpc/server"
 import { canViewForms, canCreateForm } from "@/lib/access-control"
@@ -18,7 +18,7 @@ export const metadata = {
 
 export default async function FormsPage() {
   let user;
-  
+
   try {
     user = await currentUser();
   } catch (error) {
@@ -47,8 +47,8 @@ export default async function FormsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Solicitações</h1>
           <p className="text-muted-foreground mt-2 mb-4">
-            {userCanCreateForm 
-              ? "Crie, gerencie e responda solicitações personalizadas." 
+            {userCanCreateForm
+              ? "Crie, gerencie e responda solicitações personalizadas."
               : "Responda aos solicitações disponíveis para você."
             }
           </p>
@@ -56,7 +56,7 @@ export default async function FormsPage() {
             <Dialog>
               <DialogTrigger asChild>
                 <Button>
-                  Tutorial <LucideFileVideo className="size-4"/>
+                  Tutorial <LucideFileVideo className="size-4" />
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -75,7 +75,7 @@ export default async function FormsPage() {
                 <LucideKanbanSquare className="mr-2 h-4 w-4" />
                 Kanban
               </Button>
-            </Link> 
+            </Link>
           </div>
         </div>
         <div className="flex gap-3 flex-col md:flex-row w-full md:w-auto">

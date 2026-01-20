@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn, formatDateForInput } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-import { AvatarFallback, AvatarImage, Avatar } from "./ui/avatar"
+import { AvatarFallback, AvatarImage, Avatar } from "../ui/avatar"
 import { useAuth } from "@clerk/nextjs"
 import { type createBookingSchema } from "@/server/api/routers/booking"
 import {
@@ -21,15 +21,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Label } from "./ui/label"
-import { Input } from "./ui/input"
+import { Label } from "../ui/label"
+import { Input } from "../ui/input"
 import { type z } from "zod"
 
 export function RoomCalendar({ className, filial }: { className?: string; filial?: string }) {
   const [date, setDate] = useState<Date>(startOfToday())
   const { toast } = useToast()
   const utils = api.useUtils()
-  const auth = useAuth(); 
+  const auth = useAuth();
 
   const { data: bookings, isLoading } = api.booking.list.useQuery({
     startDate: startOfToday(),
@@ -84,7 +84,7 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <Calendar mode="single"  selected={date} onSelect={(date) => date && setDate(date)} initialFocus />
+              <Calendar mode="single" selected={date} onSelect={(date) => date && setDate(date)} initialFocus />
             </PopoverContent>
           </Popover>
         </div>
@@ -112,7 +112,7 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
                         <div className="flex gap-2 items-center min-w-[50%]">
                           <Avatar className="size-6">
                             <AvatarFallback>{booking.user.firstName?.at(0)?.toUpperCase()}</AvatarFallback>
-                            <AvatarImage src={booking.user.imageUrl ?? undefined}/>
+                            <AvatarImage src={booking.user.imageUrl ?? undefined} />
                           </Avatar>
                           <p className="text-sm text-muted-foreground overflow-hidden overflow-ellipsis text-nowrap">
                             {booking.user.firstName} {booking.user.lastName}
@@ -134,7 +134,7 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Cancelar reserva</span>
                               </Button>
-                              <UpdateBookingDialog {...{booking}}/>
+                              <UpdateBookingDialog {...{ booking }} />
                             </>
                           }
                         </div>
@@ -155,16 +155,16 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
 
 interface UpdateBookingDialogProps {
   booking: z.TypeOf<typeof createBookingSchema>
-} 
+}
 
 
 function UpdateBookingDialog({
   booking
-}:UpdateBookingDialogProps){
+}: UpdateBookingDialogProps) {
   const utils = api.useUtils();
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
- 
+
   const updateBooking = api.booking.update.useMutation({
     onSuccess: async () => {
       toast({
@@ -187,7 +187,7 @@ function UpdateBookingDialog({
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    
+
     const date = parse(formData.get("date") as string, "yyyy-MM-dd", new Date())
     const time = parse(formData.get("time") as string, "HH:mm", new Date())
     const duration = Number(formData.get("duration"))
@@ -219,7 +219,7 @@ function UpdateBookingDialog({
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Título da Reunião</Label>
-            <Input id="title" name="title" placeholder="Digite o título da reunião" required defaultValue={booking.title}/>
+            <Input id="title" name="title" placeholder="Digite o título da reunião" required defaultValue={booking.title} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">

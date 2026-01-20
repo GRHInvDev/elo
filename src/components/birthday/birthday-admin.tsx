@@ -16,13 +16,13 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BirthdayForm } from "@/components/birthday-form"
-import { BirthdayImport } from "@/components/birthday-import"
+import { BirthdayForm } from "@/components/birthday/birthday-form"
+import { BirthdayImport } from "@/components/birthday/birthday-import"
 import { type Birthday } from "@prisma/client"
 
 export function BirthdayAdmin() {
   const [open, setOpen] = useState(false)
-  const [editingBirthday, setEditingBirthday] = useState<Birthday|null>(null)
+  const [editingBirthday, setEditingBirthday] = useState<Birthday | null>(null)
   const { toast } = useToast()
   const utils = api.useUtils()
 
@@ -53,16 +53,16 @@ export function BirthdayAdmin() {
 
   const formatBirthdayDate = (date: Date) => {
     const birthdayDate = new Date(date)
-    
+
     const day = birthdayDate.getUTCDate()
     const month = birthdayDate.getUTCMonth()
     const year = birthdayDate.getUTCFullYear()
-    
+
     const monthNames = [
       'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
       'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
     ]
-    
+
     return `${day} de ${monthNames[month]} de ${year}`
   }
 

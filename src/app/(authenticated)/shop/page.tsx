@@ -1,6 +1,6 @@
 "use client"
 
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import ProductGrid from "@/components/shop/product-grid"
 import { MyOrdersList } from "@/components/shop/my-orders-list"
 import ShoppingCart from "@/components/shop/shopping-cart"
@@ -121,7 +121,7 @@ function getUnreadCount(orders: unknown): number {
 
 function ShopPageContent() {
   const utils = api.useUtils()
-  
+
   // Contar pedidos não lidos do usuário
   const ordersQuery = api.productOrder.listMyOrders.useQuery(undefined, {
     staleTime: 2 * 60 * 1000, // 2 minutos - pedidos mudam com frequência
@@ -306,8 +306,8 @@ function ShopPageContent() {
                 </div>
               </div>
             </div>
-            <ProductGrid 
-              size="sm" 
+            <ProductGrid
+              size="sm"
               enterpriseFilter={enterprise}
               nameFilter={nameFilter}
               priceFilter={priceFilter}

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Car, Clock, MapPin, User, Filter, X } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { RentForm } from "@/components/rent-form"
+import { RentForm } from "@/components/vehicles/rent-form"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { VehicleRent, Vehicle } from "@prisma/client"
 
@@ -43,12 +43,12 @@ export default function MyRentsPage() {
 
   // Filtrar reservas baseado no status e termo de busca
   const filteredRents = allRents?.items?.filter((rent) => {
-    const matchesStatus = 
-      filterStatus === "all" || 
+    const matchesStatus =
+      filterStatus === "all" ||
       (filterStatus === "active" && !rent.finished) ||
       (filterStatus === "finished" && rent.finished)
 
-    const matchesSearch = 
+    const matchesSearch =
       !searchTerm ||
       rent.vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rent.driver.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,14 +61,14 @@ export default function MyRentsPage() {
     if (rent.finished) {
       return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Finalizado</Badge>
     }
-    
+
     const now = new Date()
     const endDate = rent.possibleEnd ? new Date(rent.possibleEnd) : null
-    
+
     if (endDate && endDate < now) {
       return <Badge variant="destructive">Atrasado</Badge>
     }
-    
+
     return <Badge variant="secondary">Em andamento</Badge>
   }
 
@@ -162,8 +162,8 @@ export default function MyRentsPage() {
               {allRents?.items?.length === 0 ? "Nenhuma reserva encontrada" : "Nenhuma reserva corresponde aos filtros"}
             </h2>
             <p className="text-muted-foreground">
-              {allRents?.items?.length === 0 
-                ? "Você ainda não fez nenhuma reserva de veículo." 
+              {allRents?.items?.length === 0
+                ? "Você ainda não fez nenhuma reserva de veículo."
                 : "Tente ajustar os filtros para encontrar suas reservas."
               }
             </p>

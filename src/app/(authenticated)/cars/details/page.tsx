@@ -5,9 +5,9 @@ import { useSearchParams } from "next/navigation"
 import type { Enterprise, Vehicle } from "@prisma/client"
 
 import { api } from "@/trpc/react"
-import { VehicleCard } from "@/components/vehicle-card"
-import { EnterpriseFilter } from "@/components/enterprise-filter"
-import { VehicleCardSkeleton } from "@/components/vehicle-card-skeleton"
+import { VehicleCard } from "@/components/vehicles/vehicle-card"
+import { EnterpriseFilter } from "@/components/ui/enterprise-filter"
+import { VehicleCardSkeleton } from "@/components/vehicles/vehicle-card-skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -91,7 +91,7 @@ function VehiclesPageContent() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                // Removido min para permitir seleção de datas passadas
+              // Removido min para permitir seleção de datas passadas
               />
             </div>
             <div className="flex-1">

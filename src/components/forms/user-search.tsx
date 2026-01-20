@@ -12,8 +12,8 @@ import { Search, X, Users, Check, ChevronDown } from "lucide-react"
 interface User {
   id: string
   name: string
-  email: string
-  setor: string | null
+  email?: string | null
+  setor?: string | null
 }
 
 interface UserSearchProps {
@@ -24,10 +24,10 @@ interface UserSearchProps {
   maxHeight?: string
 }
 
-export function UserSearch({ 
-  users, 
-  selectedUsers, 
-  onSelectionChange, 
+export function UserSearch({
+  users,
+  selectedUsers,
+  onSelectionChange,
   placeholder = "Buscar colaboradores...",
   maxHeight = "200px"
 }: UserSearchProps) {
@@ -39,10 +39,10 @@ export function UserSearch({
     if (!searchTerm.trim()) return users
 
     const term = searchTerm.toLowerCase()
-    return users.filter(user => 
+    return users.filter(user =>
       user.name.toLowerCase().includes(term) ||
-      user.email.toLowerCase().includes(term) ||
-      (!!user.setor && user.setor.toLowerCase().includes(term))
+      (user.email?.toLowerCase().includes(term) ?? false) ||
+      (user.setor?.toLowerCase().includes(term) ?? false)
     )
   }, [users, searchTerm])
 
@@ -76,7 +76,7 @@ export function UserSearch({
     }
   }
 
-  const isAllSelected = filteredUsers.length > 0 && 
+  const isAllSelected = filteredUsers.length > 0 &&
     filteredUsers.every(user => selectedUsers.includes(user.id))
 
   return (
@@ -87,7 +87,7 @@ export function UserSearch({
         <p className="text-xs text-muted-foreground mb-2">
           Busque e selecione usuários específicos que podem ver este formulário
         </p>
-        
+
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -99,7 +99,7 @@ export function UserSearch({
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4" />
                 <span className="truncate">
-                  {selectedUsers.length > 0 
+                  {selectedUsers.length > 0
                     ? `${selectedUsers.length} usuário(s) selecionado(s)`
                     : placeholder
                   }
@@ -119,7 +119,7 @@ export function UserSearch({
                 <CommandEmpty>
                   {searchTerm ? "Nenhum usuário encontrado." : "Digite para buscar usuários..."}
                 </CommandEmpty>
-                
+
                 {filteredUsers.length > 0 && (
                   <CommandGroup>
                     {/* Opção para selecionar/deselecionar todos */}
@@ -141,11 +141,11 @@ export function UserSearch({
                         </Badge>
                       </div>
                     </CommandItem>
-                    
+
                     {/* Lista de usuários */}
                     {filteredUsers.map((user) => {
                       const isSelected = selectedUsers.includes(user.id)
-                      
+
                       return (
                         <CommandItem
                           key={user.id}
@@ -166,12 +166,10 @@ export function UserSearch({
                               )}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="truncate">{user.email}</span>
+                              {user.email && <span className="truncate">{user.email}</span>}
+                              {user.email && user.setor && <span>•</span>}
                               {user.setor && (
-                                <>
-                                  <span>•</span>
-                                  <span className="truncate">{user.setor}</span>
-                                </>
+                                <span className="truncate">{user.setor}</span>
                               )}
                             </div>
                           </div>

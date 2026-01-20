@@ -3,7 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { Inter } from "next/font/google"
 import "@/styles/globals.css"
 import { cn } from "@/lib/utils"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/ui/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "sonner"
 import { TRPCReactProvider } from "@/trpc/react"
@@ -34,10 +34,10 @@ export default async function RootLayout({
           </head> */}
           <body className={cn("min-h-screen bg-zinc-100 dark:bg-background antialiased", inter.className)}>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <Analytics/>
-              <SpeedInsights/>
+              <Analytics />
+              <SpeedInsights />
               <Toaster />
-              <SonnerToaster 
+              <SonnerToaster
                 position="top-center"
                 expand={true}
                 richColors

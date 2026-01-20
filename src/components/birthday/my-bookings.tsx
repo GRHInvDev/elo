@@ -18,19 +18,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Label } from "./ui/label"
-import { Input } from "./ui/input"
+import { Label } from "../ui/label"
+import { Input } from "../ui/input"
 import { type z } from "zod"
 
 export function MyBookings({ className, filial }: { className?: string; filial?: string }) {
   const { toast } = useToast()
   const utils = api.useUtils()
-  const auth = useAuth(); 
+  const auth = useAuth();
 
   const { data: bookings, isLoading } = api.booking.listMine.useQuery()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filtered = bookings?.filter((b) => !filial || b.room.filial === filial)
-  
+
   const deleteBooking = api.booking.delete.useMutation({
     onSuccess: async () => {
       toast({
@@ -70,7 +70,7 @@ export function MyBookings({ className, filial }: { className?: string; filial?:
                       <div className="flex items-center gap-2 justify-between">
                         <p className="truncate font-medium">{booking.room.name}</p>
                         <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
-                        {format(booking.start, "PP", { locale: ptBR })} | {format(booking.start, "HH:mm")} - {format(booking.end, "HH:mm")}
+                          {format(booking.start, "PP", { locale: ptBR })} | {format(booking.start, "HH:mm")} - {format(booking.end, "HH:mm")}
                         </span>
                       </div>
                       <div className="mt-1 flex items-center gap-2">
@@ -89,7 +89,7 @@ export function MyBookings({ className, filial }: { className?: string; filial?:
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Cancelar reserva</span>
                               </Button>
-                              <UpdateBookingDialog {...{booking}}/>
+                              <UpdateBookingDialog {...{ booking }} />
                             </>
                           }
                         </div>
@@ -110,16 +110,16 @@ export function MyBookings({ className, filial }: { className?: string; filial?:
 
 interface UpdateBookingDialogProps {
   booking: z.TypeOf<typeof createBookingSchema>
-} 
+}
 
 
 function UpdateBookingDialog({
   booking
-}:UpdateBookingDialogProps){
+}: UpdateBookingDialogProps) {
   const utils = api.useUtils();
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
- 
+
   const updateBooking = api.booking.update.useMutation({
     onSuccess: async () => {
       toast({
@@ -142,7 +142,7 @@ function UpdateBookingDialog({
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    
+
     const date = parse(formData.get("date") as string, "yyyy-MM-dd", new Date())
     const time = parse(formData.get("time") as string, "HH:mm", new Date())
     const duration = Number(formData.get("duration"))
@@ -174,7 +174,7 @@ function UpdateBookingDialog({
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Título da Reunião</Label>
-            <Input id="title" name="title" placeholder="Digite o título da reunião" required defaultValue={booking.title}/>
+            <Input id="title" name="title" placeholder="Digite o título da reunião" required defaultValue={booking.title} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">

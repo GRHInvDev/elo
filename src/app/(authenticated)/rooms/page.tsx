@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-import { DashboardShell } from "@/components/dashboard-shell"
+import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { RoomsClient } from "./_components/rooms-client"
 
 export const metadata: Metadata = {
