@@ -61,28 +61,31 @@ model User {
   newCollaborator NewCollaborator?
 
   // Pedidos de produtos
-  productOrders ProductOrder[]
-  orderGroups OrderGroup[]
-  enterpriseManagers EnterpriseManager[]
+  productOrders         ProductOrder[]
+  orderGroups           OrderGroup[]
+  enterpriseManagers    EnterpriseManager[]
   purchaseRegistrations PurchaseRegistration[]
 
   // Gestão de Qualidade
-  qualityDocumentsResponsible QualityDocument[] @relation("QualityDocumentResponsible")
-  qualityDocumentsApprovedManager QualityDocument[] @relation("QualityDocumentApprovedManager")
-  qualityDocumentAccess QualityDocumentAccess[]
+  qualityDocumentsResponsible     QualityDocument[]       @relation("QualityDocumentResponsible")
+  qualityDocumentsApprovedManager QualityDocument[]       @relation("QualityDocumentApprovedManager")
+  qualityDocumentAccess           QualityDocumentAccess[]
 
   // Régua de Emoções
-  emotionRulerResponses EmotionRulerResponse[]
+  emotionRulerResponses     EmotionRulerResponse[]
   emotionRulerDailyAccesses EmotionRulerDailyAccess[]
+
+  // Funcionalidades Beta/Novidades
+  novidades Boolean @default(false)
 
   @@map("users")
 }
 
 model GlobalConfig {
-  id                 String @unique @default(cuid())
-  shopWebhook        String
+  id                    String  @unique @default(cuid())
+  shopWebhook           String
   shopNotificationEmail String?
-  formResponseTags   Json?  // Tags globais para respostas de formulários
+  formResponseTags      Json? // Tags globais para respostas de formulários
 }
 
 model Room {
@@ -247,20 +250,20 @@ model VehicleRent {
 }
 
 model Product {
-  id          String     @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
   description String
   code        String?
   price       Float
-  stock       Int        @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  stock       Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   enterprise  Enterprise
   imageUrl    String[]
-  sells       Sell[]     @relation("ProductToSell")
-  shopCarts   ShopCart[] @relation("ProductToShopCart")
+  sells       Sell[]         @relation("ProductToSell")
+  shopCarts   ShopCart[]     @relation("ProductToShopCart")
   orders      ProductOrder[]
-  active      Boolean    @default(true)
+  active      Boolean        @default(true)
 
   @@map("products")
 }
@@ -291,70 +294,70 @@ model Sell {
 }
 
 model OrderGroup {
-  id          String        @id @default(cuid())
-  userId      String
-  enterprise  Enterprise
-  status      ProductOrderStatus @default(SOLICITADO)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders      ProductOrder[]
+  id         String             @id @default(cuid())
+  userId     String
+  enterprise Enterprise
+  status     ProductOrderStatus @default(SOLICITADO)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders     ProductOrder[]
 
   @@map("order_groups")
 }
 
 model PurchaseRegistration {
-  id          String      @id @default(cuid())
-  userId      String
-  enterprise  Enterprise
-  fullName    String
-  phone       String
-  email       String
-  address     String
-  whatsapp    String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  userId     String
+  enterprise Enterprise
+  fullName   String
+  phone      String
+  email      String
+  address    String
+  whatsapp   String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, enterprise])
   @@map("purchase_registrations")
 }
 
 model ProductOrder {
-  id                          String              @id @default(cuid())
-  userId                      String
-  productId                   String
-  orderGroupId               String?
-  quantity                    Int                 @default(1)
-  paymentMethod               PaymentMethod?
-  status                      ProductOrderStatus  @default(SOLICITADO)
-  read                        Boolean             @default(false)
-  readAt                      DateTime?
-  orderTimestamp              DateTime?
+  id                            String             @id @default(cuid())
+  userId                        String
+  productId                     String
+  orderGroupId                  String?
+  quantity                      Int                @default(1)
+  paymentMethod                 PaymentMethod?
+  status                        ProductOrderStatus @default(SOLICITADO)
+  read                          Boolean            @default(false)
+  readAt                        DateTime?
+  orderTimestamp                DateTime?
   purchaseRegistrationTimestamp DateTime?
-  createdAt                   DateTime            @default(now())
-  updatedAt                   DateTime            @updatedAt
-  user                        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product                     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderGroup                  OrderGroup?         @relation(fields: [orderGroupId], references: [id], onDelete: SetNull)
+  createdAt                     DateTime           @default(now())
+  updatedAt                     DateTime           @updatedAt
+  user                          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product                       Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderGroup                    OrderGroup?        @relation(fields: [orderGroupId], references: [id], onDelete: SetNull)
   // Chat relacionado a este pedido
-  shopChats                   ShopChat[]
+  shopChats                     ShopChat[]
 
   @@map("product_orders")
 }
 
 model ShopChat {
-  id              String        @id @default(cuid())
-  userId          String
-  productOrderId  String
-  message         String
-  imageUrl        String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String   @id @default(cuid())
+  userId         String
+  productOrderId String
+  message        String
+  imageUrl       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relações
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productOrder  ProductOrder  @relation(fields: [productOrderId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productOrder ProductOrder @relation(fields: [productOrderId], references: [id], onDelete: Cascade)
 
   @@index([productOrderId, createdAt])
   @@index([userId, createdAt])
@@ -362,14 +365,14 @@ model ShopChat {
 }
 
 model EnterpriseManager {
-  id            String      @id @default(cuid())
+  id            String     @id @default(cuid())
   userId        String?
   enterprise    Enterprise
   externalName  String?
   externalEmail String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, enterprise])
   @@unique([externalEmail, enterprise])
@@ -405,7 +408,7 @@ model FormResponse {
   formId           String
   status           ResponseStatus     @default(NOT_STARTED)
   statusComment    String?
-  tags             Json?              // Tags aplicadas nesta resposta (array de IDs de tags)
+  tags             Json? // Tags aplicadas nesta resposta (array de IDs de tags)
   form             Form               @relation(fields: [formId], references: [id], onDelete: Cascade)
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   FormResponseChat FormResponseChat[]
@@ -894,16 +897,16 @@ enum EnumType {
 
 // Listas privadas - controle de acesso por documento
 model QualityDocumentAccess {
-  id             String          @id @default(cuid())
-  documentId     String
-  userId         String
-  canView        Boolean         @default(true)
-  canEdit        Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id         String   @id @default(cuid())
+  documentId String
+  userId     String
+  canView    Boolean  @default(true)
+  canEdit    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  document       QualityDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document QualityDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, userId])
   @@map("quality_document_access")
@@ -911,30 +914,30 @@ model QualityDocumentAccess {
 
 // Model para Gestão de Qualidade - Lista Mestra de Documentos
 model QualityDocument {
-  id                  String                    @id @default(cuid())
-  docName             String
-  docDesc             String
-  docURL              String?
-  docLink             String?
-  docProcess          String
-  docCod              String
-  docLastEdit         DateTime
-  docTypeArc          String
-  docResponsibleId    String?
+  id                   String       @id @default(cuid())
+  docName              String
+  docDesc              String
+  docURL               String?
+  docLink              String?
+  docProcess           String
+  docCod               String
+  docLastEdit          DateTime
+  docTypeArc           String
+  docResponsibleId     String?
   docApprovedManagerId String?
-  docRevPeriod        DocRevPeriod              @default(ANUAL)
-  docAvailability     String?
-  isPrivate           Boolean                   @default(false)
+  docRevPeriod         DocRevPeriod @default(ANUAL)
+  docAvailability      String?
+  isPrivate            Boolean      @default(false)
 
   // Relações com User (empresa e setor vêm do User)
-  docResponsible      User?                     @relation("QualityDocumentResponsible", fields: [docResponsibleId], references: [id], onDelete: SetNull)
-  docApprovedManager  User?                     @relation("QualityDocumentApprovedManager", fields: [docApprovedManagerId], references: [id], onDelete: SetNull)
+  docResponsible     User? @relation("QualityDocumentResponsible", fields: [docResponsibleId], references: [id], onDelete: SetNull)
+  docApprovedManager User? @relation("QualityDocumentApprovedManager", fields: [docApprovedManagerId], references: [id], onDelete: SetNull)
 
   // Controle de acesso privado
-  accessList          QualityDocumentAccess[]
+  accessList QualityDocumentAccess[]
 
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([docResponsibleId])
   @@index([docApprovedManagerId])
@@ -953,33 +956,33 @@ enum DocRevPeriod {
 
 // Módulo Régua de Emoções
 model EmotionRuler {
-  id              String                  @id @default(cuid())
-  question        String                  @default("Como você está se sentindo hoje?")
-  isActive        Boolean                 @default(true)
+  id              String                    @id @default(cuid())
+  question        String                    @default("Como você está se sentindo hoje?")
+  isActive        Boolean                   @default(true)
   startDate       DateTime?
   endDate         DateTime?
-  backgroundColor String?                 // Cor de fundo do layout
+  backgroundColor String? // Cor de fundo do layout
   emotions        EmotionRulerEmotion[]
   responses       EmotionRulerResponse[]
   dailyAccesses   EmotionRulerDailyAccess[]
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
 
   @@map("emotion_rulers")
 }
 
 model EmotionRulerEmotion {
-  id              String        @id @default(cuid())
-  rulerId         String
-  value            Int           // Valor numérico (0-5, onde 0 é extremamente chateado e 5 é extremamente feliz)
-  emoji           String?       // Emoji para este nível (ex: "😢", "😊")
-  color           String        // Cor da emoção (ex: "#FF0000" para vermelho, "#00FF00" para verde)
-  states          String[]      @default([]) // Estados/emoções para este nível (ex: ["frustrado", "chateado", "triste"])
-  order           Int           @default(0) // Ordem na régua
-  ruler           EmotionRuler  @relation(fields: [rulerId], references: [id], onDelete: Cascade)
+  id      String       @id @default(cuid())
+  rulerId String
+  value   Int // Valor numérico (0-5, onde 0 é extremamente chateado e 5 é extremamente feliz)
+  emoji   String? // Emoji para este nível (ex: "😢", "😊")
+  color   String // Cor da emoção (ex: "#FF0000" para vermelho, "#00FF00" para verde)
+  states  String[]     @default([]) // Estados/emoções para este nível (ex: ["frustrado", "chateado", "triste"])
+  order   Int          @default(0) // Ordem na régua
+  ruler   EmotionRuler @relation(fields: [rulerId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([rulerId, value])
   @@index([rulerId, order])
@@ -987,16 +990,16 @@ model EmotionRulerEmotion {
 }
 
 model EmotionRulerResponse {
-  id              String                  @id @default(cuid())
-  userId          String
-  rulerId         String
-  emotionValue    Int                     // Valor da emoção selecionada (0-5)
-  comment         String?                 // Comentário opcional
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  rulerId      String
+  emotionValue Int // Valor da emoção selecionada (0-5)
+  comment      String? // Comentário opcional
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ruler           EmotionRuler            @relation(fields: [rulerId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruler EmotionRuler @relation(fields: [rulerId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([rulerId, createdAt])
@@ -1005,18 +1008,18 @@ model EmotionRulerResponse {
 }
 
 model EmotionRulerDailyAccess {
-  id              String        @id @default(cuid())
-  userId          String
-  rulerId         String
-  date            DateTime      @default(now()) @db.Date // Data do acesso (sem hora)
-  accessedAt      DateTime      @default(now()) // Data e hora exata do acesso
-  wasDismissed    Boolean       @default(false) // Se o usuário fechou no X
-  responded       Boolean       @default(false) // Se o usuário respondeu
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  rulerId      String
+  date         DateTime @default(now()) @db.Date // Data do acesso (sem hora)
+  accessedAt   DateTime @default(now()) // Data e hora exata do acesso
+  wasDismissed Boolean  @default(false) // Se o usuário fechou no X
+  responded    Boolean  @default(false) // Se o usuário respondeu
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ruler           EmotionRuler  @relation(fields: [rulerId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruler EmotionRuler @relation(fields: [rulerId], references: [id], onDelete: Cascade)
 
   @@unique([userId, rulerId, date])
   @@index([userId, date])
