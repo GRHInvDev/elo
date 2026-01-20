@@ -23,7 +23,8 @@ export const userRouter = createTRPCRouter({
           setor: true,
           birthDay: true,
           extension: true,
-          emailExtension: true
+          emailExtension: true,
+          novidades: true
         }
       });
 
@@ -44,7 +45,7 @@ export const userRouter = createTRPCRouter({
       };
 
       // Se existe role_config customizado, usar; senão usar default
-      const roleConfigData = user?.role_config 
+      const roleConfigData = user?.role_config
         ? user.role_config as RolesConfig
         : defaultRoleConfig;
 
@@ -68,7 +69,7 @@ export const userRouter = createTRPCRouter({
         userId: ctx.auth.userId,
         error: error
       });
-      
+
       // Em caso de erro, retornar um usuário básico para evitar crash
       const fallbackRoleConfig: RolesConfig = {
         sudo: false,
@@ -257,7 +258,7 @@ export const userRouter = createTRPCRouter({
 
       const roleConfig = currentUser?.role_config as RolesConfig | null;
       const hasAccess = Boolean(roleConfig?.sudo) || Boolean(roleConfig?.can_manage_dados_basicos_users);
-      
+
       if (!hasAccess) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -504,10 +505,10 @@ export const userRouter = createTRPCRouter({
       })
 
       const roleConfig = currentUser?.role_config as RolesConfig | null;
-      
+
       // Permitir se for sudo ou se tiver a permissão específica
       const canEdit = Boolean(roleConfig?.sudo) || Boolean(roleConfig?.can_manage_dados_basicos_users);
-      
+
       if (!canEdit) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -516,7 +517,7 @@ export const userRouter = createTRPCRouter({
       }
 
       const { userId, ...updateData } = input
-      
+
       // Se o usuário não é sudo, apenas permitir alterar dados básicos
       if (!roleConfig?.sudo) {
         // Garantir que apenas dados básicos sejam atualizados
@@ -530,13 +531,13 @@ export const userRouter = createTRPCRouter({
           matricula: input.matricula,
           email_empresarial: input.email_empresarial,
         }
-        
+
         return ctx.db.user.update({
           where: { id: userId },
           data: allowedFields,
         })
       }
-      
+
       return ctx.db.user.update({
         where: { id: userId },
         data: updateData,

@@ -7,7 +7,7 @@ export const emotionRulerRouter = createTRPCRouter({
   // Buscar a régua ativa
   getActive: protectedProcedure.query(async ({ ctx }) => {
     const today = new Date();
-    
+
     const ruler = await ctx.db.emotionRuler.findFirst({
       where: {
         isActive: true,
@@ -49,10 +49,15 @@ export const emotionRulerRouter = createTRPCRouter({
     // Verificar se o usuário é Totem - não mostrar modal para Totem
     const user = await ctx.db.user.findUnique({
       where: { id: userId },
-      select: { 
+      select: {
         role_config: true,
+        novidades: true
       },
     });
+
+    if (user?.novidades !== true) {
+      return { shouldShow: false, ruler: null };
+    }
 
     if (user?.role_config) {
       const roleConfig = user.role_config as { isTotem?: boolean };
@@ -593,11 +598,11 @@ export const emotionRulerRouter = createTRPCRouter({
           rulerId: input.rulerId,
           ...(startDate && endDate
             ? {
-                date: {
-                  gte: startDate,
-                  lte: endDate,
-                },
-              }
+              date: {
+                gte: startDate,
+                lte: endDate,
+              },
+            }
             : {}),
         },
       });
@@ -608,11 +613,11 @@ export const emotionRulerRouter = createTRPCRouter({
           rulerId: input.rulerId,
           ...(startDate && endDate
             ? {
-                createdAt: {
-                  gte: startDate,
-                  lte: endDate,
-                },
-              }
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+            }
             : {}),
         },
       });
@@ -624,11 +629,11 @@ export const emotionRulerRouter = createTRPCRouter({
           rulerId: input.rulerId,
           ...(startDate && endDate
             ? {
-                createdAt: {
-                  gte: startDate,
-                  lte: endDate,
-                },
-              }
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+            }
             : {}),
         },
         _count: {
@@ -707,11 +712,11 @@ export const emotionRulerRouter = createTRPCRouter({
           rulerId: input.rulerId,
           ...(startDate && endDate
             ? {
-                createdAt: {
-                  gte: startDate,
-                  lte: endDate,
-                },
-              }
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+            }
             : {}),
         },
         include: {
@@ -736,11 +741,11 @@ export const emotionRulerRouter = createTRPCRouter({
           rulerId: input.rulerId,
           ...(startDate && endDate
             ? {
-                createdAt: {
-                  gte: startDate,
-                  lte: endDate,
-                },
-              }
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+            }
             : {}),
         },
       });

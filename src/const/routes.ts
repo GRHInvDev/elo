@@ -28,7 +28,7 @@ export interface RouteItem {
 }
 
 // eslint-disable-next-line
-export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: boolean): RouteItem[] => {
+export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: boolean, novidades?: boolean): RouteItem[] => {
   // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes, Aniversários)
   if (roleConfig && 'isTotem' in roleConfig && roleConfig.isTotem) {
     return [
@@ -140,12 +140,12 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
           describe: "Página para requisitar processos internos para os setores, como marketing, TI, inovação e compras",
           href: "/forms",
         },
-        {
+        ...(novidades ? [{
           title: "Régua de Emoções",
           icon: Heart,
           describe: "Identifique o nível de sentimento para acompanhamento do RH",
           href: "/forms/emotion-ruler",
-        },
+        }] : []),
       ],
     },
     {
