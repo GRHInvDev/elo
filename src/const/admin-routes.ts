@@ -1,5 +1,5 @@
 import {
-  Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck, Heart
+  Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck
 } from "lucide-react"
 
 export interface AdminRoute {

@@ -6,6 +6,7 @@ import { type InputJsonValue } from "@prisma/client/runtime/library";
 import type { RolesConfig } from "@/types/role-config";
 
 
+
 export const formsRouter = createTRPCRouter({
     create: protectedProcedure
         .input(z.object({
@@ -51,16 +52,18 @@ export const formsRouter = createTRPCRouter({
                 }
 
                 // Atualizar role_config para todos os outros usuários (esconder o formulário)
-                const allUsers = await ctx.db.user.findMany({
+                // Otimização: Identificar usuários afetados e realizar atualização em lote
+                const usersToHideForm = await ctx.db.user.findMany({
+                    where: {
+                        AND: [
+                            { id: { not: ctx.auth.userId } },
+                            { id: { notIn: Array.from(usersToUpdate) } }
+                        ]
+                    },
                     select: { id: true, role_config: true }
                 });
 
-                for (const user of allUsers) {
-                    // Pular se é o criador ou tem acesso
-                    if (user.id === ctx.auth.userId || usersToUpdate.has(user.id)) {
-                        continue;
-                    }
-
+                const updates = usersToHideForm.map(user => {
                     const currentConfig = (user.role_config as RolesConfig) || {
                         sudo: false,
                         admin_pages: [],
@@ -72,19 +75,23 @@ export const formsRouter = createTRPCRouter({
                         can_view_dre_report: false,
                     };
 
-                    // Adicionar formulário à lista de ocultos
                     const hiddenForms = currentConfig.hidden_forms ?? [];
                     if (!hiddenForms.includes(form.id)) {
                         const newConfig = {
                             ...currentConfig,
                             hidden_forms: [...hiddenForms, form.id]
                         };
-
-                        await ctx.db.user.update({
+                        return ctx.db.user.update({
                             where: { id: user.id },
                             data: { role_config: newConfig }
                         });
                     }
+                    return null;
+                }).filter((update): update is NonNullable<typeof update> => update !== null);
+                if (updates.length > 0) {
+                    // Executar atualizações em transação para atomicidade
+                    // Se houver muitos usuários, idealmente processar em chunks, mas aqui faremos em uma transação única
+                    await ctx.db.$transaction(updates);
                 }
             }
 
@@ -149,7 +156,7 @@ export const formsRouter = createTRPCRouter({
             const isOwner = existingForm.ownerIds?.includes(currentUser.id) ?? false;
 
             // 3. Se tem permissão can_create_form, pode editar qualquer formulário
-            const canCreate = roleConfig?.sudo ?? roleConfig?.can_create_form ?? false;
+            const canCreate = (roleConfig?.sudo ?? false) || (roleConfig?.can_create_form ?? false);
 
             // 4. Se tem acesso às respostas do formulário, pode editar
             let hasAccessToResponses = false;
@@ -191,7 +198,7 @@ export const formsRouter = createTRPCRouter({
                     ...(input.isPrivate !== undefined ? { isPrivate: input.isPrivate } : {}),
                     ...(input.allowedUsers !== undefined ? { allowedUsers: input.allowedUsers } : {}),
                     ...(input.allowedSectors !== undefined ? { allowedSectors: input.allowedSectors } : {}),
-                    ...(input.ownerIds ? { ownerIds: input.ownerIds } : {}),
+                    ...(input.ownerIds !== undefined ? { ownerIds: input.ownerIds } : {}),
                 },
                 where: {
                     id: input.id
@@ -308,11 +315,76 @@ export const formsRouter = createTRPCRouter({
             id: z.string(),
         }))
         .mutation(async ({ ctx, input }) => {
-            return await ctx.db.form.delete({
-                where: {
-                    id: input.id
+            const form = await ctx.db.form.findUnique({
+                where: { id: input.id }
+            });
+
+            if (!form) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Formulário não encontrado",
+                });
+            }
+
+            const userId = ctx.auth.userId;
+
+            // Buscar o usuário para verificar role_config (admin check)
+            const caller = await ctx.db.user.findUnique({
+                where: { id: userId },
+                select: { role_config: true }
+            });
+            const roleConfig = caller?.role_config as RolesConfig | null;
+            const isSuperAdmin = (roleConfig?.sudo ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false);
+
+            const canDelete =
+                form.userId === userId ||
+                form.ownerIds.includes(userId) ||
+                isSuperAdmin;
+
+            if (!canDelete) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Você não tem permissão para excluir este formulário",
+                });
+            }
+
+            return await ctx.db.$transaction(async (tx) => {
+                // Remove references from hidden_forms and visible_forms
+                const usersWithRef = await tx.user.findMany({
+                    where: {
+                        OR: [
+                            { role_config: { path: ['hidden_forms'], array_contains: input.id } },
+                            { role_config: { path: ['visible_forms'], array_contains: input.id } }
+                        ]
+                    },
+                    select: { id: true, role_config: true }
+                });
+
+                for (const user of usersWithRef) {
+                    const rc = user.role_config as RolesConfig;
+                    const newHidden = rc.hidden_forms?.filter(id => id !== input.id);
+                    const newVisible = rc.visible_forms?.filter(id => id !== input.id);
+
+                    if (newHidden?.length !== rc.hidden_forms?.length || newVisible?.length !== rc.visible_forms?.length) {
+                        await tx.user.update({
+                            where: { id: user.id },
+                            data: {
+                                role_config: {
+                                    ...rc,
+                                    hidden_forms: newHidden,
+                                    visible_forms: newVisible
+                                }
+                            }
+                        });
+                    }
                 }
-            })
+
+                return await tx.form.delete({
+                    where: {
+                        id: input.id
+                    }
+                });
+            });
         }),
 
     list: protectedProcedure
@@ -379,14 +451,59 @@ export const formsRouter = createTRPCRouter({
             id: z.string()
         }))
         .query(async ({ ctx, input }) => {
-            return await ctx.db.form.findUnique({
+            const form = await ctx.db.form.findUnique({
                 where: {
                     id: input.id
                 },
                 include: {
-                    user: true
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            imageUrl: true, // Assuming avatarUrl is imageUrl based on other files
+                            // Add other safe fields if necessary
+                        }
+                    }
                 }
-            })
+            });
+
+            if (!form) return null;
+
+            const userId = ctx.auth.userId;
+            // Enforce visibility rules
+            if (form.isPrivate) {
+                if (form.userId !== userId && !form.ownerIds.includes(userId)) {
+                    // Check specific access
+                    if (!form.allowedUsers.includes(userId)) {
+                        // Check sector access
+                        const user = await ctx.db.user.findUnique({
+                            where: { id: userId },
+                            select: { setor: true, role_config: true }
+                        });
+
+                        const roleConfig = user?.role_config as RolesConfig | null;
+                        const isHidden = roleConfig?.hidden_forms?.includes(form.id) ?? false;
+                        const isVisible = roleConfig?.visible_forms?.includes(form.id) ?? false;
+
+                        if (!isVisible && isHidden) return null;
+
+                        // Se não tem acesso explícito
+                        if (!user?.role_config && !form.allowedSectors.includes(user?.setor ?? "")) {
+                            const canView =
+                                (roleConfig?.visible_forms?.includes(form.id) ?? false) ||
+                                (!(roleConfig?.hidden_forms?.includes(form.id) ?? false) && !(roleConfig?.isTotem ?? false) &&
+                                    (form.allowedSectors.includes(user?.setor ?? "") || form.allowedUsers.includes(userId)));
+
+                            if (!canView && !(roleConfig?.sudo ?? false) && !(roleConfig?.can_create_form ?? false)) { // Admins podem ver
+                                return null;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return form;
         }),
 
     // Gerenciamento de visibilidade via role_config
@@ -397,13 +514,30 @@ export const formsRouter = createTRPCRouter({
             action: z.enum(['show', 'hide', 'restrict_to_list']),
         }))
         .mutation(async ({ ctx, input }) => {
+            const userId = ctx.auth.userId;
+            // Authorization guard
+            if (input.userId !== userId) {
+                const caller = await ctx.db.user.findUnique({
+                    where: { id: userId },
+                    select: { role_config: true }
+                });
+                const roleConfig = caller?.role_config as RolesConfig | null;
+                const isAdmin = (roleConfig?.sudo ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false); // Simplified admin check
+
+                if (!isAdmin) {
+                    throw new TRPCError({
+                        code: "FORBIDDEN",
+                        message: "Você não tem permissão para alterar a visibilidade de outros usuários",
+                    });
+                }
+            }
             const user = await ctx.db.user.findUnique({
                 where: { id: input.userId },
                 select: { role_config: true }
             });
 
             if (!user) {
-                throw new Error("Usuário não encontrado");
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Usuário não encontrado' });
             }
 
             const currentConfig = (user.role_config as RolesConfig) || {
@@ -458,14 +592,26 @@ export const formsRouter = createTRPCRouter({
 
     getUsersForFormVisibility: protectedProcedure
         .query(async ({ ctx }) => {
+            const userId = ctx.auth.userId;
+            // Check authorization
+            const caller = await ctx.db.user.findUnique({
+                where: { id: userId },
+                select: { role_config: true }
+            });
+            const roleConfig = caller?.role_config as RolesConfig | null;
+            const isAuthorized = (roleConfig?.sudo ?? false) || (roleConfig?.can_create_form ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false);
+
             const users = await ctx.db.user.findMany({
                 select: {
                     id: true,
                     firstName: true,
                     lastName: true,
-                    email: true,
-                    setor: true,
-                    role_config: true,
+                    // Check permissions to include sensitive data
+                    ...(isAuthorized ? {
+                        email: true,
+                        setor: true,
+                        role_config: true,
+                    } : {}),
                 },
                 orderBy: {
                     firstName: 'asc'
@@ -474,10 +620,17 @@ export const formsRouter = createTRPCRouter({
 
             return users.map(user => ({
                 id: user.id,
-                name: `${user.firstName} ${user.lastName}`.trim() || user.email,
-                email: user.email,
-                setor: user.setor,
-                role_config: user.role_config as RolesConfig,
+                name: `${user.firstName} ${user.lastName}`.trim(),
+                // Conditionally return sensitive fields
+                ...(isAuthorized ? {
+                    email: user.email,
+                    setor: user.setor,
+                    role_config: user.role_config as RolesConfig,
+                } : {
+                    email: undefined,
+                    setor: undefined,
+                    role_config: undefined, // Or omit entirely if type allows optional
+                }),
             }));
         }),
 

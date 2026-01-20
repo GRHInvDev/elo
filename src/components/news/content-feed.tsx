@@ -51,7 +51,7 @@ import { ImageViewer } from "@/components/ui/image-viewer"
 import { LazyIframe } from "@/components/ui/lazy-iframe"
 import { MonacoEditor } from "@/components/ui/monaco-editor"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
-import { AuthorWithRoleConfig, PostWithAuthor, EventWithAuthor, FlyerWithAuthor, ContentFeedProps } from "@/types/content-feed"
+import type { PostWithAuthor, EventWithAuthor, FlyerWithAuthor, ContentFeedProps } from "@/types/content-feed"
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })

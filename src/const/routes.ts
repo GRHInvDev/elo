@@ -15,7 +15,6 @@ import {
   SearchCheck,
   Book,
   FileText,
-  Heart,
 } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
