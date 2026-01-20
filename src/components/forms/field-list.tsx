@@ -1,5 +1,6 @@
 "use client"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { type Field, getFieldTypeLabel } from "@/lib/form-types"
@@ -31,8 +32,15 @@ export function FieldList({ fields, selectedFieldId, onSelectField, onRemoveFiel
           onClick={() => onSelectField(field.id)}
         >
           <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="font-medium">{field.label || "Sem título"}</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{field.label || "Sem título"}</p>
+                {field.showInList && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 bg-blue-50 text-blue-600 border-blue-200">
+                    Visível na lista
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">{getFieldTypeLabel(field.type)}</p>
             </div>
             <div className="flex space-x-1">

@@ -1,5 +1,7 @@
 "use client"
 
+import { cn } from "@/lib/utils"
+
 import { useState, useMemo } from "react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -22,6 +24,7 @@ interface UserSearchProps {
   onSelectionChange: (userIds: string[]) => void
   placeholder?: string
   maxHeight?: string
+  className?: string
 }
 
 export function UserSearch({
@@ -29,7 +32,8 @@ export function UserSearch({
   selectedUsers,
   onSelectionChange,
   placeholder = "Buscar colaboradores...",
-  maxHeight = "200px"
+  maxHeight = "200px",
+  className,
 }: UserSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [isOpen, setIsOpen] = useState(false)
@@ -80,14 +84,9 @@ export function UserSearch({
     filteredUsers.every(user => selectedUsers.includes(user.id))
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", className)}>
       {/* Campo de busca */}
       <div>
-        <Label className="text-sm font-medium">Usuários Específicos</Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Busque e selecione usuários específicos que podem ver este formulário
-        </p>
-
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button

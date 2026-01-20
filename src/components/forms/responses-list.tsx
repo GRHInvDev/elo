@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
 import { ResponsesFilters, type ResponsesFiltersState } from "./responses-filters"
 import type { FormResponse, ChatMessage } from "@/types/form-responses"
+import type { Field } from "@/lib/form-types"
 
 export function ResponsesList({ formId }: { formId: string }) {
   const [page, setPage] = useState(1)
@@ -21,6 +22,7 @@ export function ResponsesList({ formId }: { formId: string }) {
   const [filters, setFilters] = useState<ResponsesFiltersState>({
     userIds: [],
     setores: [],
+    tagIds: [],
   })
 
   // Resetar página quando filtros mudarem
@@ -36,6 +38,8 @@ export function ResponsesList({ formId }: { formId: string }) {
     priority: filters.priority,
     userIds: filters.userIds.length > 0 ? filters.userIds : undefined,
     setores: filters.setores.length > 0 ? filters.setores : undefined,
+    tagIds: filters.tagIds.length > 0 ? filters.tagIds : undefined,
+    number: filters.number ? parseInt(filters.number) : undefined,
     hasResponse: filters.hasResponse,
     take: pageSize,
     skip: (page - 1) * pageSize,
@@ -171,11 +175,15 @@ export function ResponsesList({ formId }: { formId: string }) {
                       {response.user.firstName
                         ? `${response.user.firstName} ${response.user.lastName ?? ""}`
                         : response.user.email}
-                      {" - "}{response.user.setor}
                     </CardTitle>
                     <CardDescription>
                       Enviado {formatDistanceToNow(new Date(response.createdAt), { addSuffix: true, locale: ptBR })} <br />
-                      Solicitação: <strong>{formatResponseValue(Object.values(response.responses[0] ?? {})[3])}</strong> <br />
+                      {/* Campos personalizados selecionados */}
+                      {(form?.fields as Field[] | undefined)?.filter(f => f.showInList).map(field => (
+                        <div key={field.id} className="mt-1">
+                          {field.label}: <strong>{formatResponseValue(response.responses[0]?.[field.name])}</strong>
+                        </div>
+                      ))}
                     </CardDescription>
                     <CardContent className="pt-2 px-0">
                       {!!(response.FormResponseChat || response.formResponseChat) ? (

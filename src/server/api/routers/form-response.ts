@@ -282,6 +282,8 @@ export const formResponseRouter = createTRPCRouter({
         hasResponse: z.boolean().optional(),
         take: z.number().optional(),
         skip: z.number().optional(),
+        number: z.number().optional(),
+        tagIds: z.array(z.string()).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -304,6 +306,18 @@ export const formResponseRouter = createTRPCRouter({
       // Construir where clause
       const where: Prisma.FormResponseWhereInput = {
         formId: input.formId,
+      }
+
+      // Filtro por número do chamado
+      if (input.number !== undefined) {
+        where.number = input.number
+      }
+
+      // Filtro por tags
+      if (input.tagIds && input.tagIds.length > 0) {
+        where.tags = {
+          array_contains: input.tagIds,
+        }
       }
 
       // Se não for o dono, só pode ver suas próprias respostas
@@ -451,6 +465,8 @@ export const formResponseRouter = createTRPCRouter({
           userIds: z.array(z.string()).optional(),
           setores: z.array(z.string()).optional(),
           hasResponse: z.boolean().optional(),
+          number: z.number().optional(),
+          tagIds: z.array(z.string()).optional(),
         })
         .optional(),
     )
@@ -465,6 +481,18 @@ export const formResponseRouter = createTRPCRouter({
             { ownerIds: { has: currentUserId } },
           ],
         },
+      }
+
+      // Filtro por número do chamado
+      if (input?.number !== undefined) {
+        where.number = input.number
+      }
+
+      // Filtro por tags
+      if (input?.tagIds && input.tagIds.length > 0) {
+        where.tags = {
+          array_contains: input.tagIds,
+        }
       }
 
       // Filtro por data
@@ -1462,4 +1490,11 @@ export const formResponseRouter = createTRPCRouter({
 
       return { success: true }
     }),
+
+  getTags: protectedProcedure.query(async ({ ctx }) => {
+    const config = await ctx.db.globalConfig.findFirst({
+      where: { id: "default" }
+    })
+    return (config?.formResponseTags as unknown as Array<{ id: string, nome: string, cor?: string, countVezesUsadas?: number }>) || []
+  }),
 })

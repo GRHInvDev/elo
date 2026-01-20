@@ -19,6 +19,7 @@ export interface BaseField {
   placeholder?: string
   required?: boolean
   helpText?: string
+  showInList?: boolean
 }
 
 export interface TextField extends BaseField {

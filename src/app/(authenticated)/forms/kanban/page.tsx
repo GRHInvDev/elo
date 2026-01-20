@@ -26,6 +26,7 @@ export default function KanbanPage() {
     const [filters, setFilters] = useState<KanbanFiltersState>({
         userIds: [],
         setores: [],
+        tagIds: [],
     })
 
     // Fetch form responses with filters
@@ -35,6 +36,8 @@ export default function KanbanPage() {
         priority: filters.priority,
         userIds: filters.userIds.length > 0 ? filters.userIds : undefined,
         setores: filters.setores.length > 0 ? filters.setores : undefined,
+        tagIds: filters.tagIds.length > 0 ? filters.tagIds : undefined,
+        number: filters.number ? parseInt(filters.number) : undefined,
         hasResponse: filters.hasResponse,
     })
 
@@ -131,7 +134,7 @@ export default function KanbanPage() {
         )
     }
 
-    if (!responses || responses.length === 0) {
+    if (!responses || (responses.length === 0 && !isLoading)) {
         return (
             <DashboardShell>
                 <div className="mb-8">
@@ -140,14 +143,16 @@ export default function KanbanPage() {
                         Visualize e organize as respostas recebidas nos seus formulários.
                     </p>
                 </div>
+
+                <KanbanFilters filters={filters} onFiltersChange={setFilters} />
+
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="text-6xl mb-4">📋</div>
                     <h3 className="text-lg font-medium">Nenhuma solicitação encontrada</h3>
                     <p className="text-muted-foreground mt-1 mb-4">
-                        Você ainda não recebeu nenhuma resposta em seus formulários.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                        As respostas aparecerão aqui quando alguém responder aos seus formulários.
+                        {filters.number || filters.tagIds.length > 0 || filters.userIds.length > 0 || filters.setores.length > 0 || filters.startDate
+                            ? "Nenhuma solicitação corresponde aos filtros aplicados."
+                            : "Você ainda não recebeu nenhuma resposta em seus formulários."}
                     </p>
                 </div>
             </DashboardShell>

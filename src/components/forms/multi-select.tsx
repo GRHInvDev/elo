@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { X } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Command, CommandGroup, CommandItem } from "@/components/ui/command"
 import { Command as CommandPrimitive } from "cmdk"
@@ -12,9 +13,10 @@ interface MultiSelectProps {
   onChange: (selected: string[]) => void
   placeholder?: string
   disabled?: boolean
+  className?: string
 }
 
-export function MultiSelect({ options, selected, onChange, placeholder = "Selecione opções...", disabled= false }: MultiSelectProps) {
+export function MultiSelect({ options, selected, onChange, placeholder = "Selecione opções...", disabled = false, className }: MultiSelectProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState("")
@@ -48,7 +50,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Seleci
   const selectables = options.filter((option) => !selected.includes(option.value))
 
   return (
-    <Command onKeyDown={handleKeyDown} className="overflow-visible bg-transparent">
+    <Command onKeyDown={handleKeyDown} className={cn("overflow-visible bg-transparent", className)}>
       <div className="group border border-input px-3 py-2 text-sm ring-offset-background rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <div className="flex gap-1 flex-wrap">
           {selected.map((value) => {
@@ -88,7 +90,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Seleci
       </div>
       <div className="relative mt-2">
         {open && selectables.length > 0 ? (
-          <div className="absolute w-full z-10 top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
+          <div className="absolute w-full z-[200] top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
             <CommandGroup className="h-full overflow-auto max-h-[200px]">
               {selectables.map((option) => {
                 return (

@@ -10,10 +10,8 @@ export function formatFormResponseNumber(number: number | null | undefined): str
   if (number === null || number === undefined) {
     return ""
   }
-  // Pega os últimos 2 dígitos do número
-  const lastTwoDigits = number % 100
   // Formata com zero à esquerda se necessário
-  const formatted = lastTwoDigits.toString().padStart(2, "0")
+  const formatted = number.toString().padStart(3, "0")
   return `#${formatted}`
 }
 

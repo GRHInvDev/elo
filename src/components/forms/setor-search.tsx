@@ -1,5 +1,7 @@
 "use client"
 
+import { cn } from "@/lib/utils"
+
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -28,13 +30,15 @@ interface SetorSearchProps {
   onSelectionChange: (setores: string[]) => void
   placeholder?: string
   maxHeight?: string
+  className?: string
 }
 
-export function SetorSearch({ 
-  selectedSetores, 
-  onSelectionChange, 
+export function SetorSearch({
+  selectedSetores,
+  onSelectionChange,
   placeholder = "Buscar setores...",
-  maxHeight = "200px"
+  maxHeight = "200px",
+  className,
 }: SetorSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [isOpen, setIsOpen] = useState(false)
@@ -44,7 +48,7 @@ export function SetorSearch({
     if (!searchTerm.trim()) return AVAILABLE_SETORES
 
     const term = searchTerm.toLowerCase()
-    return AVAILABLE_SETORES.filter(setor => 
+    return AVAILABLE_SETORES.filter(setor =>
       setor.label.toLowerCase().includes(term) ||
       setor.value.toLowerCase().includes(term)
     )
@@ -80,11 +84,11 @@ export function SetorSearch({
     }
   }
 
-  const isAllSelected = filteredSetores.length > 0 && 
+  const isAllSelected = filteredSetores.length > 0 &&
     filteredSetores.every(setor => selectedSetores.includes(setor.value))
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", className)}>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -96,7 +100,7 @@ export function SetorSearch({
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4" />
               <span className="truncate">
-                {selectedSetores.length > 0 
+                {selectedSetores.length > 0
                   ? `${selectedSetores.length} setor(es) selecionado(s)`
                   : placeholder
                 }
@@ -116,7 +120,7 @@ export function SetorSearch({
               <CommandEmpty>
                 {searchTerm ? "Nenhum setor encontrado." : "Digite para buscar setores..."}
               </CommandEmpty>
-              
+
               {filteredSetores.length > 0 && (
                 <CommandGroup>
                   {/* Opção para selecionar/deselecionar todos */}
@@ -138,11 +142,11 @@ export function SetorSearch({
                       </Badge>
                     </div>
                   </CommandItem>
-                  
+
                   {/* Lista de setores */}
                   {filteredSetores.map((setor) => {
                     const isSelected = selectedSetores.includes(setor.value)
-                    
+
                     return (
                       <CommandItem
                         key={setor.value}
