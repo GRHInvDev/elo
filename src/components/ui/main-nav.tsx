@@ -67,7 +67,7 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
     findActiveGroups(routes)
     setExpandedGroups(prev => new Set([...prev, ...groupsToExpand]))
-  }, [pathname, db_user?.role_config, isOwnerOfAnyForm, db_user?.novidades])
+  }, [pathname, db_user?.role_config, isOwnerOfAnyForm, db_user?.novidades === true])
 
   const renderNavItem = (item: RouteItem, level = 0): JSX.Element | null => {
     const hasChildren = item.children && item.children.length > 0
