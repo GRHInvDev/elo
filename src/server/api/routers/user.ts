@@ -95,7 +95,8 @@ export const userRouter = createTRPCRouter({
         role_config: fallbackRoleConfig,
         enterprise: null,
         setor: null,
-        birthDay: null
+        birthDay: null,
+        novidades: false
       };
     }
   }),
