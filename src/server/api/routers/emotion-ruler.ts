@@ -8,6 +8,16 @@ export const emotionRulerRouter = createTRPCRouter({
   getActive: protectedProcedure.query(async ({ ctx }) => {
     const today = new Date();
 
+    // Validar se o usuário tem a flag de novidades
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { novidades: true },
+    });
+
+    if (!user?.novidades) {
+      return null;
+    }
+
     const ruler = await ctx.db.emotionRuler.findFirst({
       where: {
         isActive: true,
@@ -55,7 +65,7 @@ export const emotionRulerRouter = createTRPCRouter({
       },
     });
 
-    if (user?.novidades !== true) {
+    if (!user?.novidades) {
       return { shouldShow: false, ruler: null };
     }
 
@@ -667,7 +677,7 @@ export const emotionRulerRouter = createTRPCRouter({
         rulerId: z.string(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
-        limit: z.number().min(1).max(1000).default(1000),
+        limit: z.number().min(1).max(10000).default(1000),
         offset: z.number().min(0).default(0),
       })
     )
