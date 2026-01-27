@@ -1,6 +1,19 @@
-"use server"
-import nodemailer from 'nodemailer';
-import type SMTPPool from 'nodemailer/lib/smtp-pool';
+"use server";
+
+import { Resend } from "resend";
+
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const DEFAULT_FROM =
+  '"Intranet Grupo RHenz" <intranet.rhenz@apps.allpines.com.br>';
+
+/**
+ * @params to - Destinatário
+ * @params subject - Assunto
+ * @params htmlContent - Conteúdo
+ * @params cc - Copia
+ */
 
 export async function sendEmail(
   to: string,
@@ -8,33 +21,20 @@ export async function sendEmail(
   htmlContent: string,
   cc?: string
 ): Promise<void> {
-
-  const config: SMTPPool.Options = {
-    pool: true,
-    host: process.env.MAILHOST,
-    port: Number(process.env.MAILPORT),
-    secure: false,
-    auth: {
-      user: process.env.MAILUSER??'', // Seu e-mail
-      pass: process.env.MAILPASS??'', // Sua senha
-    },
-  }
-  const transporter = nodemailer.createTransport(config);
-
-  // Configuração do e-mail
-  const mailOptions = {
-    from: '"Intranet Grupo RHenz" <elo@intranet.boxdistribuidor.com.br>', // Remetente
-    to: to, // Destinatário
-    cc: cc ?? undefined,
-    subject: subject, // Assunto
-    html: htmlContent, // Conteúdo HTML
-  };
-
-  // Envio do e-mail
   try {
-    await transporter.sendMail(mailOptions);
-    console.log('E-mail enviado para: %s', to);
+    const toList = to.split(",").map((e) => e.trim()).filter(Boolean);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const data = await resend.emails.send({
+      from: process.env.RESEND_FROM ?? DEFAULT_FROM,
+      to: toList,
+      subject,
+      html: htmlContent,
+      ...(cc?.trim() && {
+        cc: cc.split(",").map((e) => e.trim()).filter(Boolean),
+      }),
+    });
   } catch (error) {
-    console.error('Erro ao enviar e-mail: ', error);
+    console.error("Erro ao enviar e-mail: ", error);
+    throw error;
   }
 }
