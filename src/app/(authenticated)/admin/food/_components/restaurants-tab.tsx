@@ -1,30 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { api } from "@/trpc/react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Plus, Edit, Trash2, Loader2 } from "lucide-react"
+import { Edit, Loader2, Mail, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { api } from "@/trpc/react"
 import RestaurantForm from "./restaurant-form"
 
 export default function RestaurantsTab() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState<Record<string, boolean>>({})
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [sendingId, setSendingId] = useState<string | null>(null)
 
   const utils = api.useUtils()
   
@@ -44,6 +35,19 @@ export default function RestaurantsTab() {
     },
   })
 
+  const sendOrdersEmail = api.foodOrder.sendOrdersEmailByRestaurant.useMutation({
+    onSuccess: (data) => {
+      if (data.ordersNotified > 0) {
+        toast.success(`Email enviado com ${data.ordersNotified} pedidos.`)
+        return
+      }
+      toast.info("Nenhum pedido pendente para enviar.")
+    },
+    onError: (error) => {
+      toast.error(`Erro ao enviar email: ${error.message}`)
+    },
+  })
+
   const handleDelete = async (restaurantId: string) => {
     setDeletingId(restaurantId)
     try {
@@ -60,6 +64,18 @@ export default function RestaurantsTab() {
       console.log("[RestaurantsTab] Estado do dialog atualizado:", newState)
       return newState
     })
+  }
+
+  const handleSendOrdersEmail = async (restaurantId: string, restaurantName: string) => {
+    setSendingId(restaurantId)
+    try {
+      await sendOrdersEmail.mutateAsync({ restaurantId })
+      console.log("[RestaurantsTab] Email manual enviado para restaurante:", restaurantId, restaurantName)
+    } catch {
+      // Erro já tratado no onError
+    } finally {
+      setSendingId(null)
+    }
   }
 
   return (
@@ -141,6 +157,20 @@ export default function RestaurantsTab() {
                         >
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Editar restaurante</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleSendOrdersEmail(restaurant.id, restaurant.name)}
+                          disabled={sendingId === restaurant.id}
+                        >
+                          {sendingId === restaurant.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Mail className="h-4 w-4" />
+                          )}
+                          <span className="sr-only">Enviar pedidos por email</span>
                         </Button>
                         <Dialog
                           open={editDialogOpen[restaurant.id] ?? false}
