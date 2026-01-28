@@ -31,3 +31,8 @@ export const getOrdersByRestaurantSchema = z.object({
   restaurantId: z.string(),
   date: z.date().optional(),
 }) 
+
+export const sendRestaurantOrdersEmailSchema = z.object({
+  restaurantId: z.string().min(1, "Restaurante é obrigatório"),
+  orderDate: z.date().optional(),
+})

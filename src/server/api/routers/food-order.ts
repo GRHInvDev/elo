@@ -1,9 +1,10 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { createFoodOrderSchema, updateFoodOrderSchema, foodOrderIdSchema, getOrdersByDateSchema, getOrdersByRestaurantSchema, createManualFoodOrderSchema } from "@/schemas/food-order.schema"
+import { createFoodOrderSchema, updateFoodOrderSchema, foodOrderIdSchema, getOrdersByDateSchema, getOrdersByRestaurantSchema, createManualFoodOrderSchema, sendRestaurantOrdersEmailSchema } from "@/schemas/food-order.schema"
 import { type Prisma } from "@prisma/client"
 import type { RolesConfig } from "@/types/role-config"
+import { sendFoodOrdersEmail } from "@/server/services/food-order-email"
 
 export const foodOrderRouter = createTRPCRouter({
   // Criar um novo pedido
@@ -254,6 +255,16 @@ export const foodOrderRouter = createTRPCRouter({
           restaurant: true,
           menuItem: true,
         },
+      })
+    }),
+
+  // Enviar email de pedidos para um restaurante (manual)
+  sendOrdersEmailByRestaurant: protectedProcedure
+    .input(sendRestaurantOrdersEmailSchema)
+    .mutation(async ({ input }) => {
+      return sendFoodOrdersEmail({
+        restaurantId: input.restaurantId,
+        orderDate: input.orderDate,
       })
     }),
 
