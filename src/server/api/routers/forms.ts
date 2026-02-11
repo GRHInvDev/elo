@@ -446,6 +446,21 @@ export const formsRouter = createTRPCRouter({
             });
         }),
 
+    /** Lista formulários em que o usuário é responsável (criador ou em ownerIds) para uso no filtro do Kanban. */
+    listForKanbanFilter: protectedProcedure.query(async ({ ctx }) => {
+        const currentUserId = ctx.auth.userId;
+        return ctx.db.form.findMany({
+            where: {
+                OR: [
+                    { userId: currentUserId },
+                    { ownerIds: { has: currentUserId } },
+                ],
+            },
+            select: { id: true, title: true },
+            orderBy: { title: "asc" },
+        });
+    }),
+
     getById: protectedProcedure
         .input(z.object({
             id: z.string()

@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { api } from "@/trpc/react"
 import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd"
-import { Loader2 } from "lucide-react"
 import type { ResponseStatus } from "@/types/form-responses"
 import { KanbanColumn } from "./_components/kanban-column"
+import { KanbanSkeleton } from "@/components/forms/responses-skeleton"
 import { ResponseDialog } from "./_components/response-dialog"
 import { KanbanFilters, type KanbanFiltersState } from "./_components/kanban-filters"
 import { TagsManagerModal } from "./_components/tags-manager-modal"
@@ -27,6 +27,7 @@ export default function KanbanPage() {
         userIds: [],
         setores: [],
         tagIds: [],
+        formIds: [],
     })
 
     // Fetch form responses with filters
@@ -37,6 +38,7 @@ export default function KanbanPage() {
         userIds: filters.userIds.length > 0 ? filters.userIds : undefined,
         setores: filters.setores.length > 0 ? filters.setores : undefined,
         tagIds: filters.tagIds.length > 0 ? filters.tagIds : undefined,
+        formIds: filters.formIds.length > 0 ? filters.formIds : undefined,
         number: filters.number ? parseInt(filters.number) : undefined,
         hasResponse: filters.hasResponse,
     })
@@ -127,9 +129,24 @@ export default function KanbanPage() {
     if (isLoading) {
         return (
             <DashboardShell>
-                <div className="flex h-64 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="mb-8">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
+                            <p className="text-muted-foreground mt-2">
+                                Visualize e organize as respostas recebidas nos seus formulários.
+                            </p>
+                        </div>
+                        <Button variant="outline" disabled>
+                            <Tags className="h-4 w-4 mr-2" />
+                            Gerenciar Tags
+                        </Button>
+                    </div>
                 </div>
+
+                <KanbanFilters filters={filters} onFiltersChange={setFilters} />
+
+                <KanbanSkeleton />
             </DashboardShell>
         )
     }
@@ -150,7 +167,7 @@ export default function KanbanPage() {
                     <div className="text-6xl mb-4">📋</div>
                     <h3 className="text-lg font-medium">Nenhuma solicitação encontrada</h3>
                     <p className="text-muted-foreground mt-1 mb-4">
-                        {filters.number || filters.tagIds.length > 0 || filters.userIds.length > 0 || filters.setores.length > 0 || filters.startDate
+                        {filters.number || filters.tagIds.length > 0 || filters.userIds.length > 0 || filters.setores.length > 0 || filters.formIds.length > 0 || filters.startDate
                             ? "Nenhuma solicitação corresponde aos filtros aplicados."
                             : "Você ainda não recebeu nenhuma resposta em seus formulários."}
                     </p>
