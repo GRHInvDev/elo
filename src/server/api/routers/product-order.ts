@@ -105,6 +105,7 @@ export const productOrderRouter = createTRPCRouter({
                         read: false,
                         orderTimestamp: new Date(),
                         purchaseRegistrationTimestamp: purchaseRegistration ? purchaseRegistration.createdAt : null,
+                        contactWhatsapp: input.contactWhatsapp ?? null,
                     },
                     include: {
                         user: {
@@ -390,6 +391,7 @@ export const productOrderRouter = createTRPCRouter({
                             read: false,
                             orderTimestamp: new Date(),
                             purchaseRegistrationTimestamp: purchaseRegistration ? purchaseRegistration.createdAt : null,
+                            contactWhatsapp: input.contactWhatsapp ?? null,
                         },
                         include: {
                             user: {
