@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button"
 import { UserSearch } from "@/components/forms/user-search"
 import { SetorSearch } from "@/components/forms/setor-search"
 import { DateRangePicker } from "@/components/forms/date-range-picker"
-import { Filter, X, Hash, Tag } from "lucide-react"
+import { Filter, X, Hash, Tag, FileText, ChevronDown, ChevronUp } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils"
 import { api } from "@/trpc/react"
 import { MultiSelect } from "@/components/forms/multi-select"
 import { Input } from "@/components/ui/input"
@@ -26,12 +28,14 @@ export interface KanbanFiltersState {
   userIds: string[]
   setores: string[]
   tagIds: string[]
+  formIds: string[]
   number?: string
   hasResponse?: boolean
 }
 
 export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) {
   const [localNumber, setLocalNumber] = useState(filters.number ?? "")
+  const [isOpen, setIsOpen] = useState(true)
 
   // Sync local state when external filters change
   useEffect(() => {
@@ -51,9 +55,10 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
     }
   }, [localNumber, filters, onFiltersChange])
 
-  // Buscar usuários para o UserSearch
+  // Buscar usuários, tags e formulários (que o usuário é responsável) para os filtros
   const { data: usersData } = api.user.listForChat.useQuery({})
   const { data: tagsData } = api.formResponse.getTags.useQuery()
+  const { data: formsData } = api.form.listForKanbanFilter.useQuery()
 
   // Converter dados do backend para o formato do UserSearch
   const users = (usersData ?? []).map(user => ({
@@ -70,6 +75,7 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
     filters.userIds.length > 0 ||
     filters.setores.length > 0 ||
     filters.tagIds.length > 0 ||
+    filters.formIds.length > 0 ||
     filters.number !== undefined ||
     filters.hasResponse !== undefined
 
@@ -81,6 +87,7 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
       userIds: [],
       setores: [],
       tagIds: [],
+      formIds: [],
       number: undefined,
       hasResponse: undefined,
     })
@@ -88,27 +95,47 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
 
   return (
     <Card className="mb-6 shadow-sm border-muted/60 relative z-10">
-      <CardHeader className="pb-4 border-b bg-muted/20">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Filter className="h-5 w-5 text-primary" />
-            Filtros Avançados
-          </CardTitle>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-muted-foreground hover:text-destructive transition-colors h-8 px-2"
-            >
-              <X className="mr-2 h-3.5 w-3.5" />
-              Limpar Filtros
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CardHeader className="pb-4 border-b bg-muted/20">
+          <div className="flex items-center justify-between gap-2">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex items-center gap-2 text-left rounded-md outline-none ring-primary focus-visible:ring-2 focus-visible:ring-offset-2",
+                  "hover:opacity-80 transition-opacity"
+                )}
+              >
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Filter className="h-5 w-5 text-primary" />
+                  Filtros Avançados
+                </CardTitle>
+                {isOpen ? (
+                  <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0" aria-hidden />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" aria-hidden />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  clearFilters()
+                }}
+                className="text-muted-foreground hover:text-destructive transition-colors h-8 px-2 shrink-0"
+              >
+                <X className="mr-2 h-3.5 w-3.5" />
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Filtro por Número */}
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
@@ -155,6 +182,23 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
               className="bg-background"
             />
           </div>
+
+          {/* Filtro por Formulário (responsável ou vínculo) */}
+          {formsData && formsData.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+                <FileText className="h-3.5 w-3.5" />
+                Formulário
+              </Label>
+              <MultiSelect
+                options={(formsData ?? []).map((f) => ({ label: f.title ?? f.id, value: f.id }))}
+                selected={filters.formIds}
+                onChange={(formIds) => onFiltersChange({ ...filters, formIds })}
+                placeholder="Todos os formulários..."
+                className="bg-background relative z-20"
+              />
+            </div>
+          )}
 
           {/* STATUS E PRIORIDADE */}
 
@@ -244,9 +288,11 @@ export function KanbanFilters({ filters, onFiltersChange }: KanbanFiltersProps) 
               }}
               className="w-full bg-background"
             />
-          </div>
-        </div>
-      </CardContent>
+            </div>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   )
 }

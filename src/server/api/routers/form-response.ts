@@ -467,13 +467,14 @@ export const formResponseRouter = createTRPCRouter({
           hasResponse: z.boolean().optional(),
           number: z.number().optional(),
           tagIds: z.array(z.string()).optional(),
+          formIds: z.array(z.string()).optional(),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
       const currentUserId = ctx.auth.userId
 
-      // Construir where clause
+      // Construir where clause: formulários em que o usuário é responsável (criador ou owner)
       const where: Prisma.FormResponseWhereInput = {
         form: {
           OR: [
@@ -481,6 +482,11 @@ export const formResponseRouter = createTRPCRouter({
             { ownerIds: { has: currentUserId } },
           ],
         },
+      }
+
+      // Filtro por formulário(s): restringe aos formulários selecionados (ainda dentro dos que o usuário tem acesso)
+      if (input?.formIds && input.formIds.length > 0) {
+        where.formId = { in: input.formIds }
       }
 
       // Filtro por número do chamado
