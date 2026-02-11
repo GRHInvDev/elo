@@ -23,6 +23,18 @@ function hasProductAndUser(order: unknown): order is ProductOrderWithRelations &
   return "product" in o && "user" in o && o.product !== null && o.user !== null
 }
 
+/** Formata número para exibição no padrão do create-order-modal: (00) 00000-0000 ou (00) 0000-0000 */
+function formatWhatsAppDisplay(value: string): string {
+  const digits = value.replace(/\D/g, "")
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  }
+  return value
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isPurchaseRegistration(value: unknown): value is PurchaseRegistration {
   if (!value || typeof value !== "object") return false
@@ -44,20 +56,12 @@ interface OrderDetailsModalProps {
 export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsModalProps) {
   if (!order || !hasProductAndUser(order)) return null
 
-  // Type assertion para incluir contactWhatsapp
-  const orderWithWhatsapp = order as typeof order & { contactWhatsapp?: string | null }
-
   // Buscar dados de cadastro de compras do usuário do pedido
   const enterprise: Enterprise = order.product.enterprise ?? Enterprise.NA
   
   const userId: string = order.userId ?? ""
   const enabled: boolean = open && !!order && !!order.userId
-  const {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    data: purchaseRegistration,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    isLoading: isLoadingRegistration,
-  } = api.purchaseRegistration.getByUserIdAndEnterprise.useQuery(
+  const { data: purchaseRegistration } = api.purchaseRegistration.getByUserIdAndEnterprise.useQuery(
     { userId, enterprise },
     { enabled }
   )
@@ -273,11 +277,23 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                       : order.user.email}
                   </p>
                   <p className="text-sm text-muted-foreground">{order.user.email}</p>
-                  {orderWithWhatsapp.contactWhatsapp && (
+                  {(order.contactWhatsapp ?? purchaseRegistration?.whatsapp) ? (
                     <p className="text-sm text-muted-foreground">
-                      WhatsApp: ({orderWithWhatsapp.contactWhatsapp.slice(0, 2)}) {orderWithWhatsapp.contactWhatsapp.slice(2, 7)}-{orderWithWhatsapp.contactWhatsapp.slice(7)}
+                      WhatsApp para contato:{" "}
+                      <a
+                        href={`https://wa.me/55${(order.contactWhatsapp ?? purchaseRegistration?.whatsapp ?? "").replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {formatWhatsAppDisplay(order.contactWhatsapp ?? purchaseRegistration?.whatsapp ?? "")}
+                      </a>
                     </p>
-                  )}
+                  ) : purchaseRegistration?.phone ? (
+                    <p className="text-sm text-muted-foreground">
+                      Telefone: {purchaseRegistration.phone}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </CardContent>
