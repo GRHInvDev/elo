@@ -262,6 +262,7 @@ export const foodOrderRouter = createTRPCRouter({
   sendOrdersEmailByRestaurant: protectedProcedure
     .input(sendRestaurantOrdersEmailSchema)
     .mutation(async ({ input }) => {
+      console.log("| FOOD_ORDER | Envio acionado manualmente: Payload simples")
       return sendFoodOrdersEmail({
         restaurantId: input.restaurantId,
         orderDate: input.orderDate,

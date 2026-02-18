@@ -21,6 +21,7 @@ export async function sendEmail(
   htmlContent: string,
   cc?: string
 ): Promise<void> {
+  console.log("Envio via Resend (SMTP não utilizado): Payload simples")
   try {
     const toList = to.split(",").map((e) => e.trim()).filter(Boolean);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access

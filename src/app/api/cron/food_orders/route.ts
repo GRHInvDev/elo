@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { sendFoodOrdersEmail } from "@/server/services/food-order-email"
 
 export async function GET() {
-  console.log("| CRONJOB | Executando envio de pedidos de comida...")
+  console.log("| CRONJOB | Envio acionado conforme programado do CronJob: Payload simples")
   const processOrders = async () => {
     try {
       const result = await sendFoodOrdersEmail({})
