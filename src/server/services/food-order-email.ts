@@ -13,6 +13,7 @@ interface SendFoodOrdersEmailParams {
 interface SendFoodOrdersEmailResult {
   restaurantsNotified: number
   ordersNotified: number
+  emailsNotified: string[]
 }
 
 const normalizeOrderDate = (orderDate: Date): Date => {
@@ -81,6 +82,7 @@ export const sendFoodOrdersEmail = async ({
 
   let restaurantsNotified = 0
   let ordersNotified = 0
+  const emailsNotified: string[] = []
 
   for (const [, data] of ordersByRestaurant) {
     const { restaurant, orders: ordersData } = data
@@ -128,7 +130,8 @@ export const sendFoodOrdersEmail = async ({
 
     restaurantsNotified += 1
     ordersNotified += ordersData.length
+    emailsNotified.push(restaurant.email)
   }
 
-  return { restaurantsNotified, ordersNotified }
+  return { restaurantsNotified, ordersNotified, emailsNotified }
 }

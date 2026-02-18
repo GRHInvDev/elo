@@ -7,6 +7,9 @@ export async function GET() {
     try {
       const result = await sendFoodOrdersEmail({})
       console.log(`| CRONJOB | Emails enviados para ${result.restaurantsNotified} restaurantes`)
+      if (result.emailsNotified.length > 0) {
+        console.log(`| CRONJOB | Email dos Restaurantes enviados:`, result.emailsNotified.join(", "))
+      }
       console.log(`| CRONJOB | Processamento de pedidos concluído`)
     } catch (err) {
       console.error("| CRONJOB | Erro ao processar pedidos de comida:", err)
