@@ -319,7 +319,7 @@ export async function GET() {
 
 #### **tRPC procedure falhando**
 ```typescript
-// src/server/routers/user.ts
+// src/server/api/routers/user.ts
 export const userRouter = createTRPCRouter({
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))

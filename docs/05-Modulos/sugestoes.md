@@ -535,7 +535,7 @@ export function CreateSuggestionDialog() {
 
 ### **tRPC Router de Sugestões**
 ```typescript
-// src/server/routers/suggestions.ts
+// src/server/api/routers/suggestions.ts
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "@/server/api/trpc"
 import { calculateSuggestionScore } from "@/lib/scoring/algorithm"
@@ -1094,7 +1094,7 @@ export class SuggestionEventEmitter {
 
 ### **Métricas do Sistema**
 ```typescript
-// src/server/routers/kpi.ts
+// src/server/api/routers/kpi.ts
 export const kpiRouter = createTRPCRouter({
   getSuggestionKPIs: adminProcedure
     .input(z.object({

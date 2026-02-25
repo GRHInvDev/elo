@@ -23,7 +23,7 @@ O **Sistema de Intranet ELO** é uma plataforma corporativa completa desenvolvid
 ## 🏗️ Arquitetura do Sistema
 
 ### 🎨 **Frontend**
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **Linguagem**: TypeScript
 - **UI**: React + Tailwind CSS + shadcn/ui
 - **Estado**: React Hooks + tRPC Cache

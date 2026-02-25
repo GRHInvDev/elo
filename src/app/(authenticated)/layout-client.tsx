@@ -5,7 +5,6 @@ import { useState } from "react"
 import { MainNav, Sidebar } from "@/components/ui/main-nav"
 import { UserNav } from "@/components/ui/user-nav"
 import { SettingsMenu } from "@/components/ui/settings-menu"
-import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { AnimatedBackground } from "@/components/ui/animated-background"
@@ -65,10 +64,6 @@ export default function AuthenticatedLayoutClient({
               {children}
             </div>
           </main>
-        </div>
-
-        <div className="print:hidden">
-          <FloatingChatButton />
         </div>
       </div>
       <div className="print:hidden">

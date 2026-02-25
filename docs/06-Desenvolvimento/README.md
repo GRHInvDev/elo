@@ -86,7 +86,7 @@ elo/
 ## 🛠️ Ferramentas e Tecnologias
 
 ### **Stack Principal**
-- **Frontend**: Next.js 14 (App Router) + React 18 + TypeScript
+- **Frontend**: Next.js 15 (App Router) + React 19 + TypeScript
 - **Backend**: tRPC + Prisma ORM + PostgreSQL
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Autenticação**: Clerk.js

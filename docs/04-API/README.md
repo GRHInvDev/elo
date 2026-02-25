@@ -16,39 +16,39 @@ A API do Sistema de Intranet ELO é construída com **tRPC** (Type-safe Remote P
 
 ```
 src/server/
-├── api/
-│   └── root.ts                   # 📋 API Root - Combina todos os routers
-│
-└── routers/                     # 📦 Routers por domínio
-    ├── birthday.ts              # 🎂 Aniversários
-    ├── booking.ts               # 🏢 Reservas de salas
-    ├── classification.ts        # 📊 Classificação de sugestões
-    ├── comment.ts               # 💬 Comentários
-    ├── event.ts                 # 📅 Eventos
-    ├── flyer.ts                 # 📄 Flyers
-    ├── food-order.ts            # 🍽️ Pedidos de alimentação
-    ├── form-response.ts         # 📝 Respostas de formulários
-    ├── forms.ts                 # 📋 Formulários dinâmicos
-    ├── kpi.ts                   # 📈 KPIs
-    ├── menu-item.ts             # 🍕 Itens de menu
-    ├── order-log.ts             # 📋 Logs de pedidos
-    ├── post.ts                  # 📰 Posts/Notícias
-    ├── product.ts               # 🛒 Produtos
-    ├── reaction.ts              # ❤️ Reações
-    ├── restaurant.ts            # 🍽️ Restaurantes
-    ├── room.ts                  # 🏢 Salas
-    ├── suggestions.ts           # 💡 Sistema de sugestões
-    ├── user.ts                  # 👥 Usuários
-    ├── vehicle-rent.ts          # 🚗 Locações de veículos
-    └── vehicle.ts               # 🚙 Veículos
+└── api/
+    ├── root.ts                   # 📋 API Root - Combina todos os routers
+    ├── trpc.ts                   # Contexto e procedures (protected, admin)
+    └── routers/                  # 📦 Routers por domínio
+        ├── birthday.ts           # 🎂 Aniversários
+        ├── booking.ts            # 🏢 Reservas de salas
+        ├── classification.ts     # 📊 Classificação de sugestões
+        ├── comment.ts            # 💬 Comentários
+        ├── event.ts              # 📅 Eventos
+        ├── flyer.ts              # 📄 Flyers
+        ├── food-order.ts         # 🍽️ Pedidos de alimentação
+        ├── form-response.ts      # 📝 Respostas de formulários
+        ├── forms.ts              # 📋 Formulários dinâmicos
+        ├── kpi.ts                # 📈 KPIs
+        ├── menu-item.ts          # 🍕 Itens de menu
+        ├── order-log.ts          # 📋 Logs de pedidos
+        ├── post.ts               # 📰 Posts/Notícias
+        ├── product.ts            # 🛒 Produtos
+        ├── reaction.ts           # ❤️ Reações
+        ├── restaurant.ts         # 🍽️ Restaurantes
+        ├── room.ts               # 🏢 Salas
+        ├── suggestions.ts        # 💡 Sistema de sugestões
+        ├── user.ts               # 👥 Usuários
+        ├── vehicle-rent.ts       # 🚗 Locações de veículos
+        └── vehicle.ts            # 🚙 Veículos
 ```
 
 ### **Root Router**
 ```typescript
 // src/server/api/root.ts
 import { router } from "./trpc"
-import { birthdayRouter } from "@/server/routers/birthday"
-import { bookingRouter } from "@/server/routers/booking"
+import { birthdayRouter } from "@/server/api/routers/birthday"
+import { bookingRouter } from "@/server/api/routers/booking"
 // ... outros imports
 
 export const appRouter = router({
@@ -596,7 +596,7 @@ export class ApiMetrics {
 
 ### **Real-time Subscriptions**
 ```typescript
-// src/server/routers/realtime.ts
+// src/server/api/routers/realtime.ts
 export const realtimeRouter = router({
   onSuggestionCreated: protectedProcedure
     .subscription(() => {
@@ -616,7 +616,7 @@ export const realtimeRouter = router({
 
 ### **File Upload Integration**
 ```typescript
-// src/server/routers/upload.ts
+// src/server/api/routers/upload.ts
 export const uploadRouter = router({
   uploadAvatar: protectedProcedure
     .input(z.object({ file: z.instanceof(File) }))
@@ -633,7 +633,7 @@ export const uploadRouter = router({
 
 ### **Batch Operations**
 ```typescript
-// src/server/routers/batch.ts
+// src/server/api/routers/batch.ts
 export const batchRouter = router({
   updateMultipleBookings: adminProcedure
     .input(z.object({
