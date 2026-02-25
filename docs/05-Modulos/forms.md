@@ -1079,7 +1079,7 @@ export function FormField({ field, formMethods, mode }: FormFieldProps) {
 
 ### **Form Router**
 ```typescript
-// src/server/routers/forms.ts
+// src/server/api/routers/forms.ts
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "@/server/api/trpc"
 
@@ -1810,7 +1810,7 @@ export class FormWebhookService {
 
 ### **Métricas de Formulários**
 ```typescript
-// src/server/routers/analytics.ts
+// src/server/api/routers/analytics.ts
 export const analyticsRouter = createTRPCRouter({
   getFormAnalytics: adminProcedure
     .input(z.object({

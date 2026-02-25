@@ -7,7 +7,7 @@
 
 **Tipo**: Plataforma Corporativa Integrada  
 
-**Tecnologias**: Next.js 14, React, tRPC, Prisma, PostgreSQL, Clerk Auth  
+**Tecnologias**: Next.js 15, React, tRPC, Prisma, PostgreSQL, Clerk Auth  
 
 **Objetivo**: Centralizar funcionalidades corporativas e promover engajamento dos colaboradores
 
@@ -23,9 +23,9 @@
 
 #### Frontend
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router)
 
-- **UI Library**: React 18 + TypeScript
+- **UI Library**: React 19 + TypeScript
 
 - **Styling**: Tailwind CSS + shadcn/ui
 

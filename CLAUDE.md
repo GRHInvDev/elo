@@ -1,0 +1,1 @@
+- Nunca veja os arquivos .env;

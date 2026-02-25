@@ -40,7 +40,7 @@ src/server/
 
 #### **1. Type Safety End-to-End**
 ```typescript
-// src/server/routers/room.ts
+// src/server/api/routers/room.ts
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 
@@ -148,7 +148,7 @@ export const adminProcedure = protectedProcedure.use(
 
 #### **3. Error Handling Strategy**
 ```typescript
-// src/server/routers/error-handling.ts
+// src/server/api/routers/error-handling.ts
 import { TRPCError } from "@trpc/server"
 
 export const errorHandler = (error: unknown) => {

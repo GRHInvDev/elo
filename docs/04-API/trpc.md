@@ -4,7 +4,7 @@
 
 Cada router tRPC representa um domínio específico do sistema, contendo queries e mutations type-safe. Abaixo está a documentação completa de todos os routers implementados.
 
-## 👥 **User Router** (`src/server/routers/user.ts`)
+## 👥 **User Router** (`src/server/api/routers/user.ts`)
 
 ### **Queries**
 ```typescript
@@ -154,7 +154,7 @@ delete: adminProcedure
   })
 ```
 
-## 🏢 **Room Router** (`src/server/routers/room.ts`)
+## 🏢 **Room Router** (`src/server/api/routers/room.ts`)
 
 ### **Queries**
 ```typescript
@@ -276,7 +276,7 @@ delete: adminProcedure
   })
 ```
 
-## 🏢 **Booking Router** (`src/server/routers/booking.ts`)
+## 🏢 **Booking Router** (`src/server/api/routers/booking.ts`)
 
 ### **Queries**
 ```typescript
@@ -457,7 +457,7 @@ cancel: protectedProcedure
 
 ## 🍽️ **Restaurant & Menu Router**
 
-### **Restaurant Router** (`src/server/routers/restaurant.ts`)
+### **Restaurant Router** (`src/server/api/routers/restaurant.ts`)
 ```typescript
 // Get all active restaurants
 getAll: protectedProcedure
@@ -489,7 +489,7 @@ create: adminProcedure
   })
 ```
 
-### **Menu Item Router** (`src/server/routers/menu-item.ts`)
+### **Menu Item Router** (`src/server/api/routers/menu-item.ts`)
 ```typescript
 // Get menu items by restaurant
 getByRestaurant: protectedProcedure
@@ -548,7 +548,7 @@ create: adminProcedure
   })
 ```
 
-## 💡 **Suggestions Router** (`src/server/routers/suggestions.ts`)
+## 💡 **Suggestions Router** (`src/server/api/routers/suggestions.ts`)
 
 ### **Queries**
 ```typescript
@@ -694,7 +694,7 @@ updateStatus: adminProcedure
   })
 ```
 
-## 📝 **Forms Router** (`src/server/routers/forms.ts`)
+## 📝 **Forms Router** (`src/server/api/routers/forms.ts`)
 
 ### **Queries**
 ```typescript
@@ -791,7 +791,7 @@ submitResponse: protectedProcedure
   })
 ```
 
-## 🚗 **Vehicle Router** (`src/server/routers/vehicle.ts`)
+## 🚗 **Vehicle Router** (`src/server/api/routers/vehicle.ts`)
 
 ### **Queries**
 ```typescript
@@ -941,7 +941,7 @@ updateRentStatus: adminProcedure
 
 ## 📰 **Posts & Content Router**
 
-### **Post Router** (`src/server/routers/post.ts`)
+### **Post Router** (`src/server/api/routers/post.ts`)
 ```typescript
 // Get all published posts
 getAll: protectedProcedure
@@ -1010,7 +1010,7 @@ create: adminProcedure
   })
 ```
 
-### **Reaction Router** (`src/server/routers/reaction.ts`)
+### **Reaction Router** (`src/server/api/routers/reaction.ts`)
 ```typescript
 // Add or update reaction
 upsert: protectedProcedure
@@ -1052,7 +1052,7 @@ remove: protectedProcedure
 
 ## 📊 **Analytics & KPI Router**
 
-### **KPI Router** (`src/server/routers/kpi.ts`)
+### **KPI Router** (`src/server/api/routers/kpi.ts`)
 ```typescript
 // Get system KPIs (Admin)
 getSystemKPIs: adminProcedure

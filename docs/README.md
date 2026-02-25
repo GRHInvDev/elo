@@ -1,5 +1,26 @@
 # 📚 Documentação do Sistema de Intranet ELO
 
+## 📋 Documento mestre
+
+**[DOCUMENTACAO-MESTRE.md](./DOCUMENTACAO-MESTRE.md)** — Referência central do projeto: relatório técnico (stack, arquitetura, estrutura de pastas, configuração) e levantamento de funcionalidades por módulo (rotas, procedures tRPC, componentes, modelos Prisma). Use como ponto de entrada para visão geral e navegação para documentos específicos.
+
+**Referências alinhadas ao documento mestre:**
+
+| Tema | Caminho |
+|------|---------|
+| Introdução | [00-Introducao/README.md](00-Introducao/README.md) |
+| Setup | [01-Setup/README.md](01-Setup/README.md), [ambiente.md](01-Setup/ambiente.md), [dependencias.md](01-Setup/dependencias.md) |
+| Arquitetura | [02-Arquitetura/README.md](02-Arquitetura/README.md), [frontend.md](02-Arquitetura/frontend.md), [backend.md](02-Arquitetura/backend.md), [infraestrutura.md](02-Arquitetura/infraestrutura.md) |
+| Banco de dados | [03-Banco-Dados/README.md](03-Banco-Dados/README.md), [modelos.md](03-Banco-Dados/modelos.md), [migracoes.md](03-Banco-Dados/migracoes.md), [relacoes.md](03-Banco-Dados/relacoes.md) |
+| API | [04-API/README.md](04-API/README.md), [trpc.md](04-API/trpc.md), [auth.md](04-API/auth.md), [middlewares.md](04-API/middlewares.md), [webhooks.md](04-API/webhooks.md) |
+| Módulos | [05-Modulos/README.md](05-Modulos/README.md) — dashboard, ideias, sugestões, forms, food, rooms, cars, events, shop, [news](05-Modulos/news.md), admin |
+| Desenvolvimento | [06-Desenvolvimento/README.md](06-Desenvolvimento/README.md), [padroes.md](06-Desenvolvimento/padroes.md), [componentes.md](06-Desenvolvimento/componentes.md), [hooks.md](06-Desenvolvimento/hooks.md), [testes.md](06-Desenvolvimento/testes.md), [deploy.md](06-Desenvolvimento/deploy.md) |
+| Deploy | [07-Deploy/README.md](07-Deploy/README.md) |
+| Troubleshooting | [08-Troubleshooting/README.md](08-Troubleshooting/README.md), [desenvolvimento.md](08-Troubleshooting/desenvolvimento.md) |
+| Roles | [role-config-examples.md](role-config-examples.md), [migration-to-role-config.md](migration-to-role-config.md) |
+
+---
+
 ## 📖 Índice de Documentação
 
 ### 📂 Estrutura da Documentação

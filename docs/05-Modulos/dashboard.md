@@ -657,7 +657,7 @@ export const dashboardRouter = createTRPCRouter({
 
 ### **Métricas do Dashboard**
 ```typescript
-// src/server/routers/analytics.ts
+// src/server/api/routers/analytics.ts
 export const analyticsRouter = createTRPCRouter({
   getDashboardMetrics: protectedProcedure.query(async ({ ctx }) => {
     const user = ctx.user

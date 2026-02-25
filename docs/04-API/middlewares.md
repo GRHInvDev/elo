@@ -615,7 +615,7 @@ export const foodOrderProcedure = baseProcedure
 
 ### **Router-Level Middleware**
 ```typescript
-// src/server/routers/booking.ts
+// src/server/api/routers/booking.ts
 import { bookingProcedure } from "@/server/procedures/base"
 
 export const bookingRouter = createTRPCRouter({

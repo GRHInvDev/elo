@@ -29,8 +29,8 @@ O Sistema de Intranet ELO é construído seguindo princípios de arquitetura mod
 ### 📱 **1. Presentation Layer (Frontend)**
 
 #### 🎨 **Framework & UI**
-- **Next.js 14** - React Framework com App Router
-- **React 18** - Interface reativa
+- **Next.js 15** - React Framework com App Router
+- **React 19** - Interface reativa
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Utility-first styling
 
@@ -218,7 +218,7 @@ Component → Context → Provider → Consumer
 
 ## 🔧 Technical Decisions
 
-### 🎯 **Why Next.js 14?**
+### 🎯 **Why Next.js 15?**
 - **App Router** - Melhor performance e SEO
 - **Server Components** - Renderização eficiente
 - **Middleware** - Autenticação e autorização
