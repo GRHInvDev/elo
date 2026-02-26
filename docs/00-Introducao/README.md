@@ -94,7 +94,8 @@ O **Sistema de Intranet ELO** é uma plataforma corporativa completa desenvolvid
 - **API**: Validação em nível de endpoint
 
 ### 📊 **Conformidade**
-- **LGPD**: Proteção de dados pessoais
+- **LGPD**: Proteção de dados pessoais; política disponível em [Política de Privacidade (LGPD)](/lgpd) e documentada em [05-Modulos/lgpd.md](../05-Modulos/lgpd.md)
+- **Dados privados**: Aba no painel de usuários (permissão `can_view_dados_privados`) para visualização/edição de dados de pré-cadastro Lojinha, com aviso LGPD ao acessar
 - **Auditoria**: Logs completos de ações
 - **Backup**: Estratégia de recuperação
 
