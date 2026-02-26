@@ -2,6 +2,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { startOfDay, endOfDay } from "date-fns";
+import { getEffectiveRoleConfig } from "@/lib/effective-role-config";
 
 export const emotionRulerRouter = createTRPCRouter({
   // Buscar a régua ativa
@@ -56,12 +57,13 @@ export const emotionRulerRouter = createTRPCRouter({
     const today = startOfDay(new Date());
     const userId = ctx.auth.userId;
 
-    // Verificar se o usuário é Totem - não mostrar modal para Totem
+    // Verificar se o usuário é Totem ou desativado - não mostrar modal
     const user = await ctx.db.user.findUnique({
       where: { id: userId },
       select: {
         role_config: true,
-        novidades: true
+        novidades: true,
+        is_active: true,
       },
     });
 
@@ -69,12 +71,9 @@ export const emotionRulerRouter = createTRPCRouter({
       return { shouldShow: false, ruler: null };
     }
 
-    if (user?.role_config) {
-      const roleConfig = user.role_config as { isTotem?: boolean };
-      // Se for Totem, não mostrar o modal
-      if (roleConfig.isTotem === true) {
-        return { shouldShow: false, ruler: null };
-      }
+    const roleConfig = getEffectiveRoleConfig(user);
+    if (roleConfig.isTotem === true) {
+      return { shouldShow: false, ruler: null };
     }
 
     // Buscar régua ativa
