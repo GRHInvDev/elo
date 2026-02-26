@@ -18,7 +18,8 @@ Cada arquivo abaixo descreve um módulo do Sistema de Intranet ELO: rotas, proce
 | Aniversariantes | *(integrado ao dashboard)* | Birthday router e componentes |
 | Formulários e chamados | [forms.md](forms.md) | Forms e form-response |
 | Alimentação | [food.md](food.md) | Restaurantes, cardápio, pedidos |
-| Loja | [shop.md](shop.md) | Produtos e product-order |
+| Loja | [shop.md](shop.md) | Produtos, product-order e pré-cadastro Lojinha (SIGIN) |
+| Política LGPD | [lgpd.md](lgpd.md) | Página /lgpd e uso no sistema (Lojinha, Dados privados) |
 | Ideias / sugestões e KPIs | [ideias.md](ideias.md), [sugestoes.md](sugestoes.md) | Sugestões, classification, kpi |
 | Chat e grupos | *(ver DOCUMENTACAO-MESTRE § 2.12)* | chatMessage, adminChatGroups |
 | Ramais e extensões | *(ver DOCUMENTACAO-MESTRE § 2.13)* | user router (extensions) |

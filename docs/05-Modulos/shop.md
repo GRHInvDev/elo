@@ -34,33 +34,45 @@ O pré-cadastro na Lojinha agiliza a liberação no processo de compra, evitando
 ### Objetivo
 - Ao fazer um pedido na Lojinha, o sistema verifica se o usuário tem os dados de pré-cadastro preenchidos.
 - Se não tiver, é exibido um **Dialog** solicitando o preenchimento antes de prosseguir com o pedido.
-- Os dados são armazenados na tabela `users` e usados exclusivamente neste módulo.
+- Os dados são armazenados na tabela `users` (campos exclusivos do módulo Lojinha) e utilizados apenas neste fluxo.
 
 ### Campos obrigatórios
-- Nome completo
-- CPF (11 dígitos)
-- Endereço completo (rua, número, complemento)
-- Bairro
-- CEP (8 dígitos)
-- RG
-- E-mail
-- Contato telefônico (mín. 10 dígitos)
+| Campo | Descrição / validação |
+|-------|------------------------|
+| Nome completo | Texto obrigatório |
+| CPF | 11 dígitos (apenas números) |
+| Endereço completo | Rua, número, complemento |
+| Bairro | Texto obrigatório |
+| CEP | 8 dígitos (apenas números) |
+| RG | Texto obrigatório |
+| E-mail | E-mail válido |
+| Contato telefônico | Mínimo 10 dígitos (apenas números) |
 
-### Fluxo
-1. Usuário clica em **Finalizar Pedido** no carrinho.
-2. O sistema verifica se o perfil Lojinha está completo (`user.me` com os 8 campos).
-3. Se **incompleto**: abre o Dialog de pré-cadastro (com texto informando que os dados são para SIGIN e estão seguros conforme a [política LGPD](/lgpd)).
-4. Usuário preenche e salva → `user.updateLojinhaProfile`.
+### Fluxo do usuário
+1. Usuário clica em **Finalizar Pedido** no carrinho da Lojinha.
+2. O sistema verifica se o perfil Lojinha está completo (os 8 campos preenchidos em `user.me`).
+3. Se **incompleto**: abre o **Dialog de pré-cadastro**, que informa que os dados são para pré-cadastro no SIGIN e estão seguros conforme a [política de privacidade (LGPD)](/lgpd).
+4. Usuário preenche todos os campos e salva (procedure `user.updateLojinhaProfile`).
 5. Após sucesso, o modal de pedido é aberto normalmente.
 
-### Onde editar (admin)
-- **Painel de usuários** → card do usuário → aba **Dados privados**.
+### Onde editar no admin
+- **Painel de usuários** (`/admin/users`) → card do usuário → aba **Dados privados**.
 - A aba **Dados privados** só é visível para quem tem a permissão **Visualizar dados privados** (`can_view_dados_privados`) ou é sudo.
-- Ao acessar a aba, um **toast** lembra que os dados são protegidos pela LGPD e que o usuário está ciente ao acessar. Consulte a página [LGPD](/lgpd).
+- Ao acessar a aba, um **toast** exibe o aviso de que os dados são protegidos pela LGPD e que, ao acessar, o usuário está ciente. A política completa está em [Política de Privacidade (LGPD)](/lgpd).
 
-### LGPD
-- Os dados de pré-cadastro são tratados conforme a política de privacidade (página **/lgpd**).
-- O Dialog de completar perfil da Lojinha informa que os dados são para pré-cadastro no SIGIN e que estão seguros conforme essa política.
+### LGPD e segurança
+- Os dados de pré-cadastro são tratados conforme a [Política de Privacidade e Proteção de Dados (LGPD)](/lgpd) do sistema.
+- O Dialog de completar perfil da Lojinha informa explicitamente que os dados são para pré-cadastro no SIGIN e que estão seguros conforme essa política.
+
+### Referência técnica
+- **Modelo (Prisma)**: No `User`, os campos são `lojinha_full_name`, `lojinha_cpf`, `lojinha_address`, `lojinha_neighborhood`, `lojinha_cep`, `lojinha_rg`, `lojinha_email`, `lojinha_phone` (todos opcionais).
+- **API (tRPC)**:
+  - `user.me`: retorna os 8 campos para o cliente verificar se o perfil está completo.
+  - `user.updateLojinhaProfile`: atualiza os 8 campos do usuário atual (protected).
+  - `user.listUsers`: retorna os 8 campos **somente** se o chamador tiver `can_view_dados_privados` ou for sudo.
+  - `user.updateDadosPrivados`: atualiza os 8 campos de um usuário (apenas quem tem `can_view_dados_privados` ou sudo).
+- **Frontend**: helper `hasCompleteLojinhaProfile()` em `@/lib/lojinha-profile.ts`; componente `CompleteLojinhaProfileModal` em `@/components/shop/complete-lojinha-profile-modal.tsx`; verificação no `ShoppingCart` antes de abrir o modal de pedido.
+- **Permissão**: `can_view_dados_privados` em `RolesConfig`; hook `canViewDadosPrivados()` em `useAccessControl`.
 
 ## 🏗️ Arquitetura do Sistema
 
