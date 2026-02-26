@@ -63,6 +63,7 @@ O pré-cadastro na Lojinha agiliza a liberação no processo de compra, evitando
 ### LGPD e segurança
 - Os dados de pré-cadastro são tratados conforme a [Política de Privacidade e Proteção de Dados (LGPD)](/lgpd) do sistema.
 - O Dialog de completar perfil da Lojinha informa explicitamente que os dados são para pré-cadastro no SIGIN e que estão seguros conforme essa política.
+- Os dados coletados na etapa primária (pré-cadastro) ficam visíveis para quem emite/visualiza o pedido: no **Detalhes do Pedido** (card **Dados do Cliente**) e no **e-mail de notificação** enviado ao colaborador responsável pelos pedidos.
 
 ### Referência técnica
 - **Modelo (Prisma)**: No `User`, os campos são `lojinha_full_name`, `lojinha_cpf`, `lojinha_address`, `lojinha_neighborhood`, `lojinha_cep`, `lojinha_rg`, `lojinha_email`, `lojinha_phone` (todos opcionais).

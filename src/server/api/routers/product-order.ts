@@ -116,6 +116,14 @@ export const productOrderRouter = createTRPCRouter({
                                 email: true,
                                 imageUrl: true,
                                 enterprise: true,
+                                lojinha_full_name: true,
+                                lojinha_cpf: true,
+                                lojinha_address: true,
+                                lojinha_neighborhood: true,
+                                lojinha_cep: true,
+                                lojinha_rg: true,
+                                lojinha_email: true,
+                                lojinha_phone: true,
                             }
                         },
                         product: true,
@@ -259,6 +267,10 @@ export const productOrderRouter = createTRPCRouter({
                             }]
                         }
 
+                        const u = order.user as { lojinha_full_name?: string | null; lojinha_cpf?: string | null; lojinha_address?: string | null; lojinha_neighborhood?: string | null; lojinha_cep?: string | null; lojinha_rg?: string | null; lojinha_email?: string | null; lojinha_phone?: string | null }
+                        const dadosClienteLojinha = [u.lojinha_full_name, u.lojinha_cpf, u.lojinha_address, u.lojinha_neighborhood, u.lojinha_cep, u.lojinha_rg, u.lojinha_email, u.lojinha_phone].some(Boolean)
+                            ? { lojinha_full_name: u.lojinha_full_name, lojinha_cpf: u.lojinha_cpf, lojinha_address: u.lojinha_address, lojinha_neighborhood: u.lojinha_neighborhood, lojinha_cep: u.lojinha_cep, lojinha_rg: u.lojinha_rg, lojinha_email: u.lojinha_email, lojinha_phone: u.lojinha_phone }
+                            : null
                         const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                             userName,
                             userEmail ?? "N/A",
@@ -269,7 +281,8 @@ export const productOrderRouter = createTRPCRouter({
                             dataPedido,
                             input.contactWhatsapp,
                             orderItems,
-                            order.product.code
+                            order.product.code,
+                            dadosClienteLojinha
                         )
 
                         // Enviar para todos os emails de notificação
@@ -402,6 +415,14 @@ export const productOrderRouter = createTRPCRouter({
                                     email: true,
                                     imageUrl: true,
                                     enterprise: true,
+                                    lojinha_full_name: true,
+                                    lojinha_cpf: true,
+                                    lojinha_address: true,
+                                    lojinha_neighborhood: true,
+                                    lojinha_cep: true,
+                                    lojinha_rg: true,
+                                    lojinha_email: true,
+                                    lojinha_phone: true,
                                 }
                             },
                             product: true,
@@ -522,6 +543,10 @@ export const productOrderRouter = createTRPCRouter({
                                 subtotal: order.product.price * order.quantity
                             }))
 
+                            const firstUser = firstOrder?.user as { lojinha_full_name?: string | null; lojinha_cpf?: string | null; lojinha_address?: string | null; lojinha_neighborhood?: string | null; lojinha_cep?: string | null; lojinha_rg?: string | null; lojinha_email?: string | null; lojinha_phone?: string | null } | undefined
+                            const dadosClienteLojinhaMultiple = firstUser && [firstUser.lojinha_full_name, firstUser.lojinha_cpf, firstUser.lojinha_address, firstUser.lojinha_neighborhood, firstUser.lojinha_cep, firstUser.lojinha_rg, firstUser.lojinha_email, firstUser.lojinha_phone].some(Boolean)
+                                ? { lojinha_full_name: firstUser.lojinha_full_name, lojinha_cpf: firstUser.lojinha_cpf, lojinha_address: firstUser.lojinha_address, lojinha_neighborhood: firstUser.lojinha_neighborhood, lojinha_cep: firstUser.lojinha_cep, lojinha_rg: firstUser.lojinha_rg, lojinha_email: firstUser.lojinha_email, lojinha_phone: firstUser.lojinha_phone }
+                                : null
                             const emailContentNotificacao = mockEmailNotificacaoPedidoProduto(
                                 userName,
                                 userEmail ?? "N/A",
@@ -532,7 +557,8 @@ export const productOrderRouter = createTRPCRouter({
                                 dataPedido,
                                 input.contactWhatsapp,
                                 orderItems,
-                                null // Código do produto não aplicável para múltiplos pedidos
+                                null, // Código do produto não aplicável para múltiplos pedidos
+                                dadosClienteLojinhaMultiple
                             )
 
                             // Enviar para todos os emails de notificação
@@ -604,6 +630,14 @@ export const productOrderRouter = createTRPCRouter({
                             lastName: true,
                             email: true,
                             imageUrl: true,
+                            lojinha_full_name: true,
+                            lojinha_cpf: true,
+                            lojinha_address: true,
+                            lojinha_neighborhood: true,
+                            lojinha_cep: true,
+                            lojinha_rg: true,
+                            lojinha_email: true,
+                            lojinha_phone: true,
                         }
                     },
                     product: true,
