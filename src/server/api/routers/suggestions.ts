@@ -7,6 +7,7 @@ import type { db } from "@/server/db"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
 import type { RolesConfig } from "@/types/role-config"
+import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
 
 const StatusEnum = z.enum(["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"])
 
@@ -202,13 +203,13 @@ export const suggestionRouter = createTRPCRouter({
       }),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Bloquear usuários TOTEM de submeter sugestões
+      // Bloquear usuários TOTEM e desativados de submeter sugestões
       const me = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
-        select: { role_config: true },
+        select: { role_config: true, is_active: true },
       })
-      const roleConfig = (me?.role_config ?? {}) as RolesConfig
-      if (roleConfig?.isTotem) {
+      const roleConfig = getEffectiveRoleConfig(me)
+      if (roleConfig.isTotem) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Usuários Totem não podem submeter sugestões.",

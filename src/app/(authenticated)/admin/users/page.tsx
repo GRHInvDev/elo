@@ -76,6 +76,7 @@ export default function UsersManagementPage() {
   const [selectedSector, setSelectedSector] = useState<string>("all")
   const [selectedEnterprise, setSelectedEnterprise] = useState<Enterprise | "all">("all")
   const [isAdminFilter, setIsAdminFilter] = useState<boolean | "all">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
   const [offset, setOffset] = useState(0)
   const limit = 10
 
@@ -89,6 +90,7 @@ export default function UsersManagementPage() {
     sector: selectedSector !== "all" ? selectedSector : undefined,
     enterprise: selectedEnterprise !== "all" ? selectedEnterprise : undefined,
     isAdmin: isAdminFilter !== "all" ? isAdminFilter : undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
     limit,
     offset,
   })
@@ -102,7 +104,7 @@ export default function UsersManagementPage() {
   // Reset offset quando filtros mudarem
   useEffect(() => {
     setOffset(0)
-  }, [searchTerm, selectedSector, selectedEnterprise, isAdminFilter])
+  }, [searchTerm, selectedSector, selectedEnterprise, isAdminFilter, statusFilter])
 
   // Verificar se tem acesso
   if (!hasAccess) {
@@ -166,7 +168,7 @@ export default function UsersManagementPage() {
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Filtro de Setor */}
               <div>
                 <Label htmlFor="sector">Setor</Label>
@@ -225,6 +227,24 @@ export default function UsersManagementPage() {
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="admin">Apenas Admins</SelectItem>
                     <SelectItem value="user">Apenas Usuários</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Status na empresa */}
+              <div>
+                <Label htmlFor="status">Status na empresa</Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Ativos</SelectItem>
+                    <SelectItem value="inactive">Desativados</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -324,6 +344,7 @@ interface UserManagementCardProps {
     emailExtension: string | null
     matricula: string | null
     email_empresarial?: string | null
+    enterprise?: Enterprise | null
   }
   allForms: { id: string; title: string }[]
   onUserUpdate: () => void
@@ -346,6 +367,11 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     const setor = AVAILABLE_SETORES.find(s => s.value === setorValue)
     return setor ? setor.label : setorValue
   }
+  const getEnterpriseLabel = (enterpriseValue: Enterprise | null | undefined): string => {
+    if (!enterpriseValue) return "N/A"
+    const opt = ENTERPRISE_OPTIONS.find(o => o.value === enterpriseValue)
+    return opt ? opt.label : String(enterpriseValue)
+  }
   const [basicData, setBasicData] = useState({
     firstName: user.firstName ?? "",
     lastName: user.lastName ?? "",
@@ -355,6 +381,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     emailExtension: user.emailExtension ?? "",
     matricula: user.matricula ?? "",
     email_empresarial: user.email_empresarial ?? "",
+    enterprise: user.enterprise ?? "NA",
+    is_active: (user as { is_active?: boolean }).is_active ?? true,
   })
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
     {
@@ -484,6 +512,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       emailExtension: basicData.emailExtension || "",
       matricula: basicData.matricula || "",
       email_empresarial: basicData.email_empresarial || "",
+      enterprise: basicData.enterprise,
+      is_active: basicData.is_active,
     })
   }
 
@@ -638,6 +668,11 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   TOTEM
                 </Badge>
               )}
+              {(user as { is_active?: boolean }).is_active === false && (
+                <Badge variant="outline" className="bg-muted text-muted-foreground">
+                  Desativado
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -722,6 +757,24 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     </Select>
                   </div>
                   <div>
+                    <Label htmlFor="enterprise">Empresa</Label>
+                    <Select
+                      value={basicData.enterprise}
+                      onValueChange={(value) => setBasicData({ ...basicData, enterprise: value as Enterprise })}
+                    >
+                      <SelectTrigger id="enterprise">
+                        <SelectValue placeholder="Selecione uma empresa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ENTERPRISE_OPTIONS.filter((opt) => opt.value !== "all").map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label htmlFor="extension">Ramal</Label>
                     <Input
                       id="extension"
@@ -769,6 +822,24 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       Email usado para ações específicas (ex: chat com permissão can_view_answer_without_admin_access)
                     </p>
                   </div>
+                  <div>
+                    <Label htmlFor="is_active">Status na empresa</Label>
+                    <Select
+                      value={basicData.is_active ? "active" : "inactive"}
+                      onValueChange={(value) => setBasicData({ ...basicData, is_active: value === "active" })}
+                    >
+                      <SelectTrigger id="is_active">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Desativado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Usuário desativado tem acesso limitado (equivalente a TOTEM)
+                    </p>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" onClick={() => setIsEditing(false)}>
@@ -804,6 +875,10 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   <p className="text-sm font-medium">{getSetorLabel(user.setor)}</p>
                 </div>
                 <div>
+                  <Label className="text-xs text-muted-foreground">Empresa</Label>
+                  <p className="text-sm font-medium">{getEnterpriseLabel(user.enterprise)}</p>
+                </div>
+                <div>
                   <Label className="text-xs text-muted-foreground">Ramal</Label>
                   <p className="text-sm font-medium">{user.extension && user.extension > 0n ? user.extension : 'Não definido'}</p>
                 </div>
@@ -818,6 +893,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 <div>
                   <Label className="text-xs text-muted-foreground">Email Empresarial</Label>
                   <p className="text-sm font-medium">{user.email_empresarial ?? 'Não informado'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Status na empresa</Label>
+                  <p className="text-sm font-medium">
+                    {(user as { is_active?: boolean }).is_active !== false ? 'Ativo' : 'Desativado'}
+                  </p>
                 </div>
                 <div className="md:col-span-2 pt-2">
                   <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">

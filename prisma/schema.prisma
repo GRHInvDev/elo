@@ -78,6 +78,9 @@ model User {
   // Funcionalidades Beta/Novidades
   novidades Boolean @default(false)
 
+  // Status na empresa: Ativo (pode usar o sistema normalmente) ou Desativado (acesso limitado como TOTEM)
+  is_active Boolean @default(true)
+
   @@map("users")
 }
 

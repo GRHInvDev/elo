@@ -5,6 +5,7 @@ import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
 import { z } from "zod"
 import { type RolesConfig } from "@/types/role-config"
 import { TRPCError } from "@trpc/server"
+import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
 
 
 export const userRouter = createTRPCRouter({
@@ -25,30 +26,14 @@ export const userRouter = createTRPCRouter({
           birthDay: true,
           extension: true,
           emailExtension: true,
-          novidades: true
+          novidades: true,
+          is_active: true,
         }
       });
 
-      // Garantir que role_config sempre tenha uma estrutura válida
-      const defaultRoleConfig: RolesConfig = {
-        sudo: false,
-        admin_pages: [],
-        can_create_form: false,
-        can_create_event: false,
-        can_create_flyer: false,
-        can_create_booking: false,
-        can_locate_cars: false,
-        can_view_dre_report: false,
-        can_manage_extensions: false,
-        can_create_solicitacoes: false,
-        can_manage_quality_management: false,
-        isTotem: false,
-      };
-
-      // Se existe role_config customizado, usar; senão usar default
-      const roleConfigData = user?.role_config
-        ? user.role_config as RolesConfig
-        : defaultRoleConfig;
+      // Role efetivo: se usuário desativado (is_active === false), mascarar como TOTEM
+      // para que o app trate como acesso limitado sem alterar o role_config no banco.
+      const roleConfigData = getEffectiveRoleConfig(user ?? null);
 
       const userData = {
         ...user,
@@ -57,10 +42,11 @@ export const userRouter = createTRPCRouter({
 
       // Log adicional para usuários Totem para debug
       if (roleConfigData.isTotem) {
-        console.log('[USER.ME] Usuário Totem acessando:', {
+        console.log('[USER.ME] Usuário Totem ou desativado acessando:', {
           userId: ctx.auth.userId,
           email: user?.email,
-          isTotem: roleConfigData.isTotem
+          isTotem: roleConfigData.isTotem,
+          is_active: user?.is_active
         });
       }
 
@@ -254,18 +240,19 @@ export const userRouter = createTRPCRouter({
       search: z.string().optional(),
       enterprise: z.nativeEnum(Enterprise).optional(),
       isAdmin: z.boolean().optional(),
+      /** Filtro por status na empresa: active (ativo), inactive (desativado). Omitir = todos. */
+      status: z.enum(["active", "inactive"]).optional(),
       limit: z.number().min(1).max(100).default(10),
       offset: z.number().min(0).default(0),
     }))
     .query(async ({ ctx, input }) => {
-      // Verificar se o usuário tem permissão
+      // Verificar se o usuário tem permissão (desativado = sem acesso)
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
-        select: { role_config: true },
+        select: { role_config: true, is_active: true },
       })
-
-      const roleConfig = currentUser?.role_config as RolesConfig | null;
-      const hasAccess = Boolean(roleConfig?.sudo) || Boolean(roleConfig?.can_manage_dados_basicos_users);
+      const effectiveConfig = getEffectiveRoleConfig(currentUser);
+      const hasAccess = Boolean(effectiveConfig.sudo) || Boolean(effectiveConfig.can_manage_dados_basicos_users);
 
       if (!hasAccess) {
         throw new TRPCError({
@@ -287,6 +274,13 @@ export const userRouter = createTRPCRouter({
       // Filtro por empresa
       if (input.enterprise) {
         where.enterprise = input.enterprise
+      }
+
+      // Filtro por status na empresa (ativo / desativado)
+      if (input.status === "active") {
+        where.is_active = true
+      } else if (input.status === "inactive") {
+        where.is_active = false
       }
 
       // Filtro por admin (sudo) - será aplicado após buscar os dados
@@ -332,6 +326,7 @@ export const userRouter = createTRPCRouter({
           matricula: true,
           role_config: true,
           email_empresarial: true,
+          is_active: true,
         },
         orderBy: {
           firstName: 'asc',
@@ -364,15 +359,14 @@ export const userRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
-        select: { role_config: true },
+        select: { role_config: true, is_active: true },
       })
-
-      const roleConfig = currentUser?.role_config as RolesConfig | null
+      const effectiveConfig = getEffectiveRoleConfig(currentUser);
       const canListCollaborators =
-        roleConfig?.sudo === true ||
-        roleConfig?.can_view_add_manual_ped === true ||
-        roleConfig?.can_manage_produtos === true ||
-        roleConfig?.can_manage_quality_management === true
+        effectiveConfig.sudo === true ||
+        effectiveConfig.can_view_add_manual_ped === true ||
+        effectiveConfig.can_manage_produtos === true ||
+        effectiveConfig.can_manage_quality_management === true
       if (!canListCollaborators) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -412,6 +406,8 @@ export const userRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       const where: Prisma.UserWhereInput = {
+        // Apenas usuários ativos na empresa
+        is_active: true,
         // Excluir usuários Totem
         role_config: {
           path: ['isTotem'],
@@ -476,14 +472,13 @@ export const userRouter = createTRPCRouter({
       })
     }))
     .mutation(async ({ ctx, input }) => {
-      // Verificar se o usuário é sudo
+      // Verificar se o usuário é sudo (desativado não pode alterar permissões)
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
-        select: { role_config: true },
+        select: { role_config: true, is_active: true },
       })
-
-      const roleConfig = currentUser?.role_config as RolesConfig | null;
-      if (!roleConfig?.sudo) {
+      const effectiveConfig = getEffectiveRoleConfig(currentUser);
+      if (!effectiveConfig.sudo) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Apenas usuários sudo podem alterar permissões",
@@ -509,18 +504,20 @@ export const userRouter = createTRPCRouter({
       emailExtension: z.string().email().optional().or(z.literal("")),
       matricula: z.string().optional().or(z.literal("")),
       email_empresarial: z.string().email().optional().or(z.literal("")),
+      enterprise: z.nativeEnum(Enterprise).optional(),
+      /** Status na empresa: ativo ou desativado. Apenas sudo ou can_manage_dados_basicos_users podem alterar. */
+      is_active: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Verificar permissões do usuário
+      // Verificar permissões do usuário (desativado = sem permissão de edição)
       const currentUser = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
-        select: { role_config: true },
+        select: { role_config: true, is_active: true },
       })
-
-      const roleConfig = currentUser?.role_config as RolesConfig | null;
+      const effectiveConfig = getEffectiveRoleConfig(currentUser);
 
       // Permitir se for sudo ou se tiver a permissão específica
-      const canEdit = Boolean(roleConfig?.sudo) || Boolean(roleConfig?.can_manage_dados_basicos_users);
+      const canEdit = Boolean(effectiveConfig.sudo) || Boolean(effectiveConfig.can_manage_dados_basicos_users);
 
       if (!canEdit) {
         throw new TRPCError({
@@ -531,8 +528,8 @@ export const userRouter = createTRPCRouter({
 
       const { userId, ...updateData } = input
 
-      // Se o usuário não é sudo, apenas permitir alterar dados básicos
-      if (!roleConfig?.sudo) {
+      // Se o usuário não é sudo, apenas permitir alterar dados básicos (incluindo is_active)
+      if (!effectiveConfig.sudo) {
         // Garantir que apenas dados básicos sejam atualizados
         const allowedFields = {
           firstName: input.firstName,
@@ -543,6 +540,8 @@ export const userRouter = createTRPCRouter({
           emailExtension: input.emailExtension,
           matricula: input.matricula,
           email_empresarial: input.email_empresarial,
+          enterprise: input.enterprise,
+          is_active: input.is_active,
         }
 
         return ctx.db.user.update({
@@ -560,9 +559,10 @@ export const userRouter = createTRPCRouter({
   // Listar usuários por setor com ramais para visualização pública
   listExtensions: protectedProcedure
     .query(async ({ ctx }) => {
-      // Buscar usuários excluindo TOTEMs e ordenados por setor, nome
+      // Buscar usuários ativos, excluindo TOTEMs e ordenados por setor, nome
       const users = await ctx.db.user.findMany({
         where: {
+          is_active: true,
           role_config: {
             path: ['isTotem'],
             equals: false,

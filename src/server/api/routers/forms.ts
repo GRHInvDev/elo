@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Field } from "@/lib/form-types"
 import { type InputJsonValue } from "@prisma/client/runtime/library";
 import type { RolesConfig } from "@/types/role-config";
+import { getEffectiveRoleConfig } from "@/lib/effective-role-config";
 
 
 
@@ -129,13 +130,14 @@ export const formsRouter = createTRPCRouter({
                 });
             }
 
-            // Buscar dados do usuário atual
+            // Buscar dados do usuário atual (desativado = role efetivo TOTEM)
             const currentUser = await ctx.db.user.findUnique({
                 where: { id: ctx.auth.userId },
                 select: {
                     id: true,
                     setor: true,
                     role_config: true,
+                    is_active: true,
                 }
             });
 
@@ -146,7 +148,7 @@ export const formsRouter = createTRPCRouter({
                 });
             }
 
-            const roleConfig = currentUser.role_config as RolesConfig | null;
+            const roleConfig = getEffectiveRoleConfig(currentUser);
 
             // Verificar se o usuário pode editar este formulário
             // 1. Se é o criador do formulário, sempre pode editar
@@ -389,19 +391,23 @@ export const formsRouter = createTRPCRouter({
 
     list: protectedProcedure
         .query(async ({ ctx }) => {
-            // Buscar dados do usuário atual
+            // Buscar dados do usuário atual (desativado = role efetivo TOTEM)
             const currentUser = await ctx.db.user.findUnique({
                 where: { id: ctx.auth.userId },
                 select: {
                     id: true,
                     setor: true,
-                    role_config: true
+                    role_config: true,
+                    is_active: true,
                 }
             });
 
             if (!currentUser) {
                 return [];
             }
+
+            // Filtrar formulários baseado na visibilidade e permissões do role efetivo
+            const roleConfig = getEffectiveRoleConfig(currentUser);
 
             // Buscar todos os formulários
             const allForms = await ctx.db.form.findMany({
@@ -416,9 +422,6 @@ export const formsRouter = createTRPCRouter({
                     }
                 }
             });
-
-            // Filtrar formulários baseado na visibilidade e permissões do role_config
-            const roleConfig = currentUser.role_config as RolesConfig;
 
             return allForms.filter(form => {
                 // TOTEMs não podem ver nenhum formulário
@@ -491,13 +494,13 @@ export const formsRouter = createTRPCRouter({
                 if (form.userId !== userId && !form.ownerIds.includes(userId)) {
                     // Check specific access
                     if (!form.allowedUsers.includes(userId)) {
-                        // Check sector access
+                        // Check sector access (desativado = role efetivo TOTEM)
                         const user = await ctx.db.user.findUnique({
                             where: { id: userId },
-                            select: { setor: true, role_config: true }
+                            select: { setor: true, role_config: true, is_active: true }
                         });
 
-                        const roleConfig = user?.role_config as RolesConfig | null;
+                        const roleConfig = getEffectiveRoleConfig(user);
                         const isHidden = roleConfig?.hidden_forms?.includes(form.id) ?? false;
                         const isVisible = roleConfig?.visible_forms?.includes(form.id) ?? false;
 
