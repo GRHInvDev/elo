@@ -967,6 +967,18 @@ export interface OrderItem {
   subtotal: number
 }
 
+/** Dados do pré-cadastro Lojinha (etapa primária) para exibir no e-mail de notificação ao responsável pelos pedidos */
+export interface LojinhaClientData {
+  lojinha_full_name?: string | null
+  lojinha_cpf?: string | null
+  lojinha_address?: string | null
+  lojinha_neighborhood?: string | null
+  lojinha_cep?: string | null
+  lojinha_rg?: string | null
+  lojinha_email?: string | null
+  lojinha_phone?: string | null
+}
+
 export const mockEmailNotificacaoPedidoProduto = (
   nomeUsuario: string,
   emailUsuario: string,
@@ -978,6 +990,7 @@ export const mockEmailNotificacaoPedidoProduto = (
   contactWhatsapp?: string,
   itens?: OrderItem[], // Lista de itens para pedidos agrupados
   codigoProduto?: string | null,
+  dadosClienteLojinha?: LojinhaClientData | null,
 ) => {
   // Se itens foi fornecido, usar a lista de itens; caso contrário, criar um item único
   const itemsList: OrderItem[] = itens ?? [{
@@ -1134,6 +1147,57 @@ export const mockEmailNotificacaoPedidoProduto = (
               </tr>
             </table>
           </div>
+
+          ${(dadosClienteLojinha && [
+            dadosClienteLojinha.lojinha_full_name,
+            dadosClienteLojinha.lojinha_cpf,
+            dadosClienteLojinha.lojinha_address,
+            dadosClienteLojinha.lojinha_neighborhood,
+            dadosClienteLojinha.lojinha_cep,
+            dadosClienteLojinha.lojinha_rg,
+            dadosClienteLojinha.lojinha_email,
+            dadosClienteLojinha.lojinha_phone,
+          ].some(Boolean)) ? (() => {
+            const d = dadosClienteLojinha
+            const endereco = [d.lojinha_address, d.lojinha_neighborhood, d.lojinha_cep ? `CEP ${d.lojinha_cep}` : null].filter(Boolean).join(" — ") || "—"
+            return `
+          <div class="order-details" style="margin-top: 20px;">
+            <h3 style="margin: 0 0 15px; color: #333; font-size: 1.1rem;">Dados do Cliente (pré-cadastro Lojinha)</h3>
+            <table>
+              ${d.lojinha_full_name ? `
+              <tr>
+                <td>Nome completo:</td>
+                <td>${d.lojinha_full_name}</td>
+              </tr>` : ""}
+              ${d.lojinha_cpf ? `
+              <tr>
+                <td>CPF:</td>
+                <td>${d.lojinha_cpf}</td>
+              </tr>` : ""}
+              ${d.lojinha_rg ? `
+              <tr>
+                <td>RG:</td>
+                <td>${d.lojinha_rg}</td>
+              </tr>` : ""}
+              ${d.lojinha_email ? `
+              <tr>
+                <td>E-mail:</td>
+                <td>${d.lojinha_email}</td>
+              </tr>` : ""}
+              ${d.lojinha_phone ? `
+              <tr>
+                <td>Telefone:</td>
+                <td>${d.lojinha_phone}</td>
+              </tr>` : ""}
+              ${(d.lojinha_address || d.lojinha_neighborhood || d.lojinha_cep) ? `
+              <tr>
+                <td>Endereço:</td>
+                <td>${endereco}</td>
+              </tr>` : ""}
+            </table>
+          </div>
+          `
+          })() : ""}
 
           ${itemsList.length > 0 ? `
           <div class="order-details" style="margin-top: 20px;">

@@ -270,11 +270,11 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-5 w-5 text-primary" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0 space-y-1">
                   <p className="font-medium">
                     {order.user.firstName && order.user.lastName
                       ? `${order.user.firstName} ${order.user.lastName}`
-                      : order.user.email}
+                      : (order.user as { lojinha_full_name?: string | null }).lojinha_full_name ?? order.user.email}
                   </p>
                   <p className="text-sm text-muted-foreground">{order.user.email}</p>
                   {(order.contactWhatsapp ?? purchaseRegistration?.whatsapp) ? (
@@ -296,6 +296,83 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                   ) : null}
                 </div>
               </div>
+              {/* Dados do pré-cadastro Lojinha (etapa primária) — visíveis para quem emite/visualiza o pedido */}
+              {(() => {
+                const u = order.user as {
+                  lojinha_full_name?: string | null
+                  lojinha_cpf?: string | null
+                  lojinha_address?: string | null
+                  lojinha_neighborhood?: string | null
+                  lojinha_cep?: string | null
+                  lojinha_rg?: string | null
+                  lojinha_email?: string | null
+                  lojinha_phone?: string | null
+                }
+                const hasLojinha = [
+                  u.lojinha_full_name,
+                  u.lojinha_cpf,
+                  u.lojinha_address,
+                  u.lojinha_neighborhood,
+                  u.lojinha_cep,
+                  u.lojinha_rg,
+                  u.lojinha_email,
+                  u.lojinha_phone,
+                ].some(Boolean)
+                if (!hasLojinha) return null
+                return (
+                  <div className="rounded-lg border bg-muted/50 p-3 space-y-2 mt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Dados do pré-cadastro (Lojinha)
+                    </p>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      {u.lojinha_full_name ? (
+                        <>
+                          <dt className="text-muted-foreground">Nome completo</dt>
+                          <dd className="font-medium">{u.lojinha_full_name}</dd>
+                        </>
+                      ) : null}
+                      {u.lojinha_cpf ? (
+                        <>
+                          <dt className="text-muted-foreground">CPF</dt>
+                          <dd>{u.lojinha_cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4")}</dd>
+                        </>
+                      ) : null}
+                      {u.lojinha_rg ? (
+                        <>
+                          <dt className="text-muted-foreground">RG</dt>
+                          <dd>{u.lojinha_rg}</dd>
+                        </>
+                      ) : null}
+                      {u.lojinha_email ? (
+                        <>
+                          <dt className="text-muted-foreground">E-mail</dt>
+                          <dd>{u.lojinha_email}</dd>
+                        </>
+                      ) : null}
+                      {u.lojinha_phone ? (
+                        <>
+                          <dt className="text-muted-foreground">Telefone</dt>
+                          <dd>{u.lojinha_phone}</dd>
+                        </>
+                      ) : null}
+                      {u.lojinha_address ? (
+                        <>
+                          <dt className="text-muted-foreground sm:col-span-2">Endereço</dt>
+                          <dd className="sm:col-span-2">
+                            {[
+                              u.lojinha_address,
+                              u.lojinha_neighborhood,
+                              u.lojinha_cep ? `CEP ${u.lojinha_cep}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" — ")}
+                          </dd>
+                        </>
+                      ) : null}
+                    </dl>
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
 

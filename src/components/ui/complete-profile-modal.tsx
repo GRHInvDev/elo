@@ -130,7 +130,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="matricula">Número de matrícula *</Label>
+            <Label htmlFor="matricula">Número de matrícula (utilizada no seu ponto)*</Label>
             <Input
               id="matricula"
               type="text"
