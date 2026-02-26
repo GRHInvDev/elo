@@ -38,7 +38,7 @@ export default async function RootLayout({
               <SpeedInsights />
               <Toaster />
               <SonnerToaster
-                position="top-center"
+                position="top-right"
                 expand={true}
                 richColors
                 closeButton

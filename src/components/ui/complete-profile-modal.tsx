@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/trpc/react"
@@ -14,6 +14,7 @@ interface CompleteProfileModalProps {
   isOpen: boolean
   user: {
     id: string
+    matricula: string | null
     enterprise: string | null
     setor: string | null
   } | null
@@ -41,6 +42,7 @@ const setores = [
 ]
 
 export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: CompleteProfileModalProps) {
+  const [matricula, setMatricula] = useState("")
   const [enterprise, setEnterprise] = useState("")
   const [setor, setSetor] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -50,6 +52,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
   // Atualizar os valores quando o modal abrir
   useEffect(() => {
     if (isOpen && user) {
+      setMatricula(user.matricula ?? "")
       setEnterprise(user.enterprise ?? "")
       setSetor(user.setor ?? "")
     }
@@ -79,6 +82,15 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!matricula.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, informe seu número de matrícula.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (!enterprise.trim()) {
       toast({
         title: "Campo obrigatório",
@@ -100,6 +112,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
     setIsLoading(true)
 
     updateProfileMutation.mutate({
+      matricula: matricula.trim(),
       enterprise: enterprise.trim(),
       setor: setor.trim(),
     })
@@ -111,11 +124,22 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
         <DialogHeader>
           <DialogTitle>Perfil Obrigatório</DialogTitle>
           <DialogDescription>
-            Para continuar usando a plataforma, é necessário completar seu perfil com informações de empresa e setor.
+            Para continuar usando a plataforma, informe seu número de matrícula, empresa e setor.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="matricula">Número de matrícula *</Label>
+            <Input
+              id="matricula"
+              type="text"
+              value={matricula}
+              onChange={(e) => setMatricula(e.target.value)}
+              placeholder="Digite sua matrícula"
+              autoComplete="off"
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="enterprise">Empresa *</Label>
             <Select value={enterprise} onValueChange={setEnterprise}>
