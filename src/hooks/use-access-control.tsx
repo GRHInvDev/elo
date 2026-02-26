@@ -200,6 +200,16 @@ export function useAccessControl() {
     return db_user.role_config.can_view_answer_without_admin_access ?? false;
   };
 
+  const canViewDadosPrivados = (): boolean => {
+    if (!db_user?.role_config) return false;
+
+    // Se é sudo, pode visualizar dados privados
+    if (db_user.role_config.sudo) return true;
+
+    // Verifica permissão específica para dados privados/LGPD
+    return db_user.role_config.can_view_dados_privados ?? false;
+  };
+
   const hasPermission = (permission: string): boolean => {
     if (!db_user?.role_config) return false;
 
@@ -221,6 +231,8 @@ export function useAccessControl() {
         return db_user.role_config.can_manage_dados_basicos_users ?? false;
       case "can_view_dre_report":
         return db_user.role_config.can_view_dre_report ?? false;
+      case "can_view_dados_privados":
+        return db_user.role_config.can_view_dados_privados ?? false;
       default:
         return false;
     }
@@ -248,6 +260,7 @@ export function useAccessControl() {
     canManageEmotionRules,
     canManageQualityManagement,
     canViewAnswerWithoutAdminAccess,
+    canViewDadosPrivados,
     canAccessChat,
     hasPermission,
     isLoading: !db_user,

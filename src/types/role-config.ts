@@ -24,6 +24,7 @@ export type RolesConfig = {
   can_manage_emotion_rules?: boolean; // Pode gerenciar réguas de emoções (criar, editar, deletar, visualizar estatísticas)
   can_view_answer_without_admin_access?: boolean; // Pode visualizar/responder mensagens e atualizar estados de pedidos sem acesso admin completo
   can_view_add_manual_ped?: boolean; // Pode visualizar e adicionar pedidos manuais de alimentação
+  can_view_dados_privados?: boolean; // Pode visualizar e editar dados privados/LGPD de usuários (ex.: pré-cadastro Lojinha)
 
   isTotem?: boolean; // Para usuários TOTEM (acesso limitado)
 }

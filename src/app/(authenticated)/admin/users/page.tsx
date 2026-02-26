@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,6 +42,7 @@ type ExtendedRolesConfig = RolesConfig & {
   can_create_solicitacoes?: boolean
   can_view_answer_without_admin_access?: boolean
   can_view_add_manual_ped?: boolean
+  can_view_dados_privados?: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
 
@@ -345,6 +346,14 @@ interface UserManagementCardProps {
     matricula: string | null
     email_empresarial?: string | null
     enterprise?: Enterprise | null
+    lojinha_full_name?: string | null
+    lojinha_cpf?: string | null
+    lojinha_address?: string | null
+    lojinha_neighborhood?: string | null
+    lojinha_cep?: string | null
+    lojinha_rg?: string | null
+    lojinha_email?: string | null
+    lojinha_phone?: string | null
   }
   allForms: { id: string; title: string }[]
   onUserUpdate: () => void
@@ -358,8 +367,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const [showPermissionAutocomplete, setShowPermissionAutocomplete] = useState(false)
   const [showFormAutocomplete, setShowFormAutocomplete] = useState(false)
 
-  const { isSudo, canManageBasicUserData } = useAccessControl()
+  const { isSudo, canManageBasicUserData, canViewDadosPrivados } = useAccessControl()
   const canEditBasicOnly = canManageBasicUserData() && !isSudo
+  const showDadosPrivadosTab = isSudo || canViewDadosPrivados()
 
   // Função auxiliar para obter o nome do setor
   const getSetorLabel = (setorValue: string | null | undefined): string => {
@@ -400,6 +410,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       can_manage_produtos: (user.role_config as ExtendedRolesConfig)?.can_manage_produtos ?? false,
       can_view_answer_without_admin_access: (user.role_config as ExtendedRolesConfig)?.can_view_answer_without_admin_access ?? false,
       can_view_add_manual_ped: (user.role_config as ExtendedRolesConfig)?.can_view_add_manual_ped ?? false,
+      can_view_dados_privados: (user.role_config as ExtendedRolesConfig)?.can_view_dados_privados ?? false,
       isTotem: (user.role_config as ExtendedRolesConfig)?.isTotem ?? false,
       visible_forms: (user.role_config as ExtendedRolesConfig)?.visible_forms,
       hidden_forms: (user.role_config as ExtendedRolesConfig)?.hidden_forms,
@@ -408,6 +419,31 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   const [adminRoutesData, setAdminRoutesData] = useState<string[]>(
     (user.role_config as ExtendedRolesConfig)?.admin_pages || []
   )
+  const [isEditingDadosPrivados, setIsEditingDadosPrivados] = useState(false)
+  const [dadosPrivadosData, setDadosPrivadosData] = useState({
+    lojinha_full_name: (user as { lojinha_full_name?: string | null }).lojinha_full_name ?? "",
+    lojinha_cpf: (user as { lojinha_cpf?: string | null }).lojinha_cpf ?? "",
+    lojinha_address: (user as { lojinha_address?: string | null }).lojinha_address ?? "",
+    lojinha_neighborhood: (user as { lojinha_neighborhood?: string | null }).lojinha_neighborhood ?? "",
+    lojinha_cep: (user as { lojinha_cep?: string | null }).lojinha_cep ?? "",
+    lojinha_rg: (user as { lojinha_rg?: string | null }).lojinha_rg ?? "",
+    lojinha_email: (user as { lojinha_email?: string | null }).lojinha_email ?? "",
+    lojinha_phone: (user as { lojinha_phone?: string | null }).lojinha_phone ?? "",
+  })
+  const dadosPrivadosToastShownRef = useRef(false)
+
+  useEffect(() => {
+    setDadosPrivadosData({
+      lojinha_full_name: (user as { lojinha_full_name?: string | null }).lojinha_full_name ?? "",
+      lojinha_cpf: (user as { lojinha_cpf?: string | null }).lojinha_cpf ?? "",
+      lojinha_address: (user as { lojinha_address?: string | null }).lojinha_address ?? "",
+      lojinha_neighborhood: (user as { lojinha_neighborhood?: string | null }).lojinha_neighborhood ?? "",
+      lojinha_cep: (user as { lojinha_cep?: string | null }).lojinha_cep ?? "",
+      lojinha_rg: (user as { lojinha_rg?: string | null }).lojinha_rg ?? "",
+      lojinha_email: (user as { lojinha_email?: string | null }).lojinha_email ?? "",
+      lojinha_phone: (user as { lojinha_phone?: string | null }).lojinha_phone ?? "",
+    })
+  }, [user.id])
 
   // Sincronizar adminRoutesData com permissionsData.admin_pages
   useEffect(() => {
@@ -449,6 +485,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   }, [permissionsData.can_manage_produtos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (activeTab === "dados-privados" && showDadosPrivadosTab && !dadosPrivadosToastShownRef.current) {
+      dadosPrivadosToastShownRef.current = true
+      toast({
+        title: "Dados protegidos pela LGPD",
+        description: "Ao acessar esta aba você está ciente de que estes dados são protegidos pela LGPD. Consulte nossa política em /lgpd",
+        duration: 6000,
+      })
+    }
+  }, [activeTab, showDadosPrivadosTab, toast])
 
   const updateBasicInfo = api.user.updateBasicInfo.useMutation({
     onSuccess: () => {
@@ -503,6 +550,38 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     },
   })
 
+  const updateDadosPrivados = api.user.updateDadosPrivados.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Dados privados atualizados",
+        description: "Os dados de pré-cadastro Lojinha foram atualizados com sucesso.",
+      })
+      setIsEditingDadosPrivados(false)
+      onUserUpdate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+  const handleSaveDadosPrivados = () => {
+    updateDadosPrivados.mutate({
+      userId: user.id,
+      lojinha_full_name: dadosPrivadosData.lojinha_full_name.trim() || null,
+      lojinha_cpf: dadosPrivadosData.lojinha_cpf.replace(/\D/g, "") || null,
+      lojinha_address: dadosPrivadosData.lojinha_address.trim() || null,
+      lojinha_neighborhood: dadosPrivadosData.lojinha_neighborhood.trim() || null,
+      lojinha_cep: dadosPrivadosData.lojinha_cep.replace(/\D/g, "") || null,
+      lojinha_rg: dadosPrivadosData.lojinha_rg.trim() || null,
+      lojinha_email: dadosPrivadosData.lojinha_email.trim() || null,
+      lojinha_phone: dadosPrivadosData.lojinha_phone.replace(/\D/g, "") || null,
+    })
+  }
+
   const handleSaveBasicInfo = () => {
     updateBasicInfo.mutate({
       userId: user.id,
@@ -534,6 +613,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_manage_produtos: permissionsData.can_manage_produtos ?? false,
         can_view_answer_without_admin_access: permissionsData.can_view_answer_without_admin_access ?? false,
         can_view_add_manual_ped: permissionsData.can_view_add_manual_ped ?? false,
+        can_view_dados_privados: permissionsData.can_view_dados_privados ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
@@ -704,6 +784,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Solicitações</span>
                 <span className="sm:hidden">Solic.</span>
+              </TabsTrigger>
+            )}
+            {showDadosPrivadosTab && (
+              <TabsTrigger value="dados-privados" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Dados privados</span>
+                <span className="sm:hidden">Privados</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -1165,6 +1252,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                                   can_view_add_manual_ped: checked
                                 });
                               }
+                            },
+                            {
+                              id: "view_dados_privados",
+                              label: "Visualizar dados privados (LGPD / pré-cadastro Lojinha)",
+                              checked: permissionsData.can_view_dados_privados,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_view_dados_privados: checked
+                                });
+                              }
                             }
                           ]
                             .filter(permission =>
@@ -1255,6 +1353,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         {permissionsData.can_view_add_manual_ped && (
                           <Badge variant="secondary">Adicionar Pedidos Manuais</Badge>
                         )}
+                        {permissionsData.can_view_dados_privados && (
+                          <Badge variant="secondary">Visualizar Dados Privados</Badge>
+                        )}
                         {!permissionsData.can_create_form &&
                           !permissionsData.can_create_event &&
                           !permissionsData.can_create_flyer &&
@@ -1264,7 +1365,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           !permissionsData.can_manage_extensions &&
                           !permissionsData.can_manage_produtos &&
                           !permissionsData.can_view_answer_without_admin_access &&
-                          !permissionsData.can_view_add_manual_ped && (
+                          !permissionsData.can_view_add_manual_ped &&
+                          !permissionsData.can_view_dados_privados && (
                             <span className="text-sm text-muted-foreground">Apenas visualização</span>
                           )}
                       </div>
@@ -1544,6 +1646,150 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   </div>
                 )}
               </div>
+            </TabsContent>
+          )}
+
+          {/* Tab: Dados privados (pré-cadastro Lojinha) */}
+          {showDadosPrivadosTab && (
+            <TabsContent value="dados-privados" className="mt-4 space-y-4">
+              {isEditingDadosPrivados ? (
+                <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="dp_full_name">Nome completo</Label>
+                      <Input
+                        id="dp_full_name"
+                        value={dadosPrivadosData.lojinha_full_name}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_full_name: e.target.value })}
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dp_cpf">CPF</Label>
+                      <Input
+                        id="dp_cpf"
+                        value={dadosPrivadosData.lojinha_cpf}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
+                        placeholder="11 dígitos"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dp_rg">RG</Label>
+                      <Input
+                        id="dp_rg"
+                        value={dadosPrivadosData.lojinha_rg}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_rg: e.target.value })}
+                        placeholder="RG"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="dp_address">Endereço completo</Label>
+                      <Input
+                        id="dp_address"
+                        value={dadosPrivadosData.lojinha_address}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_address: e.target.value })}
+                        placeholder="Rua, número, complemento"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dp_neighborhood">Bairro</Label>
+                      <Input
+                        id="dp_neighborhood"
+                        value={dadosPrivadosData.lojinha_neighborhood}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_neighborhood: e.target.value })}
+                        placeholder="Bairro"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dp_cep">CEP</Label>
+                      <Input
+                        id="dp_cep"
+                        value={dadosPrivadosData.lojinha_cep}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_cep: e.target.value.replace(/\D/g, "").slice(0, 8) })}
+                        placeholder="8 dígitos"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dp_email">E-mail</Label>
+                      <Input
+                        id="dp_email"
+                        type="email"
+                        value={dadosPrivadosData.lojinha_email}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dp_phone">Contato telefônico</Label>
+                      <Input
+                        id="dp_phone"
+                        value={dadosPrivadosData.lojinha_phone}
+                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_phone: e.target.value.replace(/\D/g, "").slice(0, 11) })}
+                        placeholder="10 ou 11 dígitos"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setIsEditingDadosPrivados(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSaveDadosPrivados} disabled={updateDadosPrivados.isPending}>
+                      {updateDadosPrivados.isPending ? (
+                        <>
+                          <span className="animate-spin mr-2">⏳</span>
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Salvar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border">
+                  <div className="md:col-span-2">
+                    <Label className="text-xs text-muted-foreground">Nome completo</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_full_name?: string | null }).lojinha_full_name ?? "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">CPF</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_cpf?: string | null }).lojinha_cpf ?? "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">RG</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_rg?: string | null }).lojinha_rg ?? "—"}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs text-muted-foreground">Endereço</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_address?: string | null }).lojinha_address ?? "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Bairro</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_neighborhood?: string | null }).lojinha_neighborhood ?? "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">CEP</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_cep?: string | null }).lojinha_cep ?? "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">E-mail</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_email?: string | null }).lojinha_email ?? "—"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Contato telefônico</Label>
+                    <p className="text-sm font-medium">{(user as { lojinha_phone?: string | null }).lojinha_phone ?? "—"}</p>
+                  </div>
+                  <div className="md:col-span-2 pt-2">
+                    <Button onClick={() => setIsEditingDadosPrivados(true)} size="sm" variant="outline">
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Editar dados privados
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           )}
         </Tabs>

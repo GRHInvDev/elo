@@ -28,7 +28,15 @@ export const userRouter = createTRPCRouter({
           emailExtension: true,
           novidades: true,
           is_active: true,
-        }
+          lojinha_full_name: true,
+          lojinha_cpf: true,
+          lojinha_address: true,
+          lojinha_neighborhood: true,
+          lojinha_cep: true,
+          lojinha_rg: true,
+          lojinha_email: true,
+          lojinha_phone: true,
+        } as Prisma.UserSelect,
       });
 
       // Role efetivo: se usuário desativado (is_active === false), mascarar como TOTEM
@@ -84,7 +92,15 @@ export const userRouter = createTRPCRouter({
         setor: null,
         matricula: null,
         birthDay: null,
-        novidades: false
+        novidades: false,
+        lojinha_full_name: null,
+        lojinha_cpf: null,
+        lojinha_address: null,
+        lojinha_neighborhood: null,
+        lojinha_cep: null,
+        lojinha_rg: null,
+        lojinha_email: null,
+        lojinha_phone: null,
       };
     }
   }),
@@ -232,7 +248,47 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-
+  updateLojinhaProfile: protectedProcedure
+    .input(z.object({
+      lojinha_full_name: z.string().min(1, "Nome completo é obrigatório"),
+      lojinha_cpf: z.string().min(1, "CPF é obrigatório").refine((val) => val.replace(/\D/g, "").length === 11, "CPF deve ter 11 dígitos"),
+      lojinha_address: z.string().min(1, "Endereço é obrigatório"),
+      lojinha_neighborhood: z.string().min(1, "Bairro é obrigatório"),
+      lojinha_cep: z.string().min(1, "CEP é obrigatório").refine((val) => val.replace(/\D/g, "").length === 8, "CEP deve ter 8 dígitos"),
+      lojinha_rg: z.string().min(1, "RG é obrigatório"),
+      lojinha_email: z.string().email("E-mail inválido"),
+      lojinha_phone: z.string().min(1, "Contato telefônico é obrigatório").refine((val) => val.replace(/\D/g, "").length >= 10, "Telefone deve ter pelo menos 10 dígitos"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.auth.userId;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário não autenticado" });
+      }
+      return ctx.db.user.update({
+        where: { id: userId },
+        data: {
+          lojinha_full_name: input.lojinha_full_name.trim(),
+          lojinha_cpf: input.lojinha_cpf.replace(/\D/g, ""),
+          lojinha_address: input.lojinha_address.trim(),
+          lojinha_neighborhood: input.lojinha_neighborhood.trim(),
+          lojinha_cep: input.lojinha_cep.replace(/\D/g, ""),
+          lojinha_rg: input.lojinha_rg.trim(),
+          lojinha_email: input.lojinha_email.trim(),
+          lojinha_phone: input.lojinha_phone.replace(/\D/g, ""),
+        } as Prisma.UserUpdateInput,
+        select: {
+          id: true,
+          lojinha_full_name: true,
+          lojinha_cpf: true,
+          lojinha_address: true,
+          lojinha_neighborhood: true,
+          lojinha_cep: true,
+          lojinha_rg: true,
+          lojinha_email: true,
+          lojinha_phone: true,
+        } as Prisma.UserSelect,
+      });
+    }),
 
   listUsers: protectedProcedure
     .input(z.object({
@@ -310,7 +366,9 @@ export const userRouter = createTRPCRouter({
         ]
       }
 
-      // Buscar todos os usuários que atendem aos filtros básicos
+      const canViewDadosPrivados = Boolean(effectiveConfig.sudo) || Boolean(effectiveConfig.can_view_dados_privados);
+
+      // Buscar todos os usuários que atendem aos filtros básicos (incluir lojinha_* para quem tem permissão)
       const allUsers = await ctx.db.user.findMany({
         where,
         select: {
@@ -327,7 +385,15 @@ export const userRouter = createTRPCRouter({
           role_config: true,
           email_empresarial: true,
           is_active: true,
-        },
+          lojinha_full_name: true,
+          lojinha_cpf: true,
+          lojinha_address: true,
+          lojinha_neighborhood: true,
+          lojinha_cep: true,
+          lojinha_rg: true,
+          lojinha_email: true,
+          lojinha_phone: true,
+        } as Prisma.UserSelect,
         orderBy: {
           firstName: 'asc',
         },
@@ -345,7 +411,17 @@ export const userRouter = createTRPCRouter({
 
       // Aplicar paginação
       const total = filteredUsers.length
-      const paginatedUsers = filteredUsers.slice(input.offset, input.offset + input.limit)
+      let paginatedUsers = filteredUsers.slice(input.offset, input.offset + input.limit)
+
+      // Ocultar dados privados (lojinha_*) se o usuário não tiver can_view_dados_privados
+      if (!canViewDadosPrivados) {
+        const lojinhaKeys = ["lojinha_full_name", "lojinha_cpf", "lojinha_address", "lojinha_neighborhood", "lojinha_cep", "lojinha_rg", "lojinha_email", "lojinha_phone"] as const
+        paginatedUsers = paginatedUsers.map(u => {
+          const rest = { ...u } as Record<string, unknown>
+          lojinhaKeys.forEach(k => delete rest[k])
+          return rest
+        }) as typeof paginatedUsers
+      }
 
       return {
         users: paginatedUsers,
@@ -466,6 +542,7 @@ export const userRouter = createTRPCRouter({
         can_manage_quality_management: z.boolean().optional(),
         can_view_answer_without_admin_access: z.boolean().optional(),
         can_view_add_manual_ped: z.boolean().optional(),
+        can_view_dados_privados: z.boolean().optional(),
         isTotem: z.boolean().optional(),
         visible_forms: z.array(z.string()).optional(),
         hidden_forms: z.array(z.string()).optional(),
@@ -554,6 +631,47 @@ export const userRouter = createTRPCRouter({
         where: { id: userId },
         data: updateData,
       })
+    }),
+
+  updateDadosPrivados: protectedProcedure
+    .input(z.object({
+      userId: z.string(),
+      lojinha_full_name: z.string().optional().nullable(),
+      lojinha_cpf: z.string().optional().nullable(),
+      lojinha_address: z.string().optional().nullable(),
+      lojinha_neighborhood: z.string().optional().nullable(),
+      lojinha_cep: z.string().optional().nullable(),
+      lojinha_rg: z.string().optional().nullable(),
+      lojinha_email: z.string().optional().nullable(),
+      lojinha_phone: z.string().optional().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true, is_active: true },
+      });
+      const effectiveConfig = getEffectiveRoleConfig(currentUser);
+      const canEdit = Boolean(effectiveConfig.sudo) || Boolean(effectiveConfig.can_view_dados_privados);
+      if (!canEdit) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para alterar dados privados",
+        });
+      }
+      const { userId, ...data } = input;
+      const updateData: Record<string, string | null> = {};
+      if (data.lojinha_full_name !== undefined) updateData.lojinha_full_name = data.lojinha_full_name?.trim() ?? null;
+      if (data.lojinha_cpf !== undefined) updateData.lojinha_cpf = data.lojinha_cpf ? data.lojinha_cpf.replace(/\D/g, "") : null;
+      if (data.lojinha_address !== undefined) updateData.lojinha_address = data.lojinha_address?.trim() ?? null;
+      if (data.lojinha_neighborhood !== undefined) updateData.lojinha_neighborhood = data.lojinha_neighborhood?.trim() ?? null;
+      if (data.lojinha_cep !== undefined) updateData.lojinha_cep = data.lojinha_cep ? data.lojinha_cep.replace(/\D/g, "") : null;
+      if (data.lojinha_rg !== undefined) updateData.lojinha_rg = data.lojinha_rg?.trim() ?? null;
+      if (data.lojinha_email !== undefined) updateData.lojinha_email = data.lojinha_email?.trim() ?? null;
+      if (data.lojinha_phone !== undefined) updateData.lojinha_phone = data.lojinha_phone ? data.lojinha_phone.replace(/\D/g, "") : null;
+      return ctx.db.user.update({
+        where: { id: userId },
+        data: updateData as Prisma.UserUpdateInput,
+      });
     }),
 
   // Listar usuários por setor com ramais para visualização pública

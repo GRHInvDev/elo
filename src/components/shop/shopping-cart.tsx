@@ -9,7 +9,10 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Minus, Plus, Trash2, CreditCard, ShoppingCart as ShoppingCartIcon } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
+import { api } from "@/trpc/react"
+import { hasCompleteLojinhaProfile } from "@/lib/lojinha-profile"
 import { CreateOrderModal } from "./create-order-modal"
+import { CompleteLojinhaProfileModal } from "./complete-lojinha-profile-modal"
 import { OrderSuccessModal } from "./order-success-modal"
 import { PixPaymentWarningModal } from "./pix-payment-warning-modal"
 import type { Product } from "@prisma/client"
@@ -22,18 +25,30 @@ interface ShoppingCartProps {
 const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps) {
   const { items, enterprise, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [showLojinhaProfileModal, setShowLojinhaProfileModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showPixWarningModal, setShowPixWarningModal] = useState(false)
   const [successEnterprise, setSuccessEnterprise] = useState<Product["enterprise"] | null>(null)
 
+  const { data: user, refetch: refetchUser } = api.user.me.useQuery()
 
   const handleClearCart = useCallback(() => {
     clearCart()
   }, [clearCart])
 
   const handleCheckout = useCallback(() => {
+    if (!hasCompleteLojinhaProfile(user)) {
+      setShowLojinhaProfileModal(true)
+      return
+    }
     setIsCheckoutOpen(true)
-  }, [])
+  }, [user])
+
+  const handleLojinhaProfileSuccess = useCallback(() => {
+    void refetchUser()
+    setShowLojinhaProfileModal(false)
+    setIsCheckoutOpen(true)
+  }, [refetchUser])
 
   const handleCheckoutClose = useCallback(() => {
     setIsCheckoutOpen(false)
@@ -185,6 +200,13 @@ const ShoppingCart = memo(function ShoppingCart({ className }: ShoppingCartProps
           </div>
         </CardContent>
       </Card>
+
+      <CompleteLojinhaProfileModal
+        open={showLojinhaProfileModal}
+        onOpenChange={setShowLojinhaProfileModal}
+        user={user ?? null}
+        onSuccess={handleLojinhaProfileSuccess}
+      />
 
       <CreateOrderModal
         cartItems={items}

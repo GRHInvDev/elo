@@ -27,6 +27,41 @@ O **Sistema de Loja Corporativa** é uma plataforma completa de e-commerce para 
 - ✅ **Backup** - Recuperação de dados
 - ✅ **Suporte** - Gestão de problemas
 
+## 📝 Pré-cadastro Lojinha (SIGIN)
+
+O pré-cadastro na Lojinha agiliza a liberação no processo de compra, evitando que o suporte precise contatar o RH para obter dados do funcionário antes de criar o cadastro.
+
+### Objetivo
+- Ao fazer um pedido na Lojinha, o sistema verifica se o usuário tem os dados de pré-cadastro preenchidos.
+- Se não tiver, é exibido um **Dialog** solicitando o preenchimento antes de prosseguir com o pedido.
+- Os dados são armazenados na tabela `users` e usados exclusivamente neste módulo.
+
+### Campos obrigatórios
+- Nome completo
+- CPF (11 dígitos)
+- Endereço completo (rua, número, complemento)
+- Bairro
+- CEP (8 dígitos)
+- RG
+- E-mail
+- Contato telefônico (mín. 10 dígitos)
+
+### Fluxo
+1. Usuário clica em **Finalizar Pedido** no carrinho.
+2. O sistema verifica se o perfil Lojinha está completo (`user.me` com os 8 campos).
+3. Se **incompleto**: abre o Dialog de pré-cadastro (com texto informando que os dados são para SIGIN e estão seguros conforme a [política LGPD](/lgpd)).
+4. Usuário preenche e salva → `user.updateLojinhaProfile`.
+5. Após sucesso, o modal de pedido é aberto normalmente.
+
+### Onde editar (admin)
+- **Painel de usuários** → card do usuário → aba **Dados privados**.
+- A aba **Dados privados** só é visível para quem tem a permissão **Visualizar dados privados** (`can_view_dados_privados`) ou é sudo.
+- Ao acessar a aba, um **toast** lembra que os dados são protegidos pela LGPD e que o usuário está ciente ao acessar. Consulte a página [LGPD](/lgpd).
+
+### LGPD
+- Os dados de pré-cadastro são tratados conforme a política de privacidade (página **/lgpd**).
+- O Dialog de completar perfil da Lojinha informa que os dados são para pré-cadastro no SIGIN e que estão seguros conforme essa política.
+
 ## 🏗️ Arquitetura do Sistema
 
 ### **Componentes Principais**

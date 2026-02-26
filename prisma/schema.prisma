@@ -42,6 +42,16 @@ model User {
   matricula           String? // matrícula do usuário - para exportação de pedidos
   email_empresarial   String? // email empresarial para uso em ações específicas (ex: chat com permissão can_view_answer_without_admin_access)
 
+  // Pré-cadastro Lojinha (exclusivo módulo Lojinha / SIGIN)
+  lojinha_full_name    String?
+  lojinha_cpf          String?
+  lojinha_address      String?
+  lojinha_neighborhood String?
+  lojinha_cep          String?
+  lojinha_rg           String?
+  lojinha_email        String?
+  lojinha_phone        String?
+
   // Notificações
   notifications           Notification[]
   notificationPreferences NotificationPreference?
