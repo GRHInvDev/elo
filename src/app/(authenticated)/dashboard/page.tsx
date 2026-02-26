@@ -43,14 +43,15 @@ export default function DashboardPage() {
   // Removido: userRole não é mais necessário com novo sistema
   const userEnterprise = user?.enterprise ?? null
   const userSetor = user?.setor ?? null
+  const userMatricula = user?.matricula ?? null
   const isTotem = user?.role_config?.isTotem === true
 
-  // Verificar se os campos obrigatórios estão preenchidos
+  // Verificar se os campos obrigatórios estão preenchidos (matrícula, empresa e setor)
   useEffect(() => {
-    if (user && (!userEnterprise || !userSetor)) {
+    if (user && (!userMatricula?.trim() || !userEnterprise || !userSetor)) {
       setShowProfileModal(true)
     }
-  }, [user, userEnterprise, userSetor])
+  }, [user, userMatricula, userEnterprise, userSetor])
 
   const todayBirthdays = useMemo(() => {
     if (!birthdays) {
@@ -473,6 +474,7 @@ export default function DashboardPage() {
         isOpen={showProfileModal}
         user={user?.id ? {
           id: user.id,
+          matricula: user.matricula ?? null,
           enterprise: user.enterprise ?? null,
           setor: user.setor ?? null
         } : null}

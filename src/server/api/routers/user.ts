@@ -21,6 +21,7 @@ export const userRouter = createTRPCRouter({
           role_config: true,
           enterprise: true,
           setor: true,
+          matricula: true,
           birthDay: true,
           extension: true,
           emailExtension: true,
@@ -95,6 +96,7 @@ export const userRouter = createTRPCRouter({
         role_config: fallbackRoleConfig,
         enterprise: null,
         setor: null,
+        matricula: null,
         birthDay: null,
         novidades: false
       };
@@ -187,6 +189,7 @@ export const userRouter = createTRPCRouter({
 
   updateProfile: protectedProcedure
     .input(z.object({
+      matricula: z.string().min(1, "Matrícula é obrigatória"),
       enterprise: z.string().min(1, "Empresa é obrigatória"),
       setor: z.string().min(1, "Setor é obrigatório"),
     }))
@@ -201,11 +204,13 @@ export const userRouter = createTRPCRouter({
         return await ctx.db.user.update({
           where: { id: userId },
           data: {
+            matricula: input.matricula.trim(),
             enterprise: input.enterprise as Enterprise,
             setor: input.setor,
           },
           select: {
             id: true,
+            matricula: true,
             enterprise: true,
             setor: true,
           },
@@ -221,6 +226,7 @@ export const userRouter = createTRPCRouter({
             firstName: null,
             lastName: null,
             imageUrl: null,
+            matricula: input.matricula.trim(),
             enterprise: input.enterprise as Enterprise,
             setor: input.setor,
             role_config: {
@@ -232,6 +238,7 @@ export const userRouter = createTRPCRouter({
           },
           select: {
             id: true,
+            matricula: true,
             enterprise: true,
             setor: true,
           },
@@ -361,10 +368,15 @@ export const userRouter = createTRPCRouter({
       })
 
       const roleConfig = currentUser?.role_config as RolesConfig | null
-      if (!roleConfig?.sudo) {
+      const canListCollaborators =
+        roleConfig?.sudo === true ||
+        roleConfig?.can_view_add_manual_ped === true ||
+        roleConfig?.can_manage_produtos === true ||
+        roleConfig?.can_manage_quality_management === true
+      if (!canListCollaborators) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Apenas usuários sudo podem listar colaboradores",
+          message: "Você não tem permissão para listar colaboradores",
         })
       }
 

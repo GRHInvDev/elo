@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -18,7 +20,10 @@ import { useEffect } from "react"
 import { Select as UiSelect } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { CheckCircle, Loader2 } from "lucide-react"
+import { useDebounce } from "@/hooks/use-debounce"
 import { type UserMinimal } from "@/trpc/react"
+import { cn } from "@/lib/utils"
 
 interface OrdersTabProps {
   selectedDate: Date
@@ -58,6 +63,7 @@ export default function OrdersTab({
   const [createObservations, setCreateObservations] = useState<string>("")
   const [createIncludeOptions, setCreateIncludeOptions] = useState<Record<string, string[]>>({})
   const [createUserSearch, setCreateUserSearch] = useState<string>("")
+  const [collabPopoverOpen, setCollabPopoverOpen] = useState(false)
 
   const resetCreateState = () => {
     setCreateDate(new Date())
@@ -68,6 +74,7 @@ export default function OrdersTab({
     setCreateObservations("")
     setCreateIncludeOptions({})
     setCreateUserSearch("")
+    setCollabPopoverOpen(false)
   }
 
   // Buscar restaurantes
@@ -84,10 +91,14 @@ export default function OrdersTab({
   const canViewAddManualPed = currentUser.data?.role_config?.can_view_add_manual_ped ?? false
   const canAddManualOrder = isSudo || canViewAddManualPed
 
+  const debouncedCollaboratorSearch = useDebounce(createUserSearch, 1000)
+  const hasCollaboratorSearchTerm = (debouncedCollaboratorSearch?.trim() ?? "").length > 0
   const usersQuery = api.user.searchMinimal.useQuery(
-    { query: createUserSearch },
-    { enabled: canAddManualOrder && createDialogOpen }
+    { query: debouncedCollaboratorSearch.trim() || undefined },
+    { enabled: canAddManualOrder && createDialogOpen && hasCollaboratorSearchTerm }
   )
+  const isCollaboratorSearching =
+    usersQuery.isFetching && createUserSearch.trim() === debouncedCollaboratorSearch.trim()
 
   // Buscar pedidos com filtros - período da data selecionada
   const queryParams = {
@@ -400,13 +411,25 @@ export default function OrdersTab({
 
   const manualCreate = api.foodOrder.createManual.useMutation({
     onSuccess: async () => {
-      toast.success("Pedido criado com sucesso!")
+      toast.success("Pedido criado com sucesso!", {
+        description: "O pedido manual foi registrado e aparecerá na lista.",
+      })
       resetCreateState()
       setCreateDialogOpen(false)
       await filteredOrders.refetch()
     },
     onError: (error) => {
-      toast.error(`Erro ao criar pedido: ${error.message}`)
+      const data = error.data as { zodError?: { fieldErrors?: Record<string, string[]> } } | undefined
+      const fieldErrors = data?.zodError?.fieldErrors
+      const description =
+        fieldErrors && typeof fieldErrors === "object"
+          ? Object.entries(fieldErrors)
+              .map(([field, messages]) => `${field}: ${(messages ?? []).join(", ")}`)
+              .join("; ")
+          : error.message
+      toast.error("Erro ao criar pedido", {
+        description,
+      })
     },
   })
 
@@ -567,33 +590,91 @@ export default function OrdersTab({
                 Adicionar Pedido Manual
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
+            <DialogContent className="flex max-h-[90vh] h-[85vh] flex-col gap-0 p-0">
+              <DialogHeader className="shrink-0 border-b px-6 py-4">
                 <DialogTitle>Novo Pedido Manual</DialogTitle>
                 <DialogDescription>
                   Registre um pedido em nome de um colaborador.
                 </DialogDescription>
               </DialogHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
-                  <Label>Colaborador</Label>
-                  <Input
-                    placeholder="Buscar colaborador"
-                    value={createUserSearch}
-                    onChange={(event) => setCreateUserSearch(event.target.value)}
-                  />
-                  <Select value={createUser} onValueChange={setCreateUser}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o colaborador" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Label
+                      className={cn(
+                        createUser && "cursor-pointer select-none rounded px-1 py-0.5 hover:bg-muted/80"
+                      )}
+                      onClick={(e) => {
+                        if (createUser) {
+                          e.preventDefault()
+                          setCreateUser("")
+                          setCreateUserSearch("")
+                        }
+                      }}
+                    >
+                      Colaborador
+                    </Label>
+                    {createUser && (
+                      <CheckCircle className="h-5 w-5 shrink-0 text-green-600 dark:text-green-500" aria-label="Colaborador selecionado" />
+                    )}
+                  </div>
+                  <Popover open={collabPopoverOpen} onOpenChange={setCollabPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <div className="relative flex items-center">
+                        <Input
+                          placeholder="Digite para buscar colaborador..."
+                          value={createUserSearch}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setCreateUserSearch(v)
+                            if (createUser) setCreateUser("")
+                            setCollabPopoverOpen(true)
+                          }}
+                          onFocus={() => {
+                            if (createUser) setCreateUser("")
+                            setCollabPopoverOpen(true)
+                          }}
+                          className={cn("pr-9 w-full")}
+                        />
+                        {isCollaboratorSearching && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
+                          </span>
+                        )}
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                      align="start"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                    >
+                      <Command>
+                        <CommandList>
+                          <CommandEmpty>
+                            {createUserSearch.trim()
+                              ? "Nenhum colaborador encontrado."
+                              : "Digite para ver sugestões."}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {userOptions.map((option) => (
+                              <CommandItem
+                                key={option.value}
+                                value={option.label}
+                                onSelect={() => {
+                                  setCreateUser(option.value)
+                                  setCreateUserSearch(option.label)
+                                  setCollabPopoverOpen(false)
+                                }}
+                              >
+                                {option.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label>Data do Pedido</Label>
@@ -711,7 +792,8 @@ export default function OrdersTab({
                   </div>
                 )}
               </div>
-              <DialogFooter>
+              </div>
+              <DialogFooter className="shrink-0 border-t px-6 py-4">
                 <Button onClick={handleCreateManualOrder} disabled={manualCreate.isPending}>
                   {manualCreate.isPending ? "Criando..." : "Criar pedido"}
                 </Button>
