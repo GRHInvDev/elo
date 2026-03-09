@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import type { Birthday, User } from "@prisma/client"
+import { isSameUtcMonthDay } from "@/lib/date-utils"
 
 interface BirthdayConfettiProps {
   birthdays: (Birthday & { user: User | null })[]
@@ -25,14 +26,11 @@ export function BirthdayConfetti({ birthdays }: BirthdayConfettiProps) {
       hasTriggeredRef.current = false
     }
 
-    // Verifica se realmente é hoje antes de disparar
+    // Verifica se realmente é hoje antes de disparar (comparando em UTC)
     const today = new Date()
     const hasTodayBirthday = birthdays.some((birthday) => {
       const birthdayDate = new Date(birthday.data)
-      return (
-        birthdayDate.getDate() === today.getDate() &&
-        birthdayDate.getMonth() === today.getMonth()
-      )
+      return isSameUtcMonthDay(today, birthdayDate)
     })
 
     // Só dispara confetes se houver aniversários de HOJE e ainda não tiver disparado
