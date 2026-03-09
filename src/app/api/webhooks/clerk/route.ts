@@ -59,18 +59,15 @@ export async function POST(req: Request) {
   // Handle the webhook
   switch (evt.type) {
     case "user.created":
-      // SISTEMA SIMPLIFICADO: Todos podem ver tudo, só alguns podem criar
+      // SISTEMA SIMPLIFICADO: Todos podem ver tudo; novos usuários já podem reservar salas e veículos
       let initialConfig = {
         sudo: false,
-        // Permissões de criação - todas false por padrão
         can_create_form: false,
         can_create_event: false,
         can_create_flyer: false,
-        can_create_booking: false,
-        can_locate_cars: false,
+        can_create_booking: true, // Padrão: novos usuários podem agendar salas
+        can_locate_cars: true, // Padrão: novos usuários podem agendar veículos
         can_view_dre_report: false,
-        // Se tem permissão DRE, automaticamente ganha acesso ao painel admin
-        // Admin pages apenas para sudos
         admin_pages: [] as string[],
         isTotem: public_metadata?.isTotem ?? false
       };

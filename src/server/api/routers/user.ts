@@ -221,6 +221,20 @@ export const userRouter = createTRPCRouter({
         // Se usuário não existe (desenvolvimento), criar novo
         console.warn("Usuário não encontrado, criando novo registro:", error);
 
+        // Role config alinhado ao padrão de novos usuários (reserva de salas e veículos habilitada)
+        const devDefaultRoleConfig = {
+          sudo: false,
+          admin_pages: [] as string[],
+          can_create_form: false,
+          can_create_event: false,
+          can_create_flyer: false,
+          can_create_booking: true,
+          can_locate_cars: true,
+          can_view_dre_report: false,
+          can_create_solicitacoes: false,
+          isTotem: false,
+        };
+
         return await ctx.db.user.create({
           data: {
             id: userId,
@@ -231,12 +245,7 @@ export const userRouter = createTRPCRouter({
             matricula: input.matricula.trim(),
             enterprise: input.enterprise as Enterprise,
             setor: input.setor,
-            role_config: {
-              sudo: false,
-              admin_pages: undefined,
-              forms: undefined,
-              content: undefined
-            }
+            role_config: devDefaultRoleConfig,
           },
           select: {
             id: true,
