@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react"
 import { api } from "@/trpc/react"
+import { isSameUtcMonthDay } from "@/lib/date-utils"
 import { BirthdayConfetti } from "./birthday-confetti"
 
 export function BirthdayConfettiWrapper() {
@@ -27,19 +28,12 @@ export function BirthdayConfettiWrapper() {
     }
 
     const today = new Date()
-    const currentDay = today.getDate()
-    const currentMonth = today.getMonth()
-    
+
     // Atualiza a ref com a data atual
     dateKeyRef.current = today.toDateString()
 
     const birthdayDate = new Date(myBirthday.data)
-    const isToday = (
-      birthdayDate.getDate() === currentDay &&
-      birthdayDate.getMonth() === currentMonth
-    )
-
-    return isToday
+    return isSameUtcMonthDay(today, birthdayDate)
   }, [myBirthday, currentUser])
 
   if (isLoadingBirthday || !currentUser) {

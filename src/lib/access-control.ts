@@ -172,19 +172,28 @@ export function getAccessibleForms<T extends { id: string }>(
 }
 
 /**
- * Verifica se o usuário pode editar um formulário específico
- * 
- * Um usuário pode editar um formulário se:
- * 1. É o criador do formulário
- * 2. Está na lista de owners do formulário
- * 3. Tem permissão can_create_form (pode editar qualquer formulário)
- * 4. Tem acesso às respostas do formulário (mesma lógica de canAccessForm)
- * 
+ * Regra de negócio para edição de templates de formulário (segurança):
+ * Apenas os seguintes perfis podem editar a estrutura de um formulário:
+ * - Criador do formulário (userId do form)
+ * - Usuários listados em ownerIds do formulário
+ * - Usuários com role_config.sudo
+ * - Usuários com role_config.can_create_form (admin de formulários)
+ *
+ * Ter acesso às respostas (allowedUsers/allowedSectors em formulário privado,
+ * ou formulário público) NÃO concede permissão de edição do template.
+ */
+
+/**
+ * Verifica se o usuário pode editar um formulário específico (template).
+ *
+ * Um usuário pode editar apenas se for: criador, owner explícito, sudo ou can_create_form.
+ * Acesso às respostas (visibilidade/responder) não concede edição.
+ *
  * @param roleConfig - Configuração de roles do usuário
  * @param userId - ID do usuário
- * @param formId - ID do formulário
- * @param form - Dados do formulário (userId, ownerIds, isPrivate, allowedUsers, allowedSectors)
- * @param userSetor - Setor do usuário (opcional)
+ * @param formId - ID do formulário (usado apenas para consistência de assinatura; não afeta a regra endurecida)
+ * @param form - Dados do formulário (userId, ownerIds)
+ * @param userSetor - Setor do usuário (não usado na regra de edição; mantido por compatibilidade)
  * @returns true se o usuário pode editar o formulário
  */
 export function canEditForm(
@@ -202,34 +211,11 @@ export function canEditForm(
 ): boolean {
   if (!roleConfig || !userId) return false;
 
-  // TOTEMs não podem editar
   if (roleConfig.isTotem) return false;
 
-  // Se é o criador do formulário, sempre pode editar
   if (form.userId === userId) return true;
-
-  // Se está na lista de owners, pode editar
   if (form.ownerIds?.includes(userId)) return true;
-
-  // Se tem permissão can_create_form, pode editar qualquer formulário
   if (roleConfig.sudo || roleConfig.can_create_form) return true;
 
-  // Se tem acesso às respostas do formulário, pode editar
-  // Verificar se o formulário é privado
-  if (form.isPrivate) {
-    // Verificar se o formulário está na lista de ocultos
-    if (roleConfig.hidden_forms?.includes(formId)) return false;
-
-    // Verificar se o usuário está na lista de usuários permitidos
-    const isAllowedUser = form.allowedUsers?.includes(userId) ?? false;
-
-    // Verificar se o usuário está em um setor permitido
-    const isAllowedSector = form.allowedSectors?.includes(userSetor ?? "") ?? false;
-
-    // Se não tem acesso nem por usuário nem por setor, não pode editar
-    if (!isAllowedUser && !isAllowedSector) return false;
-  }
-
-  // Se passou por todas as verificações, pode editar
-  return true;
+  return false;
 }

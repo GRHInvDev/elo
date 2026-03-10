@@ -5,6 +5,7 @@ import type { Field } from "@/lib/form-types"
 import { type InputJsonValue } from "@prisma/client/runtime/library";
 import type { RolesConfig } from "@/types/role-config";
 import { getEffectiveRoleConfig } from "@/lib/effective-role-config";
+import { canEditForm } from "@/lib/access-control";
 
 
 
@@ -150,41 +151,15 @@ export const formsRouter = createTRPCRouter({
 
             const roleConfig = getEffectiveRoleConfig(currentUser);
 
-            // Verificar se o usuário pode editar este formulário
-            // 1. Se é o criador do formulário, sempre pode editar
-            const isCreator = existingForm.userId === currentUser.id;
+            const canEdit = canEditForm(
+                roleConfig,
+                currentUser.id,
+                input.id,
+                existingForm,
+                currentUser.setor
+            );
 
-            // 2. Se está na lista de owners, pode editar
-            const isOwner = existingForm.ownerIds?.includes(currentUser.id) ?? false;
-
-            // 3. Se tem permissão can_create_form, pode editar qualquer formulário
-            const canCreate = (roleConfig?.sudo ?? false) || (roleConfig?.can_create_form ?? false);
-
-            // 4. Se tem acesso às respostas do formulário, pode editar
-            let hasAccessToResponses = false;
-            if (!isCreator && !isOwner && !canCreate) {
-                // Verificar se o formulário é privado
-                if (existingForm.isPrivate) {
-                    // Verificar se o formulário está na lista de ocultos
-                    const isHidden = roleConfig?.hidden_forms?.includes(input.id) ?? false;
-
-                    if (!isHidden) {
-                        // Verificar se o usuário está na lista de usuários permitidos
-                        const isAllowedUser = existingForm.allowedUsers?.includes(currentUser.id) ?? false;
-
-                        // Verificar se o usuário está em um setor permitido
-                        const isAllowedSector = existingForm.allowedSectors?.includes(currentUser.setor ?? "") ?? false;
-
-                        hasAccessToResponses = isAllowedUser || isAllowedSector;
-                    }
-                } else {
-                    // Se o formulário não é privado, todos têm acesso (exceto TOTEMs)
-                    hasAccessToResponses = !roleConfig?.isTotem;
-                }
-            }
-
-            // Se não tem nenhuma das permissões, lançar erro
-            if (!isCreator && !isOwner && !canCreate && !hasAccessToResponses) {
+            if (!canEdit) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "Você não tem permissão para editar este formulário",
