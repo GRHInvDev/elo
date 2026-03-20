@@ -1,11 +1,53 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { X } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import {
+  ArrowRight,
+  CalendarDays,
+  Car,
+  Lightbulb,
+  PartyPopper,
+  Sparkles,
+  UtensilsCrossed,
+  X,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { api } from "@/trpc/react"
 import { Confetti } from "@/components/ui/confetti"
+
+/**
+ * Itens estáticos fora do componente — evita recriar o array a cada render.
+ */
+const WELCOME_FEATURES = [
+  {
+    icon: CalendarDays,
+    text: "Acompanhar eventos e notícias da empresa",
+  },
+  {
+    icon: Lightbulb,
+    text: "Enviar ideias e sugestões",
+  },
+  {
+    icon: UtensilsCrossed,
+    text: "Fazer pedidos de alimentação",
+  },
+  {
+    icon: Car,
+    text: "Reservar salas e veículos",
+  },
+  {
+    icon: Sparkles,
+    text: "Explorar muito mais na Intranet",
+  },
+] as const
 
 export function WelcomeCard() {
   const { data: newCollaborator, refetch } = api.user.checkNewCollaborator.useQuery()
@@ -14,27 +56,27 @@ export function WelcomeCard() {
       void refetch()
     },
   })
+  const { data: currentUser } = api.user.me.useQuery()
 
   const [showConfetti, setShowConfetti] = useState(true)
   const [isClosing, setIsClosing] = useState(false)
 
-  // Esconder confetti após animação
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setShowConfetti(false)
     }, 5000)
-    return () => clearTimeout(timer)
+    return () => window.clearTimeout(timer)
   }, [])
+
+  const handleClose = useCallback(() => {
+    setIsClosing(true)
+    window.setTimeout(() => {
+      markAsNotNew.mutate()
+    }, 300)
+  }, [markAsNotNew])
 
   if (!newCollaborator?.isNew) {
     return null
-  }
-
-  const handleClose = () => {
-    setIsClosing(true)
-    setTimeout(() => {
-      markAsNotNew.mutate()
-    }, 300)
   }
 
   if (isClosing) {
@@ -43,64 +85,87 @@ export function WelcomeCard() {
 
   return (
     <>
-      {showConfetti && <Confetti />}
-      <Card className="relative overflow-hidden border-2 border-primary shadow-lg animate-in fade-in slide-in-from-top-5 duration-500">
-        <CardContent className="p-6 md:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 space-y-4">
-              <div className="space-y-2">
-                <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  🎉 Bem-vindo(a) à Intranet!
-                </h2>
-                <p className="text-muted-foreground text-sm md:text-base">
-                  Estamos muito felizes em tê-lo(a) conosco! Esta é sua nova plataforma de comunicação interna.
-                </p>
-              </div>
+      {showConfetti ? <Confetti /> : null}
+      <Card
+        className={cn(
+          "w-full rounded-2xl",
+          "relative overflow-hidden border border-primary/25 bg-gradient-to-b from-card via-card to-primary/[0.04]",
+          "shadow-lg shadow-primary/5 ring-1 ring-primary/10",
+          "animate-in fade-in slide-in-from-top-5 duration-500",
+        )}
+      >
+        {/* Decoração leve — apenas camadas CSS, sem JS extra */}
+        <div
+          className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-primary/5 blur-2xl"
+          aria-hidden
+        />
 
-              <div className="space-y-2 text-sm">
-                <p className="font-medium">Aqui você pode:</p>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
-                  <li>Acompanhar eventos e notícias da empresa</li>
-                  <li>Enviar suas ideias e sugestões</li>
-                  <li>Fazer pedidos de alimentação</li>
-                  <li>Reservar salas e veículos</li>
-                  <li>E muito mais!</li>
-                </ul>
-              </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleClose}
+          className="absolute right-2 top-2 z-10 h-9 w-9 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive md:right-3 md:top-3"
+          aria-label="Fechar mensagem de boas-vindas"
+        >
+          <X className="h-4 w-4" />
+        </Button>
 
-              <Button
-                onClick={handleClose}
-                className="mt-4"
-                size="sm"
-              >
-                Começar a explorar
-              </Button>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
-              aria-label="Fechar"
+        <CardHeader className="relative space-y-0 pb-3 pt-4 pr-11 md:pb-4 md:pt-5 md:pr-12">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                "bg-primary/12 text-primary shadow-inner ring-1 ring-primary/20",
+              )}
             >
-              <X className="h-4 w-4" />
-            </Button>
+              <PartyPopper className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
+              <span className="inline-flex w-fit items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary sm:text-xs">
+                Primeiro acesso
+              </span>
+              <CardTitle className="text-balance text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                Bem-vindo(a) à Intranet{currentUser?.firstName ? `, ${currentUser.firstName}` : ""}!
+              </CardTitle>
+              <CardDescription className="max-w-3xl text-pretty text-xs leading-snug text-muted-foreground sm:text-sm">
+                Central de comunicação interna — tudo o que você precisa em um só lugar.
+              </CardDescription>
+            </div>
           </div>
-        </CardContent>
+        </CardHeader>
 
-        {/* Balões animados decorativos */}
-        <div className="absolute top-4 right-4 w-16 h-16 opacity-20 animate-bounce">
-          <div className="text-4xl">🎈</div>
-        </div>
-        <div className="absolute top-8 right-16 w-12 h-12 opacity-15 animate-bounce delay-150">
-          <div className="text-3xl">🎈</div>
-        </div>
-        <div className="absolute bottom-4 right-8 w-14 h-14 opacity-20 animate-bounce delay-300">
-          <div className="text-3xl">🎈</div>
-        </div>
+        <CardContent className="relative space-y-3 pb-4 pt-0 sm:space-y-4 sm:pb-5">
+          <p className="text-xs font-semibold text-foreground sm:text-sm">O que você pode fazer por aqui</p>
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 md:grid-rows-2">
+            {WELCOME_FEATURES.map(({ icon: Icon, text }) => (
+              <li
+                key={text}
+                className="flex gap-2.5 rounded-xl border border-border/60 bg-muted/40 px-2.5 py-2 transition-colors hover:border-primary/25 hover:bg-muted/60 dark:bg-muted/20"
+              >
+                <span className="mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background/80 text-primary shadow-sm ring-1 ring-border/50">
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+                </span>
+                <span className="text-xs leading-snug text-muted-foreground sm:text-[13px]">{text}</span>
+              </li>
+            ))}
+          </ul>
+
+          <Button
+            type="button"
+            onClick={handleClose}
+            className="mt-0.5 gap-2 shadow-sm sm:w-fit"
+            size="sm"
+          >
+            Começar a explorar
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Button>
+        </CardContent>
       </Card>
     </>
   )
 }
-

@@ -112,7 +112,7 @@ export default function DashboardPage() {
       {/* Modal da Régua de Emoções */}
       <EmotionRulerWrapper />
       {/* Card de Boas-vindas para novos colaboradores */}
-      <div className="w-full max-w-6xl mx-auto px-4 pt-6 pb-4">
+      <div className="w-full px-4 pt-6 pb-4 md:px-4 lg:px-8">
         <WelcomeCard />
       </div>
 
