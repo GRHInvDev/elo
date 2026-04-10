@@ -101,7 +101,9 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
           <div className="space-y-2">
             {birthdays.map((birthday) => {
               const isToday = isBirthdayToday(birthday.data)
-              
+              const effectiveImage =
+                birthday.imageUrl ?? birthday.user?.imageUrl ?? null
+
               return (
                 <div
                   key={birthday.id}
@@ -113,9 +115,9 @@ export function MonthlyBirthdays({ className }: MonthlyBirthdaysProps) {
                   )}
                 >
                   <Avatar className="h-10 w-10 flex-shrink-0">
-                    {birthday.user?.imageUrl ? (
+                    {effectiveImage ? (
                       <AvatarImage
-                        src={birthday.user.imageUrl}
+                        src={effectiveImage}
                         alt={birthday.name}
                         className="object-contain bg-white"
                       />

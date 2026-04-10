@@ -16,6 +16,7 @@ import {
   Book,
   FileText,
   Heart,
+  DoorOpen,
 } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
 
@@ -94,13 +95,19 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
     {
       title: "Anúncios",
       icon: LucideMegaphone,
-      describe: "Aniversariantes do Mês, Eventos, Encartes e Notícias",
+      describe: "Aniversariantes, Hall de entrada, Eventos, Encartes e Notícias",
       children: [
         {
           title: "Aniversariantes do Mês",
           icon: LucideCake,
           describe: "Página para visualizar os aniversariantes do mês",
           href: "/birthdays",
+        },
+        {
+          title: "Hall de entrada",
+          icon: DoorOpen,
+          describe: "Comunicação de novos colaboradores na intranet",
+          href: "/forms/hall-entrada",
         },
         {
           title: "Eventos",
@@ -174,13 +181,16 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
   // 2. Tem /admin na lista de admin_pages
   // 3. Tem qualquer rota que comece com /admin na lista de admin_pages
   // 4. Tem permissão can_manage_produtos (que dá acesso a /admin/products)
+  // 5. Tem permissão can_manage_new_users_hall (Hall de entrada no admin)
   const hasAdminPages = Array.isArray(roleConfig?.admin_pages) && roleConfig?.admin_pages?.length && roleConfig?.admin_pages?.length > 0
   const hasAnyAdminRoute = hasAdminPages && roleConfig?.admin_pages.some((route: string) => route.startsWith("/admin"))
   const hasCanManageProducts = roleConfig?.can_manage_produtos === true
+  const hasCanManageNewUsersHall = roleConfig?.can_manage_new_users_hall === true
   const hasAdminAccess = !!roleConfig?.sudo ||
     (hasAdminPages && roleConfig?.admin_pages?.includes("/admin")) ||
     hasAnyAdminRoute ||
-    hasCanManageProducts
+    hasCanManageProducts ||
+    hasCanManageNewUsersHall
 
   if (hasAdminAccess) {
     items.push({

@@ -21,8 +21,15 @@ export async function checkAdminAccess(route: string) {
     const hasCanManageProducts = db_user.role_config.can_manage_produtos === true
     const hasCanManageQuality = db_user.role_config.can_manage_quality_management === true
     const hasCanManageEmotionRules = db_user.role_config.can_manage_emotion_rules === true
-    
-    const hasAccess = hasAdminRoute || hasAnyAdminRoute || hasCanManageProducts || hasCanManageQuality || hasCanManageEmotionRules
+    const hasCanManageNewUsersHall = db_user.role_config.can_manage_new_users_hall === true
+
+    const hasAccess =
+      hasAdminRoute ||
+      hasAnyAdminRoute ||
+      hasCanManageProducts ||
+      hasCanManageQuality ||
+      hasCanManageEmotionRules ||
+      hasCanManageNewUsersHall
     
     if (!hasAccess) {
       redirect("/dashboard");
@@ -45,12 +52,17 @@ export async function checkAdminAccess(route: string) {
     return db_user;
   }
 
+  if (route === "/admin/hall-entrada" && db_user.role_config.can_manage_new_users_hall === true) {
+    return db_user;
+  }
+
   if (!hasAccessToAdminRoute(
     db_user.role_config.admin_pages || [], 
     route,
     db_user.role_config.can_manage_produtos === true,
     db_user.role_config.can_manage_quality_management === true,
-    db_user.role_config.can_manage_emotion_rules === true
+    db_user.role_config.can_manage_emotion_rules === true,
+    db_user.role_config.can_manage_new_users_hall === true
   )) {
     redirect("/dashboard");
   }

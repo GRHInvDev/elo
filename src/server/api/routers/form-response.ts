@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario, mockEmailTagFormulario } from "@/lib/mail/html-mock"
+import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
 /**
  * Gera o próximo número sequencial para um novo chamado
@@ -105,15 +106,19 @@ export const formResponseRouter = createTRPCRouter({
                   ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                   : (owner.email ?? 'Usuário')
 
+                const chamadoLabel = formatFormResponseNumber(created.number)
                 const emailContent = mockEmailRespostaFormulario(
                   ownerName,
                   input.formId,
-                  form.title ?? 'Formulário'
+                  form.title ?? 'Formulário',
+                  created.number,
                 )
 
                 await sendEmail(
                   owner.email,
-                  `Nova solicitação no formulário "${form.title ?? 'Formulário'}"`,
+                  chamadoLabel
+                    ? `Nova solicitação ${chamadoLabel} no formulário "${form.title ?? 'Formulário'}"`
+                    : `Nova solicitação no formulário "${form.title ?? 'Formulário'}"`,
                   emailContent
                 ).catch((error) => {
                   console.error(`[FormResponse] Erro ao enviar email de nova solicitação para ${owner.email}:`, error)
@@ -247,15 +252,19 @@ export const formResponseRouter = createTRPCRouter({
                 ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                 : (owner.email ?? 'Usuário')
 
+              const chamadoLabel = formatFormResponseNumber(created.number)
               const emailContent = mockEmailRespostaFormulario(
                 ownerName,
                 input.formId,
-                form.title ?? 'Formulário'
+                form.title ?? 'Formulário',
+                created.number,
               )
 
               await sendEmail(
                 owner.email,
-                `Nova solicitação no formulário "${form.title ?? 'Formulário'}"`,
+                chamadoLabel
+                  ? `Nova solicitação ${chamadoLabel} no formulário "${form.title ?? 'Formulário'}"`
+                  : `Nova solicitação no formulário "${form.title ?? 'Formulário'}"`,
                 emailContent
               ).catch((error) => {
                 console.error(`[FormResponse] Erro ao enviar email de nova solicitação (manual) para ${owner.email}:`, error)
@@ -816,18 +825,22 @@ export const formResponseRouter = createTRPCRouter({
 
                 const isAutor = recipient.id === responseWithDetails.userId
 
+                const chamadoLabel = formatFormResponseNumber(responseWithDetails.number)
                 const emailContent = mockEmailChatMensagemFormulario(
                   destinatarioNome,
                   remetenteNome,
                   input.message,
                   input.responseId,
                   formTitle,
-                  isAutor
+                  isAutor,
+                  responseWithDetails.number,
                 )
 
                 await sendEmail(
                   recipient.email,
-                  "Elo | Intranet - Você tem uma nova mensagem em Solicitações",
+                  chamadoLabel
+                    ? `Elo | Intranet - Nova mensagem ${chamadoLabel} em Solicitações`
+                    : "Elo | Intranet - Você tem uma nova mensagem em Solicitações",
                   emailContent
                 ).catch((error) => {
                   console.error(`[FormResponse] Erro ao enviar email de chat para ${recipient.email}:`, error)

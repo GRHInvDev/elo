@@ -1,5 +1,16 @@
 import {
-  Shield, Users, Cake, Utensils, MapPin, Lightbulb, Car, Newspaper, ShoppingBag, FileCheck, FileText
+  Shield,
+  Users,
+  Cake,
+  Utensils,
+  MapPin,
+  Lightbulb,
+  Car,
+  Newspaper,
+  ShoppingBag,
+  FileCheck,
+  FileText,
+  DoorOpen,
 } from "lucide-react"
 
 export interface AdminRoute {
@@ -34,6 +45,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     description: "Configurar e gerenciar aniversários",
     icon: Cake,
     path: "/admin/birthday",
+    requiresBasicAdmin: true,
+  },
+  {
+    id: "/admin/hall-entrada",
+    title: "Hall de entrada",
+    description: "Comunicação de novos colaboradores na intranet",
+    icon: DoorOpen,
+    path: "/admin/hall-entrada",
     requiresBasicAdmin: true,
   },
   {
@@ -127,7 +146,14 @@ export function getAccessibleAdminRoutes(adminPages: string[]): AdminRoute[] {
   })
 }
 
-export function hasAccessToAdminRoute(adminPages: string[], routeId: string, canManageProducts?: boolean, canManageQuality?: boolean, canManageEmotionRules?: boolean): boolean {
+export function hasAccessToAdminRoute(
+  adminPages: string[],
+  routeId: string,
+  canManageProducts?: boolean,
+  canManageQuality?: boolean,
+  canManageEmotionRules?: boolean,
+  canManageNewUsersHall?: boolean,
+): boolean {
   // Se é a rota base, verificar se tem qualquer acesso admin
   if (routeId === "/admin") {
     // Tem acesso se tem /admin na lista OU tem qualquer rota que comece com /admin
@@ -149,6 +175,11 @@ export function hasAccessToAdminRoute(adminPages: string[], routeId: string, can
     return true
   }
 
+  // Para /admin/hall-entrada, verificar também can_manage_new_users_hall se fornecido
+  if (routeId === "/admin/hall-entrada" && canManageNewUsersHall === true) {
+    return true
+  }
+
   // Se não tem acesso ao /admin básico, não pode acessar outras rotas
   // EXCETO se tem a rota específica e permissão específica
   if (!adminPages.includes("/admin")) {
@@ -162,6 +193,10 @@ export function hasAccessToAdminRoute(adminPages: string[], routeId: string, can
     }
     // Permitir se tem can_manage_emotion_rules e a rota é /admin/emotion-ruler
     if (routeId === "/admin/emotion-ruler" && canManageEmotionRules === true) {
+      return true
+    }
+    // Permitir se tem can_manage_new_users_hall e a rota é /admin/hall-entrada
+    if (routeId === "/admin/hall-entrada" && canManageNewUsersHall === true) {
       return true
     }
     return false

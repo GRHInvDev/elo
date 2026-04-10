@@ -22,6 +22,8 @@ interface UserSearchProps {
   users: User[]
   selectedUsers: string[]
   onSelectionChange: (userIds: string[]) => void
+  /** Chamado a cada mudança do campo de busca (ex.: debounced query no servidor) */
+  onSearchTermChange?: (term: string) => void
   placeholder?: string
   maxHeight?: string
   className?: string
@@ -31,12 +33,21 @@ export function UserSearch({
   users,
   selectedUsers,
   onSelectionChange,
+  onSearchTermChange,
   placeholder = "Buscar colaboradores...",
   maxHeight = "200px",
   className,
 }: UserSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [isOpen, setIsOpen] = useState(false)
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (!open) {
+      setSearchTerm("")
+      onSearchTermChange?.("")
+    }
+  }
 
   // Filtrar usuários baseado no termo de busca
   const filteredUsers = useMemo(() => {
@@ -87,7 +98,7 @@ export function UserSearch({
     <div className={cn("space-y-3", className)}>
       {/* Campo de busca */}
       <div>
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <Popover open={isOpen} onOpenChange={handleOpenChange}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -107,12 +118,15 @@ export function UserSearch({
               <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-full p-0" align="start">
-            <Command>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0" align="start">
+            <Command shouldFilter={false}>
               <CommandInput
                 placeholder="Buscar por nome, email ou setor..."
                 value={searchTerm}
-                onValueChange={setSearchTerm}
+                onValueChange={(v) => {
+                  setSearchTerm(v)
+                  onSearchTermChange?.(v)
+                }}
               />
               <CommandList style={{ maxHeight }}>
                 <CommandEmpty>

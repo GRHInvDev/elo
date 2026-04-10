@@ -70,6 +70,9 @@ model User {
   // Novo colaborador
   newCollaborator NewCollaborator?
 
+  // Hall de entrada (comunicação de novos colaboradores) — no máximo uma entrada vinculada por usuário
+  newUsersHallEntry NewUsersHallEntry?
+
   // Pedidos de produtos
   productOrders         ProductOrder[]
   orderGroups           OrderGroup[]
@@ -868,7 +871,7 @@ model custom_extension {
   createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([createdById])
-  @@index([setor])
+@@index([setor])
   @@map("custom_extensions")
 }
 
@@ -885,6 +888,23 @@ model NewCollaborator {
   @@index([userId])
   @@index([isNew])
   @@map("new_collaborators")
+}
+
+/// Comunicação institucional de novos colaboradores (Hall de entrada)
+model NewUsersHallEntry {
+  id         String   @id @default(cuid())
+  userId     String?  @unique
+  name       String
+  setor      String?  @db.VarChar
+  imageUrl   String?
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([published, createdAt])
+  @@map("new_users_hall_entries")
 }
 
 // Enums personalizáveis para Gestão de Qualidade

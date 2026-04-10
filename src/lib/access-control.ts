@@ -61,6 +61,13 @@ export function canLocateCars(roleConfig: RolesConfig | null): boolean {
   return roleConfig.can_locate_cars;
 }
 
+/** Gestão do Hall de entrada (comunicação de novos colaboradores) */
+export function canManageNewUsersHall(roleConfig: RolesConfig | null): boolean {
+  if (!roleConfig) return false;
+  if (roleConfig.sudo) return true;
+  return roleConfig.can_manage_new_users_hall === true;
+}
+
 export function canCreateSolicitacoes(roleConfig: RolesConfig | null): boolean {
   if (!roleConfig) return false;
 
