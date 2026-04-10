@@ -228,45 +228,43 @@ function PostItem({ post }: PostItemProps) {
   return (
     <Card className="w-full max-w-none overflow-hidden hover:shadow-lg transition-shadow duration-300 rounded-2xl">
       <CardContent className="p-0">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:items-stretch">
-          {/* Coluna da Imagem */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+          {/* Coluna da Imagem — aspect-ratio fixo para evitar container retrato */}
           {imageUrls.length > 0 && (
-            <div className="relative h-48 md:h-full overflow-hidden bg-muted">
+            <div className="relative aspect-[3/2] md:aspect-[3/2] overflow-hidden bg-muted">
               <ImageCarousel
                 images={imageUrls}
                 alt={post.title}
                 aspectRatio="auto"
                 showArrows={imageUrls.length > 1}
                 showDots={imageUrls.length > 1}
-                className="h-full w-full"
+                className="w-full h-full"
                 imageFit="cover"
               />
             </div>
           )}
 
           {/* Coluna do Conteúdo */}
-          <div className={`p-6 space-y-4 ${imageUrls.length > 0 ? 'md:col-span-2' : 'md:col-span-3'} flex flex-col`}>
+          <div className={`p-6 space-y-4 ${imageUrls.length > 0 ? 'md:col-span-2' : 'md:col-span-3'} flex flex-col justify-center`}>
             {/* Header com Avatar e Data */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                  <AvatarImage src={post.author.imageUrl ?? undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                    {post.author.firstName?.charAt(0).toUpperCase()}
-                    {post.author.lastName?.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1">
-                    {post.author.firstName} {post.author.lastName}
-                    {post.author.role_config?.sudo && (
-                      <LucideVerified className="text-blue-500 size-4" />
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                <AvatarImage src={post.author.imageUrl ?? undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                  {post.author.firstName?.charAt(0).toUpperCase()}
+                  {post.author.lastName?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+                  {post.author.firstName} {post.author.lastName}
+                  {post.author.role_config?.sudo && (
+                    <LucideVerified className="text-blue-500 size-4" />
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                </p>
               </div>
             </div>
 
