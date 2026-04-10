@@ -1,81 +1,61 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef } from "react"
 
-interface ConfettiParticle {
-  id: number
-  x: number
-  y: number
-  rotation: number
-  speedY: number
-  speedX: number
-  size: number
-  shape: string
-}
+import { Confetti as MagicConfetti, type ConfettiRef } from "@/registry/magicui/confetti"
+
+const CONFETTI_COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"]
 
 export function Confetti() {
-  const [particles, setParticles] = useState<ConfettiParticle[]>([])
+  const confettiRef = useRef<ConfettiRef>(null)
 
   useEffect(() => {
-    const shapes = ["🎉", "🎊", "✨", "⭐", "💫", "🌟", "🎈"]
-    
-    const newParticles: ConfettiParticle[] = []
-    for (let i = 0; i < 60; i++) {
-      newParticles.push({
-        id: i,
-        x: Math.random() * 100,
-        y: -10 - Math.random() * 20,
-        rotation: Math.random() * 360,
-        speedY: 2 + Math.random() * 3,
-        speedX: -2 + Math.random() * 4,
-        size: 20 + Math.random() * 20,
-        shape: shapes[Math.floor(Math.random() * shapes.length)] ?? "🎉",
+    const start = Date.now()
+    const durationMs = 4800
+
+    // Dispara bursts curtos para manter o efeito visível por alguns segundos.
+    const intervalId = window.setInterval(() => {
+      const elapsed = Date.now() - start
+      if (elapsed >= durationMs) {
+        window.clearInterval(intervalId)
+        return
+      }
+
+      confettiRef.current?.fire({
+        particleCount: 18,
+        spread: 70,
+        angle: 90,
+        origin: { y: 0.6 },
+        colors: CONFETTI_COLORS,
       })
-    }
-    setParticles(newParticles)
+    }, 320)
 
-    const interval = setInterval(() => {
-      setParticles((prev) => {
-        const updated = prev
-          .map((p) => ({
-            ...p,
-            y: p.y + p.speedY,
-            x: p.x + p.speedX,
-            rotation: p.rotation + 5,
-          }))
-          .filter((p) => p.y < 120)
+    // Burst inicial imediato.
+    confettiRef.current?.fire({
+      particleCount: 55,
+      spread: 70,
+      angle: 90,
+      origin: { y: 0.6 },
+      colors: CONFETTI_COLORS,
+    })
 
-        if (updated.length === 0) {
-          clearInterval(interval)
-        }
-        return updated
-      })
-    }, 50)
-
-    return () => clearInterval(interval)
+    return () => window.clearInterval(intervalId)
   }, [])
-
-  if (particles.length === 0) {
-    return null
-  }
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-      {particles.map((particle) => (
-        <div
-          key={particle.id}
-          className="absolute"
-          style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-            transform: `rotate(${particle.rotation}deg)`,
-            fontSize: `${particle.size}px`,
-            transition: "opacity 0.3s ease-out",
-          }}
-        >
-          {particle.shape}
-        </div>
-      ))}
+      <MagicConfetti
+        ref={confettiRef}
+        className="absolute left-0 top-0 size-full"
+        onMouseEnter={() => {
+          confettiRef.current?.fire({
+            particleCount: 35,
+            spread: 60,
+            origin: { y: 0.55 },
+            colors: CONFETTI_COLORS,
+          })
+        }}
+      />
     </div>
   )
 }

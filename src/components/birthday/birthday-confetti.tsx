@@ -3,12 +3,15 @@
 import { useEffect, useRef } from "react"
 import type { Birthday, User } from "@prisma/client"
 import { isSameUtcMonthDay } from "@/lib/date-utils"
+import { Confetti, type ConfettiRef } from "@/registry/magicui/confetti"
 
 interface BirthdayConfettiProps {
   birthdays: (Birthday & { user: User | null })[]
 }
 
 export function BirthdayConfetti({ birthdays }: BirthdayConfettiProps) {
+  const confettiRef = useRef<ConfettiRef>(null)
+
   // Usa a data atual como chave para resetar quando o dia mudar
   const todayKey = useRef(new Date().toDateString())
   const hasTriggeredRef = useRef(false)
@@ -38,75 +41,62 @@ export function BirthdayConfetti({ birthdays }: BirthdayConfettiProps) {
       return
     }
 
-    // eslint-disable-next-line no-console
-    console.log("🎉 BirthdayConfetti: Disparando confetes para", birthdays.length, "aniversariante(s)")
+    let intervalId: number | null = null
+    let centralTimeoutId: number | null = null
 
     // Pequeno delay para garantir que o DOM está pronto
     const timeoutId = setTimeout(() => {
-      // Importação dinâmica do canvas-confetti
-      void import("canvas-confetti")
-        .then((confetti) => {
-          const confettiInstance = confetti.default
+      const colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"]
 
-            // eslint-disable-next-line no-console
-            console.log("✅ canvas-confetti carregado com sucesso")
+      const durationMs = 3000
+      const end = Date.now() + durationMs
 
-          // Configuração dos confetes
-          const duration = 3000 // 3 segundos
-          const end = Date.now() + duration
+      // Dispara pequenos bursts em loop até completar o tempo.
+      intervalId = window.setInterval(() => {
+        if (Date.now() >= end) {
+          if (intervalId) window.clearInterval(intervalId)
+          return
+        }
 
-          // Função para disparar confetes
-          const frame = () => {
-            void confettiInstance({
-              particleCount: 3,
-              angle: 60,
-              spread: 55,
-              origin: { x: 0 },
-              colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
-            })
-
-            void confettiInstance({
-              particleCount: 3,
-              angle: 120,
-              spread: 55,
-              origin: { x: 1 },
-              colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
-            })
-
-            if (Date.now() < end) {
-              requestAnimationFrame(frame)
-            }
-          }
-
-          // Dispara os confetes
-          frame()
-
-          // Dispara uma explosão central após um pequeno delay
-          void setTimeout(() => {
-            void confettiInstance({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8"],
-            })
-          }, 500)
-
-          // Marca como já disparado
-          hasTriggeredRef.current = true
+        confettiRef.current?.fire({
+          particleCount: 6,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors,
         })
-        .catch((error) => {
-          // Log de erro para debug
-          // eslint-disable-next-line no-console
-          console.error("❌ Erro ao carregar canvas-confetti:", error)
+
+        confettiRef.current?.fire({
+          particleCount: 6,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors,
         })
+      }, 120)
+
+      // Explosão central após um pequeno delay
+      centralTimeoutId = window.setTimeout(() => {
+        confettiRef.current?.fire({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors,
+        })
+      }, 500)
+
+      // Marca como já disparado (evita loops/reativações)
+      hasTriggeredRef.current = true
     }, 100) // Delay de 100ms para garantir que o DOM está pronto
 
     return () => {
       clearTimeout(timeoutId)
+      if (intervalId) window.clearInterval(intervalId)
+      if (centralTimeoutId) window.clearTimeout(centralTimeoutId)
     }
   }, [birthdays])
 
-  // Não renderiza nada visualmente
-  return null
+  // Renderiza apenas um elemento base para o `ref` do confete, sem afetar layout.
+  return <Confetti ref={confettiRef} className="pointer-events-none fixed inset-0 z-50" />
 }
 

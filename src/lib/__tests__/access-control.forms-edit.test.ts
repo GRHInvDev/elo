@@ -10,6 +10,7 @@ const baseRoleConfig: RolesConfig = {
   can_create_flyer: false,
   can_create_booking: false,
   can_locate_cars: false,
+  can_create_solicitacoes: false,
   can_view_dre_report: false,
 };
 
