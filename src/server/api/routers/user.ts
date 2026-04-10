@@ -135,6 +135,7 @@ export const userRouter = createTRPCRouter({
           firstName: true,
           lastName: true,
           imageUrl: true,
+          setor: true,
           extension: true,
           emailExtension: true,
         },
@@ -451,7 +452,8 @@ export const userRouter = createTRPCRouter({
         effectiveConfig.sudo === true ||
         effectiveConfig.can_view_add_manual_ped === true ||
         effectiveConfig.can_manage_produtos === true ||
-        effectiveConfig.can_manage_quality_management === true
+        effectiveConfig.can_manage_quality_management === true ||
+        effectiveConfig.can_manage_new_users_hall === true
       if (!canListCollaborators) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -466,6 +468,7 @@ export const userRouter = createTRPCRouter({
           { firstName: { contains: input.query, mode: "insensitive" } },
           { lastName: { contains: input.query, mode: "insensitive" } },
           { email: { contains: input.query, mode: "insensitive" } },
+          { setor: { contains: input.query, mode: "insensitive" } },
         ]
       }
 
@@ -476,6 +479,7 @@ export const userRouter = createTRPCRouter({
           firstName: true,
           lastName: true,
           email: true,
+          setor: true,
         },
         orderBy: {
           firstName: "asc",
@@ -549,6 +553,7 @@ export const userRouter = createTRPCRouter({
         can_manage_dados_basicos_users: z.boolean().optional(),
         can_manage_produtos: z.boolean().optional(),
         can_manage_quality_management: z.boolean().optional(),
+        can_manage_new_users_hall: z.boolean().optional(),
         can_view_answer_without_admin_access: z.boolean().optional(),
         can_view_add_manual_ped: z.boolean().optional(),
         can_view_dados_privados: z.boolean().optional(),

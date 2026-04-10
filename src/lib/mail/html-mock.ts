@@ -1,8 +1,16 @@
+import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
+
 export const mockEmailRespostaFormulario = (
   nomeAutor: string,
   idFormulario: string,
   nomeFormulario: string,
-) => (`
+  chamadoNumero: number | null | undefined,
+) => {
+  const chamadoLabel = formatFormResponseNumber(chamadoNumero ?? null)
+  const chamadoBlock = chamadoLabel
+    ? `<p><strong>Número do chamado:</strong> ${chamadoLabel}</p>`
+    : ""
+  return (`
     <!DOCTYPE html>
     <html lang="pt-BR">
         <head>
@@ -40,6 +48,7 @@ export const mockEmailRespostaFormulario = (
             <div class="container">
                 <h1>Olá, ${nomeAutor}!</h1>
                 <p>Você acabou de receber uma resposta no seu formulário "${nomeFormulario}".</p>
+                ${chamadoBlock}
                 <p>Por favor, clique no link abaixo para conferir a resposta:</p>
                 <p><a href="https://intranet.boxdistribuidor.com.br/forms/${idFormulario}/responses" style="color: #007BFF;">Ver Resposta</a></p>
 
@@ -52,6 +61,7 @@ export const mockEmailRespostaFormulario = (
         </body>
     </html>
 `)
+}
 
 export const mockEmailSituacaoFormulario = (
   nomeUsuario: string,
@@ -1414,7 +1424,13 @@ export const mockEmailChatMensagemFormulario = (
   responseId: string,
   formTitle: string,
   isAutor: boolean, // Se true, o destinatário é o autor da solicitação (link para /forms/my-responses)
-) => (`
+  chamadoNumero?: number | null,
+) => {
+  const chamadoLabel = formatFormResponseNumber(chamadoNumero ?? null)
+  const chamadoLine = chamadoLabel
+    ? `<p><strong>Número do chamado:</strong> ${chamadoLabel}</p>`
+    : ""
+  return (`
   <!DOCTYPE html>
   <html lang="pt-BR">
     <head>
@@ -1531,6 +1547,7 @@ export const mockEmailChatMensagemFormulario = (
 
           <div class="form-info">
             <p><strong>Formulário:</strong> ${formTitle}</p>
+            ${chamadoLine}
           </div>
 
           <div class="message-box">
@@ -1554,6 +1571,7 @@ export const mockEmailChatMensagemFormulario = (
     </body>
   </html>
 `)
+}
 
 export const emailPedidosRestauranteAgrupado = (
   nomeRestaurante: string,

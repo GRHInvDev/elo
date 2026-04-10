@@ -4,16 +4,16 @@ import { MainCarousel } from "@/components/dashboard/main-carousel"
 import { BirthdaysCarousel } from "@/components/dashboard/birthdays-carousel"
 import { api } from "@/trpc/react"
 import { cn } from "@/lib/utils"
-import { LinkIcon, LucideGraduationCap, Coffee, Sparkles } from "lucide-react"
+import { LinkIcon, LucideGraduationCap, Coffee, Sparkles, LucideMegaphone } from "lucide-react"
 import { motion } from "framer-motion"
 import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import { NewsDisplay } from "@/components/dashboard/news-displ"
-import { routeItems } from "@/const/routes"
+import { routeItems, type RouteItem } from "@/const/routes"
+import { canViewForms } from "@/lib/access-control"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { Separator } from "@/components/ui/separator"
 
 import { SuggestionsWrapper } from "./suggestions-wrapper"
 import { CompleteProfileModal } from "@/components/ui/complete-profile-modal"
@@ -75,6 +75,19 @@ export default function DashboardPage() {
 
   const hasTodayBirthdays = todayBirthdays.length > 0
 
+  const announcementShortcuts = useMemo(() => {
+    const routes = routeItems(user?.role_config, false, user?.novidades === true)
+    const group = routes.find((m) => m.title === "Anúncios")
+    const withHref =
+      group?.children?.filter((c): c is RouteItem & { href: string } => Boolean(c.href)) ?? []
+    return withHref.filter((c) => {
+      if (c.href === "/forms/hall-entrada") {
+        return canViewForms(user?.role_config ?? null)
+      }
+      return true
+    })
+  }, [user?.role_config, user?.novidades])
+
   const posts: {
     imageRef: string,
     title: string,
@@ -125,7 +138,7 @@ export default function DashboardPage() {
         {
           hasTodayBirthdays && (
             <BirthdaysCarousel className="w-full md:col-span-1" itens={todayBirthdays.map((b) => ({
-              imageRef: b.imageUrl ?? "",
+              imageRef: b.imageUrl ?? b.user?.imageUrl ?? "",
               title: b.name
             }))} />
           )
@@ -149,204 +162,140 @@ export default function DashboardPage() {
               ))
             }
           </div>
+          {announcementShortcuts.length > 0 ? (
+            <div className="mb-6 space-y-3">
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <LucideMegaphone className="size-5 shrink-0" aria-hidden />
+                <span>Anúncios</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {announcementShortcuts.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="hover:bg-primary/30 transition-all justify-center flex items-center bg-muted p-3 rounded-lg gap-x-2 text-sm"
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    <span className="text-center leading-tight">{item.title}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
-      {/* Links Úteis e Ideias - Dividido em duas colunas */}
+      {/* Links Úteis, Universidade Corporativa e Ideias */}
       <div className="w-full max-w-6xl md:max-w-[1920px] mx-auto px-4 md:px-4 lg:px-8 mt-4 md:mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          {/* Links Úteis - Desktop: lado a lado, Mobile: Sites primeiro, depois Treinamento */}
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-3 md:gap-4",
+            isTotem ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"
+          )}
+        >
+          {/* Links Úteis — apenas sites */}
           <div className="bg-muted rounded-lg p-3 md:p-4">
             <div className="flex gap-2 items-center text-sm md:text-base font-semibold mb-3">
               <LinkIcon className="size-4 md:size-5" />
               <span>Links Úteis</span>
             </div>
-
-            {/* Mobile: Sites primeiro, Divisor, Treinamento */}
-            <div className="md:hidden space-y-3">
-              {/* Sites */}
-              <div>
-                <h4 className="text-xs font-medium mb-2 text-muted-foreground">Sites</h4>
-                <div className="space-y-1.5">
-                  <Link
-                    href={'https://boxdistribuidor.com.br'}
-                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/LOGO BOX.png"
-                      height={20}
-                      width={20}
-                      className="rounded-sm mr-2 flex-shrink-0"
-                      style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
-                      alt="Site Box"
-                    />
-                    <span className="text-xs font-medium">Site Box</span>
-                  </Link>
-                  <Link
-                    href={'https://cristallux.com.br'}
-                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/icon_cristal.svg"
-                      height={20}
-                      width={20}
-                      className="rounded-sm mr-2 flex-shrink-0 size-5"
-                      alt="Cristallux"
-                    />
-                    <span className="text-xs font-medium">Cristallux</span>
-                  </Link>
-                  <Link
-                    href={'https://centraldofuncionario.com.br/60939'}
-                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/central-funcionario.ico"
-                      height={20}
-                      width={20}
-                      className="rounded-sm mr-2 flex-shrink-0"
-                      style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
-                      alt="Central do Colaborador"
-                    />
-                    <span className="text-xs font-medium">Central do Colaborador</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Divisor */}
-              <Separator />
-
-              {/* Treinamento */}
-              <div>
-                <h4 className="text-xs font-medium mb-2 text-muted-foreground">Treinamento</h4>
-                <div className="space-y-1.5">
-                  <Link
-                    href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'}
-                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/umentor.jpg"
-                      height={20}
-                      width={20}
-                      className="rounded-sm mr-2 flex-shrink-0"
-                      style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }}
-                      alt="Umentor"
-                    />
-                    <span className="text-xs font-medium">Umentor</span>
-                  </Link>
-                  <Link
-                    href={'https://cristaluni.com.br'}
-                    className="flex items-center rounded-sm p-2 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <LucideGraduationCap className="mr-2 flex-shrink-0 text-primary" style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px' }} />
-                    <span className="text-xs font-medium">CristalUni</span>
-                  </Link>
-                </div>
+            <div>
+              <h4 className="text-xs md:text-sm font-medium mb-2 md:mb-3 text-muted-foreground">Sites</h4>
+              <div className="space-y-1.5 md:space-y-2">
+                <Link
+                  href={'https://boxdistribuidor.com.br'}
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image
+                    src="/LOGO BOX.png"
+                    height={24}
+                    width={24}
+                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6"
+                    alt="Site Box"
+                  />
+                  <span className="text-xs md:text-sm font-medium">Site Box</span>
+                </Link>
+                <Link
+                  href={'https://cristallux.com.br'}
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image
+                    src="/icon_cristal.svg"
+                    height={24}
+                    width={24}
+                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6"
+                    alt="Cristallux"
+                  />
+                  <span className="text-xs md:text-sm font-medium">Cristallux</span>
+                </Link>
+                <Link
+                  href={'https://centraldofuncionario.com.br/60939'}
+                  className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Image
+                    src="/central-funcionario.ico"
+                    height={24}
+                    width={24}
+                    className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6"
+                    alt="Central do Colaborador"
+                  />
+                  <span className="text-xs md:text-sm font-medium">Central do Colaborador</span>
+                </Link>
               </div>
             </div>
+          </div>
 
-            {/* Desktop: Sites e Treinamento lado a lado */}
-            <div className="hidden md:grid md:grid-cols-2 md:gap-4">
-              {/* Sites */}
-              <div>
-                <h4 className="text-sm font-medium mb-3 text-muted-foreground">Sites</h4>
-                <div className="space-y-2">
-                  <Link
-                    href={'https://boxdistribuidor.com.br'}
-                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/LOGO BOX.png"
-                      height={24}
-                      width={24}
-                      className="rounded-sm mr-3 flex-shrink-0"
-                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
-                      alt="Site Box"
-                    />
-                    <span className="text-sm font-medium">Site Box</span>
-                  </Link>
-                  <Link
-                    href={'https://cristallux.com.br'}
-                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/icon_cristal.svg"
-                      height={24}
-                      width={24}
-                      className="rounded-sm mr-3 flex-shrink-0"
-                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
-                      alt="Cristallux"
-                    />
-                    <span className="text-sm font-medium">Cristallux</span>
-                  </Link>
-                  <Link
-                    href={'https://centraldofuncionario.com.br/60939'}
-                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/central-funcionario.ico"
-                      height={24}
-                      width={24}
-                      className="rounded-sm mr-3 flex-shrink-0"
-                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
-                      alt="Central do Colaborador"
-                    />
-                    <span className="text-sm font-medium">Central do Colaborador</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Treinamento */}
-              <div>
-                <h4 className="text-sm font-medium mb-3 text-muted-foreground">Treinamento</h4>
-                <div className="space-y-2">
-                  <Link
-                    href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'}
-                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Image
-                      src="/umentor.jpg"
-                      height={24}
-                      width={24}
-                      className="rounded-sm mr-3 flex-shrink-0"
-                      style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
-                      alt="Umentor"
-                    />
-                    <span className="text-sm font-medium">Umentor</span>
-                  </Link>
-                  <Link
-                    href={'https://cristaluni.com.br'}
-                    className="flex items-center rounded-sm p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <LucideGraduationCap className="mr-3 flex-shrink-0 text-primary" style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }} />
-                    <span className="text-sm font-medium">CristalUni</span>
-                  </Link>
-                </div>
-              </div>
+          {/* Universidade Corporativa */}
+          <div className="bg-muted rounded-lg p-3 md:p-4">
+            <div className="flex gap-2 items-center text-sm md:text-base font-semibold mb-3">
+              <LucideGraduationCap className="size-4 md:size-5 shrink-0" />
+              <span>Universidade Corporativa</span>
+            </div>
+            <div className="space-y-1.5 md:space-y-2">
+              <Link
+                href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'}
+                className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/umentor.jpg"
+                  height={24}
+                  width={24}
+                  className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6"
+                  alt="Umentor"
+                />
+                <span className="text-xs md:text-sm font-medium">Umentor</span>
+              </Link>
+              <Link
+                href={'https://boxuni.rhenz.com.br'}
+                className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <LucideGraduationCap className="mr-2 md:mr-3 flex-shrink-0 text-primary size-5 md:size-6" />
+                <span className="text-xs md:text-sm font-medium">Box Uni</span>
+              </Link>
+              <Link
+                href={'https://cristaluni.com.br'}
+                className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <LucideGraduationCap className="mr-2 md:mr-3 flex-shrink-0 text-primary size-5 md:size-6" />
+                <span className="text-xs md:text-sm font-medium">CristalUni</span>
+              </Link>
             </div>
           </div>
 
           {/* Card de Ideias - Não exibir para usuários Totem */}
           {!isTotem && (
-            <div className="bg-muted rounded-lg p-3 md:p-4">
+            <div className="bg-muted rounded-lg p-3 md:p-4 md:col-span-2 xl:col-span-1">
               <h3 className="text-sm md:text-base font-semibold mb-3 flex items-center gap-2">
                 <span>Ideias</span>
               </h3>
