@@ -139,23 +139,25 @@ export function ImageCarousel({
     })
   }, [allowedAspects, aspectRatio])
 
-  // CORREÇÃO: Detectar se h-full ou w-full está no className
   const shouldUseFullHeight = className?.includes('h-full') ?? false
   const shouldUseFullWidth = className?.includes('w-full') ?? false
 
   const renderImage = (image: string, index: number) => {
-    // CORREÇÃO: Se h-full está presente, NÃO usar aspect-ratio
-    // Deixar o container pai controlar a altura
-    const aspectClass = shouldUseFullHeight ? "" : resolveAspectClass(index)
-    
+    // Quando o aspectRatio é explícito (square/video), sempre aplicar o aspect-ratio
+    // Quando é "auto" ou className contém h-full, deixar o pai controlar a altura
+    const hasExplicitAspect = aspectRatio === "square" || aspectRatio === "video"
+    const aspectClass = hasExplicitAspect
+      ? resolveAspectClass(index)
+      : shouldUseFullHeight
+        ? ""
+        : resolveAspectClass(index)
+
     return (
-      <div 
+      <div
         className={cn(
           "relative w-full overflow-hidden bg-muted",
-          // CORREÇÃO: Aplicar aspect-ratio APENAS se não for h-full
           aspectClass,
-          // Se h-full, forçar altura 100%
-          shouldUseFullHeight && "h-full"
+          !hasExplicitAspect && shouldUseFullHeight && "h-full"
         )}
       >
         <OptimizedImage
@@ -220,8 +222,9 @@ export function ImageCarousel({
           slidesToScroll: 1,
         }}
       >
-        <CarouselContent 
+        <CarouselContent
           className={cn(shouldUseFullHeight && "h-full", "-ml-0")}
+          viewportClassName={shouldUseFullHeight ? "h-full" : undefined}
         >
           {validImages.map((image, index) => (
             <CarouselItem 

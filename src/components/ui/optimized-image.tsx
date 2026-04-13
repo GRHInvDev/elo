@@ -15,6 +15,7 @@ interface OptimizedImageProps {
   blurIntensity?: number
   onLoadingComplete?: ImageProps["onLoad"]
   imageFit?: "cover" | "contain"
+  objectPosition?: string
 }
 
 export function OptimizedImage({
@@ -27,7 +28,8 @@ export function OptimizedImage({
   fill = false,
   // blurIntensity = 8,
   onLoadingComplete,
-  imageFit = "cover"
+  imageFit = "cover",
+  objectPosition = "center center"
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
@@ -86,7 +88,7 @@ export function OptimizedImage({
           className
         )}
         style={{
-          objectPosition: 'center center'
+          objectPosition
         }}
         priority={priority}
         onLoad={handleLoadingComplete}
