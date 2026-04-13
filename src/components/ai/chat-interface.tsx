@@ -8,53 +8,98 @@ import { CogIcon, Send, Square, StopCircle } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import remarkGfm from "remark-gfm"
 import ReactMarkdown from "react-markdown"
-import type { UIMessage, Message, ToolInvocation } from "ai"
+import type { Message, ToolInvocation } from "ai"
+import { api } from "@/trpc/react"
+
+const STORED_MESSAGE_CAP = 30
 
 export default function ChatInterface() {
-  const { messages, input, handleInputChange, addToolResult, stop, handleSubmit, status } =
+  const hydratedRef = useRef(false)
+  const persistReadyRef = useRef(false)
+  const lastSerializedRef = useRef<string | null>(null)
+
+  const { data: storedMessages, isSuccess } = api.aiAssistant.getSession.useQuery(undefined, {
+    staleTime: 60_000,
+  })
+  const saveSession = api.aiAssistant.saveSession.useMutation()
+
+  const { messages, setMessages, input, handleInputChange, addToolResult, stop, handleSubmit, status } =
     useChat({
       api: "/api/chat",
       maxSteps: 5,
-      initialMessages:
-        typeof window !== "undefined"
-          ? (JSON.parse(localStorage.getItem("aiMessages") ?? "[]") as Message[]) || undefined
-          : [],
-      onFinish: (m) => {
-        const newMessages = messages.concat([m as UIMessage])
-        saveMessagesToStorage(newMessages)
-      },
+      credentials: "include",
+      initialMessages: [],
     })
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isMounted, setIsMounted] = useState(false)
 
-  // Função utilitária para limitar mensagens no localStorage a 30
-  const saveMessagesToStorage = (messages: UIMessage[]) => {
-    if (typeof window !== "undefined") {
-      const limitedMessages = messages.slice(-30)
-      localStorage.setItem("aiMessages", JSON.stringify(limitedMessages))
+  useEffect(() => {
+    if (!isSuccess || hydratedRef.current) {
+      return
     }
-  }  
-  
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const onSubmit = (e: UIMessage) => {
-    const newMessages = messages.concat([e])
-    saveMessagesToStorage(newMessages)
-  }
-  
-  // Scroll to the end of messages when new messages are added
+    hydratedRef.current = true
+
+    let initial = (storedMessages ?? []) as Message[]
+    if (initial.length === 0 && typeof window !== "undefined") {
+      const raw = localStorage.getItem("aiMessages")
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as Message[]
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            initial = parsed
+            localStorage.removeItem("aiMessages")
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    const snapshot = initial.slice(-STORED_MESSAGE_CAP)
+    lastSerializedRef.current = JSON.stringify(snapshot)
+    if (snapshot.length > 0) {
+      setMessages(snapshot)
+    }
+    persistReadyRef.current = true
+  }, [isSuccess, storedMessages, setMessages])
+
+  useEffect(() => {
+    if (!persistReadyRef.current || !isSuccess) {
+      return
+    }
+    const trimmed = messages.slice(-STORED_MESSAGE_CAP) as unknown[]
+    const serialized = JSON.stringify(trimmed)
+    if (serialized === lastSerializedRef.current) {
+      return
+    }
+    const handle = window.setTimeout(() => {
+      lastSerializedRef.current = serialized
+      saveSession.mutate({ messages: trimmed })
+    }, 900)
+    return () => window.clearTimeout(handle)
+  }, [messages, isSuccess, saveSession])
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
     }
   }, [messages])
 
-  // Avoid hydration errors
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
   if (!isMounted) {
     return null
+  }
+
+  if (!isSuccess) {
+    return (
+      <div className="flex flex-1 min-h-[200px] items-center justify-center p-6 text-muted-foreground text-sm">
+        Carregando conversa…
+      </div>
+    )
   }
 
   return (
@@ -128,10 +173,10 @@ export default function ChatInterface() {
             type="submit"
             className="size-10"
             size="icon"
-            disabled={status==="streaming" || !input.trim()}
+            disabled={status === "streaming" || !input.trim()}
             aria-label="Enviar mensagem"
           >
-            {status==="streaming" ? <CogIcon className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {status === "streaming" ? <CogIcon className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </form>
@@ -156,7 +201,7 @@ function RenderToolInvocation({
       <div key={toolCallId} className="mt-2 p-2 bg-secondary rounded-md text-sm sm:text-base">
         <p>
           {typeof toolInvocation.args === "object" && toolInvocation.args !== null
-            ? (toolInvocation.args as {message: string}).message
+            ? (toolInvocation.args as { message: string }).message
             : JSON.stringify(toolInvocation.args)}
         </p>
         <div className="mt-2">
@@ -224,4 +269,3 @@ function RenderToolInvocation({
     </div>
   )
 }
-

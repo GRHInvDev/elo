@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
+import { endOfDay, startOfDay } from "date-fns"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { canCreateBooking } from "@/lib/access-control"
 import type { RolesConfig } from "@/types/role-config"
@@ -214,5 +215,25 @@ export const bookingRouter = createTRPCRouter({
       },
     })
   }),
+
+  /** Reservas de salas do usuário que intersectam o dia informado (padrão: hoje). */
+  listMineForDay: protectedProcedure
+    .input(z.object({ date: z.date().optional() }))
+    .query(async ({ ctx, input }) => {
+      const day = input.date ?? new Date()
+      const dayStart = startOfDay(day)
+      const dayEnd = endOfDay(day)
+
+      return ctx.db.booking.findMany({
+        where: {
+          userId: ctx.auth.userId,
+          AND: [{ start: { lt: dayEnd } }, { end: { gt: dayStart } }],
+        },
+        include: {
+          room: { select: { id: true, name: true, floor: true } },
+        },
+        orderBy: { start: "asc" },
+      })
+    }),
 })
 

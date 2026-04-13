@@ -94,7 +94,22 @@ model User {
   // Status na empresa: Ativo (pode usar o sistema normalmente) ou Desativado (acesso limitado como TOTEM)
   is_active Boolean @default(true)
 
+  // Histórico do assistente de IA (sessão por usuário)
+  aiAssistantChatSession AiAssistantChatSession?
+
   @@map("users")
+}
+
+model AiAssistantChatSession {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  messages  Json     @default("[]")
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_assistant_chat_sessions")
 }
 
 model GlobalConfig {
