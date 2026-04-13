@@ -41,9 +41,12 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
   const isGroupExpanded = (title: string) => expandedGroups.has(title)
 
+  const dbUserRoleConfig = db_user?.role_config
+  const dbUserNovidades = db_user?.novidades
+
   // Auto-expand groups containing the current route
   useEffect(() => {
-    const routes = routeItems(db_user?.role_config, isOwnerOfAnyForm, db_user?.novidades)
+    const routes = routeItems(dbUserRoleConfig, isOwnerOfAnyForm, dbUserNovidades)
     const groupsToExpand = new Set<string>()
 
     const findActiveGroups = (items: RouteItem[]) => {
@@ -67,7 +70,7 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
     findActiveGroups(routes)
     setExpandedGroups(prev => new Set([...prev, ...groupsToExpand]))
-  }, [pathname, db_user?.role_config, isOwnerOfAnyForm, db_user?.novidades === true])
+  }, [pathname, dbUserRoleConfig, isOwnerOfAnyForm, dbUserNovidades])
 
   const renderNavItem = (item: RouteItem, level = 0): JSX.Element | null => {
     const hasChildren = item.children && item.children.length > 0

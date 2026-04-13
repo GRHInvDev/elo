@@ -3,16 +3,17 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react"
+import { ExternalLink, Pencil, Plus, Sparkles, Trash2 } from "lucide-react"
 
 import { api } from "@/trpc/react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { boostAvatarUrl } from "@/lib/boost-avatar-url"
 
 import {
   NewUsersHallFormDialog,
@@ -36,7 +37,7 @@ function NewUsersHallAdminListSkeleton({ rows = 3 }: { rows?: number }) {
           key={i}
           className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center"
         >
-          <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+          <Skeleton className="h-24 w-24 shrink-0 rounded-full sm:h-28 sm:w-28" />
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-4 w-40" />
             <Skeleton className="h-3 w-32" />
@@ -71,7 +72,7 @@ export function NewUsersHallAdminPanel() {
     },
   })
 
-  const togglePublished = api.newUsersHall.update.useMutation({
+  const updateEntry = api.newUsersHall.update.useMutation({
     onSuccess: () => {
       void utils.newUsersHall.listPublished.invalidate()
       void utils.newUsersHall.listAll.invalidate()
@@ -101,13 +102,6 @@ export function NewUsersHallAdminPanel() {
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle>Gestão do Hall de entrada</CardTitle>
-            <CardDescription>
-              Cadastre novos colaboradores, defina foto e setor e controle a publicação na página
-              pública do Hall.
-            </CardDescription>
-          </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href="/forms/hall-entrada" className="gap-2">
@@ -133,23 +127,32 @@ export function NewUsersHallAdminPanel() {
                   key={row.id}
                   className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center"
                 >
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border bg-muted">
+                  <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border bg-muted sm:h-28 sm:w-28">
                     {row.effectiveImageUrl ? (
                       <Image
-                        src={row.effectiveImageUrl}
-                        alt=""
+                        src={boostAvatarUrl(row.effectiveImageUrl)}
+                        alt={row.name}
                         fill
-                        className="object-cover"
-                        unoptimized
+                        className="object-cover object-center"
+                        sizes="(max-width: 640px) 96px, 112px"
+                        quality={95}
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs font-medium">
+                      <div className="flex h-full w-full items-center justify-center text-sm font-medium sm:text-base">
                         {getInitials(row.name)}
                       </div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{row.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium truncate">{row.name}</p>
+                      {row.isHighlight ? (
+                        <Badge className="shrink-0 gap-0.5 text-[10px]" variant="default">
+                          <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                          Destaque
+                        </Badge>
+                      ) : null}
+                    </div>
                     <p className="text-xs text-muted-foreground truncate">
                       {row.setor && row.setor.trim() !== "" ? row.setor : "—"}
                       {row.userId ? (
@@ -168,9 +171,11 @@ export function NewUsersHallAdminPanel() {
                       <Checkbox
                         id={`admin-pub-${row.id}`}
                         checked={row.published}
-                        disabled={togglePublished.isPending}
+                        disabled={
+                          updateEntry.isPending && updateEntry.variables?.id === row.id
+                        }
                         onCheckedChange={(c) => {
-                          togglePublished.mutate({
+                          updateEntry.mutate({
                             id: row.id,
                             published: c === true,
                           })
@@ -178,6 +183,24 @@ export function NewUsersHallAdminPanel() {
                       />
                       <Label htmlFor={`admin-pub-${row.id}`} className="cursor-pointer text-xs">
                         Publicado
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`admin-hi-${row.id}`}
+                        checked={row.isHighlight}
+                        disabled={
+                          updateEntry.isPending && updateEntry.variables?.id === row.id
+                        }
+                        onCheckedChange={(c) => {
+                          updateEntry.mutate({
+                            id: row.id,
+                            isHighlight: c === true,
+                          })
+                        }}
+                      />
+                      <Label htmlFor={`admin-hi-${row.id}`} className="cursor-pointer text-xs">
+                        Destaque
                       </Label>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => openEdit(row)}>

@@ -892,18 +892,21 @@ model NewCollaborator {
 
 /// Comunicação institucional de novos colaboradores (Hall de entrada)
 model NewUsersHallEntry {
-  id         String   @id @default(cuid())
-  userId     String?  @unique
-  name       String
-  setor      String?  @db.VarChar
-  imageUrl   String?
-  published  Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String?  @unique
+  name        String
+  setor       String?  @db.VarChar
+  imageUrl    String?
+  published   Boolean  @default(true)
+  /// Destaque: permanece no topo em cards maiores até ser desativado manualmente
+  isHighlight Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([published, createdAt])
+  @@index([published, isHighlight, createdAt])
   @@map("new_users_hall_entries")
 }
 

@@ -45,7 +45,7 @@ export const newUsersHallRouter = createTRPCRouter({
     const rows = await ctx.db.newUsersHallEntry.findMany({
       where: { published: true },
       include: { user: userInclude },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isHighlight: "desc" }, { createdAt: "desc" }],
     })
     return rows.map(withEffectiveImage)
   }),
@@ -54,7 +54,7 @@ export const newUsersHallRouter = createTRPCRouter({
     await assertCanManageNewUsersHall(ctx)
     const rows = await ctx.db.newUsersHallEntry.findMany({
       include: { user: userInclude },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isHighlight: "desc" }, { createdAt: "desc" }],
     })
     return rows.map(withEffectiveImage)
   }),
@@ -67,6 +67,7 @@ export const newUsersHallRouter = createTRPCRouter({
         imageUrl: z.string().optional().nullable(),
         userId: z.string().optional().nullable(),
         published: z.boolean().optional().default(true),
+        isHighlight: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -95,6 +96,7 @@ export const newUsersHallRouter = createTRPCRouter({
           imageUrl: input.imageUrl?.trim() ? input.imageUrl.trim() : null,
           userId: input.userId ?? null,
           published: input.published,
+          isHighlight: input.isHighlight,
         },
         include: { user: userInclude },
       })
@@ -110,6 +112,7 @@ export const newUsersHallRouter = createTRPCRouter({
         imageUrl: z.string().optional().nullable(),
         userId: z.string().optional().nullable(),
         published: z.boolean().optional(),
+        isHighlight: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -150,6 +153,7 @@ export const newUsersHallRouter = createTRPCRouter({
             : {}),
           ...(input.userId !== undefined ? { userId: input.userId } : {}),
           ...(input.published !== undefined ? { published: input.published } : {}),
+          ...(input.isHighlight !== undefined ? { isHighlight: input.isHighlight } : {}),
         },
         include: { user: userInclude },
       })

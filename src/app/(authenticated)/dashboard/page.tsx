@@ -199,7 +199,6 @@ export default function DashboardPage() {
               <span>Links Úteis</span>
             </div>
             <div>
-              <h4 className="text-xs md:text-sm font-medium mb-2 md:mb-3 text-muted-foreground">Sites</h4>
               <div className="space-y-1.5 md:space-y-2">
                 <Link
                   href={'https://boxdistribuidor.com.br'}
@@ -258,6 +257,36 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-1.5 md:space-y-2">
               <Link
+                href={'https://boxuni.rhenz.com.br'}
+                className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/LOGO BOX.png"
+                  height={24}
+                  width={24}
+                  className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6"
+                  alt="Box Uni"
+                />
+                <span className="text-xs md:text-sm font-medium">Box Uni</span>
+              </Link>
+              <Link
+                href={'https://cristaluni.com.br'}
+                className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image
+                  src="/icon_cristal.svg"
+                  height={24}
+                  width={24}
+                  className="rounded-sm mr-2 md:mr-3 flex-shrink-0 size-5 md:size-6"
+                  alt="CristalUni"
+                />
+                <span className="text-xs md:text-sm font-medium">CristalUni</span>
+              </Link>
+              <Link
                 href={'https://painel.umentor.com.br/cadastro_treinamento/?con_cod=ges449602&pla=5'}
                 className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
                 target="_blank"
@@ -271,24 +300,6 @@ export default function DashboardPage() {
                   alt="Umentor"
                 />
                 <span className="text-xs md:text-sm font-medium">Umentor</span>
-              </Link>
-              <Link
-                href={'https://boxuni.rhenz.com.br'}
-                className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <LucideGraduationCap className="mr-2 md:mr-3 flex-shrink-0 text-primary size-5 md:size-6" />
-                <span className="text-xs md:text-sm font-medium">Box Uni</span>
-              </Link>
-              <Link
-                href={'https://cristaluni.com.br'}
-                className="flex items-center rounded-sm p-2 md:p-2.5 bg-background/50 hover:bg-background/80 transition-all hover:shadow-sm active:scale-[0.98]"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <LucideGraduationCap className="mr-2 md:mr-3 flex-shrink-0 text-primary size-5 md:size-6" />
-                <span className="text-xs md:text-sm font-medium">CristalUni</span>
               </Link>
             </div>
           </div>
