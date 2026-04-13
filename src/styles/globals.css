@@ -185,6 +185,23 @@
   animation: float 3s ease-in-out infinite;
 }
 
+/* Assistente intranet: indicador de resposta */
+@keyframes chat-assistant-dot {
+  0%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0) scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1);
+  }
+}
+
+.chat-assistant-dot {
+  animation: chat-assistant-dot 1s ease-in-out infinite;
+}
+
 @keyframes rain {
   0% {
     transform: translateY(-20px) translateX(0);

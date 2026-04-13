@@ -53,6 +53,10 @@ export const api = {
       const caller = await createServerCaller();
       return caller.vehicle.getAll(input ?? {});
     },
+    getAvailable: async (input: { startDate: Date; endDate: Date }) => {
+      const caller = await createServerCaller();
+      return caller.vehicle.getAvailable(input);
+    },
     getById: async (id: string) => {
       const caller = await createServerCaller();
       return caller.vehicle.getById({ id });
@@ -176,6 +180,26 @@ export const api = {
     notifyColleague: async (input: { targetUserId: string; message: string }) => {
       const caller = await createServerCaller();
       return caller.aiAssistant.notifyColleague(input);
+    },
+  },
+  foodOrder: {
+    create: async (input: {
+      restaurantId: string;
+      menuItemId: string;
+      orderDate: Date;
+      observations?: string;
+      optionChoices?: string[];
+    }) => {
+      const caller = await createServerCaller();
+      return caller.foodOrder.create(input);
+    },
+    myOrders: async (input?: {
+      startDate?: Date;
+      endDate?: Date;
+      status?: "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED";
+    }) => {
+      const caller = await createServerCaller();
+      return caller.foodOrder.myOrders(input);
     },
   },
 };

@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { MainNav, Sidebar } from "@/components/ui/main-nav"
 import { UserNav } from "@/components/ui/user-nav"
+import { AppReleaseNotesDialog } from "@/components/ui/app-release-notes-dialog"
 import { SettingsMenu } from "@/components/ui/settings-menu"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
@@ -38,7 +39,8 @@ export default function AuthenticatedLayoutClient({
           {/* Top header - only visible on mobile */}
           <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:hidden print:hidden">
             <MainNav />
-            <div className="ml-auto flex items-center space-x-2">
+            <div className="ml-auto flex items-center gap-0.5">
+              <AppReleaseNotesDialog size="small" />
               <SettingsMenu size="small" />
               <UserNav />
             </div>

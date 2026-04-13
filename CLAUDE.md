@@ -238,3 +238,6 @@ Se a solução:
 - Confunde responsabilidades dos agentes
 
 Ela é **automaticamente inválida**, mesmo que funcione.
+
+# 14. REGRAS ADICIONAIS
+- Sempre atualize junto o componente de app-relesase-notes-dialog se for Major ou Minor.

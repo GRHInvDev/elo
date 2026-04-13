@@ -4,12 +4,10 @@ import { useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import Image from "next/image"
-import Link from "next/link"
 import { Users } from "lucide-react"
 
 import { api } from "@/trpc/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { boostAvatarUrl } from "@/lib/boost-avatar-url"
@@ -108,7 +106,7 @@ function HallHighlightPortrait({
   )
 }
 
-export function NewUsersHallContent({ canManage }: { canManage?: boolean }) {
+export function NewUsersHallContent({ canManage: _canManage }: { canManage?: boolean }) {
   const { data: publishedList, isLoading: loadingPub } = api.newUsersHall.listPublished.useQuery()
 
   const { highlights, others } = useMemo(() => {

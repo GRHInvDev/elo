@@ -246,7 +246,7 @@ export function ImageCarousel({
             variant="ghost"
             size="sm"
             className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex z-10"
-            onClick={() => carouselApi?.scrollPrev()}
+            onClick={(e) => { e.stopPropagation(); carouselApi?.scrollPrev() }}
             disabled={validImages.length <= 1}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -255,7 +255,7 @@ export function ImageCarousel({
             variant="ghost"
             size="sm"
             className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex z-10"
-            onClick={() => carouselApi?.scrollNext()}
+            onClick={(e) => { e.stopPropagation(); carouselApi?.scrollNext() }}
             disabled={validImages.length <= 1}
           >
             <ChevronRight className="h-4 w-4" />
@@ -274,7 +274,7 @@ export function ImageCarousel({
                   ? "bg-white scale-125"
                   : "bg-white/50 hover:bg-white/75"
               )}
-              onClick={() => carouselApi?.scrollTo(index)}
+              onClick={(e) => { e.stopPropagation(); carouselApi?.scrollTo(index) }}
               aria-label={`Ir para imagem ${index + 1}`}
             />
           ))}

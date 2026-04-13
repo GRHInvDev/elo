@@ -369,11 +369,18 @@ export const foodOrderRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.auth.userId
+      const orderDateFilter =
+        input?.startDate != null || input?.endDate != null
+          ? {
+              ...(input?.startDate != null ? { gte: input.startDate } : {}),
+              ...(input?.endDate != null ? { lte: input.endDate } : {}),
+            }
+          : undefined
+
       return ctx.db.foodOrder.findMany({
         where: {
           userId,
-          ...(input?.startDate && { orderDate: { gte: input.startDate } }),
-          ...(input?.endDate && { orderDate: { lte: input.endDate } }),
+          ...(orderDateFilter != null ? { orderDate: orderDateFilter } : {}),
           ...(input?.status && { status: input.status }),
         },
         include: {

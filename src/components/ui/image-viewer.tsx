@@ -108,7 +108,7 @@ export function ImageViewer({
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
-          className="max-w-none w-screen h-screen p-0 bg-black/95"
+          className="max-w-none w-screen h-screen p-0 bg-black/95 [&>button:last-child]:hidden"
           onKeyDown={handleKeyDown}
         >
           <VisuallyHidden>
@@ -190,7 +190,7 @@ export function ImageViewer({
                   variant="ghost"
                   size="icon"
                   onClick={handlePrevious}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-30"
                   onClickCapture={(e) => e.stopPropagation()}
                 >
                   <div className="text-2xl">‹</div>
@@ -199,7 +199,7 @@ export function ImageViewer({
                   variant="ghost"
                   size="icon"
                   onClick={handleNext}
-                  className="absolute right-20 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+                  className="absolute right-20 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-30"
                   onClickCapture={(e) => e.stopPropagation()}
                 >
                   <div className="text-2xl">›</div>
