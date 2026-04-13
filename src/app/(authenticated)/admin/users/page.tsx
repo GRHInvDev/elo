@@ -360,6 +360,32 @@ interface UserManagementCardProps {
   onUserUpdate: () => void
 }
 
+/** Reconstrói o estado de permissões a partir do JSON persistido (evita UI defasada após refetch). */
+function extendedRoleConfigFromServer(role: RolesConfig | null | undefined): ExtendedRolesConfig {
+  const rc = role as ExtendedRolesConfig | undefined
+  return {
+    sudo: rc?.sudo ?? false,
+    admin_pages: rc?.admin_pages ?? [],
+    can_create_form: rc?.can_create_form ?? false,
+    can_create_event: rc?.can_create_event ?? false,
+    can_create_flyer: rc?.can_create_flyer ?? false,
+    can_create_booking: rc?.can_create_booking ?? false,
+    can_locate_cars: rc?.can_locate_cars ?? false,
+    can_view_dre_report: rc?.can_view_dre_report ?? false,
+    can_manage_extensions: rc?.can_manage_extensions ?? false,
+    can_manage_dados_basicos_users: rc?.can_manage_dados_basicos_users ?? false,
+    can_create_solicitacoes: rc?.can_create_solicitacoes ?? false,
+    can_manage_produtos: rc?.can_manage_produtos ?? false,
+    can_manage_new_users_hall: rc?.can_manage_new_users_hall ?? false,
+    can_view_answer_without_admin_access: rc?.can_view_answer_without_admin_access ?? false,
+    can_view_add_manual_ped: rc?.can_view_add_manual_ped ?? false,
+    can_view_dados_privados: rc?.can_view_dados_privados ?? false,
+    isTotem: rc?.isTotem ?? false,
+    visible_forms: rc?.visible_forms,
+    hidden_forms: rc?.hidden_forms,
+  }
+}
+
 function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCardProps) {
   const [activeTab, setActiveTab] = useState("basic")
   const [isEditing, setIsEditing] = useState(false)
@@ -395,31 +421,11 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     enterprise: user.enterprise ?? "NA",
     is_active: (user as { is_active?: boolean }).is_active ?? true,
   })
-  const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(
-    {
-      sudo: (user.role_config as ExtendedRolesConfig)?.sudo ?? false,
-      admin_pages: (user.role_config as ExtendedRolesConfig)?.admin_pages ?? [],
-      can_create_form: (user.role_config as ExtendedRolesConfig)?.can_create_form ?? false,
-      can_create_event: (user.role_config as ExtendedRolesConfig)?.can_create_event ?? false,
-      can_create_flyer: (user.role_config as ExtendedRolesConfig)?.can_create_flyer ?? false,
-      can_create_booking: (user.role_config as ExtendedRolesConfig)?.can_create_booking ?? false,
-      can_locate_cars: (user.role_config as ExtendedRolesConfig)?.can_locate_cars ?? false,
-      can_view_dre_report: (user.role_config as ExtendedRolesConfig)?.can_view_dre_report ?? false,
-      can_manage_extensions: (user.role_config as ExtendedRolesConfig)?.can_manage_extensions ?? false,
-      can_manage_dados_basicos_users: (user.role_config as ExtendedRolesConfig)?.can_manage_dados_basicos_users ?? false,
-      can_create_solicitacoes: (user.role_config as ExtendedRolesConfig)?.can_create_solicitacoes ?? false,
-      can_manage_produtos: (user.role_config as ExtendedRolesConfig)?.can_manage_produtos ?? false,
-      can_manage_new_users_hall: (user.role_config as ExtendedRolesConfig)?.can_manage_new_users_hall ?? false,
-      can_view_answer_without_admin_access: (user.role_config as ExtendedRolesConfig)?.can_view_answer_without_admin_access ?? false,
-      can_view_add_manual_ped: (user.role_config as ExtendedRolesConfig)?.can_view_add_manual_ped ?? false,
-      can_view_dados_privados: (user.role_config as ExtendedRolesConfig)?.can_view_dados_privados ?? false,
-      isTotem: (user.role_config as ExtendedRolesConfig)?.isTotem ?? false,
-      visible_forms: (user.role_config as ExtendedRolesConfig)?.visible_forms,
-      hidden_forms: (user.role_config as ExtendedRolesConfig)?.hidden_forms,
-    }
+  const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(() =>
+    extendedRoleConfigFromServer(user.role_config),
   )
   const [adminRoutesData, setAdminRoutesData] = useState<string[]>(
-    (user.role_config as ExtendedRolesConfig)?.admin_pages || []
+    (user.role_config as ExtendedRolesConfig)?.admin_pages || [],
   )
   const [isEditingDadosPrivados, setIsEditingDadosPrivados] = useState(false)
   const [dadosPrivadosData, setDadosPrivadosData] = useState({
@@ -446,6 +452,15 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       lojinha_phone: (user as { lojinha_phone?: string | null }).lojinha_phone ?? "",
     })
   }, [user])
+
+  const serverRoleConfigSignature = JSON.stringify(user.role_config ?? null)
+
+  useEffect(() => {
+    const next = extendedRoleConfigFromServer(user.role_config)
+    setPermissionsData(next)
+    setAdminRoutesData(next.admin_pages ?? [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sincronizar só quando o JSON do role_config mudar (serverRoleConfigSignature)
+  }, [user.id, serverRoleConfigSignature])
 
   // Sincronizar adminRoutesData com permissionsData.admin_pages
   useEffect(() => {
@@ -487,6 +502,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   }, [permissionsData.can_manage_produtos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { toast } = useToast()
+  const utils = api.useUtils()
 
   useEffect(() => {
     if (activeTab === "dados-privados" && showDadosPrivadosTab && !dadosPrivadosToastShownRef.current) {
@@ -500,12 +516,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   }, [activeTab, showDadosPrivadosTab, toast])
 
   const updateBasicInfo = api.user.updateBasicInfo.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Dados atualizados",
         description: "Os dados básicos do usuário foram atualizados com sucesso.",
       })
       setIsEditing(false)
+      await utils.user.listUsers.invalidate()
       onUserUpdate()
     },
     onError: (error) => {
@@ -518,12 +535,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   })
 
   const updateRoleConfig = api.user.updateRoleConfig.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Permissões atualizadas",
         description: "As permissões do usuário foram atualizadas com sucesso.",
       })
       setIsEditing(false)
+      await utils.user.listUsers.invalidate()
       onUserUpdate()
     },
     onError: (error) => {
@@ -536,11 +554,12 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   })
 
   const updateFormVisibility = api.form.updateFormVisibility.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Visibilidade atualizada",
         description: "A visibilidade das solicitações foi atualizada com sucesso.",
       })
+      await utils.user.listUsers.invalidate()
       onUserUpdate()
     },
     onError: (error) => {
@@ -553,12 +572,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
   })
 
   const updateDadosPrivados = api.user.updateDadosPrivados.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Dados privados atualizados",
         description: "Os dados de pré-cadastro Lojinha foram atualizados com sucesso.",
       })
       setIsEditingDadosPrivados(false)
+      await utils.user.listUsers.invalidate()
       onUserUpdate()
     },
     onError: (error) => {
@@ -1591,9 +1611,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                       form.title.toLowerCase().includes(formSearch.toLowerCase())
                     )
                     .map((form) => {
-                      const isHidden = (user.role_config as ExtendedRolesConfig)?.hidden_forms?.includes(form.id) ?? false
-                      const isInVisibleList = (user.role_config as ExtendedRolesConfig)?.visible_forms?.includes(form.id) ?? false
-                      const hasRestrictiveList = ((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0
+                      const isHidden = permissionsData.hidden_forms?.includes(form.id) ?? false
+                      const isInVisibleList = permissionsData.visible_forms?.includes(form.id) ?? false
+                      const hasRestrictiveList = (permissionsData.visible_forms?.length ?? 0) > 0
 
                       let status = "Visível"
                       let statusColor = "text-green-600"
@@ -1638,21 +1658,21 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                     })}
                 </div>
 
-                {((user.role_config as ExtendedRolesConfig)?.hidden_forms?.length ?? 0) > 0 && (
+                {(permissionsData.hidden_forms?.length ?? 0) > 0 && (
                   <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
                     <div className="text-sm font-medium text-red-800 dark:text-red-400">
-                      Solicitações Ocultas: {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length}
+                      Solicitações Ocultas: {permissionsData.hidden_forms?.length}
                     </div>
                     <div className="text-xs text-red-600 dark:text-red-500">
-                      Este usuário não pode ver {(user.role_config as ExtendedRolesConfig)?.hidden_forms?.length} formulário(s)
+                      Este usuário não pode ver {permissionsData.hidden_forms?.length} formulário(s)
                     </div>
                   </div>
                 )}
 
-                {((user.role_config as ExtendedRolesConfig)?.visible_forms?.length ?? 0) > 0 && (
+                {(permissionsData.visible_forms?.length ?? 0) > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
                     <div className="text-sm font-medium text-blue-800 dark:text-blue-400">
-                      Lista Restritiva Ativa: {(user.role_config as ExtendedRolesConfig)?.visible_forms?.length} solicitação(ões)
+                      Lista Restritiva Ativa: {permissionsData.visible_forms?.length} solicitação(ões)
                     </div>
                     <div className="text-xs text-blue-600 dark:text-blue-500">
                       Este usuário só pode ver solicitações específicas da lista
