@@ -15,10 +15,9 @@ export default async function AdminHallEntradaPage() {
   return (
     <DashboardShell>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Hall de entrada</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Gestão do Hall de entrada</h1>
         <p className="text-muted-foreground mt-2">
-          Gerenciamento das entradas exibidas em{" "}
-          <span className="font-medium text-foreground">/forms/hall-entrada</span>.
+        Cadastre colaboradores, defina foto e setor, publique no Hall e marque destaques — eles ficam no topo em cards maiores até você desativar o destaque.
         </p>
       </div>
       <NewUsersHallAdminPanel />

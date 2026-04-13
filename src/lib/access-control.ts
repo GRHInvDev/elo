@@ -200,7 +200,7 @@ export function getAccessibleForms<T extends { id: string }>(
  * @param userId - ID do usuário
  * @param formId - ID do formulário (usado apenas para consistência de assinatura; não afeta a regra endurecida)
  * @param form - Dados do formulário (userId, ownerIds)
- * @param userSetor - Setor do usuário (não usado na regra de edição; mantido por compatibilidade)
+ * @param _userSetor - Setor do usuário (não usado na regra de edição; mantido por compatibilidade)
  * @returns true se o usuário pode editar o formulário
  */
 export function canEditForm(
@@ -214,7 +214,7 @@ export function canEditForm(
     allowedUsers?: string[] | null;
     allowedSectors?: string[] | null;
   },
-  userSetor?: string | null
+  _userSetor?: string | null
 ): boolean {
   if (!roleConfig || !userId) return false;
 

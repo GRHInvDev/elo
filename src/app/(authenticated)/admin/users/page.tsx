@@ -445,7 +445,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
       lojinha_email: (user as { lojinha_email?: string | null }).lojinha_email ?? "",
       lojinha_phone: (user as { lojinha_phone?: string | null }).lojinha_phone ?? "",
     })
-  }, [user.id])
+  }, [user])
 
   // Sincronizar adminRoutesData com permissionsData.admin_pages
   useEffect(() => {

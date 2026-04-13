@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button"
 import { UserSearch } from "@/components/forms/user-search"
 import { SetorSearch } from "@/components/forms/setor-search"
 import { DateRangePicker } from "@/components/forms/date-range-picker"
-import { Filter, X, Hash, Tag } from "lucide-react"
+import { Filter, X } from "lucide-react"
 import { api } from "@/trpc/react"
-import { MultiSelect } from "@/components/forms/multi-select"
-import { Input } from "@/components/ui/input"
 
 interface ResponsesFiltersProps {
   filters: ResponsesFiltersState
@@ -51,7 +49,6 @@ export function ResponsesFilters({ filters, onFiltersChange }: ResponsesFiltersP
 
   // Buscar usuários para o UserSearch
   const { data: usersData } = api.user.listForChat.useQuery({})
-  const { data: tagsData } = api.formResponse.getTags.useQuery()
 
   // Converter dados do backend para o formato do UserSearch
   const users = (usersData ?? []).map(user => ({

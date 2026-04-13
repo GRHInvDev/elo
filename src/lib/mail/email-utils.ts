@@ -24,8 +24,8 @@ export async function sendEmail(
   console.log("Envio via Resend (SMTP não utilizado): Payload simples")
   try {
     const toList = to.split(",").map((e) => e.trim()).filter(Boolean);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const data = await resend.emails.send({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    await resend.emails.send({
       from: process.env.RESEND_FROM ?? DEFAULT_FROM,
       to: toList,
       subject,

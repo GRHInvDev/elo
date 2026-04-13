@@ -35,7 +35,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-export type NewUsersHallEntryRow = RouterOutputs["newUsersHall"]["listPublished"][number]
+export type NewUsersHallEntryRow = RouterOutputs["newUsersHall"]["listAll"][number]
 
 interface NewUsersHallFormDialogProps {
   open: boolean
