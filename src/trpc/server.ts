@@ -20,7 +20,11 @@ export const api = {
     me: async () => {
       const caller = await createServerCaller();
       return caller.user.me();
-    }
+    },
+    listForChat: async (input: { search?: string }) => {
+      const caller = await createServerCaller();
+      return caller.user.listForChat(input);
+    },
   },
   vehicleRent: {
     getMyActiveRent: async () => {
@@ -49,6 +53,10 @@ export const api = {
       const caller = await createServerCaller();
       return caller.vehicle.getAll(input ?? {});
     },
+    getAvailable: async (input: { startDate: Date; endDate: Date }) => {
+      const caller = await createServerCaller();
+      return caller.vehicle.getAvailable(input);
+    },
     getById: async (id: string) => {
       const caller = await createServerCaller();
       return caller.vehicle.getById({ id });
@@ -65,6 +73,10 @@ export const api = {
     },
   },
   formResponse: {
+    create: async (input: { formId: string; responses: Array<Record<string, unknown>> }) => {
+      const caller = await createServerCaller();
+      return caller.formResponse.create(input);
+    },
     getById: async (responseId: string) => {
       const caller = await createServerCaller();
       return caller.formResponse.getById({ responseId });
@@ -105,6 +117,10 @@ export const api = {
       const caller = await createServerCaller();
       return caller.booking.listMine();
     },
+    listMineForDay: async (input?: { date?: Date }) => {
+      const caller = await createServerCaller();
+      return caller.booking.listMineForDay(input ?? {});
+    },
     delete: async (input: { id: string }) => {
       const caller = await createServerCaller();
       return caller.booking.delete(input);
@@ -142,6 +158,48 @@ export const api = {
     getAll: async () => {
       const caller = await createServerCaller();
       return caller.product.getAll();
+    },
+  },
+  restaurant: {
+    list: async (input?: { city?: string; active?: boolean }) => {
+      const caller = await createServerCaller();
+      return caller.restaurant.list(input);
+    },
+  },
+  menuItem: {
+    byRestaurant: async (input: {
+      restaurantId: string;
+      date?: Date;
+      includeUnavailable?: boolean;
+    }) => {
+      const caller = await createServerCaller();
+      return caller.menuItem.byRestaurant(input);
+    },
+  },
+  aiAssistant: {
+    notifyColleague: async (input: { targetUserId: string; message: string }) => {
+      const caller = await createServerCaller();
+      return caller.aiAssistant.notifyColleague(input);
+    },
+  },
+  foodOrder: {
+    create: async (input: {
+      restaurantId: string;
+      menuItemId: string;
+      orderDate: Date;
+      observations?: string;
+      optionChoices?: string[];
+    }) => {
+      const caller = await createServerCaller();
+      return caller.foodOrder.create(input);
+    },
+    myOrders: async (input?: {
+      startDate?: Date;
+      endDate?: Date;
+      status?: "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED";
+    }) => {
+      const caller = await createServerCaller();
+      return caller.foodOrder.myOrders(input);
     },
   },
 };

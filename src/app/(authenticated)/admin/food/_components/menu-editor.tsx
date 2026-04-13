@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { api } from "@/trpc/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,13 +36,26 @@ export default function MenuEditor() {
 
   // Buscar itens do menu do restaurante selecionado
   const menuItems = api.menuItem.byRestaurant.useQuery(
-    { restaurantId: selectedRestaurant },
-    { enabled: !!selectedRestaurant }
+    { restaurantId: selectedRestaurant, includeUnavailable: true },
+    { enabled: !!selectedRestaurant },
   )
+
+  const sortedMenuItems = useMemo(() => {
+    if (!menuItems.data?.length) return []
+    return [...menuItems.data].sort((a, b) => {
+      if (a.available !== b.available) return a.available ? -1 : 1
+      const cat = a.category.localeCompare(b.category, "pt-BR")
+      if (cat !== 0) return cat
+      return a.name.localeCompare(b.name, "pt-BR")
+    })
+  }, [menuItems.data])
 
   const createMenuItem = api.menuItem.create.useMutation({
     onSuccess: () => {
-      void utils.menuItem.byRestaurant.invalidate({ restaurantId: selectedRestaurant })
+      void utils.menuItem.byRestaurant.invalidate({
+        restaurantId: selectedRestaurant,
+        includeUnavailable: true,
+      })
       toast.success("Prato criado com sucesso!")
     },
     onError: (error) => {
@@ -62,11 +75,11 @@ export default function MenuEditor() {
 
   // Função para exportar cardápio para Excel
   const handleExportMenu = () => {
-    if (!menuItems.data || menuItems.data.length === 0) {
+    if (!sortedMenuItems.length) {
       toast.error("Nenhum item de cardápio para exportar.")
       return
     }
-    const dataToExport = menuItems.data.map((item) => ({
+    const dataToExport = sortedMenuItems.map((item) => ({
       "Nome": item.name,
       "Descrição": item.description,
       "Preço": item.price,
@@ -205,14 +218,21 @@ export default function MenuEditor() {
                 </div>
               </CardHeader>
               <CardContent>
-                {menuItems.data && menuItems.data.length > 0 ? (
+                {sortedMenuItems.length > 0 ? (
                   <div className="space-y-4">
-                    {menuItems.data.map((item) => (
-                      <Card key={item.id} className="bg-muted/50">
+                    {sortedMenuItems.map((item) => (
+                      <Card
+                        key={item.id}
+                        className={
+                          item.available
+                            ? "bg-muted/50"
+                            : "border-dashed border-muted-foreground/40 bg-muted/30 opacity-90"
+                        }
+                      >
                         <CardContent className="pt-4">
                           <div className="flex justify-between items-start">
                             <div className="flex-1 space-y-2">
-                              <div className="flex items-center space-x-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -224,11 +244,18 @@ export default function MenuEditor() {
                                     <ChevronRight className="h-4 w-4" />
                                   )}
                                 </Button>
-                                <p className="font-medium">{item.name}</p>
+                                <p className={item.available ? "font-medium" : "font-medium text-muted-foreground"}>
+                                  {item.name}
+                                </p>
                                 <Badge>{item.category}</Badge>
                                 <Badge variant="outline">
                                   {["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"][item.weekDay]}
                                 </Badge>
+                                {!item.available && (
+                                  <Badge variant="secondary" className="border border-destructive/30 text-destructive">
+                                    Indisponível no pedido
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-sm text-muted-foreground ml-10">
                                 {item.description}
@@ -354,7 +381,7 @@ function MenuItemForm({ restaurantId, menuItem, onSuccess }: { restaurantId: str
     onSuccess: () => {
       toast.success("Prato criado com sucesso!")
       onSuccess?.()
-      void utils.menuItem.byRestaurant.invalidate({ restaurantId })
+      void utils.menuItem.byRestaurant.invalidate({ restaurantId, includeUnavailable: true })
     },
     onError: (error) => {
       toast.error(`Erro ao criar prato: ${error.message}`)
@@ -365,7 +392,7 @@ function MenuItemForm({ restaurantId, menuItem, onSuccess }: { restaurantId: str
     onSuccess: () => {
       toast.success("Prato atualizado com sucesso!")
       onSuccess?.()
-      void utils.menuItem.byRestaurant.invalidate({ restaurantId })
+      void utils.menuItem.byRestaurant.invalidate({ restaurantId, includeUnavailable: true })
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar prato: ${error.message}`)
@@ -869,7 +896,10 @@ function OptionChoiceForm({ optionId, choice, onSuccess }: { optionId: string; c
 
 // Componente para gerenciar categorias
 function CategoriesManager({ restaurantId }: { restaurantId: string }) {
-  const menuItems = api.menuItem.byRestaurant.useQuery({ restaurantId })
+  const menuItems = api.menuItem.byRestaurant.useQuery({
+    restaurantId,
+    includeUnavailable: true,
+  })
   
   const categories = menuItems.data?.reduce((acc, item) => {
     if (!acc.includes(item.category)) {

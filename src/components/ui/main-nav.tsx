@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { LucideLink, Menu, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { AppReleaseNotesDialog } from "@/components/ui/app-release-notes-dialog"
 import { SettingsMenu } from "@/components/ui/settings-menu"
 import { Separator } from "./separator"
 import { routeItems, type RouteItem } from "@/const/routes"
@@ -171,8 +172,14 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
 
       <Separator />
 
-      {/* Settings Menu */}
-      <div className="p-4">
+      {/* Novidades + configurações (tema) */}
+      <div
+        className={cn(
+          "flex flex-col gap-2 p-4",
+          collapsed && "items-center",
+        )}
+      >
+        <AppReleaseNotesDialog size={collapsed ? "small" : undefined} />
         <SettingsMenu size={collapsed ? "small" : undefined} />
       </div>
     </div>
