@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.12.1" as const
+export const APP_CURRENT_VERSION = "1.14.0" as const
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -19,6 +19,20 @@ export interface AppReleaseNote {
  * Incluir somente releases **major** ou **minor** com entrega visível ao usuário.
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
+  {
+    version: "1.14.0",
+    date: "Abril de 2026",
+    items: [
+      "**Assistente de IA**: botão para **expandir** o chat em **modal em tela ampla** (e recolher de volta ao painel flutuante).",
+    ],
+  },
+  {
+    version: "1.13.0",
+    date: "Abril de 2026",
+    items: [
+      "**Assistente de IA**: ferramentas para **registrar ideias** (caixa de ideias) e **registrar solicitações** (formulários/chamados.",
+    ],
+  },
   {
     version: "1.12.0",
     date: "Abril de 2026",
