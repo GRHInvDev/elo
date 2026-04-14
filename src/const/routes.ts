@@ -30,7 +30,7 @@ export interface RouteItem {
 
 // eslint-disable-next-line
 export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: boolean, novidades?: boolean): RouteItem[] => {
-  // Verificar se é um usuário TOTEM (apenas Dashboard, Eventos, Encartes, Aniversários)
+  // Verificar se é um usuário TOTEM (Dashboard, Eventos, Encartes, Aniversários, Hall de entrada)
   if (roleConfig && 'isTotem' in roleConfig && roleConfig.isTotem) {
     return [
       {
@@ -56,6 +56,12 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
         icon: LucideCake,
         describe: "Página para visualizar os aniversariantes do mês",
         href: "/birthdays",
+      },
+      {
+        title: "Hall de entrada",
+        icon: DoorOpen,
+        describe: "Comunicação de novos colaboradores na intranet",
+        href: "/forms/hall-entrada",
       },
     ]
   }

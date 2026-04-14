@@ -3,7 +3,7 @@ import { currentUser } from "@clerk/nextjs/server"
 
 import { NewUsersHallContent } from "@/components/new-users-hall/new-users-hall-content"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { canManageNewUsersHall, canViewForms } from "@/lib/access-control"
+import { canManageNewUsersHall, canViewHallEntrada } from "@/lib/access-control"
 import type { RolesConfig } from "@/types/role-config"
 import { api } from "@/trpc/server"
 
@@ -20,7 +20,7 @@ export default async function HallEntradaPage() {
     }
 
     const userData = await api.user.me()
-    if (!canViewForms(userData.role_config as RolesConfig | null)) {
+    if (!canViewHallEntrada(userData.role_config as RolesConfig | null)) {
       redirect("/dashboard")
     }
 
