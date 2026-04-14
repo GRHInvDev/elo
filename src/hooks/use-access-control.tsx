@@ -37,6 +37,12 @@ export function useAccessControl() {
     return !db_user.role_config.isTotem;
   };
 
+  /** Hall de entrada: visível inclusive para TOTEM. */
+  const canViewHallEntrada = (): boolean => {
+    if (!db_user?.role_config) return false;
+    return true;
+  };
+
   const canCreateForm = (): boolean => {
     if (!db_user?.role_config) return false;
 
@@ -243,6 +249,7 @@ export function useAccessControl() {
     db_user,
     hasAdminAccess,
     canViewForms,
+    canViewHallEntrada,
     canCreateForm,
     canAccessForm,
     getAccessibleForms,

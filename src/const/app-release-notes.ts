@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.11.9" as const
+export const APP_CURRENT_VERSION = "1.12.1" as const
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -20,12 +20,19 @@ export interface AppReleaseNote {
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
   {
+    version: "1.12.0",
+    date: "Abril de 2026",
+    items: [
+      "**Hall de Entrada**: espaço para acompanhar contratações com **transparência dos times**.",
+    ],
+  },
+  {
     version: "1.11.0",
     date: "Abril de 2026",
     items: [
-      "**Assistente de IA** na intranet: chat com ferramentas (salas, frota, pedido de refeição, cardápio, colegas, formulários e mais), fluxos guiados com confirmação e integração **Azure OpenAI**.",
+      "**Assistente de IA** na intranet: chat com ferramentas (salas, frota, pedido de refeição, cardápio, colegas, formulários e mais)",
       "**Experiência do chat**: atalhos rápidos, layout do painel, markdown e cartões de ferramentas; indicador de resposta e ajustes de uso no dia a dia.",
-      "**Novidades do elo**: diálogo de release notes no app e celebração com confetti ao abrir.",
+      "**Novidades do elo**: diálogo de lançamentos e novidades no app.",
     ],
   },
   {

@@ -89,6 +89,12 @@ export function canViewForms(roleConfig: RolesConfig | null): boolean {
   return !roleConfig.isTotem;
 }
 
+/** Hall de entrada (novos colaboradores): público na intranet, inclusive para usuários TOTEM. */
+export function canViewHallEntrada(roleConfig: RolesConfig | null): boolean {
+  if (!roleConfig) return false;
+  return true;
+}
+
 export function canViewEvents(roleConfig: RolesConfig | null): boolean {
   // Todos podem visualizar eventos, exceto usuários TOTEM
   if (!roleConfig) return false;

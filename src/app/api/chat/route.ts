@@ -9,7 +9,10 @@ import { type CoreMessage, type LanguageModelV1, streamText } from "ai"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { routeItems } from "@/const/routes"
-import { getAssistantChatModel } from "@/server/ai/azure-assistant-model"
+import {
+  getAssistantChatModel,
+  getAssistantModelUnavailableReason,
+} from "@/server/ai/azure-assistant-model"
 import {
   createBooking,
   deleteBooking,
@@ -59,8 +62,15 @@ export async function POST(req: Request) {
 
   const model: LanguageModelV1 | null = getAssistantChatModel()
   if (!model) {
+    const reason = getAssistantModelUnavailableReason()
+    console.error("[ai-assistant] modelo indisponível (503)", {
+      userId,
+      reason: reason ?? "unknown",
+      hint:
+        "No Vercel/hosting: defina AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT_NAME e AZURE_OPENAI_ENDPOINT (ou AZURE_OPENAI_BASE_URL ou AZURE_RESOURCE_NAME). Ver .env.example.",
+    })
     return new Response(
-      "Assistente indisponível: configure Azure OpenAI (deployment, chave e resource/endpoint).",
+      "Assistente indisponível: configure Azure OpenAI no servidor (variáveis de ambiente). Se você é administrador, confira AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT_NAME e endpoint/recurso.",
       { status: 503 },
     )
   }

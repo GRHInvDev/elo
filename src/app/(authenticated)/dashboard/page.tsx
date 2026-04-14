@@ -10,7 +10,7 @@ import { VideosCarousel } from "@/components/dashboard/videos-carousel"
 import Link from "next/link"
 import { NewsDisplay } from "@/components/dashboard/news-displ"
 import { routeItems, type RouteItem } from "@/const/routes"
-import { canViewForms } from "@/lib/access-control"
+import { canViewForms, canViewHallEntrada } from "@/lib/access-control"
 import { FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa6"
 import Image from "next/image"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
@@ -82,7 +82,7 @@ export default function DashboardPage() {
       group?.children?.filter((c): c is RouteItem & { href: string } => Boolean(c.href)) ?? []
     return withHref.filter((c) => {
       if (c.href === "/forms/hall-entrada") {
-        return canViewForms(user?.role_config ?? null)
+        return canViewHallEntrada(user?.role_config ?? null)
       }
       return true
     })
