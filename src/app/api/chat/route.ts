@@ -34,12 +34,13 @@ import {
   submitLunchOrder,
 } from "./_tools/food-order"
 import {
+  createIdea,
   getMenuCafeteria,
   getMySchedule,
   listFormsForHelp,
   notifyColleague,
+  registerSolicitation,
   searchColleague,
-  submitHelpDeskTicket,
 } from "./_tools/intranet"
 import { createMyIdea, getMyIdeaByNumber, listMyIdeas } from "./_tools/ideas"
 
@@ -213,22 +214,39 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 
 ---
 
-## 📋 CHAMADOS E FORMULÁRIOS
+## 📋 SOLICITAÇÕES (FORMULÁRIOS / CHAMADOS)
 
-**Fluxo obrigatório para ABRIR um chamado:**
+**Fluxo obrigatório para REGISTRAR uma solicitação:**
 1. **listFormsForHelp** — liste os formulários disponíveis e apresente ao usuário de forma clara e numerada.
 2. Usuário escolhe o tipo de solicitação.
 3. Colete um resumo detalhado do problema ou pedido.
-4. Confirme: "Vou abrir a solicitação '[título do formulário]' com o seguinte resumo: [resumo]. Confirma?"
-5. **submitHelpDeskTicket** — execute apenas após confirmação.
+4. Confirme: "Vou registrar a solicitação '[título do formulário]' com o seguinte resumo: [resumo]. Confirma?"
+5. **registerSolicitation** — execute apenas após confirmação.
 
 **Limitação importante:**
 - Formulários que exigem **anexo obrigatório** NÃO podem ser enviados pelo assistente. Oriente o usuário a acessar a página de Formulários na intranet diretamente.
 
 **Regras críticas:**
 - Não assuma o formId — sempre use listFormsForHelp para obtê-lo.
-- O resumo fornecido em submitHelpDeskTicket é o conteúdo dos campos de texto obrigatórios.
+- O resumo em registerSolicitation preenche os campos de texto obrigatórios do formulário.
 - Após o envio, informe o número do chamado gerado para acompanhamento.
+
+---
+
+
+## 💡 CAIXA DE IDEIAS
+
+**Fluxo obrigatório para REGISTRAR uma ideia:**
+1. Entenda a proposta do usuário (melhoria, solução de problema, ideia inovadora ou outro).
+2. Colete a **descrição** da solução proposta (obrigatória) e, se houver, o **problema** identificado.
+3. Escolha o **contributionType** adequado: IDEIA_INOVADORA, SUGESTAO_MELHORIA, SOLUCAO_PROBLEMA ou OUTRO (com contributionOther quando fizer sentido).
+4. Confirme o resumo com o usuário.
+5. **createIdea** — execute apenas após confirmação.
+
+**Regras críticas:**
+- Não registre ideias sem confirmação explícita.
+- Informe o **número da ideia** retornado para o usuário acompanhar em Minhas ideias.
+- Se o servidor indicar restrição (ex.: perfil Totem), explique de forma clara.
 
 ---
 
@@ -332,7 +350,8 @@ Seja sempre claro, eficiente e seguro. Em caso de dúvida sobre a intenção do 
       getMySchedule,
       searchColleague,
       listFormsForHelp,
-      submitHelpDeskTicket,
+      registerSolicitation,
+      createIdea,
       getMenuCafeteria,
       notifyColleague,
       listLunchRestaurants,
