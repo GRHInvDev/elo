@@ -1,9 +1,10 @@
+import { checkSelfServiceFoodOrderDate, startOfLocalDay } from "@/lib/food-order-self-service-date"
 import { api } from "@/trpc/server"
 import type { Tool } from "ai"
 import { z } from "zod"
 
 function startOfDayLocal(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
+  return startOfLocalDay(d)
 }
 
 export const listLunchRestaurants: Tool = {
@@ -76,6 +77,10 @@ Lista os pratos disponíveis no cardápio de um restaurante para o dia da semana
 - Não use os IDs desta listagem como restaurantId — são menuItemIds diferentes.
 - Não chame submitLunchOrder sem ter coletado todos os opcionais obrigatórios.
 
+**Janela de datas (obrigatório):**
+- Só consulte cardápio para pedido nas datas permitidas: **hoje** ou **amanhã** (dia civil).
+- Se o usuário pedir cardápio ou marmita para **outro dia** (ex.: sexta estando na segunda), **não chame esta ferramenta** — explique que não é possível por bloqueio interno de configuração e que só há pedido para hoje ou amanhã.
+
 **Problemas comuns:**
 - Cardápio varia por dia da semana (weekDay); se o usuário pedir para amanhã e não houver itens, informe.
 - Pratos indisponíveis (available: false) são filtrados automaticamente — não aparecem na lista.
@@ -90,6 +95,11 @@ Lista os pratos disponíveis no cardápio de um restaurante para o dia da semana
   execute: async ({ restaurantId, dateIso }: { restaurantId: string; dateIso?: string }) => {
     try {
       const date = dateIso ? new Date(dateIso) : new Date()
+      const dayStart = startOfDayLocal(date)
+      const windowCheck = checkSelfServiceFoodOrderDate(dayStart)
+      if (!windowCheck.ok) {
+        return windowCheck.message
+      }
       const items = await api.menuItem.byRestaurant({
         restaurantId,
         date,
@@ -207,11 +217,14 @@ Finaliza e registra o pedido de refeição do usuário autenticado no sistema da
 - ok: true, orderId, message e summary (descrição legível: "Prato — Restaurante").
 - ok: false com campo error e hint quando há falha (ex.: pedido duplicado no dia).
 
+**Janela de datas (obrigatório):**
+- Só registre pedido para **hoje** ou **amanhã**. Para qualquer outra data, não chame — informe o bloqueio interno (ex.: não dá para pedir a marmita da sexta estando na segunda).
+
 **O que NÃO fazer:**
 - NÃO chame sem confirmação explícita do usuário — pedidos registrados são definitivos.
 - NÃO chame sem ter coletado opcionais obrigatórios.
 - NÃO chame se getMyLunchOrderForDate retornou hasOrder: true.
-- NÃO tente criar pedido para datas passadas (pode ser rejeitado).
+- NÃO tente criar pedido para datas passadas ou além de amanhã (será rejeitado pelo sistema).
 
 **Problemas comuns:**
 - Erro "pedido duplicado": significa que já existe pedido para o dia — use getMyLunchOrderForDate para verificar antes.
@@ -248,6 +261,14 @@ Finaliza e registra o pedido de refeição do usuário autenticado no sistema da
       const orderDate = orderDateIso
         ? startOfDayLocal(new Date(orderDateIso))
         : startOfDayLocal(new Date())
+      const windowCheck = checkSelfServiceFoodOrderDate(orderDate)
+      if (!windowCheck.ok) {
+        return {
+          ok: false as const,
+          error: windowCheck.message,
+          hint: "Só é permitido pedir marmita para hoje ou para amanhã.",
+        }
+      }
       const trimmedObservations = observations?.trim()
       const created = await api.foodOrder.create({
         restaurantId,
