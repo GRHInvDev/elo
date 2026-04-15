@@ -175,7 +175,7 @@ Lista todos os formulários/solicitações disponíveis na intranet que o usuár
 
 **Quando usar:**
 - Usuário quer abrir um chamado, pedido ou solicitação: "quero pedir manutenção", "como faço para solicitar equipamento?", "preciso abrir um chamado de TI".
-- SEMPRE chame esta ferramenta PRIMEIRO para obter o formId correto antes de submitHelpDeskTicket.
+- SEMPRE chame esta ferramenta PRIMEIRO para obter o formId correto antes de registerSolicitation.
 - Para apresentar as opções de formulário ao usuário quando ele não souber qual escolher.
 
 **O que retorna:**
@@ -184,10 +184,10 @@ Lista todos os formulários/solicitações disponíveis na intranet que o usuár
 
 **Fluxo correto:**
 1. listFormsForHelp → usuário escolhe o tipo de solicitação.
-2. submitHelpDeskTicket com o formId correto e o resumo do pedido.
+2. registerSolicitation com o formId correto e o resumo do pedido.
 
 **O que NÃO fazer:**
-- Não chame submitHelpDeskTicket sem ter o formId desta listagem.
+- Não chame registerSolicitation sem ter o formId desta listagem.
 - Não assuma qual formulário usar — sempre confirme com o usuário.
 
 **Problemas comuns:**
@@ -208,45 +208,45 @@ Lista todos os formulários/solicitações disponíveis na intranet que o usuár
   },
 }
 
-export const submitHelpDeskTicket: Tool = {
+export const registerSolicitation: Tool = {
   description: `
-Envia uma resposta/solicitação a um formulário existente, criando um novo chamado ou pedido interno.
+Registra uma nova solicitação interna (chamado) em um formulário existente da intranet.
 
 **Quando usar:**
-- Usuário confirma que quer abrir um chamado específico após ver a lista de listFormsForHelp.
-- Solicitações que não exigem anexo obrigatório.
+- Usuário confirma que quer abrir uma solicitação após ver a lista de listFormsForHelp.
+- Pedidos que não exigem anexo obrigatório no formulário.
 
 **Fluxo obrigatório antes de chamar:**
 1. Use listFormsForHelp para obter o formId correto.
 2. Colete do usuário um resumo claro e detalhado do pedido (summary).
-3. Confirme com o usuário: "vou abrir a solicitação '[título do formulário]' com o seguinte resumo: [summary]. Confirma?"
+3. Confirme com o usuário: "vou registrar a solicitação '[título do formulário]' com o seguinte resumo: [summary]. Confirma?"
 4. Só então chame esta ferramenta.
 
 **Como funciona internamente:**
-- O summary é usado para preencher todos os campos de texto obrigatórios do formulário.
-- Campos dinâmicos (nome, setor) são preenchidos automaticamente com os dados do usuário autenticado.
-- Campos não obrigatórios são deixados em branco ou com valor padrão.
-- Campos de arquivo (anexo) obrigatórios NÃO são suportados — nesse caso, oriente o usuário a usar a página de Formulários na intranet.
+- O summary preenche os campos de texto obrigatórios do formulário.
+- Campos dinâmicos (nome, setor) usam os dados do usuário autenticado.
+- Campos não obrigatórios ficam em branco ou com valor padrão.
+- Anexo obrigatório não é suportado — oriente o usuário a usar a página de Formulários na intranet.
 
 **O que retorna:**
-- ok: true, formResponseId, numero do chamado e mensagem de confirmação.
+- ok: true, formResponseId, número do chamado e mensagem de confirmação.
 - Em caso de erro: mensagem descritiva com motivo.
 
 **O que NÃO fazer:**
-- Não envie sem confirmar o summary com o usuário — é o conteúdo principal do chamado.
+- Não envie sem confirmar o summary com o usuário.
 - Não use para formulários que exigem anexo obrigatório.
 - Não tente adivinhar o formId — sempre use listFormsForHelp.
 
 **Problemas comuns:**
-- Summary muito vago pode gerar chamados incompletos; peça ao usuário para detalhar melhor o problema.
-- Se a resposta for "Este formulário exige anexo", redirecione para a intranet.
+- Summary vago gera solicitações incompletas; peça mais detalhes.
+- Se retornar erro de anexo obrigatório, redirecione para a intranet.
 `,
   parameters: z.object({
     formId: z.string().describe("ID do formulário obtido via listFormsForHelp"),
     summary: z
       .string()
       .min(3)
-      .describe("Resumo detalhado do pedido ou descrição do problema (será o conteúdo dos campos de texto obrigatórios)"),
+      .describe("Resumo detalhado do pedido ou descrição do problema (conteúdo dos campos de texto obrigatórios)"),
   }),
   execute: async ({ formId, summary }: { formId: string; summary: string }) => {
     try {
@@ -280,7 +280,94 @@ Envia uma resposta/solicitação a um formulário existente, criando um novo cha
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : JSON.stringify(error)
-      return `Não foi possível abrir a solicitação: ${msg}`
+      return `Não foi possível registrar a solicitação: ${msg}`
+    }
+  },
+}
+
+const contributionTypeSchema = z.enum([
+  "IDEIA_INOVADORA",
+  "SUGESTAO_MELHORIA",
+  "SOLUCAO_PROBLEMA",
+  "OUTRO",
+])
+
+export const createIdea: Tool = {
+  description: `
+Registra uma nova ideia na **caixa de ideias** do usuário (mesmo fluxo da intranet).
+
+**Quando usar:**
+- Usuário quer enviar sugestão, ideia de melhoria, solução para um problema ou proposta inovadora para a empresa.
+
+**Fluxo obrigatório antes de chamar:**
+1. Entenda o tipo da contribuição e mapeie para contributionType (IDEIA_INOVADORA, SUGESTAO_MELHORIA, SOLUCAO_PROBLEMA ou OUTRO).
+2. Colete a **descrição** (solução proposta / ideia) — obrigatória.
+3. Opcional: problema identificado (problem), nome/setor se o usuário quiser informar manualmente (submittedName, submittedSector).
+4. Se contributionType for OUTRO e fizer sentido, preencha contributionOther com o rótulo da categoria.
+5. Confirme o resumo com o usuário e só então execute.
+
+**Parâmetros alinhados ao backend:**
+- description: solução proposta (texto obrigatório).
+- problem: problema identificado (opcional).
+- contributionType + contributionOther: idem ao objeto contribution da API.
+
+**O que retorna:**
+- ok, numeroIdeia (número amigável para acompanhamento), mensagem.
+
+**O que NÃO fazer:**
+- Não invente detalhes — use o que o usuário disse.
+- Usuários **Totem** não podem criar ideias (o servidor retornará erro — explique que deve usar outro perfil).
+
+**Problemas comuns:**
+- Texto muito curto ou vazio na descrição é rejeitado.
+`,
+  parameters: z.object({
+    description: z
+      .string()
+      .min(1)
+      .describe("Solução proposta / descrição da ideia (campo obrigatório no sistema)"),
+    problem: z.string().optional().describe("Problema identificado (opcional)"),
+    contributionType: contributionTypeSchema.describe(
+      "Tipo: IDEIA_INOVADORA | SUGESTAO_MELHORIA | SOLUCAO_PROBLEMA | OUTRO",
+    ),
+    contributionOther: z
+      .string()
+      .optional()
+      .describe("Texto complementar quando o tipo for OUTRO ou para detalhar a categoria"),
+    submittedName: z.string().optional().describe("Nome informado manualmente pelo usuário (opcional)"),
+    submittedSector: z.string().optional().describe("Setor informado manualmente pelo usuário (opcional)"),
+  }),
+  execute: async (input: {
+    description: string
+    problem?: string
+    contributionType: z.infer<typeof contributionTypeSchema>
+    contributionOther?: string
+    submittedName?: string
+    submittedSector?: string
+  }) => {
+    try {
+      const problemTrim = input.problem?.trim()
+      const otherTrim = input.contributionOther?.trim()
+      const nameTrim = input.submittedName?.trim()
+      const sectorTrim = input.submittedSector?.trim()
+      const suggestion = await api.suggestion.create({
+        description: input.description.trim(),
+        problem: problemTrim && problemTrim.length > 0 ? problemTrim : undefined,
+        contribution: {
+          type: input.contributionType,
+          other: otherTrim && otherTrim.length > 0 ? otherTrim : undefined,
+        },
+        submittedName: nameTrim && nameTrim.length > 0 ? nameTrim : undefined,
+        submittedSector: sectorTrim && sectorTrim.length > 0 ? sectorTrim : undefined,
+      })
+      return {
+        ok: true as const,
+        numeroIdeia: suggestion.ideaNumber,
+        mensagem: `Ideia #${suggestion.ideaNumber} registrada. Acompanhe em Minhas ideias na intranet.`,
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : JSON.stringify(error)
+      return `Não foi possível registrar a ideia: ${msg}`
     }
   },
 }
