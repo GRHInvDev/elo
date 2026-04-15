@@ -42,6 +42,7 @@ import {
   registerSolicitation,
   searchColleague,
 } from "./_tools/intranet"
+import { createMyIdea, getMyIdeaByNumber, listMyIdeas } from "./_tools/ideas"
 
 export const maxDuration = 30
 
@@ -182,6 +183,11 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 
 ## 🍽️ PEDIDO DE REFEIÇÃO / ALMOÇO
 
+**Janela de datas (bloqueio interno — não negociar):**
+- Pedido de marmita pelo assistente (e pelo fluxo self-service da intranet) só existe para **hoje** ou **amanhã** — nunca para datas posteriores (ex.: estando na **segunda**, **não** é possível pedir a marmita da **sexta**).
+- Se o usuário pedir cardápio ou pedido para outro dia além dessa janela: **não** use listLunchMenuItems nem submitLunchOrder para essa data. Explique com clareza que **não é possível realizar isso por conta do bloqueio interno de configuração** e que só há pedido para hoje ou amanhã.
+- **getMyLunchOrderForDate** para **consultar** se já pediu em um dia específico pode ser usado em qualquer data (histórico); a restrição acima vale para **novo pedido** e **consulta de cardápio com intenção de pedir**.
+
 **Fluxo obrigatório para FAZER um pedido:**
 1. **getMyLunchOrderForDate** — verifique se já existe pedido para hoje. Se hasOrder = true, informe o pedido existente e NÃO prossiga para novo pedido.
 2. **listLunchRestaurants** — liste os restaurantes disponíveis e deixe o usuário escolher.
@@ -201,6 +207,7 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 
 **Regras críticas:**
 - Máximo de 1 pedido por usuário por dia — submitLunchOrder falha se já houver pedido.
+- **Datas:** apenas **hoje** ou **amanhã** para novo pedido; nunca inicie fluxo de pedido para dias posteriores.
 - Nunca pule grupos de opcionais obrigatórios (required: true).
 - Nunca chame submitLunchOrder sem confirmação explícita do usuário.
 - Não exiba menuItemIds, restaurantIds ou choiceIds para o usuário.
@@ -262,6 +269,25 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 
 ---
 
+## 💡 IDEIAS EM AÇÃO (MINHAS IDEIAS)
+
+**Para CONSULTAR ideias do próprio usuário:**
+1. Use **listMyIdeas** — mostra número (#), status em português e resumos (mais recentes primeiro).
+2. Para detalhes completos de uma ideia citada pelo número, use **getMyIdeaByNumber** com esse número.
+
+**Para CADASTRAR uma nova ideia:**
+1. Colete **solução proposta** (obrigatória) e, se possível, **problema identificado**.
+2. Colete o **tipo de contribuição** (ideia inovadora, sugestão de melhoria, solução de problema ou outro — neste último caso, peça o detalhe em texto).
+3. Opcional: nome e setor para exibição pública no cadastro.
+4. **Confirme o resumo** com o usuário e só então chame **createMyIdea**.
+
+**Regras críticas:**
+- Nunca chame **createMyIdea** sem confirmação explícita.
+- Com o usuário, use sempre o **número da ideia** (#), nunca IDs internos.
+- Se o usuário for perfil **Totem** e a ferramenta indicar bloqueio, explique que o envio não está disponível nesse perfil e oriente conforme a política da intranet.
+
+---
+
 ## 🗓️ AGENDA PESSOAL
 
 **Para ver a agenda de salas do usuário:**
@@ -278,11 +304,11 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 
 **Uso de ferramentas:**
 - Chame ferramentas **apenas quando necessário** — não use para informações que já possui no contexto.
-- Nunca execute ações irreversíveis (deleteBooking, submitLunchOrder, notifyColleague, registerSolicitation, createIdea, rentVehicle, createBooking) sem confirmação explícita do usuário.
+- Nunca execute ações irreversíveis ou de efeito imediato no sistema (deleteBooking, submitLunchOrder, notifyColleague, submitHelpDeskTicket, rentVehicle, createBooking, **createMyIdea**) sem confirmação explícita do usuário.
 - Quando faltar informação para executar uma ação, **pergunte tudo de uma vez** em uma única mensagem organizada — não faça uma pergunta por vez desnecessariamente.
 
 **Exibição de informações:**
-- Nunca exponha IDs internos (roomId, vehicleId, menuItemId, choiceId, formId, userId) para o usuário.
+- Nunca exponha IDs internos (roomId, vehicleId, menuItemId, choiceId, formId, userId, suggestionId) para o usuário. Para ideias, use apenas o **número visível** (#).
 - Apresente datas e horários no formato local (ex.: "Segunda, 14 de abril às 15h00").
 - Use Markdown para formatar todas as respostas: listas, negrito para destaques, tabelas quando pertinente.
 
@@ -332,6 +358,9 @@ Seja sempre claro, eficiente e seguro. Em caso de dúvida sobre a intenção do 
       listLunchMenuItems,
       getMyLunchOrderForDate,
       submitLunchOrder,
+      listMyIdeas,
+      getMyIdeaByNumber,
+      createMyIdea,
     },
   })
 

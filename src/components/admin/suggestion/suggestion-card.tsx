@@ -2,7 +2,6 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -16,6 +15,8 @@ import { api } from "@/trpc/react"
 import type { AppRouter } from "@/server/api/root"
 import type { TRPCClientErrorLike } from "@trpc/client"
 import Image from "next/image"
+import { IdeaFieldAiEnhance } from "@/components/suggestions/idea-field-ai-enhance"
+import type { SuggestionAiEnhancement } from "@/types/suggestion-ai-enhancement"
 
 type ContribType = "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO"
 
@@ -84,6 +85,8 @@ export function SuggestionsPreview({ onOpenModal }: { onOpenModal: () => void })
 }
 
 export function SuggestionsCard() {
+  const [formAiSession, setFormAiSession] = useState(0)
+  const [aiEnhancementForm, setAiEnhancementForm] = useState<SuggestionAiEnhancement>({})
   const [problema, setProblema] = useState("")
   const [solucao, setSolucao] = useState("")
   const [contribType, setContribType] = useState<ContribType>("IDEIA_INOVADORA")
@@ -118,6 +121,8 @@ export function SuggestionsCard() {
       setContribOther("")
       setHideName(false)
       setHideSector(false)
+      setAiEnhancementForm({})
+      setFormAiSession((s) => s + 1)
     },
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
       toast({
@@ -156,6 +161,10 @@ export function SuggestionsCard() {
       return
     }
 
+    const hasAiMeta =
+      !!aiEnhancementForm.description?.refinedWithAi ||
+      !!aiEnhancementForm.problem?.refinedWithAi
+
     create.mutate({
       description: solucao.trim(), // Solução proposta → campo description no banco
       problem: problema.trim() || undefined, // Problema identificado → campo problem no banco
@@ -165,6 +174,16 @@ export function SuggestionsCard() {
       },
       submittedName: hideName ? undefined : submittedName.trim() || undefined,
       submittedSector: hideSector ? undefined : userData?.setor ?? undefined,
+      ...(hasAiMeta
+        ? {
+            aiEnhancement: {
+              ...(aiEnhancementForm.description
+                ? { description: aiEnhancementForm.description }
+                : {}),
+              ...(aiEnhancementForm.problem ? { problem: aiEnhancementForm.problem } : {}),
+            },
+          }
+        : {}),
     })
   }
 
@@ -286,36 +305,42 @@ export function SuggestionsCard() {
               </div>
 
               {/* Problema */}
-              <div className="space-y-2">
-                <Label htmlFor="problema" className="text-sm md:text-base">Problema identificado *</Label>
-                <Textarea
-                  id="problema"
-                  value={problema}
-                  onChange={(e) => setProblema(e.target.value)}
-                  placeholder="Descreva o problema que você identificou..."
-                  rows={3}
-                  className="resize-none text-sm md:text-base"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Seja específico sobre o problema que precisa ser resolvido.
-                </p>
-              </div>
+              <IdeaFieldAiEnhance
+                key={`problem-${formAiSession}`}
+                field="problem"
+                fieldLabel="Problema identificado *"
+                textareaId="problema"
+                value={problema}
+                onChange={setProblema}
+                placeholder="Descreva o problema que você identificou..."
+                rows={3}
+                aiEnhancement={aiEnhancementForm}
+                onAiEnhancementChange={setAiEnhancementForm}
+                problemDraft={problema}
+                solutionDraft={solucao}
+              />
+              <p className="text-xs text-muted-foreground -mt-1">
+                Seja específico sobre o problema que precisa ser resolvido.
+              </p>
 
               {/* Solução */}
-              <div className="space-y-2">
-                <Label htmlFor="solucao" className="text-sm md:text-base">Solução proposta *</Label>
-                <Textarea
-                  id="solucao"
-                  value={solucao}
-                  onChange={(e) => setSolucao(e.target.value)}
-                  placeholder="Descreva a solução que você propõe..."
-                  rows={3}
-                  className="resize-none text-sm md:text-base"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Detalhe como sua solução pode resolver o problema identificado.
-                </p>
-              </div>
+              <IdeaFieldAiEnhance
+                key={`description-${formAiSession}`}
+                field="description"
+                fieldLabel="Solução proposta *"
+                textareaId="solucao"
+                value={solucao}
+                onChange={setSolucao}
+                placeholder="Descreva a solução que você propõe..."
+                rows={3}
+                aiEnhancement={aiEnhancementForm}
+                onAiEnhancementChange={setAiEnhancementForm}
+                problemDraft={problema}
+                solutionDraft={solucao}
+              />
+              <p className="text-xs text-muted-foreground -mt-1">
+                Detalhe como sua solução pode resolver o problema identificado.
+              </p>
 
               {/* Botão de envio */}
               <div className="flex justify-end">
@@ -337,6 +362,8 @@ export function SuggestionsCard() {
 
 // Componente Modal com formulário completo
 export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) {
+  const [formAiSession, setFormAiSession] = useState(0)
+  const [aiEnhancementForm, setAiEnhancementForm] = useState<SuggestionAiEnhancement>({})
   const [problema, setProblema] = useState("")
   const [solucao, setSolucao] = useState("")
   const [contribType, setContribType] = useState<ContribType>("IDEIA_INOVADORA")
@@ -355,6 +382,14 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
       onOpenChange(false)
     }
   }, [isTotem, isOpen, onOpenChange])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAiEnhancementForm({})
+      return
+    }
+    setFormAiSession((s) => s + 1)
+  }, [isOpen])
 
   // Pré-preencher o nome quando os dados do usuário chegarem
   useEffect(() => {
@@ -378,6 +413,7 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
       setContribOther("")
       setHideName(false)
       setHideSector(false)
+      setAiEnhancementForm({})
       onOpenChange(false)
     },
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
@@ -417,6 +453,10 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
       return
     }
 
+    const hasAiMeta =
+      !!aiEnhancementForm.description?.refinedWithAi ||
+      !!aiEnhancementForm.problem?.refinedWithAi
+
     create.mutate({
       description: solucao.trim(),
       problem: problema.trim() || undefined,
@@ -426,6 +466,16 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
       },
       submittedName: hideName ? undefined : submittedName.trim() || undefined,
       submittedSector: hideSector ? undefined : userData?.setor ?? undefined,
+      ...(hasAiMeta
+        ? {
+            aiEnhancement: {
+              ...(aiEnhancementForm.description
+                ? { description: aiEnhancementForm.description }
+                : {}),
+              ...(aiEnhancementForm.problem ? { problem: aiEnhancementForm.problem } : {}),
+            },
+          }
+        : {}),
     })
   }
 
@@ -535,36 +585,42 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             </div>
 
             {/* Problema */}
-            <div className="space-y-2">
-              <Label htmlFor="problema">Problema identificado *</Label>
-              <Textarea
-                id="problema"
-                value={problema}
-                onChange={(e) => setProblema(e.target.value)}
-                placeholder="Descreva o problema que você identificou..."
-                rows={4}
-                className="resize-none"
-              />
-              <p className="text-xs text-muted-foreground">
-                Seja específico sobre o problema que precisa ser resolvido.
-              </p>
-            </div>
+            <IdeaFieldAiEnhance
+              key={`modal-problem-${formAiSession}`}
+              field="problem"
+              fieldLabel="Problema identificado *"
+              textareaId="problema-modal"
+              value={problema}
+              onChange={setProblema}
+              placeholder="Descreva o problema que você identificou..."
+              rows={4}
+              aiEnhancement={aiEnhancementForm}
+              onAiEnhancementChange={setAiEnhancementForm}
+              problemDraft={problema}
+              solutionDraft={solucao}
+            />
+            <p className="text-xs text-muted-foreground -mt-1">
+              Seja específico sobre o problema que precisa ser resolvido.
+            </p>
 
             {/* Solução */}
-            <div className="space-y-2">
-              <Label htmlFor="solucao">Solução proposta *</Label>
-              <Textarea
-                id="solucao"
-                value={solucao}
-                onChange={(e) => setSolucao(e.target.value)}
-                placeholder="Descreva a solução que você propõe..."
-                rows={4}
-                className="resize-none"
-              />
-              <p className="text-xs text-muted-foreground">
-                Detalhe como sua solução pode resolver o problema identificado.
-              </p>
-            </div>
+            <IdeaFieldAiEnhance
+              key={`modal-description-${formAiSession}`}
+              field="description"
+              fieldLabel="Solução proposta *"
+              textareaId="solucao-modal"
+              value={solucao}
+              onChange={setSolucao}
+              placeholder="Descreva a solução que você propõe..."
+              rows={4}
+              aiEnhancement={aiEnhancementForm}
+              onAiEnhancementChange={setAiEnhancementForm}
+              problemDraft={problema}
+              solutionDraft={solucao}
+            />
+            <p className="text-xs text-muted-foreground -mt-1">
+              Detalhe como sua solução pode resolver o problema identificado.
+            </p>
 
             {/* Botão de envio */}
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">

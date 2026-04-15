@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.14.0" as const
+export const APP_CURRENT_VERSION = "1.17.2" as const
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -20,17 +20,39 @@ export interface AppReleaseNote {
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
   {
+    version: "1.17.0",
+    date: "Abril de 2026",
+    items: [
+      "**Assistente de IA**: ferramentas **Ideias em ação** — listar suas ideias e status (**listMyIdeas**), ver detalhes pelo número (**getMyIdeaByNumber**) e **registrar nova ideia** com confirmação (**createMyIdea**), alinhado ao formulário da intranet.",
+    ],
+  },
+  {
+    version: "1.16.0",
+    date: "Abril de 2026",
+    items: [
+      "**Gestão de ideias**: aba **Dashboard** ao lado de **Ideias** — visão por avaliador com gráficos (volume por status, distribuição por área), taxas de aprovação e de uso de IA (autores e Morrison), previsão simples por área (90 dias), total pago registrado e resumo Morrison por área.",
+    ],
+  },
+  {
+    version: "1.15.0",
+    date: "Abril de 2026",
+    items: [
+      "**Gestão de ideias**: botão **Gerar KPIs (IA)** na seção de KPIs do modal — sugere indicadores de sucesso a partir da ideia completa, reutilizando KPIs ativos do catálogo ou criando novos quando fizer sentido.",
+    ],
+  },
+  {
     version: "1.14.0",
     date: "Abril de 2026",
     items: [
-      "**Assistente de IA**: botão para **expandir** o chat em **modal em tela ampla** (e recolher de volta ao painel flutuante).",
+      "**Gestão de ideias**: botão **Sugerir classificações (IA)** no modal de avaliação — preenche textos e notas 0–10 de Impacto, Capacidade e Esforço com base na ideia, nos rótulos cadastrados, no rascunho do gestor e nas últimas avaliações completas feitas por ele.",
     ],
   },
   {
     version: "1.13.0",
     date: "Abril de 2026",
     items: [
-      "**Assistente de IA**: ferramentas para **registrar ideias** (caixa de ideias) e **registrar solicitações** (formulários/chamados.",
+      "**Ideias em ação**: botão **Aprimorar com IA** no problema e na solução, com comparação lado a lado, ajuste por prompt e envio do texto original para auditoria.",
+      "**Gestão de ideias**: etiquetas **Refinado com IA** e campo **Sugestão da ideia (Morrison)** com análise auxiliar para avaliadores (Azure OpenAI).",
     ],
   },
   {

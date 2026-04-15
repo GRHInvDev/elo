@@ -5,6 +5,7 @@ import { createFoodOrderSchema, updateFoodOrderSchema, foodOrderIdSchema, getOrd
 import { type Prisma } from "@prisma/client"
 import type { RolesConfig } from "@/types/role-config"
 import { sendFoodOrdersEmail } from "@/server/services/food-order-email"
+import { checkSelfServiceFoodOrderDate } from "@/lib/food-order-self-service-date"
 
 export const foodOrderRouter = createTRPCRouter({
   // Criar um novo pedido
@@ -18,7 +19,15 @@ export const foodOrderRouter = createTRPCRouter({
       // Verificar se já existe um pedido para este usuário nesta data
       const inputDate = new Date(input.orderDate)
       const orderDateNormalized = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate(), 0, 0, 0, 0)
-      
+
+      const dateCheck = checkSelfServiceFoodOrderDate(orderDateNormalized, now)
+      if (!dateCheck.ok) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: dateCheck.message,
+        })
+      }
+
       const existingOrder = await ctx.db.foodOrder.findUnique({
         where: {
           userId_orderDate: {

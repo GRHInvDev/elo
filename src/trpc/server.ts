@@ -217,4 +217,23 @@ export const api = {
       return caller.foodOrder.myOrders(input);
     },
   },
+  suggestion: {
+    getMySuggestions: async () => {
+      const caller = await createServerCaller();
+      return caller.suggestion.getMySuggestions();
+    },
+    create: async (input: {
+      submittedName?: string;
+      submittedSector?: string;
+      description: string;
+      problem?: string;
+      contribution: {
+        type: "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO";
+        other?: string;
+      };
+    }) => {
+      const caller = await createServerCaller();
+      return caller.suggestion.create(input);
+    },
+  },
 };

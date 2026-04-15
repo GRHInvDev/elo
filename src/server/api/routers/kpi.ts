@@ -3,8 +3,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { createTRPCRouter, adminProcedure } from "@/server/api/trpc"
+import { runSuggestSuccessKpis } from "@/server/ai/suggestion-kpi-suggest"
 import type { Prisma } from "@prisma/client"
 
 export const kpiRouter = createTRPCRouter({
@@ -190,5 +192,149 @@ export const kpiRouter = createTRPCRouter({
           kpiId: { in: input.kpiIds },
         },
       })
+    }),
+
+  /**
+   * Sugere KPIs de sucesso com IA: reutiliza KPIs ativos do catálogo e/ou cria novos,
+   * depois mescla com os já vinculados à ideia.
+   */
+  suggestSuccessKpisForIdea: adminProcedure
+    .input(z.object({ suggestionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const suggestion = await ctx.db.suggestion.findUnique({
+        where: { id: input.suggestionId },
+        select: {
+          id: true,
+          ideaNumber: true,
+          problem: true,
+          description: true,
+          contribution: true,
+          aiEnhancement: true,
+        },
+      })
+      if (!suggestion) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ideia não encontrada" })
+      }
+
+      const contrib = suggestion.contribution as { type?: string; other?: string } | null
+      const contributionSummary =
+        contrib?.type === "IDEIA_INOVADORA"
+          ? "Ideia inovadora"
+          : contrib?.type === "SUGESTAO_MELHORIA"
+            ? "Ideia de melhoria"
+            : contrib?.type === "SOLUCAO_PROBLEMA"
+              ? "Solução de problema"
+              : contrib?.type === "OUTRO"
+                ? `Outro: ${contrib?.other ?? ""}`
+                : "—"
+
+      const morrisonNote =
+        suggestion.aiEnhancement &&
+        typeof suggestion.aiEnhancement === "object" &&
+        "morrison" in suggestion.aiEnhancement
+          ? (suggestion.aiEnhancement as { morrison?: { evaluatorNote?: string } }).morrison
+              ?.evaluatorNote ?? null
+          : null
+
+      const [activeKpis, currentLinks] = await Promise.all([
+        ctx.db.kpi.findMany({
+          where: { isActive: true },
+          orderBy: { order: "asc" },
+          select: { id: true, name: true, description: true },
+        }),
+        ctx.db.suggestionKpi.findMany({
+          where: { suggestionId: input.suggestionId },
+          select: { kpiId: true },
+        }),
+      ])
+
+      const catalogIdSet = new Set(activeKpis.map((k) => k.id))
+      const currentIds = new Set(currentLinks.map((l) => l.kpiId))
+
+      const ai = await runSuggestSuccessKpis({
+        ideaNumber: suggestion.ideaNumber,
+        problem: suggestion.problem,
+        description: suggestion.description,
+        contributionSummary,
+        morrisonNote,
+        catalog: activeKpis,
+      })
+
+      if ("error" in ai) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message:
+            "Geração de KPIs com IA indisponível. Verifique o Azure OpenAI ou tente novamente.",
+        })
+      }
+
+      const fromCatalog = ai.result.existingKpiIdsToLink.filter((id) => catalogIdSet.has(id))
+
+      const maxOrderAgg = await ctx.db.kpi.aggregate({ _max: { order: true } })
+      let orderCursor = (maxOrderAgg._max.order ?? 0) + 1
+
+      const resolvedFromNew: string[] = []
+      for (const nk of ai.result.newKpisToCreate) {
+        const name = nk.name.trim().slice(0, 100)
+        if (name.length < 2) continue
+
+        const existingByName = await ctx.db.kpi.findUnique({
+          where: { name },
+        })
+
+        if (existingByName) {
+          if (existingByName.isActive) {
+            resolvedFromNew.push(existingByName.id)
+          } else {
+            const reactivated = await ctx.db.kpi.update({
+              where: { id: existingByName.id },
+              data: {
+                isActive: true,
+                description:
+                  nk.description?.trim().slice(0, 500) ?? existingByName.description,
+                order: orderCursor,
+              },
+            })
+            orderCursor += 1
+            resolvedFromNew.push(reactivated.id)
+          }
+          continue
+        }
+
+        const created = await ctx.db.kpi.create({
+          data: {
+            name,
+            description: nk.description?.trim()
+              ? nk.description.trim().slice(0, 500)
+              : null,
+            order: orderCursor,
+          },
+        })
+        orderCursor += 1
+        resolvedFromNew.push(created.id)
+      }
+
+      const finalIds = [...new Set([...currentIds, ...fromCatalog, ...resolvedFromNew])]
+
+      await ctx.db.suggestionKpi.deleteMany({
+        where: { suggestionId: input.suggestionId },
+      })
+      if (finalIds.length > 0) {
+        await ctx.db.suggestionKpi.createMany({
+          data: finalIds.map((kpiId) => ({
+            suggestionId: input.suggestionId,
+            kpiId,
+          })),
+        })
+      }
+
+      const newlyAddedCount = finalIds.filter((id) => !currentIds.has(id)).length
+
+      return {
+        totalLinked: finalIds.length,
+        newlyAddedCount,
+        linkedFromCatalogCount: fromCatalog.filter((id) => !currentIds.has(id)).length,
+        createdOrReactivatedCount: resolvedFromNew.filter((id) => !currentIds.has(id)).length,
+      }
     }),
 })

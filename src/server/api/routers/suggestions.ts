@@ -8,8 +8,36 @@ import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailNotificacaoSugestao } from "@/lib/mail/html-mock"
 import type { RolesConfig } from "@/types/role-config"
 import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
+import { runIdeaFieldEnhancement, runMorrisonEvaluator } from "@/server/ai/idea-field-enhance"
+import {
+  formatClassificationPoolsForPrompt,
+  formatRecentEvaluationsForPrompt,
+  rowHasFullClassification,
+  runSuggestSuggestionClassifications,
+} from "@/server/ai/suggestion-classification-suggest"
+import { runClarifyRejectionReason } from "@/server/ai/suggestion-rejection-clarify"
+import { computeEvaluatorDashboard } from "@/server/suggestion/evaluator-dashboard"
 
 const StatusEnum = z.enum(["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"])
+
+function suggestionJsonScoreToDraft(j: unknown): { text: string; score: number } | undefined {
+  if (!j || typeof j !== "object") return undefined
+  const o = j as { text?: string; label?: string; score?: unknown }
+  if (typeof o.score !== "number") return undefined
+  return { text: (o.text ?? o.label ?? "").toString(), score: Math.round(o.score) }
+}
+
+const AiEnhancementFieldPayload = z.object({
+  collaboratorOriginal: z.string().min(1).max(12000),
+  refinedWithAi: z.literal(true),
+})
+
+const AiEnhancementCreatePayload = z
+  .object({
+    description: AiEnhancementFieldPayload.optional(),
+    problem: AiEnhancementFieldPayload.optional(),
+  })
+  .optional()
 
 const ScoreItem = z.object({
   text: z.string().max(2000).optional(),
@@ -201,6 +229,7 @@ export const suggestionRouter = createTRPCRouter({
         type: z.enum(["IDEIA_INOVADORA", "SUGESTAO_MELHORIA", "SOLUCAO_PROBLEMA", "OUTRO"]),
         other: z.string().trim().optional(),
       }),
+      aiEnhancement: AiEnhancementCreatePayload,
     }))
     .mutation(async ({ ctx, input }) => {
       // Bloquear usuários TOTEM e desativados de submeter sugestões
@@ -222,6 +251,12 @@ export const suggestionRouter = createTRPCRouter({
       })
       const ideaNumber = (last?.ideaNumber ?? 99) + 1
 
+      const aiPayload = input.aiEnhancement
+      const aiEnhancementJson =
+        aiPayload && (aiPayload.description ?? aiPayload.problem)
+          ? (aiPayload as InputJsonValue)
+          : undefined
+
       const suggestion = await ctx.db.suggestion.create({
         data: {
           ideaNumber,
@@ -233,6 +268,7 @@ export const suggestionRouter = createTRPCRouter({
           contribution: input.contribution as InputJsonValue,
           dateRef: new Date(),
           status: "NEW",
+          ...(aiEnhancementJson ? { aiEnhancement: aiEnhancementJson } : {}),
         },
       })
       return suggestion
@@ -487,6 +523,7 @@ export const suggestionRouter = createTRPCRouter({
           paymentDate: true,
           editHistory: true,
           isTextEdited: true,
+          aiEnhancement: true,
           createdAt: true,
           user: {
             select: {
@@ -854,6 +891,7 @@ export const suggestionRouter = createTRPCRouter({
           paymentDate: true,
           editHistory: true,
           isTextEdited: true,
+          aiEnhancement: true,
           createdAt: true,
           user: {
             select: {
@@ -989,4 +1027,463 @@ export const suggestionRouter = createTRPCRouter({
         } : null
       }
     }),
+
+  /** Refina texto de um campo da ideia (problema ou solução) com IA — mesmo modelo Azure do assistente. */
+  enhanceIdeaField: protectedProcedure
+    .input(z.object({
+      field: z.enum(["description", "problem"]),
+      sourceText: z.string().min(20).max(12000),
+      followUpInstruction: z.string().max(2000).optional(),
+      /** Rascunho do problema (formulário completo) para contexto ao aprimorar a solução. */
+      problemDraft: z.string().max(12000).optional(),
+      /** Rascunho da solução (formulário completo) para contexto ao aprimorar o problema. */
+      solutionDraft: z.string().max(12000).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const result = await runIdeaFieldEnhancement({
+        field: input.field,
+        sourceText: input.sourceText,
+        followUpInstruction: input.followUpInstruction,
+        problemDraft: input.problemDraft,
+        solutionDraft: input.solutionDraft,
+      })
+      if ("error" in result) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message:
+            "Aprimoramento com IA indisponível no momento. Se o problema persistir, avise a equipe de TI (Azure OpenAI).",
+        })
+      }
+      return { refinedText: result.text }
+    }),
+
+  /** Gera nota de avaliação para gestores (agente Morrison — tom exigente, sem desrespeito). */
+  generateMorrisonEvaluatorNote: adminProcedure
+    .input(z.object({ suggestionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const row = await ctx.db.suggestion.findUnique({
+        where: { id: input.suggestionId },
+        select: {
+          description: true,
+          problem: true,
+          contribution: true,
+          aiEnhancement: true,
+        },
+      })
+      if (!row) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Ideia não encontrada",
+        })
+      }
+
+      const contrib = row.contribution as { type?: string; other?: string } | null
+      const contribSummary =
+        contrib?.type === "IDEIA_INOVADORA"
+          ? "Ideia inovadora"
+          : contrib?.type === "SUGESTAO_MELHORIA"
+            ? "Ideia de melhoria"
+            : contrib?.type === "SOLUCAO_PROBLEMA"
+              ? "Solução de problema"
+              : contrib?.type === "OUTRO"
+                ? `Outro: ${contrib?.other ?? ""}`
+                : "—"
+
+      const morrison = await runMorrisonEvaluator({
+        problem: row.problem,
+        description: row.description,
+        contributionSummary: contribSummary,
+      })
+      if ("error" in morrison) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message:
+            "Análise do avaliador IA indisponível. Verifique a configuração do Azure OpenAI no servidor.",
+        })
+      }
+
+      const existing =
+        row.aiEnhancement && typeof row.aiEnhancement === "object"
+          ? { ...(row.aiEnhancement as Record<string, unknown>) }
+          : {}
+      const next = {
+        ...existing,
+        morrison: {
+          evaluatorNote: morrison.text,
+          generatedAt: new Date().toISOString(),
+        },
+      }
+
+      await ctx.db.suggestion.update({
+        where: { id: input.suggestionId },
+        data: { aiEnhancement: next as InputJsonValue },
+      })
+
+      return { evaluatorNote: morrison.text }
+    }),
+
+  /**
+   * Sugere textos e notas (0–10) de Impacto, Capacidade e Esforço com base na ideia,
+   * nos rótulos cadastrados, no rascunho do gestor e nas últimas avaliações completas do mesmo avaliador.
+   */
+  suggestClassificationsWithAi: adminProcedure
+    .input(
+      z.object({
+        suggestionId: z.string(),
+        draftImpact: z
+          .object({
+            text: z.string().max(2000),
+            score: z.number().int().min(0).max(10),
+          })
+          .optional(),
+        draftCapacity: z
+          .object({
+            text: z.string().max(2000),
+            score: z.number().int().min(0).max(10),
+          })
+          .optional(),
+        draftEffort: z
+          .object({
+            text: z.string().max(2000),
+            score: z.number().int().min(0).max(10),
+          })
+          .optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const analystId = ctx.auth.userId
+      if (!analystId) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Sessão inválida." })
+      }
+
+      const suggestion = await ctx.db.suggestion.findUnique({
+        where: { id: input.suggestionId },
+        select: {
+          id: true,
+          ideaNumber: true,
+          problem: true,
+          description: true,
+          contribution: true,
+          aiEnhancement: true,
+        },
+      })
+      if (!suggestion) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ideia não encontrada" })
+      }
+
+      const contrib = suggestion.contribution as { type?: string; other?: string } | null
+      const contributionSummary =
+        contrib?.type === "IDEIA_INOVADORA"
+          ? "Ideia inovadora"
+          : contrib?.type === "SUGESTAO_MELHORIA"
+            ? "Ideia de melhoria"
+            : contrib?.type === "SOLUCAO_PROBLEMA"
+              ? "Solução de problema"
+              : contrib?.type === "OUTRO"
+                ? `Outro: ${contrib?.other ?? ""}`
+                : "—"
+
+      const morrisonNote =
+        suggestion.aiEnhancement &&
+        typeof suggestion.aiEnhancement === "object" &&
+        "morrison" in suggestion.aiEnhancement
+          ? (suggestion.aiEnhancement as { morrison?: { evaluatorNote?: string } }).morrison
+              ?.evaluatorNote ?? null
+          : null
+
+      const [
+        evaluatorUser,
+        impactPool,
+        capacityPool,
+        effortPool,
+        recentRaw,
+      ] = await Promise.all([
+        ctx.db.user.findUnique({
+          where: { id: analystId },
+          select: { firstName: true, lastName: true, email: true },
+        }),
+        ctx.db.classification.findMany({
+          where: { type: "IMPACT", isActive: true },
+          orderBy: [{ order: "asc" }, { score: "desc" }],
+          select: { label: true, score: true },
+        }),
+        ctx.db.classification.findMany({
+          where: { type: "CAPACITY", isActive: true },
+          orderBy: [{ order: "asc" }, { score: "desc" }],
+          select: { label: true, score: true },
+        }),
+        ctx.db.classification.findMany({
+          where: { type: "EFFORT", isActive: true },
+          orderBy: [{ order: "asc" }, { score: "desc" }],
+          select: { label: true, score: true },
+        }),
+        ctx.db.suggestion.findMany({
+          where: {
+            analystId,
+            NOT: { id: input.suggestionId },
+            finalScore: { not: null },
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 24,
+          select: {
+            ideaNumber: true,
+            problem: true,
+            description: true,
+            impact: true,
+            capacity: true,
+            effort: true,
+            finalScore: true,
+          },
+        }),
+      ])
+
+      const recentFiltered = recentRaw.filter(rowHasFullClassification).slice(0, 12)
+
+      const nameFromProfile = [evaluatorUser?.firstName, evaluatorUser?.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+      const evaluatorDisplayName =
+        nameFromProfile.length > 0 ? nameFromProfile : (evaluatorUser?.email ?? "Gestor")
+
+      const poolsBlock = formatClassificationPoolsForPrompt(impactPool, capacityPool, effortPool)
+      const recentEvaluationsBlock = formatRecentEvaluationsForPrompt(recentFiltered)
+
+      const draft: {
+        impact?: { text: string; score: number }
+        capacity?: { text: string; score: number }
+        effort?: { text: string; score: number }
+      } = {}
+      if (input.draftImpact) draft.impact = input.draftImpact
+      if (input.draftCapacity) draft.capacity = input.draftCapacity
+      if (input.draftEffort) draft.effort = input.draftEffort
+
+      const out = await runSuggestSuggestionClassifications({
+        ideaNumber: suggestion.ideaNumber,
+        problem: suggestion.problem,
+        description: suggestion.description,
+        contributionSummary,
+        morrisonNote,
+        evaluatorDisplayName,
+        draft,
+        recentEvaluationsBlock,
+        poolsBlock,
+      })
+
+      if ("error" in out) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message:
+            "Sugestão de classificações indisponível. Verifique o Azure OpenAI ou tente novamente.",
+        })
+      }
+
+      return out.result
+    }),
+
+  /**
+   * Redige ou esclarece o motivo da não implementação com IA, usando problema, solução, classificações,
+   * Morrison (se houver), rascunho do gestor e instruções opcionais de refinamento.
+   */
+  clarifyRejectionReasonWithAi: adminProcedure
+    .input(
+      z.object({
+        suggestionId: z.string(),
+        draftRejectionReason: z.string().max(2000).optional().default(""),
+        draftImpact: z
+          .object({ text: z.string().max(2000), score: z.number().int().min(0).max(10) })
+          .optional(),
+        draftCapacity: z
+          .object({ text: z.string().max(2000), score: z.number().int().min(0).max(10) })
+          .optional(),
+        draftEffort: z
+          .object({ text: z.string().max(2000), score: z.number().int().min(0).max(10) })
+          .optional(),
+        userRefinementPrompt: z.string().max(1500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const suggestion = await ctx.db.suggestion.findUnique({
+        where: { id: input.suggestionId },
+        select: {
+          ideaNumber: true,
+          problem: true,
+          description: true,
+          contribution: true,
+          impact: true,
+          capacity: true,
+          effort: true,
+          aiEnhancement: true,
+        },
+      })
+      if (!suggestion) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ideia não encontrada" })
+      }
+
+      const contrib = suggestion.contribution as { type?: string; other?: string } | null
+      const contributionSummary =
+        contrib?.type === "IDEIA_INOVADORA"
+          ? "Ideia inovadora"
+          : contrib?.type === "SUGESTAO_MELHORIA"
+            ? "Ideia de melhoria"
+            : contrib?.type === "SOLUCAO_PROBLEMA"
+              ? "Solução de problema"
+              : contrib?.type === "OUTRO"
+                ? `Outro: ${contrib?.other ?? ""}`
+                : "—"
+
+      const morrisonNote =
+        suggestion.aiEnhancement &&
+        typeof suggestion.aiEnhancement === "object" &&
+        "morrison" in suggestion.aiEnhancement
+          ? (suggestion.aiEnhancement as { morrison?: { evaluatorNote?: string } }).morrison?.evaluatorNote ??
+            null
+          : null
+
+      const pick = (
+        draft: { text: string; score: number } | undefined,
+        raw: unknown,
+      ): { text: string; score: number } => {
+        if (draft) return draft
+        return suggestionJsonScoreToDraft(raw) ?? { text: "", score: 0 }
+      }
+
+      const impact = pick(input.draftImpact, suggestion.impact)
+      const capacity = pick(input.draftCapacity, suggestion.capacity)
+      const effort = pick(input.draftEffort, suggestion.effort)
+      const total = impact.score + capacity.score - effort.score
+
+      const trunc = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n - 1)}…`)
+
+      const contextBlock = [
+        `Tipo de contribuição: ${contributionSummary}`,
+        `Problema identificado:\n"""${trunc(suggestion.problem ?? "(não informado)", 3500)}"""`,
+        `Solução proposta:\n"""${trunc(suggestion.description, 3500)}"""`,
+        morrisonNote?.trim()
+          ? `Nota auxiliar Morrison (IA):\n"""${trunc(morrisonNote, 2000)}"""`
+          : null,
+        `Impacto (nota ${impact.score}): ${trunc(impact.text, 1200)}`,
+        `Capacidade (nota ${capacity.score}): ${trunc(capacity.text, 1200)}`,
+        `Esforço (nota ${effort.score}): ${trunc(effort.text, 1200)}`,
+        `Pontuação total (Impacto + Capacidade - Esforço): ${total}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+
+      const out = await runClarifyRejectionReason({
+        ideaNumber: suggestion.ideaNumber,
+        contextBlock,
+        managerDraftReason: input.draftRejectionReason,
+        userRefinementPrompt: input.userRefinementPrompt?.trim() ? input.userRefinementPrompt.trim() : null,
+      })
+
+      if ("error" in out) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message:
+            "Esclarecimento do motivo indisponível. Verifique o Azure OpenAI ou tente novamente.",
+        })
+      }
+
+      return { clarifiedReason: out.result.clarifiedReason }
+    }),
+
+  /** Lista usuários que já apareceram como avaliadores de ideias (ex.: filtros em outros fluxos). */
+  listSuggestionAnalysts: adminProcedure.query(async ({ ctx }) => {
+    const distinctRows = await ctx.db.suggestion.findMany({
+      where: { analystId: { not: null } },
+      distinct: ["analystId"],
+      select: { analystId: true },
+    })
+    const ids = distinctRows.map((r) => r.analystId).filter((id): id is string => id != null)
+    if (ids.length === 0) {
+      return [] as { id: string; displayName: string; email: string }[]
+    }
+    const users = await ctx.db.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    })
+    const order = new Map(ids.map((id, i) => [id, i]))
+    return users
+      .map((u) => {
+        const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim()
+        return {
+          id: u.id,
+          displayName: name.length > 0 ? name : u.email,
+          email: u.email,
+        }
+      })
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+  }),
+
+  /**
+   * Métricas do avaliador **logado**: volume por status, distribuição por área, uso de IA, pagamentos registrados,
+   * previsão simples por área (média mensal nos últimos 90 dias) e resumos Morrison por área.
+   */
+  evaluatorDashboard: adminProcedure.query(async ({ ctx }) => {
+    const targetId = ctx.auth.userId
+    if (!targetId) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Sessão inválida." })
+    }
+
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+    const [analystUser, assigned, recentForForecast] = await Promise.all([
+      ctx.db.user.findUnique({
+        where: { id: targetId },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      }),
+      ctx.db.suggestion.findMany({
+        where: { analystId: targetId },
+        select: {
+          id: true,
+          ideaNumber: true,
+          status: true,
+          aiEnhancement: true,
+          payment: true,
+          createdAt: true,
+          updatedAt: true,
+          submittedSector: true,
+          user: { select: { setor: true } },
+        },
+      }),
+      ctx.db.suggestion.findMany({
+        where: { createdAt: { gte: ninetyDaysAgo } },
+        select: {
+          createdAt: true,
+          submittedSector: true,
+          user: { select: { setor: true } },
+        },
+      }),
+    ])
+
+    if (!analystUser) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Avaliador não encontrado." })
+    }
+
+    const displayName =
+      [analystUser.firstName, analystUser.lastName].filter(Boolean).join(" ").trim() ||
+      analystUser.email
+
+    const rows = assigned.map((s) => ({
+      id: s.id,
+      ideaNumber: s.ideaNumber,
+      status: s.status,
+      aiEnhancement: s.aiEnhancement,
+      payment: s.payment,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      submittedSector: s.submittedSector,
+      userSetor: s.user.setor,
+    }))
+
+    const forecastRows = recentForForecast.map((s) => ({
+      createdAt: s.createdAt,
+      submittedSector: s.submittedSector,
+      userSetor: s.user.setor,
+    }))
+
+    return computeEvaluatorDashboard({ id: targetId, displayName }, rows, forecastRows)
+  }),
 })
