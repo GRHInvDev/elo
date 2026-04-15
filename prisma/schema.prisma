@@ -652,6 +652,9 @@ model Suggestion {
   editHistory  Json? // { "texto-original": "...", "edicao-1": "...", "edicao-2": "..." }
   isTextEdited Boolean @default(false) // Flag para indicar se o texto foi editado
 
+  /// Metadados de aprimoramento por IA (texto original do colaborador, flags, nota do avaliador Morrison)
+  aiEnhancement Json?
+
   impact   Json?
   capacity Json?
   effort   Json?

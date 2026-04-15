@@ -72,11 +72,13 @@ function HallHighlightPortrait({
   imageUrl: string | null
 }) {
   const [failed, setFailed] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
   const boosted = imageUrl ? boostAvatarUrl(imageUrl) : null
   const showImage = Boolean(boosted && !failed)
 
   useEffect(() => {
     setFailed(false)
+    setImageLoaded(false)
   }, [imageUrl])
 
   return (
@@ -87,16 +89,31 @@ function HallHighlightPortrait({
       )}
     >
       {showImage ? (
-        <Image
-          src={boosted!}
-          alt={name}
-          fill
-          className="object-cover bg-white"
-          sizes={HIGHLIGHT_IMAGE_SIZES}
-          quality={95}
-          priority={false}
-          onError={() => setFailed(true)}
-        />
+        <>
+          {!imageLoaded ? (
+            <Skeleton
+              className="absolute inset-0 z-10 rounded-full"
+              aria-hidden
+            />
+          ) : null}
+          <Image
+            src={boosted!}
+            alt={name}
+            fill
+            className={cn(
+              "object-cover bg-white transition-opacity duration-200",
+              !imageLoaded && "opacity-0",
+            )}
+            sizes={HIGHLIGHT_IMAGE_SIZES}
+            quality={95}
+            priority={false}
+            onLoadingComplete={() => setImageLoaded(true)}
+            onError={() => {
+              setFailed(true)
+              setImageLoaded(true)
+            }}
+          />
+        </>
       ) : (
         <div className="flex h-full w-full items-center justify-center text-xl font-medium sm:text-2xl md:text-3xl">
           {getInitials(name)}
@@ -106,8 +123,44 @@ function HallHighlightPortrait({
   )
 }
 
+type AvatarImageStatus = "idle" | "loading" | "loaded" | "error"
+
+function HallRowAvatar({ name, imageUrl }: { name: string; imageUrl: string | null }) {
+  const [status, setStatus] = useState<AvatarImageStatus>(() =>
+    imageUrl ? "loading" : "loaded",
+  )
+
+  useEffect(() => {
+    setStatus(imageUrl ? "loading" : "loaded")
+  }, [imageUrl])
+
+  const showSkeleton = Boolean(imageUrl && (status === "idle" || status === "loading"))
+
+  return (
+    <div className="relative h-12 w-12 shrink-0">
+      {showSkeleton ? (
+        <Skeleton
+          className="absolute inset-0 z-10 rounded-full"
+          aria-hidden
+        />
+      ) : null}
+      <Avatar className="h-12 w-12">
+        {imageUrl ? (
+          <AvatarImage
+            src={imageUrl}
+            alt={name}
+            className="object-cover bg-white"
+            onLoadingStatusChange={setStatus}
+          />
+        ) : null}
+        <AvatarFallback className="text-xs">{getInitials(name)}</AvatarFallback>
+      </Avatar>
+    </div>
+  )
+}
+
 export function NewUsersHallContent({ canManage: _canManage }: { canManage?: boolean }) {
-  const { data: publishedList, isLoading: loadingPub } = api.newUsersHall.listPublished.useQuery()
+  const { data: publishedList, isPending: loadingPub } = api.newUsersHall.listPublished.useQuery()
 
   const { highlights, others } = useMemo(() => {
     const list = publishedList ?? []
@@ -191,16 +244,7 @@ export function NewUsersHallContent({ canManage: _canManage }: { canManage?: boo
                           "hover:bg-muted/50",
                         )}
                       >
-                        <Avatar className="h-12 w-12 shrink-0">
-                          {row.effectiveImageUrl ? (
-                            <AvatarImage
-                              src={row.effectiveImageUrl}
-                              alt={row.name}
-                              className="object-cover bg-white"
-                            />
-                          ) : null}
-                          <AvatarFallback className="text-xs">{getInitials(row.name)}</AvatarFallback>
-                        </Avatar>
+                        <HallRowAvatar name={row.name} imageUrl={row.effectiveImageUrl} />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium leading-tight truncate">{row.name}</p>
                           {row.setor ? (

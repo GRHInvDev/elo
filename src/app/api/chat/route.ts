@@ -41,6 +41,7 @@ import {
   searchColleague,
   submitHelpDeskTicket,
 } from "./_tools/intranet"
+import { createMyIdea, getMyIdeaByNumber, listMyIdeas } from "./_tools/ideas"
 
 export const maxDuration = 30
 
@@ -244,6 +245,25 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 
 ---
 
+## 💡 IDEIAS EM AÇÃO (MINHAS IDEIAS)
+
+**Para CONSULTAR ideias do próprio usuário:**
+1. Use **listMyIdeas** — mostra número (#), status em português e resumos (mais recentes primeiro).
+2. Para detalhes completos de uma ideia citada pelo número, use **getMyIdeaByNumber** com esse número.
+
+**Para CADASTRAR uma nova ideia:**
+1. Colete **solução proposta** (obrigatória) e, se possível, **problema identificado**.
+2. Colete o **tipo de contribuição** (ideia inovadora, sugestão de melhoria, solução de problema ou outro — neste último caso, peça o detalhe em texto).
+3. Opcional: nome e setor para exibição pública no cadastro.
+4. **Confirme o resumo** com o usuário e só então chame **createMyIdea**.
+
+**Regras críticas:**
+- Nunca chame **createMyIdea** sem confirmação explícita.
+- Com o usuário, use sempre o **número da ideia** (#), nunca IDs internos.
+- Se o usuário for perfil **Totem** e a ferramenta indicar bloqueio, explique que o envio não está disponível nesse perfil e oriente conforme a política da intranet.
+
+---
+
 ## 🗓️ AGENDA PESSOAL
 
 **Para ver a agenda de salas do usuário:**
@@ -260,11 +280,11 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 
 **Uso de ferramentas:**
 - Chame ferramentas **apenas quando necessário** — não use para informações que já possui no contexto.
-- Nunca execute ações irreversíveis (deleteBooking, submitLunchOrder, notifyColleague, submitHelpDeskTicket, rentVehicle, createBooking) sem confirmação explícita do usuário.
+- Nunca execute ações irreversíveis ou de efeito imediato no sistema (deleteBooking, submitLunchOrder, notifyColleague, submitHelpDeskTicket, rentVehicle, createBooking, **createMyIdea**) sem confirmação explícita do usuário.
 - Quando faltar informação para executar uma ação, **pergunte tudo de uma vez** em uma única mensagem organizada — não faça uma pergunta por vez desnecessariamente.
 
 **Exibição de informações:**
-- Nunca exponha IDs internos (roomId, vehicleId, menuItemId, choiceId, formId, userId) para o usuário.
+- Nunca exponha IDs internos (roomId, vehicleId, menuItemId, choiceId, formId, userId, suggestionId) para o usuário. Para ideias, use apenas o **número visível** (#).
 - Apresente datas e horários no formato local (ex.: "Segunda, 14 de abril às 15h00").
 - Use Markdown para formatar todas as respostas: listas, negrito para destaques, tabelas quando pertinente.
 
@@ -313,6 +333,9 @@ Seja sempre claro, eficiente e seguro. Em caso de dúvida sobre a intenção do 
       listLunchMenuItems,
       getMyLunchOrderForDate,
       submitLunchOrder,
+      listMyIdeas,
+      getMyIdeaByNumber,
+      createMyIdea,
     },
   })
 

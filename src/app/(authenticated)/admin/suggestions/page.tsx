@@ -13,16 +13,24 @@ import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "@hello-pangea/dnd"
+import type { OnDragEndResponder } from "@hello-pangea/dnd"
 import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import type { RouterOutputs } from "@/trpc/react"
-import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
+import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle, Sparkles, Loader2 } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { DoubtsPopup } from "@/components/ui/doubts-popup"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EvaluatorDashboardTab } from "@/components/admin/suggestion/evaluator-dashboard-tab"
+import { SuggestionsKanbanBoard } from "@/components/admin/suggestion/suggestions-kanban-board"
+import { RejectionReasonClarifyDialog } from "@/components/admin/suggestion/rejection-reason-clarify-dialog"
+import type { SuggestionAiEnhancement } from "@/types/suggestion-ai-enhancement"
+import { parseSuggestionAiEnhancement } from "@/types/suggestion-ai-enhancement"
 
 // Usar tipos derivados do tRPC para garantir type safety
 type DBSuggestion = RouterOutputs["suggestion"]["list"][number]
@@ -52,6 +60,7 @@ type SuggestionLocal = {
   paymentDate: Date | null
   editHistory: Record<string, string> | null
   isTextEdited: boolean
+  aiEnhancement: SuggestionAiEnhancement | null
   user: {
     firstName: string | null
     lastName: string | null
@@ -148,6 +157,7 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     paymentDate: (dbSuggestion as any).paymentDate ? new Date((dbSuggestion as any).paymentDate as string) : null,
     editHistory: (dbSuggestion as any).editHistory ? (dbSuggestion as any).editHistory as Record<string, string> : null,
     isTextEdited: (dbSuggestion as any).isTextEdited ?? false,
+    aiEnhancement: parseSuggestionAiEnhancement((dbSuggestion as any).aiEnhancement),
     user: {
       firstName: user.firstName,
       lastName: user.lastName,
@@ -777,6 +787,31 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
     }
   })
 
+  const suggestSuccessKpis = api.kpi.suggestSuccessKpisForIdea.useMutation({
+    onSuccess: (data) => {
+      void refetchKpis()
+      if (data.newlyAddedCount === 0) {
+        toast({
+          title: "KPIs analisados pela IA",
+          description:
+            "Nenhum KPI novo foi vinculado — os indicadores atuais já cobrem ou o catálogo não gerou matches adicionais.",
+        })
+      } else {
+        toast({
+          title: "KPIs de sucesso sugeridos",
+          description: `+${data.newlyAddedCount} na ideia (${data.linkedFromCatalogCount} do catálogo; ${data.createdOrReactivatedCount} criados ou reativados). Total vinculado: ${data.totalLinked}.`,
+        })
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao gerar KPIs",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
   const handleInputChange = (value: string) => {
     setInputValue(value)
     setShowSuggestions(value.length > 0)
@@ -840,17 +875,32 @@ function KpiSection({ suggestionId }: { suggestionId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-semibold">KPIs de Sucesso</h3>
         {!isAdding && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAdding(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar KPI
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => suggestSuccessKpis.mutate({ suggestionId })}
+              disabled={suggestSuccessKpis.isPending}
+            >
+              {suggestSuccessKpis.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" aria-hidden />
+              )}
+              Gerar KPIs (IA)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAdding(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar KPI
+            </Button>
+          </div>
         )}
       </div>
 
@@ -987,12 +1037,54 @@ function SuggestionDetailsModal({
   const [responsibleUser, setResponsibleUser] = useState<string | null>(null)
   const [newStatus, setNewStatus] = useState<string>("")
   const [rejectionReason, setRejectionReason] = useState("")
+  const [rejectionClarifyOpen, setRejectionClarifyOpen] = useState(false)
   const [showReasonField, setShowReasonField] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid")
   const [paymentAmount, setPaymentAmount] = useState<number | undefined>(undefined)
   const [paymentDescription, setPaymentDescription] = useState("")
   const [paymentDate, setPaymentDate] = useState<Date | null>(null)
   const [isEditHistoryExpanded, setIsEditHistoryExpanded] = useState(false)
+
+  const utils = api.useUtils()
+  const morrisonMutation = api.suggestion.generateMorrisonEvaluatorNote.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: "Análise gerada",
+        description: "A sugestão do avaliador IA foi atualizada.",
+      })
+      await utils.suggestion.list.invalidate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Não foi possível gerar a análise",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+  const suggestClassificationsMutation = api.suggestion.suggestClassificationsWithAi.useMutation({
+    onSuccess: (data) => {
+      setImpactText(data.impactText)
+      setImpactScore(data.impactScore)
+      setCapacityText(data.capacityText)
+      setCapacityScore(data.capacityScore)
+      setEffortText(data.effortText)
+      setEffortScore(data.effortScore)
+      toast({
+        title: "Sugestão de classificações",
+        description:
+          "Textos e pontuações preenchidos com base na ideia, nos seus rascunhos e no seu histórico. Revise antes de salvar.",
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: "Não foi possível sugerir classificações",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
 
   // Carregar valores existentes
   useEffect(() => {
@@ -1037,8 +1129,6 @@ function SuggestionDetailsModal({
     }
     setPaymentDate(suggestion.paymentDate)
   }, [suggestion])
-
-  const utils = api.useUtils()
 
   const updateMutation = api.suggestion.updateAdmin.useMutation({
     onSuccess: () => {
@@ -1169,8 +1259,14 @@ function SuggestionDetailsModal({
           </div>
         </div>
         <div className="md:col-span-2">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <div className="text-sm font-medium">Problema</div>
+            {suggestion.aiEnhancement?.problem?.refinedWithAi && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                Refinado com IA
+              </Badge>
+            )}
             {suggestion.isTextEdited && (
               <Badge variant="outline" className="text-xs">
                 Texto editado
@@ -1182,8 +1278,14 @@ function SuggestionDetailsModal({
           </div>
         </div>
         <div className="md:col-span-2">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <div className="text-sm font-medium">Solução</div>
+            {suggestion.aiEnhancement?.description?.refinedWithAi && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                Refinado com IA
+              </Badge>
+            )}
             {suggestion.isTextEdited && (
               <Badge variant="outline" className="text-xs">
                 Texto editado
@@ -1192,6 +1294,38 @@ function SuggestionDetailsModal({
           </div>
           <div className="text-sm text-muted-foreground whitespace-pre-wrap">
             {suggestion.description}
+          </div>
+          <div className="md:col-span-2 mt-4 space-y-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-medium">Sugestão da ideia (Morrison)</div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="gap-1.5"
+                disabled={morrisonMutation.isPending}
+                onClick={() => morrisonMutation.mutate({ suggestionId: suggestion.id })}
+              >
+                {morrisonMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                )}
+                Gerar ou atualizar análise
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Análise auxiliar para gestores (tom exigente, sem substituir a avaliação humana).
+            </p>
+            {suggestion.aiEnhancement?.morrison?.evaluatorNote ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none text-sm border rounded-md bg-background p-3">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {suggestion.aiEnhancement.morrison.evaluatorNote}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma análise gerada ainda.</p>
+            )}
           </div>
           {suggestion.editHistory && (
             <div className="mt-4 space-y-4">
@@ -1359,14 +1493,49 @@ function SuggestionDetailsModal({
 
       {/* Classificações Simplificadas */}
       <div className="space-y-6">
-        <h3 className="text-lg font-semibold">
-          Classificações
-          {suggestion.status === "NEW" && (
-            <span className="ml-2 text-sm font-normal text-green-600 dark:text-green-400">
-              (Editável - Status: Novo)
-            </span>
-          )}
-        </h3>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <h3 className="text-lg font-semibold">
+            Classificações
+            {suggestion.status === "NEW" && (
+              <span className="ml-2 text-sm font-normal text-green-600 dark:text-green-400">
+                (Editável - Status: Novo)
+              </span>
+            )}
+          </h3>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            disabled={suggestClassificationsMutation.isPending}
+            onClick={() =>
+              suggestClassificationsMutation.mutate({
+                suggestionId: suggestion.id,
+                ...(impactText.trim().length > 0 || impactScore > 0
+                  ? { draftImpact: { text: impactText, score: impactScore } }
+                  : {}),
+                ...(capacityText.trim().length > 0 || capacityScore > 0
+                  ? { draftCapacity: { text: capacityText, score: capacityScore } }
+                  : {}),
+                ...(effortText.trim().length > 0 || effortScore > 0
+                  ? { draftEffort: { text: effortText, score: effortScore } }
+                  : {}),
+              })
+            }
+          >
+            {suggestClassificationsMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden />
+            )}
+            Sugerir classificações (IA)
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-2">
+          A IA usa os rótulos cadastrados no sistema, as últimas ideias que você avaliou com pontuação
+          completa e o que já está preenchido aqui como referência. As notas seguem o mesmo intervalo
+          0–10 dos selects abaixo.
+        </p>
 
         {/* Impacto */}
         <div className="space-y-3">
@@ -1535,9 +1704,36 @@ function SuggestionDetailsModal({
               className="min-h-[100px]"
               required
             />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setRejectionClarifyOpen(true)}
+              >
+                <Sparkles className="h-4 w-4" aria-hidden />
+                Esclarecer motivo (IA)
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Opcional: gere um texto claro para o colaborador com base na ideia e nas classificações; depois revise.
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground">
               Este campo é obrigatório para ideias não implementadas.
             </p>
+            <RejectionReasonClarifyDialog
+              open={rejectionClarifyOpen}
+              onOpenChange={setRejectionClarifyOpen}
+              suggestionId={suggestion.id}
+              draftRejectionReason={rejectionReason}
+              drafts={{
+                impact: { text: impactText, score: impactScore },
+                capacity: { text: capacityText, score: capacityScore },
+                effort: { text: effortText, score: effortScore },
+              }}
+              onApply={setRejectionReason}
+            />
           </div>
         )}
 
@@ -1643,7 +1839,11 @@ export default function AdminSuggestionsPage() {
   const { hasAdminAccess, isLoading } = useAccessControl()
 
   // TODOS os hooks devem vir ANTES de qualquer verificação condicional ou early return
-  const { data: dbSuggestions = [], refetch } = api.suggestion.list.useQuery({
+  const {
+    data: dbSuggestions = [],
+    refetch,
+    isPending: isSuggestionsListPending,
+  } = api.suggestion.list.useQuery({
     status: ["NEW", "IN_REVIEW", "APPROVED", "IN_PROGRESS", "DONE", "NOT_IMPLEMENTED"],
     take: 1000, // Buscar até 1000 Ideias (valor alto para pegar todas)
   })
@@ -1729,6 +1929,14 @@ export default function AdminSuggestionsPage() {
     setSelectedSuggestion(null)
     setIsSuggestionModalOpen(false)
   }
+
+  useEffect(() => {
+    if (!selectedSuggestion?.id || !isSuggestionModalOpen) return
+    const row = dbSuggestions.find((s) => s.id === selectedSuggestion.id)
+    if (row) {
+      setSelectedSuggestion(convertDBToLocal(row))
+    }
+  }, [dbSuggestions, selectedSuggestion?.id, isSuggestionModalOpen])
 
   const suggestions = useMemo(() =>
     dbSuggestions.map((s) => convertDBToLocal(s)),
@@ -2068,6 +2276,13 @@ export default function AdminSuggestionsPage() {
         </div>
       </div>
 
+      <Tabs defaultValue="ideas" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="ideas">Ideias</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ideas" className="mt-0 space-y-0">
       <div className="mb-8">
         {/* Botão para mostrar/ocultar filtros em mobile */}
         <div className="lg:hidden mb-4">
@@ -2290,107 +2505,21 @@ export default function AdminSuggestionsPage() {
             </div>
           </div>
         )}
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3">
-            {STATUS.map((st) => (
-              <Droppable droppableId={st} key={st}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`rounded-lg border p-2 md:p-3 ${getStatusColor(st)}`}
-                  >
-                    <div className="font-medium mb-1 text-sm md:text-base flex items-center justify-between">
-                      <div className="truncate" title={st}>
-                        {st}
-                      </div>
-                      <div className="text-xs opacity-75 ml-2 flex-shrink-0">
-                        ({kanbanColumns[st]?.length ?? 0})
-                      </div>
-                    </div>
-                    <div className="max-h-[400px] md:max-h-[600px] lg:max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
-                      {kanbanColumns[st]?.map((s, index) => {
-                        const impactData = s.impact as { score?: number; text?: string } | null
-                        const capacityData = s.capacity as { score?: number; text?: string } | null
-                        const effortData = s.effort as { score?: number; text?: string } | null
-
-                        const impactScore = impactData?.score ?? 0
-                        const capacityScore = capacityData?.score ?? 0
-                        const effortScore = effortData?.score ?? 0
-                        const pontuacao = Math.max(0, impactScore + capacityScore - effortScore)
-
-
-
-                        return (
-                          <Draggable draggableId={s.id} index={index} key={s.id}>
-                            {(prov) => (
-                              <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
-                                <Card
-                                  className="bg-background/80 cursor-pointer hover:bg-background/90 transition-colors"
-                                  onClick={() => openSuggestionModal(s)}
-                                >
-                                  <CardContent className="p-2 md:p-3">
-                                    <div className="text-xs md:text-sm font-medium truncate mb-1">
-                                      #{formatIdeaNumber(s.ideaNumber)} — {(s.problem ?? "Sem problema definido").substring(0, 25)}...
-                                    </div>
-                                    <div className="text-xs text-muted-foreground mb-2">
-                                      <div className="truncate">
-                                        {s.isNameVisible ? s.submittedName ?? "Não informado" : "Nome oculto"}
-                                      </div>
-                                      {s.isNameVisible && s.submittedSector && (
-                                        <span className="ml-1 text-[9px] md:text-[10px] bg-muted px-1 py-0.5 rounded inline-block mt-1">
-                                          {s.submittedSector}
-                                        </span>
-                                      )}
-                                      <div className="text-[10px] md:text-[11px] opacity-75 mt-1">
-                                        {s.createdAt ? (
-                                          new Date(s.createdAt).toLocaleDateString('pt-BR', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })
-                                        ) : (
-                                          'Data não disponível'
-                                        )}
-                                      </div>
-                                    </div>
-                                    {/* Pontuação no Kanban */}
-                                    <div className="flex items-center justify-between gap-1">
-                                      <div className="text-xs font-medium flex-shrink-0">
-                                        {pontuacao} pts
-                                      </div>
-                                      {/* Tag de Pagamento */}
-                                      {s.payment && (
-                                        <Badge
-                                          variant="outline"
-                                          className={`text-[10px] px-1 py-0 font-medium flex-shrink-0 ${s.payment.status === "paid"
-                                            ? "bg-green-50 text-green-700 border-green-200"
-                                            : "bg-orange-50 text-orange-700 border-orange-200"
-                                            }`}
-                                        >
-                                          {s.payment.status === "paid" ? "✓ Pago" : "⏳ Não Pago"}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </div>
-                            )}
-                          </Draggable>
-                        )
-                      })}
-                    </div>
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            ))}
-          </div>
-        </DragDropContext>
+        <SuggestionsKanbanBoard
+          isLoading={isSuggestionsListPending}
+          columnTitles={STATUS}
+          getStatusColor={getStatusColor}
+          kanbanColumns={kanbanColumns}
+          onDragEnd={onDragEnd}
+          onOpenSuggestion={openSuggestionModal}
+        />
       </div>
+        </TabsContent>
 
-
+        <TabsContent value="dashboard" className="mt-0">
+          <EvaluatorDashboardTab />
+        </TabsContent>
+      </Tabs>
 
       {/* Modal de Classificações */}
       <ClassificationManagementModal
@@ -2641,6 +2770,8 @@ function SuggestionItem({
   onCancelReasonField: (suggestionId: string) => void
   getSimilarClassifications: (searchTerm: string, type: 'impact' | 'capacity' | 'effort') => ClassItem[]
 }) {
+  const [rejectionClarifyOpen, setRejectionClarifyOpen] = useState(false)
+
   // Carregar KPIs específicos para esta ideia
   const { data: suggestionKpis = [] } = api.kpi.getBySuggestionId.useQuery(
     { suggestionId: s.id },
@@ -2667,9 +2798,14 @@ function SuggestionItem({
   const contribType = s.contribution?.type ?? ""
   const contribOther = s.contribution?.other
 
-
+  const rejectionClarifyDrafts = {
+    impact: s.impact ? { text: s.impact.label, score: s.impact.score } : undefined,
+    capacity: s.capacity ? { text: s.capacity.label, score: s.capacity.score } : undefined,
+    effort: s.effort ? { text: s.effort.label, score: s.effort.score } : undefined,
+  }
 
   return (
+    <>
     <AccordionItem key={s.id} value={s.id} className="border rounded-lg">
       <AccordionTrigger className="px-4">
         <div className="w-full">
@@ -2914,6 +3050,16 @@ function SuggestionItem({
                         {(rejectionReasons[s.id] ?? s.rejectionReason ?? "").length}/1000
                       </p>
                     </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="mt-2 gap-1.5"
+                      onClick={() => setRejectionClarifyOpen(true)}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                      Esclarecer motivo (IA)
+                    </Button>
                   </div>
                   <div className="flex gap-2 justify-end">
                     <Button
@@ -2960,6 +3106,16 @@ function SuggestionItem({
                     className="border-red-200 focus:border-red-300"
                     required
                   />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="gap-1.5 w-fit"
+                    onClick={() => setRejectionClarifyOpen(true)}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                    Esclarecer motivo (IA)
+                  </Button>
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-red-600">
                       Campo obrigatório para ideias não implementadas
@@ -3027,6 +3183,16 @@ function SuggestionItem({
         </Card>
       </AccordionContent>
     </AccordionItem>
+    <RejectionReasonClarifyDialog
+      open={rejectionClarifyOpen}
+      onOpenChange={setRejectionClarifyOpen}
+      suggestionId={s.id}
+      draftRejectionReason={rejectionReasons[s.id] ?? s.rejectionReason ?? ""}
+      drafts={rejectionClarifyDrafts}
+      onApply={(text) => handleRejectionReasonChange(s.id, text)}
+      applyMaxLength={1000}
+    />
+    </>
   )
 }
 
