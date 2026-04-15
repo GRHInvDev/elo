@@ -26,6 +26,12 @@ function truncate(text: string | null | undefined, max: number): string | null {
   return `${t.slice(0, max - 1)}…`
 }
 
+/** Evita enviar string vazia ao tRPC; compatível com prefer-nullish-coalescing (não usar `|| undefined` após trim). */
+function trimmedOrUndefined(value: string | undefined): string | undefined {
+  const t = value?.trim()
+  return t === undefined || t === "" ? undefined : t
+}
+
 function formatContribution(contribution: unknown): string {
   const c = contribution as { type?: string; other?: string } | null
   if (!c?.type) return "Não informado"
@@ -260,17 +266,17 @@ export const createMyIdea: Tool = {
       const otherDetail =
         input.contributionType === "OUTRO"
           ? (input.contributionOther ?? "").trim()
-          : input.contributionOther?.trim() || undefined
+          : trimmedOrUndefined(input.contributionOther)
 
       const created = await api.suggestion.create({
         description: input.description.trim(),
-        problem: input.problem?.trim() || undefined,
+        problem: trimmedOrUndefined(input.problem),
         contribution: {
           type: input.contributionType,
           other: otherDetail,
         },
-        submittedName: input.submittedName?.trim() || undefined,
-        submittedSector: input.submittedSector?.trim() || undefined,
+        submittedName: trimmedOrUndefined(input.submittedName),
+        submittedSector: trimmedOrUndefined(input.submittedSector),
       })
 
       return {
