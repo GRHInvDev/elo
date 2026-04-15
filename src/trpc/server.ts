@@ -182,21 +182,6 @@ export const api = {
       return caller.aiAssistant.notifyColleague(input);
     },
   },
-  suggestion: {
-    create: async (input: {
-      submittedName?: string;
-      submittedSector?: string;
-      description: string;
-      problem?: string;
-      contribution: {
-        type: "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO";
-        other?: string;
-      };
-    }) => {
-      const caller = await createServerCaller();
-      return caller.suggestion.create(input);
-    },
-  },
   foodOrder: {
     create: async (input: {
       restaurantId: string;
