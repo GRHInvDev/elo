@@ -23,28 +23,28 @@ export const APP_RELEASE_NOTES: AppReleaseNote[] = [
     version: "1.17.0",
     date: "Abril de 2026",
     items: [
-      "**Assistente de IA**: ferramentas **Ideias em ação** — listar suas ideias e status (**listMyIdeas**), ver detalhes pelo número (**getMyIdeaByNumber**) e **registrar nova ideia** com confirmação (**createMyIdea**), alinhado ao formulário da intranet.",
+      "**Assistente de IA**: ferramentas **Ideias em ação** — listar suas ideias e status, ver detalhes pelo número e registrar nova ideia com confirmação, alinhado ao formulário da intranet.",
     ],
   },
   {
     version: "1.16.0",
     date: "Abril de 2026",
     items: [
-      "**Gestão de ideias**: aba **Dashboard** ao lado de **Ideias** — visão por avaliador com gráficos (volume por status, distribuição por área), taxas de aprovação e de uso de IA (autores e Morrison), previsão simples por área (90 dias), total pago registrado e resumo Morrison por área.",
+      "**Gestão de ideias**: aba **Dashboard** ao lado de **Ideias** — visão por avaliador com gráficos, taxas de aprovação e de uso de IA, previsão simples por área (90 dias), total pago registrado e resumo Morrison por área.",
     ],
   },
   {
     version: "1.15.0",
     date: "Abril de 2026",
     items: [
-      "**Gestão de ideias**: botão **Gerar KPIs (IA)** na seção de KPIs do modal — sugere indicadores de sucesso a partir da ideia completa, reutilizando KPIs ativos do catálogo ou criando novos quando fizer sentido.",
+      "**Gestão de ideias**: novas funcionalidades com uso integrado de IA.",
     ],
   },
   {
     version: "1.14.0",
     date: "Abril de 2026",
     items: [
-      "**Gestão de ideias**: botão **Sugerir classificações (IA)** no modal de avaliação — preenche textos e notas 0–10 de Impacto, Capacidade e Esforço com base na ideia, nos rótulos cadastrados, no rascunho do gestor e nas últimas avaliações completas feitas por ele.",
+      "**Gestão de ideias**: novas funcionalidades com uso integrado de IA.",
     ],
   },
   {
@@ -52,7 +52,7 @@ export const APP_RELEASE_NOTES: AppReleaseNote[] = [
     date: "Abril de 2026",
     items: [
       "**Ideias em ação**: botão **Aprimorar com IA** no problema e na solução, com comparação lado a lado, ajuste por prompt e envio do texto original para auditoria.",
-      "**Gestão de ideias**: etiquetas **Refinado com IA** e campo **Sugestão da ideia (Morrison)** com análise auxiliar para avaliadores (Azure OpenAI).",
+      "**Gestão de ideias**: novas funcionalidades com uso integrado de IA",
     ],
   },
   {
