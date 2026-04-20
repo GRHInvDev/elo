@@ -1,11 +1,16 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import type { CSSProperties } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { OptimizedImage } from "@/components/ui/optimized-image"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+
+/** Teto de altura equivalente ao maior bucket antigo (aspect 3/4): height = width × (4/3). */
+const AUTO_MAX_HEIGHT_CLASS =
+  "max-h-[min(85dvh,calc(min(100vw,100%)*4/3))]"
 
 interface ImageCarouselProps {
   images: string[]
@@ -17,6 +22,8 @@ interface ImageCarouselProps {
   autoPlay?: boolean
   autoPlayInterval?: number
   imageFit?: "cover" | "contain"
+  /** Chamado quando o slide visível muda (Embla `select` / `reInit`). */
+  onSlideIndexChange?: (index: number) => void
 }
 
 export function ImageCarousel({
@@ -28,14 +35,17 @@ export function ImageCarousel({
   showDots = true,
   autoPlay = false,
   autoPlayInterval = 3000,
-  imageFit = "cover"
+  imageFit = "cover",
+  onSlideIndexChange
 }: ImageCarouselProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
-  const [computedAspectClasses, setComputedAspectClasses] = useState<Record<number, string>>({})
+  /** Dimensões naturais por índice (modo auto, sem h-full no pai). */
+  const [intrinsicByIndex, setIntrinsicByIndex] = useState<
+    Record<number, { w: number; h: number } | null>
+  >({})
 
-  // Validar URLs das imagens
   const validImages = images?.filter(img => {
     if (!img || typeof img !== 'string') {
       console.warn('ImageCarousel: Invalid image URL:', img)
@@ -44,25 +54,39 @@ export function ImageCarousel({
     return true
   }) ?? []
 
+  const imageListKey = validImages.join("|")
+
+  useEffect(() => {
+    setIntrinsicByIndex({})
+  }, [imageListKey])
+
+  useEffect(() => {
+    if (validImages.length === 1) {
+      onSlideIndexChange?.(0)
+    }
+  }, [validImages.length, onSlideIndexChange])
+
   useEffect(() => {
     if (!carouselApi) {
       return
     }
 
-    setCurrent(carouselApi.selectedScrollSnap())
-
-    const onSelect = () => {
-      setCurrent(carouselApi.selectedScrollSnap())
+    const emit = () => {
+      const idx = carouselApi.selectedScrollSnap()
+      setCurrent(idx)
+      onSlideIndexChange?.(idx)
     }
 
-    carouselApi.on("select", onSelect)
-    carouselApi.on("reInit", onSelect)
+    emit()
+
+    carouselApi.on("select", emit)
+    carouselApi.on("reInit", emit)
 
     return () => {
-      carouselApi.off("select", onSelect)
-      carouselApi.off("reInit", onSelect)
+      carouselApi.off("select", emit)
+      carouselApi.off("reInit", emit)
     }
-  }, [carouselApi])
+  }, [carouselApi, onSlideIndexChange])
 
   useEffect(() => {
     if (carouselApi && validImages.length > 0) {
@@ -80,15 +104,6 @@ export function ImageCarousel({
     return () => clearInterval(interval)
   }, [autoPlay, validImages.length, autoPlayInterval, isHovered, carouselApi])
 
-  const allowedAspects = useMemo(() => ([
-    { value: 1, className: "aspect-square" },
-    { value: 4 / 3, className: "aspect-[4/3]" },
-    { value: 3 / 4, className: "aspect-[3/4]" },
-    { value: 4 / 5, className: "aspect-[4/5]" },
-  ] as const), [])
-
-  const defaultAspectClass = "aspect-square"
-
   const resolveAspectClass = (index: number): string => {
     if (aspectRatio === "square") {
       return "aspect-square"
@@ -99,7 +114,7 @@ export function ImageCarousel({
     }
 
     if (aspectRatio === "auto") {
-      return computedAspectClasses[index] ?? defaultAspectClass
+      return ""
     }
 
     return "aspect-auto"
@@ -115,50 +130,47 @@ export function ImageCarousel({
       return
     }
 
-    const ratio = naturalWidth / naturalHeight
-    let closest: typeof allowedAspects[number] = allowedAspects[0]
-    let minDiff = Math.abs(ratio - closest.value)
-
-    for (let i = 1; i < allowedAspects.length; i += 1) {
-      const diff = Math.abs(ratio - allowedAspects[i]!.value)
-      if (diff < minDiff) {
-        closest = allowedAspects[i]!
-        minDiff = diff
-      }
-    }
-
-    setComputedAspectClasses(prev => {
-      if (prev[index] === closest.className) {
+    setIntrinsicByIndex((prev) => {
+      const cur = prev[index]
+      if (cur?.w === naturalWidth && cur?.h === naturalHeight) {
         return prev
       }
-
-      return {
-        ...prev,
-        [index]: closest.className,
-      }
+      return { ...prev, [index]: { w: naturalWidth, h: naturalHeight } }
     })
-  }, [allowedAspects, aspectRatio])
+  }, [aspectRatio])
 
   const shouldUseFullHeight = className?.includes('h-full') ?? false
   const shouldUseFullWidth = className?.includes('w-full') ?? false
 
   const renderImage = (image: string, index: number) => {
-    // Quando o aspectRatio é explícito (square/video), sempre aplicar o aspect-ratio
-    // Quando é "auto" ou className contém h-full, deixar o pai controlar a altura
     const hasExplicitAspect = aspectRatio === "square" || aspectRatio === "video"
+    const dims = intrinsicByIndex[index]
+    const useIntrinsicAuto =
+      aspectRatio === "auto" && !shouldUseFullHeight
+
     const aspectClass = hasExplicitAspect
       ? resolveAspectClass(index)
       : shouldUseFullHeight
         ? ""
-        : resolveAspectClass(index)
+        : aspectRatio === "auto"
+          ? ""
+          : resolveAspectClass(index)
+
+    const intrinsicStyle: CSSProperties | undefined =
+      useIntrinsicAuto && dims
+        ? { aspectRatio: `${dims.w} / ${dims.h}` }
+        : undefined
 
     return (
       <div
         className={cn(
           "relative w-full overflow-hidden bg-muted",
           aspectClass,
+          useIntrinsicAuto && AUTO_MAX_HEIGHT_CLASS,
+          useIntrinsicAuto && !dims && "min-h-[200px]",
           !hasExplicitAspect && shouldUseFullHeight && "h-full"
         )}
+        style={intrinsicStyle}
       >
         <OptimizedImage
           src={image}
@@ -205,8 +217,6 @@ export function ImageCarousel({
     <div
       className={cn(
         "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none",
-        // CORREÇÃO: Remover h-full e w-full do className antes de aplicar
-        // Eles serão aplicados internamente conforme necessário
         shouldUseFullHeight && "h-full",
         shouldUseFullWidth && "w-full",
       )}
@@ -230,8 +240,9 @@ export function ImageCarousel({
             <CarouselItem 
               key={`${image}-${index}`} 
               className={cn(
-                "w-full pl-0 basis-full",
-                shouldUseFullHeight && "h-full"
+                "w-full pl-0 basis-full min-h-0",
+                shouldUseFullHeight && "h-full",
+                aspectRatio === "auto" && !shouldUseFullHeight && "flex flex-col justify-end"
               )}
             >
               {renderImage(image, index)}

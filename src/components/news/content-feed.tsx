@@ -2,7 +2,7 @@
 
 import type React from "react"
 import type { RolesConfig } from "@/types/role-config"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -452,6 +452,18 @@ function PostItem({ post }: PostItemProps) {
   const [showCommentDialog, setShowCommentDialog] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const [newComment, setNewComment] = useState("")
+  const [carouselIndex, setCarouselIndex] = useState(0)
+
+  const galleryImageUrls = useMemo(() => {
+    if ((post.images?.length ?? 0) > 0) {
+      return post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
+    }
+    return post.imageUrl ? [post.imageUrl] : []
+  }, [post.images, post.imageUrl])
+
+  useEffect(() => {
+    setCarouselIndex(0)
+  }, [post.id, galleryImageUrls.length])
   const { theme } = useTheme()
   const { data: userMe } = api.user.me.useQuery()
   const postRef = useRef<HTMLDivElement>(null)
@@ -684,25 +696,16 @@ function PostItem({ post }: PostItemProps) {
         {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
           <div className="mt-2">
             <ImageViewer
-              images={
-                (post.images?.length ?? 0) > 0
-                  ? post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
-                  : post.imageUrl
-                    ? [post.imageUrl]
-                    : []
-              }
+              images={galleryImageUrls}
+              initialIndex={carouselIndex}
               alt={post.title}
             >
               <ImageCarousel
-                images={
-                  (post.images?.length ?? 0) > 0
-                    ? post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
-                    : post.imageUrl
-                      ? [post.imageUrl]
-                      : []
-                }
+                images={galleryImageUrls}
+                onSlideIndexChange={setCarouselIndex}
                 alt={post.title}
                 aspectRatio="auto"
+                imageFit="contain"
                 showArrows={true}
                 showDots={true}
               />

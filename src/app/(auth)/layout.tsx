@@ -12,7 +12,7 @@ export default function AuthLayout({
         aria-hidden
       />
       <div className="relative grid min-h-screen place-items-center px-4 py-10 sm:px-6 sm:py-12">
-        <div className="w-full max-w-[420px]">{children}</div>
+        <div className="w-full min-w-0 max-w-md">{children}</div>
       </div>
     </div>
   )

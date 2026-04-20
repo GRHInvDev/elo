@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import type { Field } from "@/lib/form-types"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -21,6 +20,37 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 // Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import type { Field } from "@/lib/form-types"
+
+/** Valores iniciais vazios para nova solicitação (após envio ou fluxo equivalente). */
+function buildEmptyFormValues(fields: Field[]): Record<string, unknown> {
+  const values: Record<string, unknown> = {}
+  for (const field of fields) {
+    switch (field.type) {
+      case "text":
+      case "textarea":
+      case "formatted":
+        values[field.name] = ""
+        break
+      case "number":
+        values[field.name] = undefined
+        break
+      case "checkbox":
+        values[field.name] = false
+        break
+      case "combobox":
+        values[field.name] = field.multiple ? [] : ""
+        break
+      case "file":
+        values[field.name] = undefined
+        break
+      case "dynamic":
+        values[field.name] = ""
+        break
+    }
+  }
+  return values
+}
 
 interface FormResponseComponentProps {
   formId: string
@@ -40,6 +70,8 @@ export function FormResponseComponent({
   isSubmitting: customIsSubmitting
 }: FormResponseComponentProps) {
   const [isSubmitted, setIsSubmitted] = useState(false)
+  /** Incrementado ao limpar o formulário para remontar Select/arquivo (defaultValue não segue reset). */
+  const [formResetKey, setFormResetKey] = useState(0)
   const router = useRouter()
   // Criar um schema Zod dinâmico baseado nos campos
   const schemaObj: Record<string, z.ZodTypeAny> = {}
@@ -110,6 +142,7 @@ export function FormResponseComponent({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,26 +152,31 @@ export function FormResponseComponent({
   // Buscar dados do usuário para preencher campos dinâmicos
   const { data: userData } = api.user.me.useQuery()
 
+  const fillDynamicFields = useCallback(() => {
+    if (!userData) return
+    fields.forEach((field) => {
+      if (field.type === "dynamic") {
+        let value = ""
+        if (field.dynamicType === "user_name") {
+          value = userData.firstName ? `${userData.firstName} ${userData.lastName ?? ""}`.trim() : (userData.email ?? "")
+        } else if (field.dynamicType === "user_sector") {
+          value = userData.setor ?? "Nenhum setor informado"
+        }
+        setValue(field.name, value)
+      }
+    })
+  }, [userData, fields, setValue])
+
   // Preencher campos dinâmicos automaticamente
   useEffect(() => {
-    if (userData) {
-      fields.forEach((field) => {
-        if (field.type === "dynamic") {
-          let value = ""
-          if (field.dynamicType === "user_name") {
-            value = userData.firstName ? `${userData.firstName} ${userData.lastName ?? ""}`.trim() : (userData.email ?? "")
-          } else if (field.dynamicType === "user_sector") {
-            value = userData.setor ?? "Nenhum setor informado"
-          }
-          setValue(field.name, value)
-        }
-      })
-    }
-  }, [userData, fields, setValue])
+    fillDynamicFields()
+  }, [fillDynamicFields])
 
   const submitResponse = api.formResponse.create.useMutation({
     onSuccess: async () => {
-      toast.success("Resposta enviada com sucesso!")
+      toast.success("Solicitação enviada com sucesso!", {
+        description: "Os dados foram registrados e os responsáveis serão notificados.",
+      })
       setIsSubmitted(true)
       // Email agora é enviado no router (form-response.ts), não precisa mais aqui
     },
@@ -191,6 +229,10 @@ export function FormResponseComponent({
           </Button>
           <Button
             onClick={() => {
+              const empty = buildEmptyFormValues(fields) as z.infer<typeof formSchema>
+              reset(empty)
+              fillDynamicFields()
+              setFormResetKey((k) => k + 1)
               setIsSubmitted(false)
               router.refresh()
             }}
@@ -203,7 +245,7 @@ export function FormResponseComponent({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form key={formResetKey} onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {fields.map((field) => (
         <div key={field.id} className="space-y-2">
           <Label htmlFor={field.name} className="font-medium">

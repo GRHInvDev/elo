@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.17.2" as const
+export const APP_CURRENT_VERSION = "1.17.3" as const
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
