@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,15 @@ import {
 } from "lucide-react"
 import { useImageZoom } from "@/hooks/use-image-zoom"
 import Image from "next/image"
+import { cn } from "@/lib/utils"
+
+const TAP_MAX_PX = 12
+const TAP_MAX_MS = 550
+
+function clampIndex(i: number, len: number): number {
+  if (len <= 0) return 0
+  return Math.max(0, Math.min(i, len - 1))
+}
 
 interface ImageViewerProps {
   images: string[]
@@ -31,8 +40,10 @@ export function ImageViewer({
   className
 }: ImageViewerProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [currentIndex, setCurrentIndex] = useState(initialIndex)
+  const [currentIndex, setCurrentIndex] = useState(() => clampIndex(initialIndex, images.length))
   const [isImageLoaded, setIsImageLoaded] = useState(false)
+
+  const pointerStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
   const {
     zoom,
@@ -57,23 +68,74 @@ export function ImageViewer({
   const currentImage = images[currentIndex]
   const hasMultiple = images.length > 1
 
+  useEffect(() => {
+    setCurrentIndex((prev) => clampIndex(prev, images.length))
+  }, [images.length])
+
+  useEffect(() => {
+    if (!currentImage) {
+      setIsImageLoaded(false)
+      return
+    }
+    setIsImageLoaded(false)
+  }, [currentImage, currentIndex])
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open)
+      if (!open) {
+        handleReset()
+        setIsImageLoaded(false)
+        setCurrentIndex(clampIndex(initialIndex, images.length))
+      }
+    },
+    [handleReset, initialIndex, images.length]
+  )
+
+  const handleTriggerPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    pointerStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+  }, [])
+
+  const handleTriggerPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const start = pointerStartRef.current
+      pointerStartRef.current = null
+      if (!start) return
+      if (e.button !== 0) return
+      const dt = Date.now() - start.t
+      const dx = Math.abs(e.clientX - start.x)
+      const dy = Math.abs(e.clientY - start.y)
+      if (dx < TAP_MAX_PX && dy < TAP_MAX_PX && dt < TAP_MAX_MS) {
+        setCurrentIndex(clampIndex(initialIndex, images.length))
+        setIsImageLoaded(false)
+        setIsOpen(true)
+      }
+    },
+    [initialIndex, images.length]
+  )
+
+  const handleTriggerPointerCancel = useCallback(() => {
+    pointerStartRef.current = null
+  }, [])
+
   const handlePrevious = () => {
-    setCurrentIndex(prev => prev > 0 ? prev - 1 : images.length - 1)
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
     handleReset()
   }
 
   const handleNext = () => {
-    setCurrentIndex(prev => prev < images.length - 1 ? prev + 1 : 0)
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
     handleReset()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowLeft' && hasMultiple) handlePrevious()
-    if (e.key === 'ArrowRight' && hasMultiple) handleNext()
-    if (e.key === 'Escape') setIsOpen(false)
-    if (e.key === '+') handleZoomIn()
-    if (e.key === '-') handleZoomOut()
-    if (e.key === '0') handleReset()
+    if (e.key === "ArrowLeft" && hasMultiple) handlePrevious()
+    if (e.key === "ArrowRight" && hasMultiple) handleNext()
+    if (e.key === "Escape") handleOpenChange(false)
+    if (e.key === "+") handleZoomIn()
+    if (e.key === "-") handleZoomOut()
+    if (e.key === "0") handleReset()
   }
 
   const handleDownload = async () => {
@@ -83,7 +145,7 @@ export function ImageViewer({
       const response = await fetch(currentImage)
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = document.createElement("a")
       a.href = url
       a.download = `image-${currentIndex + 1}.jpg`
       document.body.appendChild(a)
@@ -91,129 +153,169 @@ export function ImageViewer({
       document.body.removeChild(a)
       window.URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Erro ao baixar imagem:', error instanceof Error ? error.message : error)
+      console.error("Erro ao baixar imagem:", error instanceof Error ? error.message : error)
     }
   }
 
   return (
     <>
-      {/* Trigger element */}
       <div
-        onClick={() => setIsOpen(true)}
+        onPointerDown={handleTriggerPointerDown}
+        onPointerUp={handleTriggerPointerUp}
+        onPointerCancel={handleTriggerPointerCancel}
         className={className}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: "pointer", touchAction: "manipulation" }}
       >
         {children}
       </div>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="max-w-none w-screen h-screen p-0 bg-black/95 [&>button:last-child]:hidden"
+          hideClose
+          className="max-w-none w-screen h-screen max-h-[100dvh] p-0 bg-black/95 border-0 rounded-none"
           onKeyDown={handleKeyDown}
         >
           <VisuallyHidden>
             <DialogTitle>Visualizador de Imagem - {alt}</DialogTitle>
           </VisuallyHidden>
           <div
-            className="relative w-full h-full flex items-center justify-center overflow-hidden"
-            onClick={() => setIsOpen(false)}
+            className="relative w-full h-full flex items-center justify-center overflow-hidden touch-none"
+            onClick={() => handleOpenChange(false)}
+            role="presentation"
           >
-            {/* Controls overlay */}
-            <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-2">
-                {/* Counter */}
+            <div
+              className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center gap-2 pr-14 sm:pr-4"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 min-w-0">
                 {hasMultiple && (
-                  <div className="bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                  <div className="bg-black/50 text-white px-3 py-1 rounded-full text-sm shrink-0">
                     {currentIndex + 1} / {images.length}
                   </div>
                 )}
-
-                {/* Zoom info */}
-                <div className="bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                <div className="bg-black/50 text-white px-3 py-1 rounded-full text-sm shrink-0">
                   {Math.round(zoom * 100)}%
                 </div>
               </div>
 
-              {/* Close button */}
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/20"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleOpenChange(false)
+                }}
+                className="text-white hover:bg-white/20 shrink-0"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
 
-            {/* Zoom controls */}
-            <div className="absolute top-1/2 right-4 z-20 flex flex-col gap-2 -translate-y-1/2" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="absolute top-1/2 right-3 sm:right-4 z-20 flex flex-col gap-2 -translate-y-1/2 pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
-                onClick={handleZoomIn}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleZoomIn()
+                }}
                 className="text-white hover:bg-white/20"
                 disabled={zoom >= 5}
               >
                 <ZoomIn className="h-5 w-5" />
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
-                onClick={handleZoomOut}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleZoomOut()
+                }}
                 className="text-white hover:bg-white/20"
                 disabled={zoom <= 0.5}
               >
                 <ZoomOut className="h-5 w-5" />
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
-                onClick={handleReset}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleReset()
+                }}
                 className="text-white hover:bg-white/20"
               >
                 <RotateCcw className="h-5 w-5" />
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
-                onClick={handleDownload}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handleDownload()
+                }}
                 className="text-white hover:bg-white/20"
               >
                 <Download className="h-5 w-5" />
               </Button>
             </div>
 
-            {/* Navigation arrows */}
             {hasMultiple && (
               <>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={handlePrevious}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-30"
-                  onClickCapture={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handlePrevious()
+                  }}
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-11 w-11 sm:h-12 sm:w-12 z-40"
                 >
-                  <div className="text-2xl">‹</div>
+                  <span className="text-2xl leading-none" aria-hidden>
+                    ‹
+                  </span>
                 </Button>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={handleNext}
-                  className="absolute right-20 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-30"
-                  onClickCapture={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleNext()
+                  }}
+                  className="absolute right-[3.25rem] sm:right-20 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-11 w-11 sm:h-12 sm:w-12 z-40"
                 >
-                  <div className="text-2xl">›</div>
+                  <span className="text-2xl leading-none" aria-hidden>
+                    ›
+                  </span>
                 </Button>
               </>
             )}
 
-            {/* Image container */}
             <div
               ref={containerRef}
-              className="relative w-full h-full overflow-hidden cursor-move"
-              style={{
-                cursor: isZoomed ? (isDragging ? 'grabbing' : 'grab') : 'default'
-              }}
+              className={cn(
+                "relative w-full h-full overflow-hidden select-none touch-none",
+                isZoomed ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
+              )}
               onWheel={handleWheel}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -225,48 +327,50 @@ export function ImageViewer({
               onDoubleClick={handleDoubleClick}
               onClick={(e) => e.stopPropagation()}
             >
-              {currentImage && !isImageLoaded && (
-                <Image
-                  src={currentImage}
-                  alt=""
-                  fill
-                  className="object-contain blur-md scale-105 opacity-70 transition-opacity duration-300"
-                  draggable={false}
-                  priority
-                />
-              )}
               {currentImage && (
-                <Image
-                  ref={imageRef}
-                  src={currentImage}
-                  alt={alt}
-                  fill
-                  className="object-contain transition-transform duration-200 ease-out select-none"
-                  style={{
-                    transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-                    transformOrigin: 'center center'
-                  }}
-                  draggable={false}
-                  priority
-                  onLoad={() => setIsImageLoaded(true)}
-                />
-              )}
-              {!isImageLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-white/80">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span className="text-sm">Carregando imagem...</span>
-                  </div>
-                </div>
+                <>
+                  <Image
+                    ref={imageRef}
+                    src={currentImage}
+                    alt={alt}
+                    fill
+                    sizes="100vw"
+                    className={cn(
+                      "object-contain transition-transform duration-200 ease-out",
+                      !isImageLoaded && "opacity-0"
+                    )}
+                    style={{
+                      transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+                      transformOrigin: "center center"
+                    }}
+                    draggable={false}
+                    onLoad={() => setIsImageLoaded(true)}
+                  />
+                  {!isImageLoaded && (
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 pointer-events-none"
+                      aria-hidden
+                    >
+                      <Loader2 className="h-8 w-8 animate-spin text-white/80" />
+                      <span className="text-sm text-white/70">Carregando…</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
-            {/* Instructions */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm text-center" onClick={(e) => e.stopPropagation()}>
-              <p>
-                Use a roda do mouse ou pinça para zoom • Clique e arraste para mover •
-                Duplo clique para resetar • Teclas + - 0 para zoom
-                {hasMultiple && ' • Setas para navegar'}
+            <div
+              className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 text-white/70 text-center px-3 max-w-[min(100%,28rem)] z-20"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-xs sm:text-sm leading-snug hidden sm:block">
+                Roda do mouse ou pinça para zoom • Arraste para mover • Duplo clique para resetar • + - 0
+                {hasMultiple && " • Setas para navegar"}
+              </p>
+              <p className="text-xs sm:hidden sr-only">
+                Pinça ou botões para zoom. Duplo clique reseta.
+                {hasMultiple ? " Setas ou botões laterais para trocar imagem." : ""}
               </p>
             </div>
           </div>

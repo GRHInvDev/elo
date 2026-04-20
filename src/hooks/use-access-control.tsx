@@ -60,9 +60,9 @@ export function useAccessControl() {
   };
 
   const canAccessChat = (): boolean => {
-    // SISTEMA SIMPLIFICADO: Todos podem acessar o chat, exceto TOTEMs
+    // Assistente de IA: disponível para qualquer usuário autenticado com role_config (inclui TOTEM).
     if (!db_user?.role_config) return false;
-    return !db_user.role_config.isTotem;
+    return true;
   };
 
   const canViewFlyers = (): boolean => {

@@ -9,40 +9,16 @@ import { type CoreMessage, type LanguageModelV1, streamText } from "ai"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { routeItems } from "@/const/routes"
+import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
+import { db } from "@/server/db"
 import {
   getAssistantChatModel,
   getAssistantModelUnavailableReason,
 } from "@/server/ai/azure-assistant-model"
 import {
-  createBooking,
-  deleteBooking,
-  listBookingByDate,
-  listNowAvailableRooms,
-  listRooms,
-  listUserBooking,
-} from "./_tools/rooms"
-import {
-  getUserRentedVehicle,
-  listAvailableVehiclesNow,
-  listCars,
-  rentVehicle,
-} from "./_tools/cars"
-import {
-  getMyLunchOrderForDate,
-  listLunchMenuItems,
-  listLunchRestaurants,
-  submitLunchOrder,
-} from "./_tools/food-order"
-import {
-  createIdea,
-  getMenuCafeteria,
-  getMySchedule,
-  listFormsForHelp,
-  notifyColleague,
-  registerSolicitation,
-  searchColleague,
-} from "./_tools/intranet"
-import { createMyIdea, getMyIdeaByNumber, listMyIdeas } from "./_tools/ideas"
+  getAssistantTotemSystemAppend,
+  getAssistantToolSetForRole,
+} from "./_assistant-tool-set"
 
 export const maxDuration = 30
 
@@ -61,6 +37,14 @@ export async function POST(req: Request) {
     return new Response("Campo messages deve ser um array.", { status: 400 })
   }
   const messages = candidate as CoreMessage[]
+
+  const dbUser = await db.user.findUnique({
+    where: { id: userId },
+    select: { is_active: true, role_config: true, novidades: true },
+  })
+  const effectiveRole = getEffectiveRoleConfig(dbUser)
+  const assistantTools = getAssistantToolSetForRole(effectiveRole)
+  const totemSystemAppend = effectiveRole.isTotem === true ? getAssistantTotemSystemAppend() : ""
 
   const model: LanguageModelV1 | null = getAssistantChatModel()
   if (!model) {
@@ -329,39 +313,16 @@ Você possui ferramentas reais integradas ao sistema — use-as sempre que neces
 ## 🏢 CONTEXTO ATUAL
 
 - **Data e Hora:** Hoje é **${format(new Date(), "PPPPpppp", { locale: ptBR })}**.
-- **Plataforma — Páginas disponíveis:** ${JSON.stringify(routeItems())}
+- **Plataforma — Páginas disponíveis:** ${JSON.stringify(routeItems(effectiveRole, false, dbUser?.novidades === true))}
+
+${totemSystemAppend}
 
 ---
 
 Seja sempre claro, eficiente e seguro. Em caso de dúvida sobre a intenção do usuário, pergunte antes de agir.
     `,
     messages,
-    tools: {
-      listCars,
-      listAvailableVehiclesNow,
-      getUserRentedVehicle,
-      rentVehicle,
-      listRooms,
-      listNowAvailableRooms,
-      createBooking,
-      listUserBooking,
-      deleteBooking,
-      listBookingByDate,
-      getMySchedule,
-      searchColleague,
-      listFormsForHelp,
-      registerSolicitation,
-      createIdea,
-      getMenuCafeteria,
-      notifyColleague,
-      listLunchRestaurants,
-      listLunchMenuItems,
-      getMyLunchOrderForDate,
-      submitLunchOrder,
-      listMyIdeas,
-      getMyIdeaByNumber,
-      createMyIdea,
-    },
+    tools: assistantTools,
   })
 
   return result.toDataStreamResponse()

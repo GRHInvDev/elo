@@ -1,7 +1,7 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -22,18 +22,14 @@ import type { Message, ToolInvocation } from "ai"
 import { api } from "@/trpc/react"
 import { cn } from "@/lib/utils"
 import { ASSISTANT_CHAT_MARKDOWN_COMPONENTS } from "@/components/ai/assistant-chat-markdown"
+import type { RolesConfig } from "@/types/role-config"
+import {
+  getQuickPromptCandidates,
+  hashSeed,
+  pickQuickPromptsForSession,
+} from "@/lib/assistant-quick-prompts"
 
 const STORED_MESSAGE_CAP = 30
-
-/** Atalhos enviados como mensagem do usuário para o assistente. */
-const ASSISTANT_QUICK_PROMPTS: ReadonlyArray<{ label: string; prompt: string }> = [
-  { label: "Salas agora", prompt: "Quais salas estão disponíveis para agora?" },
-  { label: "Almoço hoje", prompt: "Eu já pedi o almoço?" },
-  {
-    label: "Carros livres",
-    prompt: "Qual carro está a disposição para uso agora?",
-  },
-]
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   listCars: "Listar veículos da frota",
@@ -122,10 +118,26 @@ export default function ChatInterface() {
   const lastSerializedRef = useRef<string | null>(null)
 
   const utils = api.useUtils()
-  const { data: storedMessages, isSuccess } = api.aiAssistant.getSession.useQuery(undefined, {
+  const { data: me } = api.user.me.useQuery(undefined, { staleTime: 60_000 })
+  const roleConfig = me?.role_config as RolesConfig | null | undefined
+
+  const { data: storedMessages, isSuccess, isError } = api.aiAssistant.getSession.useQuery(undefined, {
     staleTime: 60_000,
+    retry: 1,
   })
+  const sessionReady = isSuccess || isError
   const saveSession = api.aiAssistant.saveSession.useMutation()
+
+  const [quickPromptRound, setQuickPromptRound] = useState(0)
+  const quickPromptSeed = useMemo(
+    () => hashSeed([me?.id ?? "guest", String(quickPromptRound)]),
+    [me?.id, quickPromptRound],
+  )
+  const visibleQuickPrompts = useMemo(
+    () =>
+      pickQuickPromptsForSession(getQuickPromptCandidates(roleConfig ?? null), quickPromptSeed),
+    [roleConfig, quickPromptSeed],
+  )
 
   const {
     messages,
@@ -149,7 +161,7 @@ export default function ChatInterface() {
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    if (!isSuccess || hydratedRef.current) {
+    if (!sessionReady || hydratedRef.current) {
       return
     }
     hydratedRef.current = true
@@ -176,10 +188,10 @@ export default function ChatInterface() {
       setMessages(snapshot)
     }
     persistReadyRef.current = true
-  }, [isSuccess, storedMessages, setMessages])
+  }, [sessionReady, storedMessages, setMessages])
 
   useEffect(() => {
-    if (!persistReadyRef.current || !isSuccess) {
+    if (!persistReadyRef.current || !sessionReady) {
       return
     }
     const trimmed = messages.slice(-STORED_MESSAGE_CAP) as unknown[]
@@ -192,7 +204,7 @@ export default function ChatInterface() {
       saveSession.mutate({ messages: trimmed })
     }, 900)
     return () => window.clearTimeout(handle)
-  }, [messages, isSuccess, saveSession])
+  }, [messages, sessionReady, saveSession])
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -208,6 +220,7 @@ export default function ChatInterface() {
     stop()
     setMessages([])
     setInput("")
+    setQuickPromptRound((n) => n + 1)
     const empty: unknown[] = []
     lastSerializedRef.current = JSON.stringify(empty)
     saveSession.mutate(
@@ -224,7 +237,7 @@ export default function ChatInterface() {
     return null
   }
 
-  if (!isSuccess) {
+  if (!sessionReady) {
     return (
       <div className="flex flex-1 min-h-[200px] items-center justify-center p-6 text-muted-foreground text-sm">
         Carregando conversa…
@@ -368,9 +381,9 @@ export default function ChatInterface() {
       <div className="shrink-0 border-t bg-background/95 px-4 pt-3 pb-4 space-y-3">
         {showQuickPrompts ? (
           <div className="flex flex-col gap-2">
-            {ASSISTANT_QUICK_PROMPTS.map(({ label, prompt }) => (
+            {visibleQuickPrompts.map(({ id, label, prompt }) => (
               <Button
-                key={prompt}
+                key={id}
                 type="button"
                 variant="secondary"
                 size="sm"

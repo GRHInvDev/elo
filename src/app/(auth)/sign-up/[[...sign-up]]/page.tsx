@@ -7,7 +7,7 @@ export default function SignUpPage() {
     <Card>
       <div className="flex flex-col space-y-2 p-4 md:p-6">
         <h1 className="text-2xl font-semibold tracking-tight">Criar conta</h1>
-        <p className="text-sm text-muted-foreground">Preencha os dados abaixo para criar sua conta na elo</p>
+        <p className="text-sm text-muted-foreground">Preencha os dados abaixo para criar sua conta no Elo</p>
       </div>
       <div className="p-4 md:p-6 pt-0 flex flex-col items-center">
         <SignUp
