@@ -35,6 +35,7 @@ import { qualityAccessRouter } from "./routers/quality-access";
 import { emotionRulerRouter } from "./routers/emotion-ruler";
 import { newUsersHallRouter } from "./routers/new-users-hall";
 import { aiAssistantRouter } from "./routers/ai-assistant";
+import { filiaisRouter } from "./routers/filiais";
 
 /**
  * This is the primary router for your server.
@@ -77,6 +78,7 @@ export const appRouter = createTRPCRouter({
   emotionRuler: emotionRulerRouter,
   newUsersHall: newUsersHallRouter,
   aiAssistant: aiAssistantRouter,
+  filiais: filiaisRouter,
 });
 
 // export type definition of API

@@ -78,6 +78,7 @@ export const userRouter = createTRPCRouter({
         can_manage_extensions: false,
         can_create_solicitacoes: false,
         can_manage_quality_management: false,
+        can_manage_filial: false,
         isTotem: true // Modo seguro - assumir que é Totem
       };
 
@@ -554,6 +555,7 @@ export const userRouter = createTRPCRouter({
         can_manage_produtos: z.boolean().optional(),
         can_manage_quality_management: z.boolean().optional(),
         can_manage_new_users_hall: z.boolean().optional(),
+        can_manage_filial: z.boolean().optional(),
         can_view_answer_without_admin_access: z.boolean().optional(),
         can_view_add_manual_ped: z.boolean().optional(),
         can_view_dados_privados: z.boolean().optional(),
@@ -979,5 +981,59 @@ export const userRouter = createTRPCRouter({
       },
     })
   }),
+
+  // Listar todos os usuários com filial
+  listAllUsers: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        filialId: true,
+        setor: true,
+        enterprise: true,
+      },
+      orderBy: { firstName: "asc" },
+    })
+  }),
+
+  // Atualizar filial do usuário
+  updateUserFilial: protectedProcedure
+    .input(z.object({
+      userId: z.string(),
+      filialId: z.string().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verificar permissão do usuário atual
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+
+      const roleConfig = currentUser?.role_config as RolesConfig | null
+
+      // Só sudo pode atualizar filiais
+      if (!roleConfig?.sudo) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para alterar filial de usuários",
+        })
+      }
+
+      return ctx.db.user.update({
+        where: { id: input.userId },
+        data: {
+          filialId: input.filialId,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          filialId: true,
+        },
+      })
+    }),
 })
 

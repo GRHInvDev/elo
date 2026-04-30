@@ -55,6 +55,7 @@ export default async function EditFormPage({ params }: EditFormPageProps) {
         initialAllowedUsers={form.allowedUsers ?? []}
         initialAllowedSectors={form.allowedSectors ?? []}
         initialOwnerIds={form.ownerIds ?? [] as string[]}
+        initialSpreadsheetExportEnabled={form.spreadsheetExportEnabled ?? false}
       />
     </DashboardShell>
   )

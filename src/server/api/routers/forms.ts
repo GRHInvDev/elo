@@ -19,6 +19,7 @@ export const formsRouter = createTRPCRouter({
             allowedUsers: z.array(z.string()).default([]),
             allowedSectors: z.array(z.string()).default([]),
             ownerIds: z.array(z.string()).default([]),
+            spreadsheetExportEnabled: z.boolean().default(false),
         }))
         .mutation(async ({ ctx, input }) => {
             const form = await ctx.db.form.create({
@@ -31,6 +32,7 @@ export const formsRouter = createTRPCRouter({
                     allowedUsers: input.allowedUsers,
                     allowedSectors: input.allowedSectors,
                     ownerIds: input.ownerIds,
+                    spreadsheetExportEnabled: input.spreadsheetExportEnabled,
                 }
             });
 
@@ -110,6 +112,7 @@ export const formsRouter = createTRPCRouter({
             allowedUsers: z.array(z.string()).optional(),
             allowedSectors: z.array(z.string()).optional(),
             ownerIds: z.array(z.string()).optional(),
+            spreadsheetExportEnabled: z.boolean().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             // Buscar o formulário existente para verificar permissões
@@ -176,6 +179,9 @@ export const formsRouter = createTRPCRouter({
                     ...(input.allowedUsers !== undefined ? { allowedUsers: input.allowedUsers } : {}),
                     ...(input.allowedSectors !== undefined ? { allowedSectors: input.allowedSectors } : {}),
                     ...(input.ownerIds !== undefined ? { ownerIds: input.ownerIds } : {}),
+                    ...(input.spreadsheetExportEnabled !== undefined
+                        ? { spreadsheetExportEnabled: input.spreadsheetExportEnabled }
+                        : {}),
                 },
                 where: {
                     id: input.id

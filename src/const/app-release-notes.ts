@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.17.3" as const
+export const APP_CURRENT_VERSION = "1.18.0" as const
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -19,6 +19,13 @@ export interface AppReleaseNote {
  * Incluir somente releases **major** ou **minor** com entrega visível ao usuário.
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
+  {
+    version: "1.18.0",
+    date: "Abril de 2026",
+    items: [
+      "**Gerenciamento de filiais**: nova página de administração para criar, editar e deletar filiais da empresa. Atribua usuários a filiais com facilidade e visualize os colaboradores por unidade.",
+    ],
+  },
   {
     version: "1.17.0",
     date: "Abril de 2026",

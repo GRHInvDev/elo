@@ -11,6 +11,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
@@ -98,6 +106,7 @@ export default function UsersManagementPage() {
   })
 
   const { data: allForms } = api.form.list.useQuery()
+  const { data: filiais = [] } = api.filiais.list.useQuery()
 
   const users = usersData?.users ?? []
   const total = usersData?.total ?? 0
@@ -288,6 +297,7 @@ export default function UsersManagementPage() {
                         role_config: user.role_config as RolesConfig
                       }}
                       allForms={allForms ?? []}
+                      filiais={filiais}
                       onUserUpdate={() => refetch()}
                     />
                   ))}
@@ -347,6 +357,7 @@ interface UserManagementCardProps {
     matricula: string | null
     email_empresarial?: string | null
     enterprise?: Enterprise | null
+    filialId?: string | null
     lojinha_full_name?: string | null
     lojinha_cpf?: string | null
     lojinha_address?: string | null
@@ -357,6 +368,7 @@ interface UserManagementCardProps {
     lojinha_phone?: string | null
   }
   allForms: { id: string; title: string }[]
+  filiais?: { id: string; name: string; code: string }[]
   onUserUpdate: () => void
 }
 
@@ -421,6 +433,8 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     enterprise: user.enterprise ?? "NA",
     is_active: (user as { is_active?: boolean }).is_active ?? true,
   })
+  const [isEditingFilial, setIsEditingFilial] = useState(false)
+  const [selectedUserFilial, setSelectedUserFilial] = useState<string>(user.filialId ?? "")
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(() =>
     extendedRoleConfigFromServer(user.role_config),
   )
@@ -590,6 +604,25 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
     },
   })
 
+  const updateUserFilial = api.user.updateUserFilial.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: "Filial atualizada",
+        description: "A filial do usuário foi atualizada com sucesso.",
+      })
+      setIsEditingFilial(false)
+      await utils.user.listUsers.invalidate()
+      onUserUpdate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
   const handleSaveDadosPrivados = () => {
     updateDadosPrivados.mutate({
       userId: user.id,
@@ -734,6 +767,13 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         })
       }
     }
+  }
+
+  const handleSaveUserFilial = () => {
+    updateUserFilial.mutate({
+      userId: user.id,
+      filialId: selectedUserFilial || null,
+    })
   }
 
   return (
@@ -1005,15 +1045,25 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                   <p className="text-sm font-medium">{user.email_empresarial ?? 'Não informado'}</p>
                 </div>
                 <div>
+                  <Label className="text-xs text-muted-foreground">Filial</Label>
+                  <p className="text-sm font-medium">
+                    {filiais?.find(f => f.id === user.filialId)?.name ?? 'Sem filial'}
+                  </p>
+                </div>
+                <div>
                   <Label className="text-xs text-muted-foreground">Status na empresa</Label>
                   <p className="text-sm font-medium">
                     {(user as { is_active?: boolean }).is_active !== false ? 'Ativo' : 'Desativado'}
                   </p>
                 </div>
-                <div className="md:col-span-2 pt-2">
+                <div className="md:col-span-2 pt-4 space-y-2">
                   <Button onClick={() => setIsEditing(true)} size="sm" variant="outline">
                     <Edit3 className="h-4 w-4 mr-2" />
                     Editar Dados
+                  </Button>
+                  <Button onClick={() => setIsEditingFilial(true)} size="sm" variant="outline">
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Alterar Filial
                   </Button>
                 </div>
               </div>
@@ -1827,6 +1877,60 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             </TabsContent>
           )}
         </Tabs>
+
+        {/* Dialog: Editar Filial */}
+        <Dialog open={isEditingFilial} onOpenChange={setIsEditingFilial}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Alterar Filial do Usuário</DialogTitle>
+              <DialogDescription>
+                {user.firstName} {user.lastName}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="filial-select">Filial</Label>
+                <Select value={selectedUserFilial} onValueChange={setSelectedUserFilial}>
+                  <SelectTrigger id="filial-select">
+                    <SelectValue placeholder="Selecione uma filial" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sem filial</SelectItem>
+                    {filiais?.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name} ({f.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditingFilial(false)
+                  setSelectedUserFilial(user.filialId ?? "")
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveUserFilial}
+                disabled={updateUserFilial.isPending}
+              >
+                {updateUserFilial.isPending ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   )

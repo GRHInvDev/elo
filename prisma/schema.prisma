@@ -18,6 +18,8 @@ model User {
   updatedAt           DateTime           @updatedAt
   enterprise          Enterprise         @default(NA)
   setor               String?            @db.VarChar
+  filialId            String?
+  filial              Filial?            @relation(fields: [filialId], references: [id], onDelete: SetNull)
   comments            Coment[]
   reactions           Reaction[]
   birthDay            Birthday?
@@ -422,6 +424,8 @@ model Form {
   allowedUsers   String[]       @default([])
   allowedSectors String[]       @default([])
   ownerIds       String[]       @default([])
+  /// Quando true, responsáveis podem exportar respostas em planilha (CSV) na tela de respostas.
+  spreadsheetExportEnabled Boolean @default(false)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -586,6 +590,17 @@ model OrderLog {
 
   @@unique([userId, month, year])
   @@map("order_logs")
+}
+
+model Filial {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique @db.VarChar(50) // Ex: "SCS", "RJ-SP"
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("filiais")
 }
 
 enum Enterprise {

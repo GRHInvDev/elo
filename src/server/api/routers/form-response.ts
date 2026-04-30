@@ -7,6 +7,14 @@ import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario, mockEmailTagFormulario } from "@/lib/mail/html-mock"
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
+import type { Field } from "@/lib/form-types"
+import {
+  buildCsvFromRows,
+  formatSpreadsheetCell,
+  sanitizeExportFilename,
+} from "@/lib/form-csv-export"
+
+const MAX_SPREADSHEET_EXPORT_ROWS = 8_000
 
 /**
  * Gera o próximo número sequencial para um novo chamado
@@ -462,6 +470,134 @@ export const formResponseRouter = createTRPCRouter({
       ])
 
       return { items, totalCount }
+    }),
+
+  /**
+   * Exporta respostas em CSV (UTF-8 com BOM). Só responsáveis do formulário;
+   * o formulário precisa ter `spreadsheetExportEnabled`.
+   */
+  exportSpreadsheetCsv: protectedProcedure
+    .input(
+      z.object({
+        formId: z.string(),
+        fieldIds: z.array(z.string()).min(1, "Selecione ao menos um campo do formulário"),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
+
+      const form = await ctx.db.form.findUnique({
+        where: { id: input.formId },
+        select: {
+          userId: true,
+          ownerIds: true,
+          title: true,
+          fields: true,
+          spreadsheetExportEnabled: true,
+        },
+      })
+
+      if (!form) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Formulário não encontrado",
+        })
+      }
+
+      if (!form.spreadsheetExportEnabled) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "A exportação em planilha não está habilitada para este formulário",
+        })
+      }
+
+      const isOwner = form.userId === currentUserId || form.ownerIds.includes(currentUserId)
+      if (!isOwner) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas responsáveis pelo formulário podem exportar as respostas",
+        })
+      }
+
+      const fields = form.fields as unknown as Field[]
+      const selectedFields = input.fieldIds
+        .map((id) => fields.find((f) => f.id === id))
+        .filter((f): f is Field => Boolean(f))
+
+      if (selectedFields.length !== input.fieldIds.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Um ou mais campos selecionados não pertencem a este formulário",
+        })
+      }
+
+      const where: Prisma.FormResponseWhereInput = {
+        formId: input.formId,
+      }
+
+      if (input.startDate ?? input.endDate) {
+        where.createdAt = {}
+        if (input.startDate) {
+          where.createdAt.gte = input.startDate
+        }
+        if (input.endDate) {
+          const endDate = new Date(input.endDate)
+          endDate.setHours(23, 59, 59, 999)
+          where.createdAt.lte = endDate
+        }
+      }
+
+      const rows = await ctx.db.formResponse.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              setor: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: MAX_SPREADSHEET_EXPORT_ROWS,
+      })
+
+      const staticHeaders = ["Número", "Data envio", "Status", "Respondente", "E-mail", "Setor"] as const
+      const fieldHeaders = selectedFields.map((f) => f.label.replace(/\r?\n/g, " "))
+      const headers = [...staticHeaders, ...fieldHeaders]
+
+      const statusPt: Record<string, string> = {
+        NOT_STARTED: "Não iniciado",
+        IN_PROGRESS: "Em andamento",
+        COMPLETED: "Concluído",
+      }
+
+      const bodyRows: string[][] = rows.map((r) => {
+        const data = (r.responses[0] as Record<string, unknown> | undefined) ?? {}
+        const displayName = [r.user.firstName, r.user.lastName].filter(Boolean).join(" ").trim() || r.user.email
+        const staticCells = [
+          r.number != null ? String(r.number) : "",
+          r.createdAt.toISOString(),
+          statusPt[r.status] ?? r.status,
+          displayName,
+          r.user.email,
+          r.user.setor ?? "",
+        ]
+        const fieldCells = selectedFields.map((f) => formatSpreadsheetCell(data[f.name]))
+        return [...staticCells, ...fieldCells]
+      })
+
+      const csv = buildCsvFromRows(headers, bodyRows)
+
+      return {
+        csv,
+        filename: sanitizeExportFilename(`${form.title ?? "formulario"}-export`),
+        truncated: rows.length >= MAX_SPREADSHEET_EXPORT_ROWS,
+        rowCount: rows.length,
+      }
     }),
 
   listKanBan: protectedProcedure
