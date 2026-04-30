@@ -163,7 +163,7 @@ export function ChatRoom({ roomId = "global", className }: ChatRoomProps) {
   // Carregar mensagens iniciais
   useEffect(() => {
     if (recentMessages) {
-      setMessages(recentMessages as unknown as Message[])
+      setMessages(recentMessages)
       setHasMoreMessages(recentMessages.length === 20) // Se recebeu 20 mensagens, provavelmente há mais
     }
   }, [recentMessages])

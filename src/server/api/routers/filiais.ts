@@ -56,6 +56,8 @@ export const filiaisRouter = createTRPCRouter({
               email: true,
               firstName: true,
               lastName: true,
+              enterprise: true,
+              filialId: true,
             },
           },
         },
@@ -77,7 +79,7 @@ export const filiaisRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // Buscar role_config do usuário
       const user = await ctx.db.user.findUnique({
-        where: { id: ctx.auth.userId! },
+        where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 
@@ -112,7 +114,7 @@ export const filiaisRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // Buscar role_config do usuário
       const user = await ctx.db.user.findUnique({
-        where: { id: ctx.auth.userId! },
+        where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 
@@ -153,7 +155,7 @@ export const filiaisRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // Buscar role_config do usuário
       const user = await ctx.db.user.findUnique({
-        where: { id: ctx.auth.userId! },
+        where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 

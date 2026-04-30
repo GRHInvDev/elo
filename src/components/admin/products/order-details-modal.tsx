@@ -244,9 +244,9 @@ export function OrderDetailsModal({ order, open, onOpenChange }: OrderDetailsMod
                     <span className="text-sm text-muted-foreground">Confirmado em:</span>
                     <span className="text-sm font-medium">
                       {format(
-                        order.orderTimestamp instanceof Date 
-                          ? order.orderTimestamp 
-                          : new Date(order.orderTimestamp as string | number),
+                        order.orderTimestamp instanceof Date
+                          ? order.orderTimestamp
+                          : new Date(order.orderTimestamp),
                         "dd/MM/yyyy 'às' HH:mm", 
                         { locale: ptBR }
                       )}

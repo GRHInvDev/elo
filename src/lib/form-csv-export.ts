@@ -5,7 +5,11 @@ export function formatSpreadsheetCell(value: unknown): string {
   if (typeof value === "number") return Number.isFinite(value) ? String(value) : ""
   if (Array.isArray(value)) return value.map((v) => formatSpreadsheetCell(v)).join("; ")
   if (typeof value === "object") return JSON.stringify(value)
-  return String(value).replace(/\r\n/g, "\n")
+  if (typeof value === "bigint") return value.toString()
+  if (typeof value === "symbol") return value.description ?? ""
+  if (typeof value === "string") return value.replace(/\r\n/g, "\n")
+  if (typeof value === "function") return "[Function]"
+  return ""
 }
 
 export function escapeCsvCell(cell: string): string {

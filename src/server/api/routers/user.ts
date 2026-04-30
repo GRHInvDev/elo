@@ -23,6 +23,7 @@ export const userRouter = createTRPCRouter({
           enterprise: true,
           setor: true,
           matricula: true,
+          filialId: true,
           birthDay: true,
           extension: true,
           emailExtension: true,
@@ -36,7 +37,7 @@ export const userRouter = createTRPCRouter({
           lojinha_rg: true,
           lojinha_email: true,
           lojinha_phone: true,
-        } as Prisma.UserSelect,
+        },
       });
 
       // Role efetivo: se usuário desativado (is_active === false), mascarar como TOTEM
@@ -92,6 +93,7 @@ export const userRouter = createTRPCRouter({
         enterprise: null,
         setor: null,
         matricula: null,
+        filialId: null,
         birthDay: null,
         novidades: false,
         lojinha_full_name: null,
@@ -196,6 +198,7 @@ export const userRouter = createTRPCRouter({
       matricula: z.string().min(1, "Matrícula é obrigatória"),
       enterprise: z.string().min(1, "Empresa é obrigatória"),
       setor: z.string().min(1, "Setor é obrigatório"),
+      filialId: z.string().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.auth.userId;
@@ -211,12 +214,14 @@ export const userRouter = createTRPCRouter({
             matricula: input.matricula.trim(),
             enterprise: input.enterprise as Enterprise,
             setor: input.setor,
+            filialId: input.filialId,
           },
           select: {
             id: true,
             matricula: true,
             enterprise: true,
             setor: true,
+            filialId: true,
           },
         });
       } catch (error) {
@@ -247,6 +252,7 @@ export const userRouter = createTRPCRouter({
             matricula: input.matricula.trim(),
             enterprise: input.enterprise as Enterprise,
             setor: input.setor,
+            filialId: input.filialId,
             role_config: devDefaultRoleConfig,
           },
           select: {
@@ -254,6 +260,7 @@ export const userRouter = createTRPCRouter({
             matricula: true,
             enterprise: true,
             setor: true,
+            filialId: true,
           },
         });
       }
@@ -286,7 +293,7 @@ export const userRouter = createTRPCRouter({
           lojinha_rg: input.lojinha_rg.trim(),
           lojinha_email: input.lojinha_email.trim(),
           lojinha_phone: input.lojinha_phone.replace(/\D/g, ""),
-        } as Prisma.UserUpdateInput,
+        },
         select: {
           id: true,
           lojinha_full_name: true,
@@ -297,7 +304,7 @@ export const userRouter = createTRPCRouter({
           lojinha_rg: true,
           lojinha_email: true,
           lojinha_phone: true,
-        } as Prisma.UserSelect,
+        },
       });
     }),
 
@@ -404,7 +411,7 @@ export const userRouter = createTRPCRouter({
           lojinha_rg: true,
           lojinha_email: true,
           lojinha_phone: true,
-        } as Prisma.UserSelect,
+        },
         orderBy: {
           firstName: 'asc',
         },
@@ -686,7 +693,7 @@ export const userRouter = createTRPCRouter({
       if (data.lojinha_phone !== undefined) updateData.lojinha_phone = data.lojinha_phone ? data.lojinha_phone.replace(/\D/g, "") : null;
       return ctx.db.user.update({
         where: { id: userId },
-        data: updateData as Prisma.UserUpdateInput,
+        data: updateData,
       });
     }),
 
@@ -1002,7 +1009,8 @@ export const userRouter = createTRPCRouter({
   updateUserFilial: protectedProcedure
     .input(z.object({
       userId: z.string(),
-      filialId: z.string().nullable(),
+      filialId: z.string().nullable().optional(),
+      enterprise: z.nativeEnum(Enterprise).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verificar permissão do usuário atual
@@ -1013,24 +1021,58 @@ export const userRouter = createTRPCRouter({
 
       const roleConfig = currentUser?.role_config as RolesConfig | null
 
-      // Só sudo pode atualizar filiais
-      if (!roleConfig?.sudo) {
+      // Só sudo ou quem tem permissão específica pode atualizar filiais
+      if (!roleConfig?.sudo && roleConfig?.can_manage_filial !== true) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para alterar filial de usuários",
         })
       }
 
+      const targetUser = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: {
+          enterprise: true,
+          filialId: true,
+        },
+      })
+
+      if (!targetUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado",
+        })
+      }
+
+      const nextEnterprise = input.enterprise ?? targetUser.enterprise
+      const requiresFilial =
+        nextEnterprise === Enterprise.Box_Filial ||
+        nextEnterprise === Enterprise.Cristallux_Filial
+
+      let nextFilialId =
+        input.filialId === undefined ? (targetUser.filialId ?? null) : input.filialId
+
+      if (!requiresFilial) {
+        nextFilialId = null
+      } else if (!nextFilialId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Filial é obrigatória para empresas do tipo Filial",
+        })
+      }
+
       return ctx.db.user.update({
         where: { id: input.userId },
         data: {
-          filialId: input.filialId,
+          enterprise: input.enterprise,
+          filialId: nextFilialId,
         },
         select: {
           id: true,
           email: true,
           firstName: true,
           lastName: true,
+          enterprise: true,
           filialId: true,
         },
       })

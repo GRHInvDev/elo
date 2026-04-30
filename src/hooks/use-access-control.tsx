@@ -27,7 +27,8 @@ export function useAccessControl() {
       db_user.role_config.can_manage_produtos === true,
       db_user.role_config.can_manage_quality_management === true,
       db_user.role_config.can_manage_emotion_rules === true,
-      db_user.role_config.can_manage_new_users_hall === true
+      db_user.role_config.can_manage_new_users_hall === true,
+      db_user.role_config.can_manage_filial === true
     );
   };
 

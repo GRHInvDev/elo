@@ -1,7 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { z } from "zod"
-import type { InputJsonValue } from "@prisma/client/runtime/library"
-import type { ResponseStatus } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
@@ -52,7 +50,7 @@ export const formResponseRouter = createTRPCRouter({
           number: nextNumber,
           userId: ctx.auth.userId,
           formId: input.formId,
-          responses: input.responses as unknown as InputJsonValue[],
+          responses: input.responses,
           status: "NOT_STARTED",
         },
       })
@@ -211,7 +209,7 @@ export const formResponseRouter = createTRPCRouter({
           number: nextNumber,
           userId: input.userId, // Usuário alvo, não o criador
           formId: input.formId,
-          responses: input.responses as unknown as InputJsonValue[],
+          responses: input.responses,
           status: "NOT_STARTED",
         },
       })
@@ -1097,7 +1095,7 @@ export const formResponseRouter = createTRPCRouter({
       const ret = await ctx.db.formResponse.update({
         where: { id: input.responseId },
         data: {
-          status: input.status as ResponseStatus,
+          status: input.status,
           statusComment: input.statusComment,
           updatedAt: new Date(),
           // Ao finalizar o chamado, remover todas as tags
@@ -1130,7 +1128,7 @@ export const formResponseRouter = createTRPCRouter({
         'COMPLETED': 'como Finalizado'
       }
 
-      if (ret && ret.user && ret.form) {
+      if (ret?.user != null && ret?.form != null) {
         const author = ret.user
         const form = ret.form as { id: string; title: string | null; userId: string }
         const formTitle = form.title ?? "Formulário"
@@ -1265,7 +1263,7 @@ export const formResponseRouter = createTRPCRouter({
       return await ctx.db.formResponse.update({
         where: { id: input.responseId },
         data: {
-          responses: input.responses as unknown as InputJsonValue[],
+          responses: input.responses,
           updatedAt: new Date(),
         },
         include: {
@@ -1318,7 +1316,7 @@ export const formResponseRouter = createTRPCRouter({
         data: {
           id: "default",
           shopWebhook: "",
-          formResponseTags: [] as unknown as InputJsonValue,
+          formResponseTags: [],
         },
       })
 
@@ -1353,7 +1351,7 @@ export const formResponseRouter = createTRPCRouter({
       await ctx.db.globalConfig.update({
         where: { id: config.id },
         data: {
-          formResponseTags: updatedTags as unknown as InputJsonValue,
+          formResponseTags: updatedTags,
         },
       })
 
@@ -1376,7 +1374,7 @@ export const formResponseRouter = createTRPCRouter({
         data: {
           id: "default",
           shopWebhook: "",
-          formResponseTags: [] as unknown as InputJsonValue,
+          formResponseTags: [],
         },
       })
 
@@ -1428,7 +1426,7 @@ export const formResponseRouter = createTRPCRouter({
       await ctx.db.globalConfig.update({
         where: { id: config.id },
         data: {
-          formResponseTags: tags as unknown as InputJsonValue,
+          formResponseTags: tags,
         },
       })
 
@@ -1462,7 +1460,7 @@ export const formResponseRouter = createTRPCRouter({
         data: {
           id: "default",
           shopWebhook: "",
-          formResponseTags: [] as unknown as InputJsonValue,
+          formResponseTags: [],
         },
       })
 
@@ -1512,7 +1510,7 @@ export const formResponseRouter = createTRPCRouter({
         ctx.db.formResponse.update({
           where: { id: input.responseId },
           data: {
-            tags: updatedTags as unknown as InputJsonValue,
+            tags: updatedTags,
           },
           include: {
             user: true,
@@ -1522,7 +1520,7 @@ export const formResponseRouter = createTRPCRouter({
         ctx.db.globalConfig.update({
           where: { id: config.id },
           data: {
-            formResponseTags: tags as unknown as InputJsonValue,
+            formResponseTags: tags,
           },
         }),
       ])
@@ -1600,7 +1598,7 @@ export const formResponseRouter = createTRPCRouter({
         ctx.db.formResponse.update({
           where: { id: input.responseId },
           data: {
-            tags: updatedTags as unknown as InputJsonValue,
+            tags: updatedTags,
           },
           include: {
             user: true,

@@ -49,6 +49,7 @@ type ExtendedRolesConfig = RolesConfig & {
   can_manage_produtos?: boolean
   can_create_solicitacoes?: boolean
   can_manage_new_users_hall?: boolean
+  can_manage_filial?: boolean
   can_view_answer_without_admin_access?: boolean
   can_view_add_manual_ped?: boolean
   can_view_dados_privados?: boolean
@@ -389,6 +390,7 @@ function extendedRoleConfigFromServer(role: RolesConfig | null | undefined): Ext
     can_create_solicitacoes: rc?.can_create_solicitacoes ?? false,
     can_manage_produtos: rc?.can_manage_produtos ?? false,
     can_manage_new_users_hall: rc?.can_manage_new_users_hall ?? false,
+    can_manage_filial: rc?.can_manage_filial ?? false,
     can_view_answer_without_admin_access: rc?.can_view_answer_without_admin_access ?? false,
     can_view_add_manual_ped: rc?.can_view_add_manual_ped ?? false,
     can_view_dados_privados: rc?.can_view_dados_privados ?? false,
@@ -398,7 +400,7 @@ function extendedRoleConfigFromServer(role: RolesConfig | null | undefined): Ext
   }
 }
 
-function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCardProps) {
+function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: UserManagementCardProps) {
   const [activeTab, setActiveTab] = useState("basic")
   const [isEditing, setIsEditing] = useState(false)
   const [permissionSearch, setPermissionSearch] = useState("")
@@ -667,13 +669,14 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         can_manage_dados_basicos_users: permissionsData.can_manage_dados_basicos_users ?? false,
         can_manage_produtos: permissionsData.can_manage_produtos ?? false,
         can_manage_new_users_hall: permissionsData.can_manage_new_users_hall ?? false,
+        can_manage_filial: permissionsData.can_manage_filial ?? false,
         can_view_answer_without_admin_access: permissionsData.can_view_answer_without_admin_access ?? false,
         can_view_add_manual_ped: permissionsData.can_view_add_manual_ped ?? false,
         can_view_dados_privados: permissionsData.can_view_dados_privados ?? false,
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
-      } as RolesConfig,
+      },
     })
   }
 
@@ -700,7 +703,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
         isTotem: permissionsData.isTotem ?? false,
         visible_forms: permissionsData.visible_forms,
         hidden_forms: permissionsData.hidden_forms,
-      } as RolesConfig,
+      },
     })
     setIsEditing(false)
   }
@@ -1316,6 +1319,17 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                               }
                             },
                             {
+                              id: "manage_filial",
+                              label: "Gerenciar filiais",
+                              checked: permissionsData.can_manage_filial ?? false,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_manage_filial: checked
+                                });
+                              }
+                            },
+                            {
                               id: "view_answer_without_admin_access",
                               label: "Visualizar/Responder pedidos sem acesso admin",
                               checked: permissionsData.can_view_answer_without_admin_access,
@@ -1431,6 +1445,9 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                         {permissionsData.can_manage_produtos && (
                           <Badge variant="secondary">Gerenciar Produtos</Badge>
                         )}
+                        {permissionsData.can_manage_filial && (
+                          <Badge variant="secondary">Gerenciar Filiais</Badge>
+                        )}
                         {permissionsData.can_view_answer_without_admin_access && (
                           <Badge variant="secondary">Visualizar/Responder Pedidos</Badge>
                         )}
@@ -1448,6 +1465,7 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
                           !permissionsData.can_view_dre_report &&
                           !permissionsData.can_manage_extensions &&
                           !permissionsData.can_manage_produtos &&
+                          !permissionsData.can_manage_filial &&
                           !permissionsData.can_view_answer_without_admin_access &&
                           !permissionsData.can_view_add_manual_ped &&
                           !permissionsData.can_view_dados_privados && (
@@ -1890,12 +1908,15 @@ function UserManagementCard({ user, allForms, onUserUpdate }: UserManagementCard
             <div className="space-y-4">
               <div>
                 <Label htmlFor="filial-select">Filial</Label>
-                <Select value={selectedUserFilial} onValueChange={setSelectedUserFilial}>
+                <Select
+                  value={selectedUserFilial || "none"}
+                  onValueChange={(value) => setSelectedUserFilial(value === "none" ? "" : value)}
+                >
                   <SelectTrigger id="filial-select">
                     <SelectValue placeholder="Selecione uma filial" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem filial</SelectItem>
+                    <SelectItem value="none">Sem filial</SelectItem>
                     {filiais?.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.name} ({f.code})

@@ -104,7 +104,7 @@ export function ImageCarousel({
     return () => clearInterval(interval)
   }, [autoPlay, validImages.length, autoPlayInterval, isHovered, carouselApi])
 
-  const resolveAspectClass = (index: number): string => {
+  const resolveAspectClass = (): string => {
     if (aspectRatio === "square") {
       return "aspect-square"
     }
@@ -149,12 +149,12 @@ export function ImageCarousel({
       aspectRatio === "auto" && !shouldUseFullHeight
 
     const aspectClass = hasExplicitAspect
-      ? resolveAspectClass(index)
+      ? resolveAspectClass()
       : shouldUseFullHeight
         ? ""
         : aspectRatio === "auto"
           ? ""
-          : resolveAspectClass(index)
+          : resolveAspectClass()
 
     const intrinsicStyle: CSSProperties | undefined =
       useIntrinsicAuto && dims

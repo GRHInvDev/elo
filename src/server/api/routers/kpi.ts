@@ -7,7 +7,6 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { createTRPCRouter, adminProcedure } from "@/server/api/trpc"
 import { runSuggestSuccessKpis } from "@/server/ai/suggestion-kpi-suggest"
-import type { Prisma } from "@prisma/client"
 
 export const kpiRouter = createTRPCRouter({
   // Buscar todos os KPIs ativos
@@ -42,7 +41,7 @@ export const kpiRouter = createTRPCRouter({
             {
               name: {
                 contains: input.query,
-                mode: "insensitive" as Prisma.QueryMode,
+                mode: "insensitive",
               },
             },
           ],

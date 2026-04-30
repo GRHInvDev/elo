@@ -6,7 +6,7 @@ import { OptimizedImage } from "@/components/ui/optimized-image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { WeatherWidget } from "@/components/dashboard/weather-widget"
-import { type Enterprise } from "@prisma/client"
+import type { Enterprise } from "@/types/enterprise"
 
 interface MainCarouselProps {
   itens: {

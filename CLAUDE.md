@@ -242,3 +242,4 @@ Ela é **automaticamente inválida**, mesmo que funcione.
 # 14. REGRAS ADICIONAIS
 - Sempre atualize junto o componente de app-relesase-notes-dialog se for Major ou Minor.
 - Quando atualizar o app-release-notes-dialog, não usar termos técnicos e usar termos populares e de fácil compreensão!
+- Nunca rodar o Browser sem o usuário explicitamente dizer.

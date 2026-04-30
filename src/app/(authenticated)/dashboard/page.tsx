@@ -44,14 +44,16 @@ export default function DashboardPage() {
   const userEnterprise = user?.enterprise ?? null
   const userSetor = user?.setor ?? null
   const userMatricula = user?.matricula ?? null
+  const userFilialId = user?.filialId ?? null
+  const isFilialEnterprise = userEnterprise === "Box_Filial" || userEnterprise === "Cristallux_Filial"
   const isTotem = user?.role_config?.isTotem === true
 
-  // Verificar se os campos obrigatórios estão preenchidos (matrícula, empresa e setor)
+  // Verificar se os campos obrigatórios estão preenchidos (filial apenas para empresas do tipo filial)
   useEffect(() => {
-    if (user && (!userMatricula?.trim() || !userEnterprise || !userSetor)) {
+    if (user && (!userMatricula?.trim() || !userEnterprise || !userSetor || (isFilialEnterprise && !userFilialId))) {
       setShowProfileModal(true)
     }
-  }, [user, userMatricula, userEnterprise, userSetor])
+  }, [user, userMatricula, userEnterprise, userSetor, userFilialId, isFilialEnterprise])
 
   const todayBirthdays = useMemo(() => {
     if (!birthdays) {
@@ -435,7 +437,8 @@ export default function DashboardPage() {
           id: user.id,
           matricula: user.matricula ?? null,
           enterprise: user.enterprise ?? null,
-          setor: user.setor ?? null
+          setor: user.setor ?? null,
+          filialId: user.filialId ?? null,
         } : null}
         onSuccess={() => {
           void refetchUser()

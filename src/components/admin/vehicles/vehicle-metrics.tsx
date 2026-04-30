@@ -42,10 +42,10 @@ export function VehicleMetrics() {
   const completedRents = totalRents - activeRents
 
   // Calcular estatísticas por empresa
-  const vehiclesByEnterprise = vehicles?.items?.reduce((acc, vehicle) => {
+  const vehiclesByEnterprise = vehicles?.items?.reduce<Record<string, number>>((acc, vehicle) => {
     acc[vehicle.enterprise] = (acc[vehicle.enterprise] ?? 0) + 1
     return acc
-  }, {} as Record<string, number>) ?? {}
+  }, {}) ?? {}
 
   // Calcular quilometragem total
   const totalKilometers = vehicles?.items?.reduce((acc, vehicle) =>
@@ -56,10 +56,10 @@ export function VehicleMetrics() {
   const avgRentsPerVehicle = totalVehicles > 0 ? (totalRents / totalVehicles).toFixed(1) : "0"
 
   // Veículos mais utilizados (baseado em número de reservas)
-  const vehicleUsage = rents?.items?.reduce((acc, rent) => {
+  const vehicleUsage = rents?.items?.reduce<Record<string, number>>((acc, rent) => {
     acc[rent.vehicleId] = (acc[rent.vehicleId] ?? 0) + 1
     return acc
-  }, {} as Record<string, number>) ?? {}
+  }, {}) ?? {}
 
   const mostUsedVehicles = Object.entries(vehicleUsage)
     .sort(([,a], [,b]) => b - a)

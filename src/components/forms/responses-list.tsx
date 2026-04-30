@@ -164,7 +164,10 @@ export function ResponsesList({ formId }: { formId: string }) {
     if (typeof value === "object") {
       return JSON.stringify(value)
     }
-    return String(value as string | number | boolean | symbol | bigint)
+    if (typeof value === "bigint") return value.toString()
+    if (typeof value === "symbol") return value.description ?? ""
+    if (typeof value === "function") return "[Function]"
+    return ""
   }
 
   return (

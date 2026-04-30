@@ -11,6 +11,7 @@ import {
   FileCheck,
   FileText,
   DoorOpen,
+  Building2,
 } from "lucide-react"
 
 export interface AdminRoute {
@@ -53,6 +54,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     description: "Comunicação de novos colaboradores na intranet",
     icon: DoorOpen,
     path: "/admin/hall-entrada",
+    requiresBasicAdmin: true,
+  },
+  {
+    id: "/admin/filiais",
+    title: "Gerenciar Empresa",
+    description: "Gerenciar empresa, filiais e vínculo com colaboradores",
+    icon: Building2,
+    path: "/admin/filiais",
     requiresBasicAdmin: true,
   },
   {
@@ -153,6 +162,7 @@ export function hasAccessToAdminRoute(
   canManageQuality?: boolean,
   canManageEmotionRules?: boolean,
   canManageNewUsersHall?: boolean,
+  canManageFilial?: boolean,
 ): boolean {
   // Se é a rota base, verificar se tem qualquer acesso admin
   if (routeId === "/admin") {
@@ -179,6 +189,9 @@ export function hasAccessToAdminRoute(
   if (routeId === "/admin/hall-entrada" && canManageNewUsersHall === true) {
     return true
   }
+  if (routeId === "/admin/filiais" && canManageFilial === true) {
+    return true
+  }
 
   // Se não tem acesso ao /admin básico, não pode acessar outras rotas
   // EXCETO se tem a rota específica e permissão específica
@@ -197,6 +210,9 @@ export function hasAccessToAdminRoute(
     }
     // Permitir se tem can_manage_new_users_hall e a rota é /admin/hall-entrada
     if (routeId === "/admin/hall-entrada" && canManageNewUsersHall === true) {
+      return true
+    }
+    if (routeId === "/admin/filiais" && canManageFilial === true) {
       return true
     }
     return false

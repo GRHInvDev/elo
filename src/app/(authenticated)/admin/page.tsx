@@ -40,7 +40,7 @@ const ADMIN_HOME_SECTIONS: {
   {
     title: "Operações e infraestrutura",
     subtitle: "Alimentação, salas, frota e recursos físicos",
-    routeIds: ["/admin/food", "/admin/rooms", "/admin/vehicles"],
+    routeIds: ["/admin/food", "/admin/rooms", "/admin/vehicles", "/admin/filiais"],
   },
   {
     title: "Ideias, loja e qualidade",
@@ -97,6 +97,7 @@ export default async function AdminHomePage() {
         db_user.role_config?.can_manage_quality_management === true,
         db_user.role_config?.can_manage_emotion_rules === true,
         db_user.role_config?.can_manage_new_users_hall === true,
+        db_user.role_config?.can_manage_filial === true,
       )
     }
     return true

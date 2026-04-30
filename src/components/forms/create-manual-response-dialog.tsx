@@ -145,7 +145,7 @@ export function CreateManualResponseDialog({
         }
 
         // Converter dados do formulário para o formato esperado
-        const responses = [data as Record<string, unknown>]
+        const responses = [data]
 
         await createManualResponse.mutateAsync({
             formId,
