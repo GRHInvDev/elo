@@ -18,5 +18,5 @@ export interface SuggestionAiEnhancement {
 
 export function parseSuggestionAiEnhancement(raw: unknown): SuggestionAiEnhancement | null {
   if (!raw || typeof raw !== "object") return null
-  return raw as SuggestionAiEnhancement
+  return raw
 }

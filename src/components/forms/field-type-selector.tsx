@@ -31,7 +31,7 @@ export function FieldTypeSelector({ onSelect }: FieldTypeSelectorProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
         {fieldTypes.map((fieldType) => (
-          <DropdownMenuItem key={fieldType.type} onClick={() => onSelect(fieldType.type as FieldType)}>
+          <DropdownMenuItem key={fieldType.type} onClick={() => onSelect(fieldType.type)}>
             {fieldType.label}
           </DropdownMenuItem>
         ))}

@@ -39,9 +39,9 @@ export const purchaseRegistrationRouter = createTRPCRouter({
                 where: {
                     userId_enterprise: {
                         userId,
-                        enterprise: input.enterprise as Enterprise
-                    }
-                }
+                        enterprise: input.enterprise,
+                    },
+                },
             })
 
             if (existing) {
@@ -61,7 +61,7 @@ export const purchaseRegistrationRouter = createTRPCRouter({
                 return await ctx.db.purchaseRegistration.create({
                     data: {
                         userId,
-                        enterprise: input.enterprise as Enterprise,
+                        enterprise: input.enterprise,
                         fullName: input.fullName,
                         phone: input.phone,
                         email: input.email,

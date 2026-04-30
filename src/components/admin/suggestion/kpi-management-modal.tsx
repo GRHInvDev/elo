@@ -35,7 +35,7 @@ export function KpiManagementModal({
   // Queries
   const kpisQuery = api.kpi.listActive.useQuery()
   const allKpis = useMemo((): { id: string; name: string; description?: string | null; _count?: { suggestions: number } }[] => {
-    return Array.isArray(kpisQuery.data) ? kpisQuery.data as { id: string; name: string; description?: string | null; _count?: { suggestions: number } }[] : []
+    return Array.isArray(kpisQuery.data) ? kpisQuery.data : []
   }, [kpisQuery.data])
   const refetchKpis = kpisQuery.refetch
 
@@ -44,7 +44,7 @@ export function KpiManagementModal({
     { enabled: searchQuery.length > 0 }
   )
   const searchResults = useMemo((): { id: string; name: string; description?: string | null; _count?: { suggestions: number } }[] => {
-    return Array.isArray(searchQuery_.data) ? searchQuery_.data as { id: string; name: string; description?: string | null; _count?: { suggestions: number } }[] : []
+    return Array.isArray(searchQuery_.data) ? searchQuery_.data : []
   }, [searchQuery_.data])
 
   // Mutations

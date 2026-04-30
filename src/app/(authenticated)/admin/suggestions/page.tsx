@@ -149,8 +149,8 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     kpis: [], // Será carregado via query separada
     kpiIds: [],
     finalScore: dbSuggestion.finalScore,
-    finalClassification: (dbSuggestion as any).finalClassification ? (dbSuggestion as any).finalClassification as { label: string; range: string } : null,
-    status: dbSuggestion.status as "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED",
+    finalClassification: (dbSuggestion as any).finalClassification ?? null,
+    status: dbSuggestion.status,
     rejectionReason: dbSuggestion.rejectionReason,
     analystId: dbSuggestion.analystId,
     payment: dbSuggestion.payment ? dbSuggestion.payment as { status: "paid" | "unpaid"; amount?: number; description?: string } : null,
@@ -2267,7 +2267,7 @@ export default function AdminSuggestionsPage() {
               variant="default"
               size="sm"
               onClick={() => setIsCreateSuggestionModalOpen(true)}
-              className="flex items-center gap-2 bg-white dark:bg-white dark:hover:bg-gray-300 dark:hover:text-black hover:bg-slate-700 hover:text-white"
+              className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Nova Ideia
@@ -3348,7 +3348,7 @@ function ClassificationManagementModal({
 
   const selectItem = (item: ClassItem) => {
     const updateData = { [activeTab]: { label: item.label, score: item.score } }
-    update(suggestionId, updateData as Partial<SuggestionLocal>)
+    update(suggestionId, updateData)
     onClose()
 
     toast({
@@ -4224,9 +4224,9 @@ function CreateSuggestionModal({
                 Cancelar
               </Button>
               <Button
+                variant="default"
                 onClick={handleSubmit}
                 disabled={createSuggestion.isPending}
-                className="bg-white dark:bg-white dark:hover:bg-gray-300 dark:hover:text-black hover:bg-slate-700 hover:text-white"
               >
                 {createSuggestion.isPending ? "Criando..." : "Criar Ideia"}
               </Button>

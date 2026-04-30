@@ -269,17 +269,7 @@ export default function OrdersTab({
         const allOptions = new Set<string>()
         
         data.forEach((order) => {
-          const orderWithSelections = order as typeof order & {
-            optionSelections?: Array<{
-              choice?: {
-                name?: string
-                option?: {
-                  name?: string
-                }
-              }
-            }>
-          }
-          const selections = orderWithSelections.optionSelections
+          const selections = order.optionSelections
           
           if (Array.isArray(selections)) {
             selections.forEach((selection) => {
@@ -297,17 +287,7 @@ export default function OrdersTab({
         // Função auxiliar para obter a escolha de uma opção específica
         const getOptionChoice = (order: (typeof data)[number], optionName: string): string => {
           try {
-            const orderWithSelections = order as typeof order & {
-              optionSelections?: Array<{
-                choice?: {
-                  name?: string
-                  option?: {
-                    name?: string
-                  }
-                }
-              }>
-            }
-            const selections = orderWithSelections.optionSelections
+            const selections = order.optionSelections
             
             if (!Array.isArray(selections) || selections.length === 0) {
               return ""

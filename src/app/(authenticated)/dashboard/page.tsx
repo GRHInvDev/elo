@@ -44,14 +44,16 @@ export default function DashboardPage() {
   const userEnterprise = user?.enterprise ?? null
   const userSetor = user?.setor ?? null
   const userMatricula = user?.matricula ?? null
+  const userFilialId = user?.filialId ?? null
+  const isFilialEnterprise = userEnterprise === "Box_Filial" || userEnterprise === "Cristallux_Filial"
   const isTotem = user?.role_config?.isTotem === true
 
-  // Verificar se os campos obrigatórios estão preenchidos (matrícula, empresa e setor)
+  // Verificar se os campos obrigatórios estão preenchidos (filial apenas para empresas do tipo filial)
   useEffect(() => {
-    if (user && (!userMatricula?.trim() || !userEnterprise || !userSetor)) {
+    if (user && (!userMatricula?.trim() || !userEnterprise || !userSetor || (isFilialEnterprise && !userFilialId))) {
       setShowProfileModal(true)
     }
-  }, [user, userMatricula, userEnterprise, userSetor])
+  }, [user, userMatricula, userEnterprise, userSetor, userFilialId, isFilialEnterprise])
 
   const todayBirthdays = useMemo(() => {
     if (!birthdays) {
@@ -391,9 +393,8 @@ export default function DashboardPage() {
                   ©️ {new Date().getFullYear()} Elo | Intranet
                 </p>
 
-                {/* Link criativo para a empresa desenvolvedora */}
+                {/* ALLPINES FOREVER */}
                 <motion.a
-                  href="https://www.allpines.com.br"
                   target="_blank"
                   rel="noreferrer"
                   className="group flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 dark:from-primary/20 dark:via-primary/10 dark:to-primary/20 border border-primary/20 dark:border-primary/30 px-3 py-1.5 text-foreground text-xs transition-all hover:from-primary/20 hover:via-primary/10 hover:to-primary/20 dark:hover:from-primary/30 dark:hover:via-primary/20 dark:hover:to-primary/30 hover:shadow-md hover:border-primary/30 dark:hover:border-primary/40"
@@ -419,7 +420,7 @@ export default function DashboardPage() {
                     className="font-semibold text-primary text-xs"
                     whileHover={{ x: 2 }}
                   >
-                    Allpines
+                    EzLab
                   </motion.span>
                   <Sparkles className="h-3 w-3 text-primary/70 dark:text-primary/80 transition-transform group-hover:rotate-12" />
                 </motion.a>
@@ -436,7 +437,8 @@ export default function DashboardPage() {
           id: user.id,
           matricula: user.matricula ?? null,
           enterprise: user.enterprise ?? null,
-          setor: user.setor ?? null
+          setor: user.setor ?? null,
+          filialId: user.filialId ?? null,
         } : null}
         onSuccess={() => {
           void refetchUser()

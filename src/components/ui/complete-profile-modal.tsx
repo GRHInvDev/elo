@@ -17,15 +17,23 @@ interface CompleteProfileModalProps {
     matricula: string | null
     enterprise: string | null
     setor: string | null
+    filialId: string | null
   } | null
   onSuccess: () => void
   onClose?: () => void
+}
+
+type FilialOption = {
+  id: string
+  name: string
+  code: string
 }
 
 const enterprises = [
   { value: "Box", label: "Box" },
   { value: "Box_Filial", label: "Box Filial" },
   { value: "Cristallux", label: "Cristallux" },
+  { value: "Cristallux_Filial", label: "Cristallux Filial" },
 ]
 
 const setores = [
@@ -45,9 +53,13 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
   const [matricula, setMatricula] = useState("")
   const [enterprise, setEnterprise] = useState("")
   const [setor, setSetor] = useState("")
+  const [filialId, setFilialId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const { toast } = useToast()
+  const { data: filiaisData = [] } = api.filiais.list.useQuery()
+  const filiais = filiaisData as FilialOption[]
+  const shouldRequireFilial = enterprise === "Box_Filial" || enterprise === "Cristallux_Filial"
 
   // Atualizar os valores quando o modal abrir
   useEffect(() => {
@@ -55,8 +67,15 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       setMatricula(user.matricula ?? "")
       setEnterprise(user.enterprise ?? "")
       setSetor(user.setor ?? "")
+      setFilialId(user.filialId ?? "")
     }
   }, [isOpen, user])
+
+  useEffect(() => {
+    if (!shouldRequireFilial && filialId) {
+      setFilialId("")
+    }
+  }, [shouldRequireFilial, filialId])
 
   const updateProfileMutation = api.user.updateProfile.useMutation({
     onSuccess: () => {
@@ -108,6 +127,14 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       })
       return
     }
+    if (shouldRequireFilial && !filialId.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, selecione sua filial.",
+        variant: "destructive",
+      })
+      return
+    }
 
     setIsLoading(true)
 
@@ -115,6 +142,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       matricula: matricula.trim(),
       enterprise: enterprise.trim(),
       setor: setor.trim(),
+      filialId: shouldRequireFilial ? filialId.trim() : null,
     })
   }
 
@@ -125,6 +153,10 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
           <DialogTitle>Perfil Obrigatório</DialogTitle>
           <DialogDescription>
             Para continuar usando a plataforma, informe seu número de matrícula, empresa e setor.
+            <br />
+            Se a empresa selecionada for Box Filial ou Cristallux Filial, você também precisa escolher a filial.
+            <br />
+            {`Se você trabalhar na modalidade PJ, pode anotar "Número da matrícula" como 0!`}
           </DialogDescription>
         </DialogHeader>
 
@@ -171,6 +203,23 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
               </SelectContent>
             </Select>
           </div>
+          {shouldRequireFilial ? (
+            <div className="space-y-2">
+              <Label htmlFor="filial">Filial *</Label>
+              <Select value={filialId} onValueChange={setFilialId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione sua filial" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filiais.map((filial) => (
+                    <SelectItem key={filial.id} value={filial.id}>
+                      {filial.name} ({filial.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <div className="flex justify-center pt-6">
             <Button

@@ -7,16 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, Loader2, Users, ChevronDown, Lock, Globe } from "lucide-react"
+import { AlertCircle, Loader2, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserSearch } from "@/components/forms/user-search"
+import { FormVisibilitySettings } from "@/components/forms/form-visibility-settings"
+import { FormSpreadsheetExportSettings } from "@/components/forms/form-spreadsheet-export-settings"
 
 interface FormBuilderWithSaveProps {
   mode: "create" | "edit"
@@ -28,6 +27,7 @@ interface FormBuilderWithSaveProps {
   initialAllowedUsers?: string[]
   initialAllowedSectors?: string[]
   initialOwnerIds?: string[]
+  initialSpreadsheetExportEnabled?: boolean
 }
 
 // Função auxiliar para comparar arrays de strings
@@ -63,6 +63,7 @@ export function FormBuilderWithSave({
   initialAllowedUsers = [],
   initialAllowedSectors = [],
   initialOwnerIds = [],
+  initialSpreadsheetExportEnabled = false,
 }: FormBuilderWithSaveProps) {
   const [title, setTitle] = useState(initialTitle)
   const [description, setDescription] = useState(initialDescription)
@@ -71,6 +72,7 @@ export function FormBuilderWithSave({
   const [allowedUsers, setAllowedUsers] = useState<string[]>(initialAllowedUsers)
   const [allowedSectors, setAllowedSectors] = useState<string[]>(initialAllowedSectors)
   const [ownerIds, setOwnerIds] = useState<string[]>(initialOwnerIds)
+  const [spreadsheetExportEnabled, setSpreadsheetExportEnabled] = useState(initialSpreadsheetExportEnabled)
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
@@ -84,6 +86,7 @@ export function FormBuilderWithSave({
     initialAllowedUsers,
     initialAllowedSectors,
     initialOwnerIds,
+    initialSpreadsheetExportEnabled,
   })
 
   // Atualizar estado quando os props iniciais mudarem (especialmente ao editar)
@@ -112,6 +115,9 @@ export function FormBuilderWithSave({
     if (!arraysEqual(prev.initialOwnerIds, initialOwnerIds)) {
       setOwnerIds(initialOwnerIds)
     }
+    if (prev.initialSpreadsheetExportEnabled !== initialSpreadsheetExportEnabled) {
+      setSpreadsheetExportEnabled(initialSpreadsheetExportEnabled)
+    }
     
     // Atualizar refs
     prevInitialsRef.current = {
@@ -122,8 +128,9 @@ export function FormBuilderWithSave({
       initialAllowedUsers,
       initialAllowedSectors,
       initialOwnerIds,
+      initialSpreadsheetExportEnabled,
     }
-  }, [initialTitle, initialDescription, initialFields, initialIsPrivate, initialAllowedUsers, initialAllowedSectors, initialOwnerIds])
+  }, [initialTitle, initialDescription, initialFields, initialIsPrivate, initialAllowedUsers, initialAllowedSectors, initialOwnerIds, initialSpreadsheetExportEnabled])
 
   // Buscar usuários e setores para o filtro
   const { data: usersAndSectors } = api.form.getUsersForFormVisibility.useQuery()
@@ -172,6 +179,7 @@ export function FormBuilderWithSave({
         allowedUsers,
         allowedSectors,
         ownerIds,
+        spreadsheetExportEnabled,
       })
     } else if (mode === "edit" && formId) {
       updateForm.mutate({
@@ -183,6 +191,7 @@ export function FormBuilderWithSave({
         allowedUsers,
         allowedSectors,
         ownerIds,
+        spreadsheetExportEnabled,
       })
     }
   }
@@ -250,137 +259,30 @@ export function FormBuilderWithSave({
         </CardContent>
       </Card>
 
-      {/* Seção de Visibilidade */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {isPrivate ? <Lock className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
-            Configurações de Visibilidade
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isPrivate"
-              checked={isPrivate}
-              onCheckedChange={(checked) => {
-                setIsPrivate(checked === true)
-                if (!checked) {
-                  setAllowedUsers([])
-                  setAllowedSectors([])
-                }
-              }}
-            />
-            <Label htmlFor="isPrivate" className="font-medium">
-              Formulário Privado
-            </Label>
-          </div>
-          
-          {!isPrivate && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-              <Globe className="h-4 w-4 text-green-600" />
-              <span className="text-sm text-green-700">
-                Este formulário será público e visível para todos os usuários.
-              </span>
-            </div>
-          )}
+      <FormVisibilitySettings
+        isPrivate={isPrivate}
+        onIsPrivateChange={(v) => {
+          setIsPrivate(v)
+          if (!v) {
+            setAllowedUsers([])
+            setAllowedSectors([])
+          }
+        }}
+        allowedUsers={allowedUsers}
+        onAllowedUsersChange={setAllowedUsers}
+        allowedSectors={allowedSectors}
+        onAllowedSectorsChange={setAllowedSectors}
+        usersForVisibility={
+          usersAndSectors?.map((user) => ({
+            id: user.id,
+            name: user.name,
+            email: user.email ?? "",
+            setor: user.setor ?? null,
+          })) ?? []
+        }
+      />
 
-          {isPrivate && (
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Configurar Acesso
-                  </div>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 mt-4">
-                <div className="space-y-6 p-4 border rounded-lg">
-                  {/* Busca e seleção de usuários específicos */}
-                  <UserSearch
-                    users={usersAndSectors?.map(user => ({
-                      id: user.id,
-                      name: user.name,
-                      email: user.email,
-                      setor: user.setor,
-                    })) ?? []}
-                    selectedUsers={allowedUsers}
-                    onSelectionChange={setAllowedUsers}
-                    placeholder="Buscar colaboradores por nome, email ou setor..."
-                    maxHeight="300px"
-                  />
-
-                  <div className="border-t pt-4">
-                    <Label className="text-sm font-medium">Setores Completos</Label>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Selecione setores inteiros para dar acesso a todos os funcionários do setor
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[...new Set(usersAndSectors?.map(user => user.setor).filter(Boolean))].sort().map((sector) => (
-                        <div key={sector} className="flex items-center space-x-2 p-2 rounded-lg border bg-muted/20">
-                          <Checkbox
-                            id={`sector_${sector}`}
-                            checked={allowedSectors.includes(sector!)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setAllowedSectors([...allowedSectors, sector!])
-                              } else {
-                                setAllowedSectors(allowedSectors.filter(s => s !== sector))
-                              }
-                            }}
-                          />
-                          <Label htmlFor={`sector_${sector}`} className="text-sm font-medium">
-                            {sector}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-
-                    {allowedSectors.length > 0 && (
-                      <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <Label className="text-sm font-medium text-blue-800">
-                          Setores com Acesso Total ({allowedSectors.length})
-                        </Label>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {allowedSectors.map((sector) => (
-                            <Badge key={sector} variant="secondary" className="bg-blue-100 text-blue-800">
-                              {sector}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {(allowedUsers.length > 0 || allowedSectors.length > 0) && (
-                    <div className="border-t pt-4">
-                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                        <Label className="text-sm font-medium text-green-800">
-                          📋 Resumo do Acesso
-                        </Label>
-                        <div className="text-sm text-green-700 mt-1 space-y-1">
-                          <div>✅ <strong>Criador:</strong> Sempre tem acesso</div>
-                          {allowedUsers.length > 0 && (
-                            <div>👥 <strong>Usuários específicos:</strong> {allowedUsers.length} pessoa(s)</div>
-                          )}
-                          {allowedSectors.length > 0 && (
-                            <div>🏢 <strong>Setores completos:</strong> {allowedSectors.join(", ")}</div>
-                          )}
-                          <div className="text-xs text-green-600 mt-2 italic">
-                            Todos os outros usuários não verão este formulário
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-        </CardContent>
-      </Card>
+      <FormSpreadsheetExportSettings enabled={spreadsheetExportEnabled} onEnabledChange={setSpreadsheetExportEnabled} />
 
       {error && (
         <Alert variant="destructive">

@@ -502,7 +502,7 @@ function OrderCard({
 
             <div className="flex items-center justify-between">
               <div>
-                {getStatusBadge(order.status as ProductOrderStatus)}
+                {getStatusBadge(order.status)}
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatDistanceToNow(new Date(order.updatedAt), {
                     addSuffix: true,

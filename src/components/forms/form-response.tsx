@@ -229,7 +229,7 @@ export function FormResponseComponent({
           </Button>
           <Button
             onClick={() => {
-              const empty = buildEmptyFormValues(fields) as z.infer<typeof formSchema>
+              const empty = buildEmptyFormValues(fields)
               reset(empty)
               fillDynamicFields()
               setFormResetKey((k) => k + 1)

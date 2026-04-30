@@ -265,7 +265,7 @@ export const suggestionRouter = createTRPCRouter({
           submittedSector: input.submittedSector ?? null,
           description: input.description, // Solução proposta
           problem: input.problem ?? null, // Problema identificado
-          contribution: input.contribution as InputJsonValue,
+          contribution: input.contribution,
           dateRef: new Date(),
           status: "NEW",
           ...(aiEnhancementJson ? { aiEnhancement: aiEnhancementJson } : {}),
@@ -418,7 +418,7 @@ export const suggestionRouter = createTRPCRouter({
           isNameVisible: input.isNameVisible,
           description: input.description,
           problem: input.problem,
-          contribution: input.contribution as InputJsonValue,
+          contribution: input.contribution,
           impact: input.impact as InputJsonValue,
           capacity: input.capacity as InputJsonValue,
           effort: input.effort as InputJsonValue,
@@ -1116,7 +1116,7 @@ export const suggestionRouter = createTRPCRouter({
 
       await ctx.db.suggestion.update({
         where: { id: input.suggestionId },
-        data: { aiEnhancement: next as InputJsonValue },
+        data: { aiEnhancement: next },
       })
 
       return { evaluatorNote: morrison.text }

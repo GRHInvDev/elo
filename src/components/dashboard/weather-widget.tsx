@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import { Cloud, CloudRain, Sun, CloudSun, Droplets, Wind, MapPin } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { Enterprise } from "@prisma/client"
+import type { Enterprise } from "@/types/enterprise"
 
 interface WeatherData {
   temperature: number
@@ -27,19 +27,17 @@ const getDefaultLocationByEnterprise = (enterprise: Enterprise | null | undefine
     return { lat: -29.7175, lon: -52.4258 } // Fallback padrão (Santa Cruz do Sul)
   }
 
-  // Comparar o valor do enum (Prisma enum é um tipo union de strings literais)
-  // Usar comparação direta com strings, pois o enum Enterprise é equivalente a: "NA" | "Box" | "RHenz" | "Cristallux" | "Box_Filial" | "Cristallux_Filial"
-  if (enterprise === Enterprise.Box || enterprise === Enterprise.RHenz || enterprise === Enterprise.Cristallux) {
+  if (enterprise === "Box" || enterprise === "RHenz" || enterprise === "Cristallux") {
     // Santa Cruz do Sul
     return { lat: -29.7175, lon: -52.4258 }
   }
   
-  if (enterprise === Enterprise.Box_Filial) {
+  if (enterprise === "Box_Filial") {
     // Venâncio Aires
     return { lat: -29.6064, lon: -52.1931 }
   }
   
-  if (enterprise === Enterprise.Cristallux_Filial) {
+  if (enterprise === "Cristallux_Filial") {
     // Cachoeirinha
     return { lat: -29.9508, lon: -51.0939 }
   }

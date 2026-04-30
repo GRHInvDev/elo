@@ -45,10 +45,13 @@ function VehiclesPageContent() {
     },
   )
 
-  const vehicles = specificFilterData?.items?.map(vehicle => ({
-    ...vehicle,
-    kilometers: Number(vehicle.kilometers)
-  }) as VehicleWithNumberKm) ?? []
+  const vehicles: VehicleWithNumberKm[] =
+    specificFilterData?.items?.map(
+      (vehicle): VehicleWithNumberKm => ({
+        ...vehicle,
+        kilometers: Number(vehicle.kilometers),
+      }),
+    ) ?? []
 
   const filteredVehicles = enterprise
     ? vehicles?.filter((vehicle) => vehicle.enterprise === enterprise)

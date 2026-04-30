@@ -160,7 +160,7 @@ export default function QualityEnumsPage() {
                   <TableRow key={enumItem.id}>
                     <TableCell>
                       <Badge variant="outline">
-                        {enumTypeLabels[enumItem.type as keyof typeof enumTypeLabels]}
+                        {enumTypeLabels[enumItem.type]}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{enumItem.name}</TableCell>

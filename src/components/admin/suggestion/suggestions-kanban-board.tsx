@@ -133,9 +133,9 @@ export function SuggestionsKanbanBoard<T extends SuggestionsKanbanCard>({
                 </div>
                 <div className="max-h-[400px] md:max-h-[600px] lg:max-h-[800px] overflow-y-auto space-y-1 scrollbar-hide">
                   {kanbanColumns[st]?.map((s, index) => {
-                    const impactData = s.impact as { score?: number; text?: string } | null
-                    const capacityData = s.capacity as { score?: number; text?: string } | null
-                    const effortData = s.effort as { score?: number; text?: string } | null
+                    const impactData = s.impact
+                    const capacityData = s.capacity
+                    const effortData = s.effort
 
                     const impactScore = impactData?.score ?? 0
                     const capacityScore = capacityData?.score ?? 0

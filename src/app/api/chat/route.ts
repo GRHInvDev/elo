@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   if (typeof rawBody !== "object" || rawBody === null || !("messages" in rawBody)) {
     return new Response("Body JSON inválido: esperado { messages }.", { status: 400 })
   }
-  const candidate = (rawBody as { messages: unknown }).messages
+  const candidate = Reflect.get(rawBody, "messages")
   if (!Array.isArray(candidate)) {
     return new Response("Campo messages deve ser um array.", { status: 400 })
   }

@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
 import { ResponsesFilters, type ResponsesFiltersState } from "./responses-filters"
+import { FormResponsesExportDialog } from "@/components/forms/form-responses-export-dialog"
 import type { FormResponse, ChatMessage } from "@/types/form-responses"
 import type { Field } from "@/lib/form-types"
 
@@ -50,7 +51,10 @@ export function ResponsesList({ formId }: { formId: string }) {
 
   const { data: form } = api.form.getById.useQuery({ id: formId })
   const { data: currentUser } = api.user.me.useQuery()
-  const isOwner = form?.userId === currentUser?.id
+  const isOwner =
+    form?.userId === currentUser?.id ||
+    (currentUser?.id ? (form?.ownerIds?.includes(currentUser.id) ?? false) : false)
+  const canExportSpreadsheet = isOwner && (form?.spreadsheetExportEnabled ?? false)
 
   if (isLoading) {
     return (
@@ -63,6 +67,15 @@ export function ResponsesList({ formId }: { formId: string }) {
   if (!responses || responses.length === 0) {
     return (
       <>
+        {canExportSpreadsheet && form ? (
+          <div className="mb-4 flex justify-end">
+            <FormResponsesExportDialog
+              formId={formId}
+              formTitle={form.title}
+              fields={(form.fields as unknown as Field[]) ?? []}
+            />
+          </div>
+        ) : null}
         <ResponsesFilters filters={filters} onFiltersChange={onFiltersChange} />
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -151,12 +164,24 @@ export function ResponsesList({ formId }: { formId: string }) {
     if (typeof value === "object") {
       return JSON.stringify(value)
     }
-    return String(value as string | number | boolean | symbol | bigint)
+    if (typeof value === "bigint") return value.toString()
+    if (typeof value === "symbol") return value.description ?? ""
+    if (typeof value === "function") return "[Function]"
+    return ""
   }
 
   return (
     <div className="space-y-6">
       {paginacao()}
+      {canExportSpreadsheet && form ? (
+        <div className="flex justify-end">
+          <FormResponsesExportDialog
+            formId={formId}
+            formTitle={form.title}
+            fields={(form.fields as unknown as Field[]) ?? []}
+          />
+        </div>
+      ) : null}
       <ResponsesFilters filters={filters} onFiltersChange={onFiltersChange} />
       <div className="grid grid-cols-1 gap-6">
         {responses.map((response) => (
@@ -179,7 +204,7 @@ export function ResponsesList({ formId }: { formId: string }) {
                     <CardDescription>
                       Enviado {formatDistanceToNow(new Date(response.createdAt), { addSuffix: true, locale: ptBR })} <br />
                       {/* Campos personalizados selecionados */}
-                      {(form?.fields as Field[] | undefined)?.filter(f => f.showInList).map(field => (
+                      {(form?.fields as unknown as Field[] | undefined)?.filter(f => f.showInList).map(field => (
                         <div key={field.id} className="mt-1">
                           {field.label}: <strong>{formatResponseValue(response.responses[0]?.[field.name])}</strong>
                         </div>
