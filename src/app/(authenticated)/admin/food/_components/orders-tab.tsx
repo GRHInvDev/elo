@@ -48,6 +48,10 @@ export default function OrdersTab({
   setUserName,
   onStatsChange
 }: OrdersTabProps) {
+  const FILIAL_ALL = "__all__"
+  const PAGE_SIZE = 15
+  const [selectedFilial, setSelectedFilial] = useState<string>(FILIAL_ALL)
+  const [page, setPage] = useState(1)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportMonth, setExportMonth] = useState<number>(new Date().getMonth() + 1)
   const [exportYear, setExportYear] = useState<number>(new Date().getFullYear())
@@ -77,8 +81,9 @@ export default function OrdersTab({
     setCollabPopoverOpen(false)
   }
 
-  // Buscar restaurantes
+  // Buscar restaurantes e filiais
   const restaurants = api.restaurant.list.useQuery()
+  const filiaisQuery = api.filiais.list.useQuery()
   const currentUser = api.user.me.useQuery()
 
   const menuItemsQuery = api.menuItem.byRestaurant.useQuery(
@@ -103,24 +108,23 @@ export default function OrdersTab({
   // Buscar pedidos com filtros - período da data selecionada
   const queryParams = {
     startDate: (() => {
-      // Criar data no formato UTC para evitar problemas de timezone
       const year = selectedDate.getFullYear()
       const month = selectedDate.getMonth()
       const day = selectedDate.getDate()
-      const start = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
-      return start
+      return new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
     })(),
     endDate: (() => {
-      // Criar data no formato UTC para evitar problemas de timezone
       const year = selectedDate.getFullYear()
       const month = selectedDate.getMonth()
       const day = selectedDate.getDate()
-      const end = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
-      return end
+      return new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
     })(),
     restaurantId: selectedRestaurant || undefined,
     status: selectedStatus ? (selectedStatus as "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED") : undefined,
     userName: userName || undefined,
+    filialId: selectedFilial !== FILIAL_ALL ? selectedFilial : undefined,
+    page,
+    pageSize: PAGE_SIZE,
   }
 
   const filteredOrders = api.foodOrder.list.useQuery(queryParams, {
@@ -129,14 +133,21 @@ export default function OrdersTab({
     refetchOnWindowFocus: false,
   })
 
-  // Reportar estatísticas para a página
+  // Resetar página quando filtros mudam
   useEffect(() => {
-    const data = filteredOrders.data ?? []
-    const total = data.length
-    const pending = data.filter(o => o.status === "PENDING").length
-    const confirmed = data.filter(o => o.status === "CONFIRMED").length
-    const delivered = data.filter(o => o.status === "DELIVERED").length
-    onStatsChange?.({ total, pending, confirmed, delivered })
+    setPage(1)
+  }, [selectedDate, selectedRestaurant, selectedStatus, userName, selectedFilial])
+
+  // Reportar estatísticas para a página usando contagens do servidor (todos os resultados, não só a página)
+  useEffect(() => {
+    const sc = filteredOrders.data?.statusCounts
+    const total = filteredOrders.data?.total ?? 0
+    onStatsChange?.({
+      total,
+      pending: sc?.PENDING ?? 0,
+      confirmed: sc?.CONFIRMED ?? 0,
+      delivered: sc?.DELIVERED ?? 0,
+    })
   }, [filteredOrders.data, onStatsChange])
 
   // Atualizar status do pedido
@@ -813,6 +824,22 @@ export default function OrdersTab({
               </Select>
             </div>
             <div className="space-y-2">
+              <Label>Filial</Label>
+              <Select value={selectedFilial} onValueChange={setSelectedFilial}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as filiais" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FILIAL_ALL}>Todas as filiais</SelectItem>
+                  {filiaisQuery.data?.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name} ({f.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Status</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
@@ -852,6 +879,10 @@ export default function OrdersTab({
               if (selectedRestaurant) {
                 filters.push(`Restaurante: ${restaurants.data?.find(r => r.id === selectedRestaurant)?.name}`)
               }
+              if (selectedFilial !== FILIAL_ALL) {
+                const f = filiaisQuery.data?.find(f => f.id === selectedFilial)
+                if (f) filters.push(`Filial: ${f.name} (${f.code})`)
+              }
               if (selectedStatus) {
                 filters.push(`Status: ${getStatusText(selectedStatus)}`)
               }
@@ -864,19 +895,24 @@ export default function OrdersTab({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredOrders.data && filteredOrders.data.length > 0 ? (
+          {filteredOrders.data && filteredOrders.data.orders.length > 0 ? (
             <div className="space-y-4">
-              {filteredOrders.data.map((order) => (
+              {filteredOrders.data.orders.map((order) => (
                 <Card key={order.id} className="bg-muted/50">
                   <CardContent className="pt-4">
                     <div className="flex justify-between items-start">
                       <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 flex-wrap gap-1">
                           <p className="font-medium">
                             {order.user.firstName} {order.user.lastName}
                           </p>
                           <Badge variant="outline">{order.user.email}</Badge>
                           <Badge variant="secondary">{order.restaurant?.name ?? "Restaurante excluído"}</Badge>
+                          {"filial" in order.user && order.user.filial && (
+                            <Badge variant="outline" className="text-xs">
+                              {order.user.filial.name} ({order.user.filial.code})
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm">{order.menuItem.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -919,6 +955,36 @@ export default function OrdersTab({
             <p className="text-center text-muted-foreground py-8">
               Nenhum pedido encontrado com os filtros aplicados
             </p>
+          )}
+
+          {/* Paginação */}
+          {(filteredOrders.data?.total ?? 0) > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {Math.min((page - 1) * PAGE_SIZE + 1, filteredOrders.data?.total ?? 0)}–{Math.min(page * PAGE_SIZE, filteredOrders.data?.total ?? 0)} de {filteredOrders.data?.total ?? 0} pedidos
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Anterior
+                </Button>
+                <span className="text-sm">
+                  Página {page} de {Math.ceil((filteredOrders.data?.total ?? 0) / PAGE_SIZE)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page * PAGE_SIZE >= (filteredOrders.data?.total ?? 0)}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

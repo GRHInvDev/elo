@@ -39,6 +39,7 @@ export const restaurantRouter = createTRPCRouter({
       return ctx.db.restaurant.findUnique({
         where: { id: input.id },
         include: {
+          filial: { select: { id: true, name: true, code: true } },
           menuItems: {
             where: { available: true },
             orderBy: { category: "asc" },
@@ -64,6 +65,7 @@ export const restaurantRouter = createTRPCRouter({
           ...(input?.active !== undefined && { active: input.active }),
         },
         include: {
+          filial: { select: { id: true, name: true, code: true } },
           menuItems: {
             where: { available: true },
             orderBy: { category: "asc" },

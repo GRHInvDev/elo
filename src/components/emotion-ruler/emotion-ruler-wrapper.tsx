@@ -12,9 +12,11 @@ export function EmotionRulerWrapper() {
     emotions: Array<{
       id: string
       value: number
+      label: string | null
       emoji: string | null
       color: string
       states: string[]
+      points: number
       order: number
     }>
     backgroundColor?: string | null

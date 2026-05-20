@@ -6,6 +6,7 @@ import { z } from "zod"
 import { type RolesConfig } from "@/types/role-config"
 import { TRPCError } from "@trpc/server"
 import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
+import { ensureFilialConsistentWithEnterprise } from "@/server/validators/filial-enterprise"
 
 
 export const userRouter = createTRPCRouter({
@@ -196,7 +197,7 @@ export const userRouter = createTRPCRouter({
   updateProfile: protectedProcedure
     .input(z.object({
       matricula: z.string().min(1, "Matrícula é obrigatória"),
-      enterprise: z.string().min(1, "Empresa é obrigatória"),
+      enterprise: z.nativeEnum(Enterprise),
       setor: z.string().min(1, "Setor é obrigatório"),
       filialId: z.string().nullable(),
     }))
@@ -206,13 +207,18 @@ export const userRouter = createTRPCRouter({
         throw new Error("Usuário não autenticado");
       }
 
+      await ensureFilialConsistentWithEnterprise(ctx.db, {
+        filialId: input.filialId,
+        enterprise: input.enterprise,
+      })
+
       // Primeiro tentar atualizar usuário existente (caso normal em produção)
       try {
         return await ctx.db.user.update({
           where: { id: userId },
           data: {
             matricula: input.matricula.trim(),
-            enterprise: input.enterprise as Enterprise,
+            enterprise: input.enterprise,
             setor: input.setor,
             filialId: input.filialId,
           },
@@ -250,7 +256,7 @@ export const userRouter = createTRPCRouter({
             lastName: null,
             imageUrl: null,
             matricula: input.matricula.trim(),
-            enterprise: input.enterprise as Enterprise,
+            enterprise: input.enterprise,
             setor: input.setor,
             filialId: input.filialId,
             role_config: devDefaultRoleConfig,
@@ -1061,10 +1067,15 @@ export const userRouter = createTRPCRouter({
         })
       }
 
+      await ensureFilialConsistentWithEnterprise(ctx.db, {
+        filialId: nextFilialId,
+        enterprise: nextEnterprise,
+      })
+
       return ctx.db.user.update({
         where: { id: input.userId },
         data: {
-          enterprise: input.enterprise,
+          ...(input.enterprise !== undefined ? { enterprise: input.enterprise } : {}),
           filialId: nextFilialId,
         },
         select: {

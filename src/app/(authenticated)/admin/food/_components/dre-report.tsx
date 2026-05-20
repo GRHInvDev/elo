@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { api } from "@/trpc/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,20 +24,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface DREData {
-  enterprise: string
-  sector: string | null
-  totalOrders: number
-  totalValue: number
-  representativeness: number
-  costCenterRateio?: number
-}
+const FILTER_ALL = "__all__" as const
+
+type RateioType = "proportional" | "headquarters" | "branch"
+type DreGroupBy = "enterprise_sector" | "restaurant" | "filial"
 
 interface DREApiItem {
-  enterprise: string
+  groupBy: DreGroupBy
+  enterprise: string | null
   sector: string | null
+  restaurantId: string | null
+  restaurantName: string | null
+  filialId: string | null
+  filialName: string | null
+  filialCode: string | null
   totalOrders: number
   totalValue: number
+  valueFromHeadquartersOrders: number
+  valueFromBranchOrders: number
+}
+
+interface DREData extends DREApiItem {
+  representativeness: number
+  costCenterRateio?: number
 }
 
 interface DREReportProps {
@@ -45,110 +54,126 @@ interface DREReportProps {
   setSelectedDate: (date: Date) => void
 }
 
-type RateioType = 'proportional' | 'headquarters' | 'branch'
+const BRANCH_ENTERPRISES = ["Box_Filial", "Cristallux_Filial"] as const
 
-// Constante com os valores do enum Enterprise que representam filiais
-const BRANCH_ENTERPRISES = ['Box_Filial', 'Cristallux_Filial'] as const
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function DREReport({ selectedDate, setSelectedDate }: DREReportProps) {
+function getEnterpriseType(enterprise: string | null): "headquarters" | "branch" {
+  if (!enterprise) return "headquarters"
+  return BRANCH_ENTERPRISES.includes(enterprise as (typeof BRANCH_ENTERPRISES)[number])
+    ? "branch"
+    : "headquarters"
+}
+
+export default function DREReport({ selectedDate }: DREReportProps) {
   const [invoiceValue, setInvoiceValue] = useState<string>("")
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    startOfMonth(selectedDate)
-  )
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    endOfMonth(selectedDate)
-  )
-  const [rateioType, setRateioType] = useState<RateioType>('proportional')
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(selectedDate))
+  const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(selectedDate))
+  const [rateioType, setRateioType] = useState<RateioType>("proportional")
+  const [groupBy, setGroupBy] = useState<DreGroupBy>("enterprise_sector")
+  const [filterRestaurantId, setFilterRestaurantId] = useState<string>(FILTER_ALL)
+  const [filterFilialId, setFilterFilialId] = useState<string>(FILTER_ALL)
+  const [filterEmpresaId, setFilterEmpresaId] = useState<string>(FILTER_ALL)
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
 
-  // Calcular ano baseado na data inicial ou usar o ano atual
   const selectedYear = startDate?.getFullYear() ?? new Date().getFullYear()
 
-  // Buscar dados DRE por empresa/setor
+  const restaurantsQuery = api.restaurant.list.useQuery({ active: true })
+  const filiaisQuery = api.filiais.list.useQuery()
+  const empresasQuery = api.empresas.list.useQuery()
+
   const dreQuery = api.foodOrder.getDREData.useQuery(
     {
       year: selectedYear,
-      period: "month", // Mantém compatibilidade
+      period: "month",
       date: startDate,
       startDate: startDate,
       endDate: endDate,
+      groupBy,
+      restaurantId: filterRestaurantId === FILTER_ALL ? undefined : filterRestaurantId,
+      filialId: filterFilialId === FILTER_ALL ? undefined : filterFilialId,
+      empresaId: filterEmpresaId === FILTER_ALL ? undefined : filterEmpresaId,
     },
     {
       enabled: !!(startDate && endDate),
-    }
+      retry: false,
+    },
   )
 
-  // Função helper para determinar se empresa é matriz ou filial
-  const getEnterpriseType = (enterprise: string): 'headquarters' | 'branch' => {
-    // Verificar explicitamente os valores do enum Enterprise
-    return BRANCH_ENTERPRISES.includes(enterprise as typeof BRANCH_ENTERPRISES[number]) ? 'branch' : 'headquarters'
-  }
+  useEffect(() => {
+    const err = dreQuery.error
+    if (!err) return
+    toast.error(err.message ?? "Erro ao carregar dados do DRE")
+  }, [dreQuery.error])
 
-  // Calcular representatividade e rateio quando os dados mudam
   const processedData: DREData[] = React.useMemo(() => {
-    if (!dreQuery.data) return []
+    const raw = dreQuery.data
+    if (!raw?.length) return []
 
     const invoiceNumber = parseFloat(invoiceValue) || 0
 
-    // Calcular totais globais para matrizes e filiais
-    const headquartersTotal = dreQuery.data
-      .filter((d: DREApiItem) => getEnterpriseType(d.enterprise) === 'headquarters')
-      .reduce((sum: number, d: DREApiItem) => sum + d.totalValue, 0)
+    const headquartersTotalEnterprise = raw
+      .filter((d) => getEnterpriseType(d.enterprise) === "headquarters")
+      .reduce((sum, d) => sum + d.totalValue, 0)
 
-    const branchTotal = dreQuery.data
-      .filter((d: DREApiItem) => getEnterpriseType(d.enterprise) === 'branch')
-      .reduce((sum: number, d: DREApiItem) => sum + d.totalValue, 0)
+    const branchTotalEnterprise = raw
+      .filter((d) => getEnterpriseType(d.enterprise) === "branch")
+      .reduce((sum, d) => sum + d.totalValue, 0)
 
-    return dreQuery.data.map((item: DREApiItem) => {
+    const globalTotalAllRows = raw.reduce((sum, d) => sum + d.totalValue, 0)
+    const hqSplitTotal = raw.reduce((sum, d) => sum + d.valueFromHeadquartersOrders, 0)
+    const branchSplitTotal = raw.reduce((sum, d) => sum + d.valueFromBranchOrders, 0)
+
+    return raw.map((item) => {
       let representativeness = 0
       let costCenterRateio = 0
 
-      if (rateioType === 'proportional') {
-        // Rateio proporcional - dentro da própria empresa
-        const enterpriseTotal = dreQuery.data
-          ?.filter((d: DREApiItem) => d.enterprise === item.enterprise)
-          .reduce((sum: number, d: DREApiItem) => sum + d.totalValue, 0) ?? 0
+      if (item.groupBy === "enterprise_sector") {
+        if (rateioType === "proportional") {
+          const enterpriseTotal =
+            raw.filter((d) => d.enterprise === item.enterprise).reduce((s, d) => s + d.totalValue, 0) ?? 0
 
-        const globalTotal = dreQuery.data.reduce((sum: number, d: DREApiItem) => sum + d.totalValue, 0)
+          const globalTotal = globalTotalAllRows
 
-        // Primeiro calcula quanto a empresa merece do valor total da nota
-        const enterpriseShare = globalTotal > 0
-          ? (enterpriseTotal / globalTotal) * invoiceNumber
-          : 0
+          const enterpriseShare = globalTotal > 0 ? (enterpriseTotal / globalTotal) * invoiceNumber : 0
 
-        // Depois distribui proporcionalmente entre os setores da empresa
-        representativeness = enterpriseTotal > 0
-          ? (item.totalValue / enterpriseTotal) * 100
-          : 0
+          representativeness = enterpriseTotal > 0 ? (item.totalValue / enterpriseTotal) * 100 : 0
 
-        costCenterRateio = (enterpriseShare * representativeness) / 100
-      } else if (rateioType === 'headquarters') {
-        // Rateio completo para matriz - representatividade global das matrizes
-        const enterpriseType = getEnterpriseType(item.enterprise)
-        if (enterpriseType === 'headquarters') {
-          representativeness = headquartersTotal > 0
-            ? (item.totalValue / headquartersTotal) * 100
-            : 0
+          costCenterRateio = (enterpriseShare * representativeness) / 100
+        } else if (rateioType === "headquarters") {
+          const enterpriseType = getEnterpriseType(item.enterprise)
+          if (enterpriseType === "headquarters") {
+            representativeness =
+              headquartersTotalEnterprise > 0 ? (item.totalValue / headquartersTotalEnterprise) * 100 : 0
 
-          costCenterRateio = (invoiceNumber * representativeness) / 100
+            costCenterRateio = (invoiceNumber * representativeness) / 100
+          } else {
+            representativeness = 0
+            costCenterRateio = 0
+          }
         } else {
-          // Para filial: rateio = 0
-          representativeness = 0
-          costCenterRateio = 0
+          const enterpriseType = getEnterpriseType(item.enterprise)
+          if (enterpriseType === "branch") {
+            representativeness =
+              branchTotalEnterprise > 0 ? (item.totalValue / branchTotalEnterprise) * 100 : 0
+
+            costCenterRateio = (invoiceNumber * representativeness) / 100
+          } else {
+            representativeness = 0
+            costCenterRateio = 0
+          }
         }
-      } else if (rateioType === 'branch') {
-        // Rateio completo para filial - representatividade global das filiais
-        const enterpriseType = getEnterpriseType(item.enterprise)
-        if (enterpriseType === 'branch') {
-          representativeness = branchTotal > 0
-            ? (item.totalValue / branchTotal) * 100
-            : 0
-
+      } else {
+        if (rateioType === "proportional") {
+          representativeness =
+            globalTotalAllRows > 0 ? (item.totalValue / globalTotalAllRows) * 100 : 0
+          costCenterRateio = (invoiceNumber * representativeness) / 100
+        } else if (rateioType === "headquarters") {
+          representativeness =
+            hqSplitTotal > 0 ? (item.valueFromHeadquartersOrders / hqSplitTotal) * 100 : 0
           costCenterRateio = (invoiceNumber * representativeness) / 100
         } else {
-          // Para matriz: rateio = 0
-          representativeness = 0
-          costCenterRateio = 0
+          representativeness =
+            branchSplitTotal > 0 ? (item.valueFromBranchOrders / branchSplitTotal) * 100 : 0
+          costCenterRateio = (invoiceNumber * representativeness) / 100
         }
       }
 
@@ -160,7 +185,27 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
     })
   }, [dreQuery.data, invoiceValue, rateioType])
 
+  const filteredData = React.useMemo(() => {
+    return processedData.filter((item) => {
+      if (item.groupBy === "enterprise_sector") {
+        const isBranch = BRANCH_ENTERPRISES.includes(
+          item.enterprise as (typeof BRANCH_ENTERPRISES)[number],
+        )
+        if (rateioType === "branch") return isBranch
+        if (rateioType === "headquarters") return !isBranch
+        return true
+      }
+      if (rateioType === "branch") return item.valueFromBranchOrders > 0
+      if (rateioType === "headquarters") return item.valueFromHeadquartersOrders > 0
+      return true
+    })
+  }, [processedData, rateioType])
+
   const handleGenerateReport = () => {
+    if (dreQuery.isError) {
+      toast.error("Não foi possível carregar os dados do DRE")
+      return
+    }
     if (!dreQuery.data || dreQuery.data.length === 0) {
       toast.error("Nenhum dado encontrado para o período selecionado")
       return
@@ -174,6 +219,37 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
     setIsPreviewModalOpen(true)
   }
 
+  const buildExportRows = (): Record<string, string | number>[] => {
+    return filteredData.map((item) => {
+      const base: Record<string, string | number> = {
+        "Total de Pedidos": item.totalOrders,
+        "Valor Total (R$)": item.totalValue.toFixed(2).replace(".", ","),
+        "Representatividade (%)": item.representativeness.toFixed(2).replace(".", ","),
+        "Valor da Nota (R$)": invoiceValue ? parseFloat(invoiceValue).toFixed(2).replace(".", ",") : "0,00",
+        "Rateio Centro de Custo (R$)": item.costCenterRateio?.toFixed(2).replace(".", ",") ?? "0,00",
+      }
+
+      if (item.groupBy === "enterprise_sector") {
+        return {
+          Empresa: item.enterprise ?? "",
+          Setor: item.sector ?? "Não informado",
+          ...base,
+        }
+      }
+      if (item.groupBy === "restaurant") {
+        return {
+          Restaurante: item.restaurantName ?? "Não informado",
+          ...base,
+        }
+      }
+      return {
+        Filial: item.filialName ?? "Não informado",
+        "Código filial": item.filialCode ?? "",
+        ...base,
+      }
+    })
+  }
+
   const handleExportToExcel = () => {
     if (filteredData.length === 0) {
       toast.error("Gere o relatório primeiro antes de exportar")
@@ -181,43 +257,41 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
     }
 
     try {
-      const exportData = filteredData.map(item => ({
-        "Empresa": item.enterprise,
-        "Setor": item.sector ?? "Não informado",
-        "Total de Pedidos": item.totalOrders,
-        "Valor Total (R$)": item.totalValue.toFixed(2).replace('.', ','),
-        "Representatividade (%)": item.representativeness.toFixed(2).replace('.', ','),
-        "Valor da Nota (R$)": invoiceValue ? parseFloat(invoiceValue).toFixed(2).replace('.', ',') : "0,00",
-        "Rateio Centro de Custo (R$)": item.costCenterRateio?.toFixed(2).replace('.', ',') ?? "0,00",
-      }))
-
+      const exportData = buildExportRows()
       const ws = XLSX.utils.json_to_sheet(exportData)
-      
-      // Garantir que as colunas monetárias sejam tratadas como texto para manter a vírgula
-      const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1')
-      // Colunas: A=Empresa, B=Setor, C=Pedidos, D=Valor Total, E=Representatividade, F=Valor Nota, G=Rateio
-      const monetaryColumns = [3, 4, 5, 6] // Índices das colunas D, E, F, G (0-indexed)
-      
+
+      const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1")
+      const keys = Object.keys(exportData[0] ?? {})
+      const monetaryKeys = new Set([
+        "Valor Total (R$)",
+        "Representatividade (%)",
+        "Valor da Nota (R$)",
+        "Rateio Centro de Custo (R$)",
+      ])
+      const monetaryColIndexes = keys
+        .map((k, i) => (monetaryKeys.has(k) ? i : -1))
+        .filter((i) => i >= 0)
+
       for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-        monetaryColumns.forEach(colIndex => {
+        monetaryColIndexes.forEach((colIndex) => {
           const cellAddress = XLSX.utils.encode_cell({ c: colIndex, r: R })
           const rawCell = ws[cellAddress] as unknown
           const cell = rawCell as XLSX.CellObject | undefined
           if (cell) {
-            // Forçar o tipo como string para manter a formatação com vírgula
-            cell.t = 's' // 's' = string type
-            // Garantir que o valor seja uma string
+            cell.t = "s"
             const cellValue: string | number | boolean | Date | undefined = cell.v
-            cell.v = typeof cellValue === 'string' ? cellValue : (cellValue != null ? String(cellValue) : '')
+            cell.v = typeof cellValue === "string" ? cellValue : cellValue != null ? String(cellValue) : ""
           }
         })
       }
-      
+
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "DRE_Report")
 
-      const isFullMonth = startDate && endDate && 
-        startDate.getTime() === startOfMonth(startDate).getTime() && 
+      const isFullMonth =
+        startDate &&
+        endDate &&
+        startDate.getTime() === startOfMonth(startDate).getTime() &&
         endDate.getTime() === endOfMonth(startDate).getTime()
       const periodLabel = isFullMonth
         ? format(startDate ?? new Date(), "MM-yyyy", { locale: ptBR })
@@ -232,36 +306,42 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
     }
   }
 
-  const filteredData = React.useMemo(() => {
-    return processedData.filter((item) => {
-      const isBranch = BRANCH_ENTERPRISES.includes(item.enterprise as typeof BRANCH_ENTERPRISES[number])
-      
-      if (rateioType === 'branch') {
-        return isBranch
-      }
-      if (rateioType === 'headquarters') {
-        return !isBranch
-      }
-      return true // para rateio proporcional, mostra tudo
-    })
-  }, [processedData, rateioType])
+  const totalValue = React.useMemo(
+    () => filteredData.reduce((sum, item) => sum + item.totalValue, 0),
+    [filteredData],
+  )
+  const totalOrders = React.useMemo(
+    () => filteredData.reduce((sum, item) => sum + item.totalOrders, 0),
+    [filteredData],
+  )
+  const totalRateio = React.useMemo(
+    () => filteredData.reduce((sum, item) => sum + (item.costCenterRateio ?? 0), 0),
+    [filteredData],
+  )
 
-  const totalValue = React.useMemo(() =>
-    filteredData.reduce((sum: number, item: DREData) => sum + item.totalValue, 0),
-    [filteredData]
-  )
-  const totalOrders = React.useMemo(() =>
-    filteredData.reduce((sum: number, item: DREData) => sum + item.totalOrders, 0),
-    [filteredData]
-  )
-  const totalRateio = React.useMemo(() =>
-    filteredData.reduce((sum: number, item: DREData) => sum + (item.costCenterRateio ?? 0), 0),
-    [filteredData]
-  )
+  const groupByLabel =
+    groupBy === "enterprise_sector"
+      ? "Empresa e setor"
+      : groupBy === "restaurant"
+        ? "Restaurante"
+        : "Filial"
+
+  const tableTitle =
+    groupBy === "enterprise_sector"
+      ? "Resultado DRE por Empresa e Setor"
+      : groupBy === "restaurant"
+        ? "Resultado DRE por Restaurante"
+        : "Resultado DRE por Filial"
+
+  const rateioHelp =
+    rateioType !== "proportional"
+      ? rateioType === "headquarters"
+        ? "Somente linhas com pedidos de colaboradores de empresa matriz entram no rateio desta nota."
+        : "Somente linhas com pedidos de colaboradores de empresa filial entram no rateio desta nota."
+      : null
 
   return (
     <div className="space-y-6">
-      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -269,21 +349,22 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
             Relatório DRE - Demonstrativo de Resultados do Exercício
           </CardTitle>
           <CardDescription>
-            Análise de pedidos de almoço por empresa e setor com cálculo de representatividade
-            {invoiceValue && (
-              <span className="block mt-1 text-sm">
-                Rateio: {
-                  rateioType === 'proportional' ? 'Proporcional' :
-                  rateioType === 'headquarters' ? 'Matriz' :
-                  'Filial'
-                } | Valor da nota: R$ {parseFloat(invoiceValue).toFixed(2)}
+            Análise de pedidos de almoço com cálculo de representatividade e rateio por nota fiscal.
+            {invoiceValue ? (
+              <span className="mt-1 block text-sm">
+                Agrupamento: {groupByLabel} | Rateio:{" "}
+                {rateioType === "proportional"
+                  ? "Proporcional"
+                  : rateioType === "headquarters"
+                    ? "Matriz"
+                    : "Filial"}{" "}
+                | Valor da nota: R$ {parseFloat(invoiceValue).toFixed(2)}
               </span>
-            )}
+            ) : null}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Seleção de Período */}
             <DateRangeCalendar
               startDate={startDate}
               endDate={endDate}
@@ -292,12 +373,105 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
               label="Período"
             />
 
-            {/* Segunda linha: Valor da Nota, Tipo de Rateio */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Valor da Nota Fiscal (R$)</Label>
+                <Label htmlFor="dre-group-by">Agrupamento do relatório</Label>
+                <Select
+                  value={groupBy}
+                  onValueChange={(v: DreGroupBy) => {
+                    setGroupBy(v)
+                    setFilterRestaurantId(FILTER_ALL)
+                    setFilterFilialId(FILTER_ALL)
+                    setFilterEmpresaId(FILTER_ALL)
+                  }}
+                >
+                  <SelectTrigger id="dre-group-by">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="enterprise_sector">Empresa e setor</SelectItem>
+                    <SelectItem value="restaurant">Restaurante</SelectItem>
+                    <SelectItem value="filial">Filial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dre-rateio-type">Tipo de rateio</Label>
+                <Select value={rateioType} onValueChange={(value: RateioType) => setRateioType(value)}>
+                  <SelectTrigger id="dre-rateio-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="proportional">Proporcional</SelectItem>
+                    <SelectItem value="headquarters">Matriz</SelectItem>
+                    <SelectItem value="branch">Filial (empresa)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="dre-filter-empresa">Empresa (filtro)</Label>
+                <Select value={filterEmpresaId} onValueChange={(v) => { setFilterEmpresaId(v); setFilterFilialId(FILTER_ALL) }}>
+                  <SelectTrigger id="dre-filter-empresa">
+                    <SelectValue placeholder="Todas as empresas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FILTER_ALL}>Todas as empresas</SelectItem>
+                    {empresasQuery.data?.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dre-filter-filial">Filial (filtro)</Label>
+                <Select value={filterFilialId} onValueChange={setFilterFilialId}>
+                  <SelectTrigger id="dre-filter-filial">
+                    <SelectValue placeholder="Todas as filiais" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FILTER_ALL}>Todas as filiais</SelectItem>
+                    {(filterEmpresaId === FILTER_ALL
+                      ? filiaisQuery.data
+                      : filiaisQuery.data?.filter((f) => f.empresaId === filterEmpresaId)
+                    )?.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name} ({f.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dre-filter-restaurant">Restaurante (filtro)</Label>
+                <Select value={filterRestaurantId} onValueChange={setFilterRestaurantId}>
+                  <SelectTrigger id="dre-filter-restaurant">
+                    <SelectValue placeholder="Todos os restaurantes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FILTER_ALL}>Todos os restaurantes</SelectItem>
+                    {restaurantsQuery.data?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="dre-invoice">Valor da Nota Fiscal (R$)</Label>
                 <Input
+                  id="dre-invoice"
                   type="number"
                   step="0.01"
                   placeholder="0.00"
@@ -305,30 +479,13 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
                   onChange={(e) => setInvoiceValue(e.target.value)}
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label>Tipo de Rateio</Label>
-                <Select
-                  value={rateioType}
-                  onValueChange={(value: RateioType) => setRateioType(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="proportional">Proporcional</SelectItem>
-                    <SelectItem value="headquarters">Matriz</SelectItem>
-                    <SelectItem value="branch">Filial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
 
-          <div className="flex gap-2 mt-6">
-            <Button 
-              onClick={handleGenerateReport} 
-              disabled={dreQuery.isLoading || !(startDate && endDate)}
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Button
+              onClick={handleGenerateReport}
+              disabled={dreQuery.isLoading || !(startDate && endDate) || dreQuery.isError}
               className="flex items-center gap-2"
             >
               <Eye className="h-4 w-4" />
@@ -348,9 +505,8 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
         </CardContent>
       </Card>
 
-      {/* Resumo */}
       {filteredData.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Card>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold">{totalOrders}</div>
@@ -363,43 +519,57 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
               <p className="text-xs text-muted-foreground">Valor Total</p>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">R$ {totalRateio.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Total Rateio (nota)</p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Tabela de Resultados */}
       <Card>
         <CardHeader>
-          <CardTitle>Resultado DRE por Empresa e Setor</CardTitle>
+          <CardTitle>{tableTitle}</CardTitle>
           <CardDescription>
             {startDate && endDate && (
               <>
-                {startDate.getTime() === startOfMonth(startDate).getTime() && 
-                 endDate.getTime() === endOfMonth(startDate).getTime()
+                {startDate.getTime() === startOfMonth(startDate).getTime() &&
+                endDate.getTime() === endOfMonth(startDate).getTime()
                   ? `Dados do mês ${format(startDate, "MMMM 'de' yyyy", { locale: ptBR })}`
-                  : `Dados do período de ${format(startDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`
-                }
+                  : `Dados do período de ${format(startDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`}
               </>
             )}
-            {rateioType !== 'proportional' && (
-              <span className="block mt-1 text-sm font-medium text-blue-600">
-                Rateio aplicado: {
-                  rateioType === 'headquarters' ? 'Somente Matriz' :
-                  'Somente Filial'
-                }
-              </span>
-            )}
+            {rateioHelp ? (
+              <span className="mt-1 block text-sm font-medium text-blue-600">{rateioHelp}</span>
+            ) : null}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {dreQuery.isLoading ? (
-            <p className="text-center text-muted-foreground py-8">Carregando dados DRE...</p>
+            <p className="py-8 text-center text-muted-foreground">Carregando dados DRE...</p>
+          ) : dreQuery.isError ? (
+            <p className="py-8 text-center text-muted-foreground">
+              Você não tem permissão para ver estes dados ou ocorreu um erro ao carregar.
+            </p>
           ) : filteredData.length > 0 ? (
             <div className="space-y-4">
               <Table>
                 <TableHeader>
-                  <TableRow>  
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Setor</TableHead>
+                  <TableRow>
+                    {groupBy === "enterprise_sector" ? (
+                      <>
+                        <TableHead>Empresa</TableHead>
+                        <TableHead>Setor</TableHead>
+                      </>
+                    ) : null}
+                    {groupBy === "restaurant" ? <TableHead>Restaurante</TableHead> : null}
+                    {groupBy === "filial" ? (
+                      <>
+                        <TableHead>Filial</TableHead>
+                        <TableHead>Código</TableHead>
+                      </>
+                    ) : null}
                     <TableHead className="text-right">Pedidos</TableHead>
                     <TableHead className="text-right">Valor (R$)</TableHead>
                     <TableHead className="text-right">Representatividade (%)</TableHead>
@@ -408,25 +578,45 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
                 </TableHeader>
                 <TableBody>
                   {filteredData.map((item, index) => (
-                      <TableRow key={`${item.enterprise}-${item.sector}-${index}`}>
-                        <TableCell>
-                          <Badge variant="outline">{item.enterprise}</Badge>
-                        </TableCell>
-                        <TableCell>{item.sector ?? "Não informado"}</TableCell>
-                        <TableCell className="text-right">{item.totalOrders}</TableCell>
-                        <TableCell className="text-right">R$ {item.totalValue.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{item.representativeness.toFixed(2)}%</TableCell>
-                        <TableCell className="text-right">
-                          R$ {item.costCenterRateio?.toFixed(2) ?? "0.00"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow
+                      key={
+                        groupBy === "enterprise_sector"
+                          ? `${item.enterprise}-${item.sector}-${index}`
+                          : groupBy === "restaurant"
+                            ? `${item.restaurantId ?? "nr"}-${index}`
+                            : `${item.filialId ?? "nf"}-${index}`
+                      }
+                    >
+                      {groupBy === "enterprise_sector" ? (
+                        <>
+                          <TableCell>
+                            <Badge variant="outline">{item.enterprise}</Badge>
+                          </TableCell>
+                          <TableCell>{item.sector ?? "Não informado"}</TableCell>
+                        </>
+                      ) : null}
+                      {groupBy === "restaurant" ? (
+                        <TableCell>{item.restaurantName ?? "Não informado"}</TableCell>
+                      ) : null}
+                      {groupBy === "filial" ? (
+                        <>
+                          <TableCell>{item.filialName ?? "Não informado"}</TableCell>
+                          <TableCell>{item.filialCode ?? "—"}</TableCell>
+                        </>
+                      ) : null}
+                      <TableCell className="text-right">{item.totalOrders}</TableCell>
+                      <TableCell className="text-right">R$ {item.totalValue.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{item.representativeness.toFixed(2)}%</TableCell>
+                      <TableCell className="text-right">
+                        R$ {item.costCenterRateio?.toFixed(2) ?? "0.00"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
 
-              {/* Totais */}
               <div className="border-t pt-4">
-                <div className="flex justify-end space-x-6 text-sm font-medium">
+                <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
                   <span>Total Geral:</span>
                   <span>{totalOrders} pedidos</span>
                   <span>R$ {totalValue.toFixed(2)}</span>
@@ -436,8 +626,8 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <div className="py-8 text-center">
+              <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <p className="text-muted-foreground">
                 Clique em &quot;Gerar Relatório&quot; para visualizar os dados DRE
               </p>
@@ -446,9 +636,8 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
         </CardContent>
       </Card>
 
-      {/* Modal de Pré-visualização do Relatório */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -457,30 +646,29 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
             <DialogDescription>
               {startDate && endDate && (
                 <>
-                  {startDate.getTime() === startOfMonth(startDate).getTime() && 
-                   endDate.getTime() === endOfMonth(startDate).getTime()
+                  {startDate.getTime() === startOfMonth(startDate).getTime() &&
+                  endDate.getTime() === endOfMonth(startDate).getTime()
                     ? `Período: ${format(startDate, "MMMM 'de' yyyy", { locale: ptBR })}`
-                    : `Período: ${format(startDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`
-                  }
-                  {invoiceValue && (
-                    <span className="block mt-1">
-                      Valor da Nota Fiscal: R$ {parseFloat(invoiceValue).toFixed(2)} | 
-                      Tipo de Rateio: {
-                        rateioType === 'proportional' ? 'Proporcional' :
-                        rateioType === 'headquarters' ? 'Matriz' :
-                        'Filial'
-                      }
+                    : `Período: ${format(startDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`}
+                  {invoiceValue ? (
+                    <span className="mt-1 block">
+                      Valor da Nota Fiscal: R$ {parseFloat(invoiceValue).toFixed(2)} | Agrupamento:{" "}
+                      {groupByLabel} | Tipo de Rateio:{" "}
+                      {rateioType === "proportional"
+                        ? "Proporcional"
+                        : rateioType === "headquarters"
+                          ? "Matriz"
+                          : "Filial (empresa)"}
                     </span>
-                  )}
+                  ) : null}
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Resumo */}
             {filteredData.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Card>
                   <CardContent className="pt-4">
                     <div className="text-2xl font-bold">{totalOrders}</div>
@@ -502,15 +690,25 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
               </div>
             )}
 
-            {/* Tabela de Resultados */}
             {filteredData.length > 0 ? (
               <div className="space-y-4">
-                <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-hidden rounded-lg border">
                   <Table>
                     <TableHeader>
-                      <TableRow>  
-                        <TableHead>Empresa</TableHead>
-                        <TableHead>Setor</TableHead>
+                      <TableRow>
+                        {groupBy === "enterprise_sector" ? (
+                          <>
+                            <TableHead>Empresa</TableHead>
+                            <TableHead>Setor</TableHead>
+                          </>
+                        ) : null}
+                        {groupBy === "restaurant" ? <TableHead>Restaurante</TableHead> : null}
+                        {groupBy === "filial" ? (
+                          <>
+                            <TableHead>Filial</TableHead>
+                            <TableHead>Código</TableHead>
+                          </>
+                        ) : null}
                         <TableHead className="text-right">Pedidos</TableHead>
                         <TableHead className="text-right">Valor (R$)</TableHead>
                         <TableHead className="text-right">Representatividade (%)</TableHead>
@@ -519,11 +717,32 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
                     </TableHeader>
                     <TableBody>
                       {filteredData.map((item, index) => (
-                        <TableRow key={`${item.enterprise}-${item.sector}-${index}`}>
-                          <TableCell>
-                            <Badge variant="outline">{item.enterprise}</Badge>
-                          </TableCell>
-                          <TableCell>{item.sector ?? "Não informado"}</TableCell>
+                        <TableRow
+                          key={
+                            groupBy === "enterprise_sector"
+                              ? `m-${item.enterprise}-${item.sector}-${index}`
+                              : groupBy === "restaurant"
+                                ? `m-${item.restaurantId ?? "nr"}-${index}`
+                                : `m-${item.filialId ?? "nf"}-${index}`
+                          }
+                        >
+                          {groupBy === "enterprise_sector" ? (
+                            <>
+                              <TableCell>
+                                <Badge variant="outline">{item.enterprise}</Badge>
+                              </TableCell>
+                              <TableCell>{item.sector ?? "Não informado"}</TableCell>
+                            </>
+                          ) : null}
+                          {groupBy === "restaurant" ? (
+                            <TableCell>{item.restaurantName ?? "Não informado"}</TableCell>
+                          ) : null}
+                          {groupBy === "filial" ? (
+                            <>
+                              <TableCell>{item.filialName ?? "Não informado"}</TableCell>
+                              <TableCell>{item.filialCode ?? "—"}</TableCell>
+                            </>
+                          ) : null}
                           <TableCell className="text-right">{item.totalOrders}</TableCell>
                           <TableCell className="text-right">R$ {item.totalValue.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{item.representativeness.toFixed(2)}%</TableCell>
@@ -536,9 +755,8 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
                   </Table>
                 </div>
 
-                {/* Totais */}
-                <div className="border-t pt-4 bg-muted/50 p-4 rounded-lg">
-                  <div className="flex justify-end space-x-6 text-sm font-medium">
+                <div className="rounded-lg border-t bg-muted/50 p-4 pt-4">
+                  <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm font-medium">
                     <span>Total Geral:</span>
                     <span>{totalOrders} pedidos</span>
                     <span>R$ {totalValue.toFixed(2)}</span>
@@ -548,20 +766,15 @@ export default function DREReport({ selectedDate, setSelectedDate }: DREReportPr
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Nenhum dado encontrado para os filtros selecionados
-                </p>
+              <div className="py-8 text-center">
+                <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhum dado encontrado para os filtros selecionados</p>
               </div>
             )}
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsPreviewModalOpen(false)}
-            >
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => setIsPreviewModalOpen(false)}>
               Fechar
             </Button>
             <Button

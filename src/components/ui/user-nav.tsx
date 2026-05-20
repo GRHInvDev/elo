@@ -1,8 +1,13 @@
 "use client"
 
-import { UserButton } from "@clerk/nextjs"
+import dynamic from "next/dynamic"
 import { AppReleaseNotesDialog } from "./app-release-notes-dialog"
 import { SettingsMenu } from "./settings-menu"
+
+const UserButton = dynamic(
+  () => import("@clerk/nextjs").then((m) => m.UserButton),
+  { ssr: false },
+)
 
 export function UserNav() {
   return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo } from "react"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,16 +38,33 @@ import {
   Search,
   X,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Users,
   Loader2,
 } from "lucide-react"
-import { List, type RowComponentProps } from "react-window"
+import { useDebounce } from "@/hooks/use-debounce"
 import { ENTERPRISE_VALUES, type Enterprise } from "@/types/enterprise"
+
+const FILIAL_ENTERPRISE_OPTIONS = ENTERPRISE_VALUES.filter((e) => e !== "NA")
+
+type EmpresaItem = {
+  id: string
+  name: string
+  enterprise: Enterprise
+  filiais: { id: string }[]
+}
 
 type FilialItem = {
   id: string
   name: string
   code: string
+  empresaId: string
+  empresa: {
+    id: string
+    name: string
+    enterprise: Enterprise
+  }
 }
 
 type UserItem = {
@@ -60,20 +77,35 @@ type UserItem = {
 }
 
 export default function FiliaisManagementPage() {
+  // ── filial state ────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedFilialId, setSelectedFilialId] = useState<string>("")
   const [userSearchTerm, setUserSearchTerm] = useState("")
-  const [employeeSearchTerm, setEmployeeSearchTerm] = useState("")
-  const [enterpriseUserSearchTerm, setEnterpriseUserSearchTerm] = useState("")
-  const [selectedEnterpriseFilter, setSelectedEnterpriseFilter] = useState<Enterprise | "">("")
-  const [showEmployeeSearch, setShowEmployeeSearch] = useState(false)
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [isEditUserFilialOpen, setIsEditUserFilialOpen] = useState(false)
+  const [isCreateFilialOpen, setIsCreateFilialOpen] = useState(false)
+  const [isEditFilialOpen, setIsEditFilialOpen] = useState(false)
+  const [isDeleteFilialOpen, setIsDeleteFilialOpen] = useState(false)
   const [selectedFilial, setSelectedFilial] = useState<FilialItem | null>(null)
+  const [filialForm, setFilialForm] = useState({ name: "", code: "", empresaId: "" })
+
+  // ── empresa state ───────────────────────────────────────────────────────────
+  const [isCreateEmpresaOpen, setIsCreateEmpresaOpen] = useState(false)
+  const [isEditEmpresaOpen, setIsEditEmpresaOpen] = useState(false)
+  const [isDeleteEmpresaOpen, setIsDeleteEmpresaOpen] = useState(false)
+  const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaItem | null>(null)
+  const [empresaForm, setEmpresaForm] = useState<{ name: string; enterprise: Enterprise | "" }>({
+    name: "",
+    enterprise: "",
+  })
+
+  // ── filial users pagination state ───────────────────────────────────────────
+  const [filialUsersPage, setFilialUsersPage] = useState(1)
+  const debouncedUserSearch = useDebounce(userSearchTerm, 300)
+
+  // ── user/employee state ─────────────────────────────────────────────────────
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState("")
+  const [showEmployeeSearch, setShowEmployeeSearch] = useState(false)
+  const [isEditUserFilialOpen, setIsEditUserFilialOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null)
-  const [formData, setFormData] = useState({ name: "", code: "" })
   const [selectedUserFilialId, setSelectedUserFilialId] = useState<string>("")
   const [selectedUserEnterprise, setSelectedUserEnterprise] = useState<Enterprise>("NA")
 
@@ -83,150 +115,135 @@ export default function FiliaisManagementPage() {
   const { toast } = useToast()
   const utils = api.useUtils()
 
-  // Queries
-  const { data: filiaisData = [], isLoading: isLoadingFiliais, refetch: refetchFiliais } = api.filiais.list.useQuery()
+  // ── queries ─────────────────────────────────────────────────────────────────
+  const { data: empresasData = [], isLoading: isLoadingEmpresas, refetch: refetchEmpresas } =
+    api.empresas.list.useQuery()
+  const empresas = empresasData as EmpresaItem[]
+
+  const { data: filiaisData = [], isLoading: isLoadingFiliais, refetch: refetchFiliais } =
+    api.filiais.list.useQuery()
   const filiais = filiaisData as FilialItem[]
 
-  const { data: filialDetails, isLoading: isLoadingUsers } = api.filiais.getById.useQuery(
-    { id: selectedFilialId },
-    { enabled: !!selectedFilialId }
+  const { data: filialUsersData, isLoading: isLoadingUsers } = api.filiais.listUsers.useQuery(
+    { filialId: selectedFilialId, page: filialUsersPage, pageSize: 10, search: debouncedUserSearch || undefined },
+    { enabled: !!selectedFilialId },
   )
 
   const { data: allUsers = [] } = api.user.listAllUsers.useQuery()
 
-  // Mutations
-  const createFilial = api.filiais.create.useMutation({
+  // ── empresa mutations ───────────────────────────────────────────────────────
+  const createEmpresa = api.empresas.create.useMutation({
     onSuccess: async () => {
-      toast({
-        title: "Filial criada",
-        description: "A filial foi criada com sucesso.",
-      })
-      setFormData({ name: "", code: "" })
-      setIsCreateModalOpen(false)
+      toast({ title: "Empresa criada", description: "Empresa criada com sucesso." })
+      setEmpresaForm({ name: "", enterprise: "" })
+      setIsCreateEmpresaOpen(false)
+      await refetchEmpresas()
+    },
+    onError: (e) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  })
+
+  const updateEmpresa = api.empresas.update.useMutation({
+    onSuccess: async () => {
+      toast({ title: "Empresa atualizada", description: "Empresa atualizada com sucesso." })
+      setEmpresaForm({ name: "", enterprise: "" })
+      setIsEditEmpresaOpen(false)
+      setSelectedEmpresa(null)
+      await refetchEmpresas()
       await refetchFiliais()
     },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
+    onError: (e) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  })
+
+  const deleteEmpresa = api.empresas.delete.useMutation({
+    onSuccess: async () => {
+      toast({ title: "Empresa excluída", description: "Empresa excluída com sucesso." })
+      setIsDeleteEmpresaOpen(false)
+      setSelectedEmpresa(null)
+      await refetchEmpresas()
     },
+    onError: (e) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  })
+
+  // ── filial mutations ────────────────────────────────────────────────────────
+  const createFilial = api.filiais.create.useMutation({
+    onSuccess: async () => {
+      toast({ title: "Filial criada", description: "Filial criada com sucesso." })
+      setFilialForm({ name: "", code: "", empresaId: "" })
+      setIsCreateFilialOpen(false)
+      await refetchFiliais()
+    },
+    onError: (e) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   })
 
   const updateFilial = api.filiais.update.useMutation({
     onSuccess: async () => {
-      toast({
-        title: "Filial atualizada",
-        description: "A filial foi atualizada com sucesso.",
-      })
-      setFormData({ name: "", code: "" })
-      setIsEditModalOpen(false)
+      toast({ title: "Filial atualizada", description: "Filial atualizada com sucesso." })
+      setFilialForm({ name: "", code: "", empresaId: "" })
+      setIsEditFilialOpen(false)
       setSelectedFilial(null)
       await refetchFiliais()
     },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
-    },
+    onError: (e) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   })
 
   const deleteFilial = api.filiais.delete.useMutation({
     onSuccess: async () => {
-      toast({
-        title: "Filial deletada",
-        description: "A filial foi deletada com sucesso.",
-      })
-      setIsDeleteDialogOpen(false)
+      toast({ title: "Filial excluída", description: "Filial excluída com sucesso." })
+      setIsDeleteFilialOpen(false)
       setSelectedFilial(null)
       await refetchFiliais()
     },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
-    },
+    onError: (e) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   })
 
   const updateUserFilial = api.user.updateUserFilial.useMutation({
     onSuccess: async () => {
-      toast({
-        title: "Empresa/Filial atualizada",
-        description: "A empresa e/ou filial do usuário foi atualizada com sucesso.",
-      })
+      toast({ title: "Empresa/Filial atualizada", description: "Dados do colaborador atualizados." })
       setIsEditUserFilialOpen(false)
       setSelectedUser(null)
       setSelectedUserFilialId("")
       await refetchFiliais()
       await utils.user.listAllUsers.invalidate()
       if (selectedFilialId) {
-        await utils.filiais.getById.invalidate({ id: selectedFilialId })
+        await utils.filiais.listUsers.invalidate({ filialId: selectedFilialId })
       }
     },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
-    },
+    onError: (e) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   })
 
-  // Handlers
-  const handleCreateClick = () => {
-    setSelectedFilial(null)
-    setFormData({ name: "", code: "" })
-    setIsCreateModalOpen(true)
-  }
-
-  const handleEditClick = (filial: FilialItem) => {
-    setSelectedFilial(filial)
-    setFormData({ name: filial.name, code: filial.code })
-    setIsEditModalOpen(true)
-  }
-
-  const handleDeleteClick = (filial: FilialItem) => {
-    setSelectedFilial(filial)
-    setIsDeleteDialogOpen(true)
-  }
-
-  const handleSaveCreate = () => {
-    if (!formData.name.trim() || !formData.code.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Nome e código são obrigatórios.",
-        variant: "destructive",
-      })
+  // ── handlers ────────────────────────────────────────────────────────────────
+  const handleSaveCreateEmpresa = () => {
+    if (!empresaForm.name.trim() || !empresaForm.enterprise) {
+      toast({ title: "Campos obrigatórios", description: "Nome e tipo são obrigatórios.", variant: "destructive" })
       return
     }
-    createFilial.mutate({ name: formData.name.trim(), code: formData.code.trim() })
+    createEmpresa.mutate({ name: empresaForm.name.trim(), enterprise: empresaForm.enterprise })
   }
 
-  const handleSaveEdit = () => {
-    if (!selectedFilial) return
-    if (!formData.name.trim() || !formData.code.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Nome e código são obrigatórios.",
-        variant: "destructive",
-      })
+  const handleSaveEditEmpresa = () => {
+    if (!selectedEmpresa) return
+    if (!empresaForm.name.trim() || !empresaForm.enterprise) {
+      toast({ title: "Campos obrigatórios", description: "Nome e tipo são obrigatórios.", variant: "destructive" })
       return
     }
-    updateFilial.mutate({
-      id: selectedFilial.id,
-      name: formData.name.trim(),
-      code: formData.code.trim(),
-    })
+    updateEmpresa.mutate({ id: selectedEmpresa.id, name: empresaForm.name.trim(), enterprise: empresaForm.enterprise })
   }
 
-  const handleConfirmDelete = () => {
+  const handleSaveCreateFilial = () => {
+    if (!filialForm.name.trim() || !filialForm.code.trim() || !filialForm.empresaId) {
+      toast({ title: "Campos obrigatórios", description: "Nome, código e empresa são obrigatórios.", variant: "destructive" })
+      return
+    }
+    createFilial.mutate({ name: filialForm.name.trim(), code: filialForm.code.trim(), empresaId: filialForm.empresaId })
+  }
+
+  const handleSaveEditFilial = () => {
     if (!selectedFilial) return
-    deleteFilial.mutate({ id: selectedFilial.id })
+    if (!filialForm.name.trim() || !filialForm.code.trim() || !filialForm.empresaId) {
+      toast({ title: "Campos obrigatórios", description: "Nome, código e empresa são obrigatórios.", variant: "destructive" })
+      return
+    }
+    updateFilial.mutate({ id: selectedFilial.id, name: filialForm.name.trim(), code: filialForm.code.trim(), empresaId: filialForm.empresaId })
   }
 
   const handleSaveUserFilial = () => {
@@ -236,11 +253,7 @@ export default function FiliaisManagementPage() {
       selectedUserEnterprise === "Box_Filial" || selectedUserEnterprise === "Cristallux_Filial"
 
     if (requiresFilial && !selectedUserFilialId) {
-      toast({
-        title: "Campo obrigatório",
-        description: "Selecione uma filial para empresas do tipo Filial.",
-        variant: "destructive",
-      })
+      toast({ title: "Campo obrigatório", description: "Selecione uma filial.", variant: "destructive" })
       return
     }
 
@@ -258,120 +271,38 @@ export default function FiliaisManagementPage() {
     setIsEditUserFilialOpen(true)
   }
 
-  const handleSearchEmployees = useCallback(() => {
-    setShowEmployeeSearch(true)
-    setSelectedFilialId("")
-    setUserSearchTerm("")
-  }, [])
+  // ── derived data ─────────────────────────────────────────────────────────────
+  const filteredFiliais = useMemo(
+    () =>
+      filiais.filter(
+        (f) =>
+          f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          f.code.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
+    [filiais, searchTerm],
+  )
 
-  // Filters
-  const filteredFiliais = useMemo(() => {
-    return filiais.filter(
-      (f) =>
-        f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        f.code.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [filiais, searchTerm])
-
-  const filialUsers = useMemo(() => {
-    if (!filialDetails?.users) return []
-    const q = userSearchTerm.toLowerCase()
-    return filialDetails.users.filter((u) =>
-      [u.firstName, u.lastName, u.email].some((field) =>
-        (field ?? "").toLowerCase().includes(q)
-      )
-    )
-  }, [filialDetails?.users, userSearchTerm])
+  const filialUsers = filialUsersData?.users ?? []
+  const filialUsersTotal = filialUsersData?.total ?? 0
+  const filialUsersTotalPages = filialUsersData?.totalPages ?? 1
+  const filialUsersStart = filialUsersTotal === 0 ? 0 : (filialUsersPage - 1) * 10 + 1
+  const filialUsersEnd = Math.min(filialUsersPage * 10, filialUsersTotal)
 
   const filteredAllUsers = useMemo(() => {
-    const normalizedSearch = employeeSearchTerm.toLowerCase()
-    if (!normalizedSearch) return allUsers
-
-    return allUsers.filter((user) =>
-      `${user.firstName ?? ""} ${user.lastName ?? ""}`.toLowerCase().includes(normalizedSearch) ||
-      user.email.toLowerCase().includes(normalizedSearch)
+    const q = employeeSearchTerm.toLowerCase()
+    if (!q) return allUsers
+    return allUsers.filter(
+      (u) =>
+        `${u.firstName ?? ""} ${u.lastName ?? ""}`.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q),
     )
   }, [allUsers, employeeSearchTerm])
 
-  const enterpriseOverview = useMemo(() => {
-    const users = allUsers
-
-    return ENTERPRISE_VALUES.map((enterprise) => {
-      const usersInEnterprise = users.filter((user) => user.enterprise === enterprise).length
-      return {
-        enterprise,
-        usersInEnterprise,
-      }
-    })
-  }, [allUsers])
-
-  const filteredEnterpriseUsers = useMemo(() => {
-    if (!selectedEnterpriseFilter) return []
-
-    const normalizedSearch = enterpriseUserSearchTerm.toLowerCase()
-    return allUsers.filter((user) => {
-      if (user.enterprise !== selectedEnterpriseFilter) return false
-      if (!normalizedSearch) return true
-
-      return (
-        `${user.firstName ?? ""} ${user.lastName ?? ""}`.toLowerCase().includes(normalizedSearch) ||
-        user.email.toLowerCase().includes(normalizedSearch)
-      )
-    })
-  }, [allUsers, selectedEnterpriseFilter, enterpriseUserSearchTerm])
-
-  const UserRow = useCallback(
-    ({ index, style }: RowComponentProps) => {
-      const user = filialUsers[index]
-      if (!user) return null
-
-      return (
-        <div style={style} className="px-1">
-          <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex-1">
-              <div className="font-medium">
-                {user.firstName} {user.lastName}
-              </div>
-              <div className="text-sm text-muted-foreground">{user.email}</div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleEditUserFilial(user)}
-            >
-              <Edit3 className="h-4 w-4 mr-2" />
-              Editar Empresa/Filial
-            </Button>
-          </div>
-        </div>
-      )
-    },
-    [filialUsers]
-  )
-
-  const EnterpriseUserRow = useCallback(
-    ({ index, style }: RowComponentProps) => {
-      const user = filteredEnterpriseUsers[index]
-      if (!user) return null
-
-      return (
-        <div style={style} className="px-1">
-          <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex-1">
-              <div className="font-medium">
-                {user.firstName} {user.lastName}
-              </div>
-              <div className="text-sm text-muted-foreground">{user.email}</div>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => handleEditUserFilial(user)}>
-              <Edit3 className="h-4 w-4 mr-2" />
-              Editar Empresa/Filial
-            </Button>
-          </div>
-        </div>
-      )
-    },
-    [filteredEnterpriseUsers]
+  // Filiais compatíveis com o enterprise selecionado para o usuário
+  const filiaisForUserEnterprise = useMemo(
+    () =>
+      filiais.filter((f) => f.empresa.enterprise === selectedUserEnterprise),
+    [filiais, selectedUserEnterprise],
   )
 
   if (!hasAccess) {
@@ -381,9 +312,7 @@ export default function FiliaisManagementPage() {
           <div className="text-center">
             <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">Acesso Negado</h3>
-            <p className="text-muted-foreground">
-              Você não tem permissão para acessar esta página.
-            </p>
+            <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
           </div>
         </div>
       </DashboardShell>
@@ -398,13 +327,19 @@ export default function FiliaisManagementPage() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Gerenciar Empresa</h2>
             <p className="text-muted-foreground">
-              Gerencie filiais e o vínculo de empresa/filial dos colaboradores
+              Gerencie empresas, filiais e o vínculo dos colaboradores
             </p>
           </div>
-          <Button onClick={handleCreateClick}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Filial
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => { setSelectedEmpresa(null); setEmpresaForm({ name: "", enterprise: "" }); setIsCreateEmpresaOpen(true) }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Empresa
+            </Button>
+            <Button onClick={() => { setSelectedFilial(null); setFilialForm({ name: "", code: "", empresaId: "" }); setIsCreateFilialOpen(true) }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Filial
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="empresas" className="space-y-4">
@@ -413,146 +348,117 @@ export default function FiliaisManagementPage() {
             <TabsTrigger value="filiais">Filiais</TabsTrigger>
           </TabsList>
 
+          {/* ── Empresas tab ──────────────────────────────────────────────── */}
           <TabsContent value="empresas">
-            <Card className="mb-6">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
-                  Empresas Cadastradas ({enterpriseOverview.length})
+                  Empresas Cadastradas ({empresas.length})
                 </CardTitle>
                 <CardDescription>
-                  Empresas disponíveis para vínculo de colaboradores
+                  Empresas que agrupam filiais. Cada filial pertence a uma empresa.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {enterpriseOverview.map((item) => (
-                    <div
-                      key={item.enterprise}
-                      className="flex items-center justify-between rounded-lg border p-4"
-                    >
-                      <div className="font-medium">{item.enterprise.replaceAll("_", " ")}</div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{item.usersInEnterprise} colaborador(es)</Badge>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedEnterpriseFilter(item.enterprise)
-                            setEnterpriseUserSearchTerm("")
-                          }}
-                        >
-                          Editar Empresa
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedEnterpriseFilter(item.enterprise)
-                            setEnterpriseUserSearchTerm("")
-                          }}
-                        >
-                          Ver Funcionários
-                        </Button>
+                {isLoadingEmpresas ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="animate-spin mx-auto h-8 w-8 text-muted-foreground" />
+                  </div>
+                ) : empresas.length > 0 ? (
+                  <div className="space-y-2">
+                    {empresas.map((empresa) => (
+                      <div
+                        key={empresa.id}
+                        className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div>
+                          <div className="font-medium">{empresa.name}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs font-normal">
+                              {empresa.enterprise.replaceAll("_", " ")}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {empresa.filiais.length} filial(is)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEmpresa(empresa)
+                              setEmpresaForm({ name: empresa.name, enterprise: empresa.enterprise })
+                              setIsEditEmpresaOpen(true)
+                            }}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEmpresa(empresa)
+                              setIsDeleteEmpresaOpen(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma empresa cadastrada. Crie uma empresa antes de adicionar filiais.
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            {selectedEnterpriseFilter ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Funcionários da Empresa: {selectedEnterpriseFilter.replaceAll("_", " ")}
-                  </CardTitle>
-                  <CardDescription>
-                    {filteredEnterpriseUsers.length} colaborador(es) encontrado(s)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="enterprise-user-search"
-                      placeholder="Buscar funcionários por nome ou email..."
-                      value={enterpriseUserSearchTerm}
-                      onChange={(e) => setEnterpriseUserSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                    {enterpriseUserSearchTerm && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                        onClick={() => setEnterpriseUserSearchTerm("")}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                  {filteredEnterpriseUsers.length > 0 ? (
-                    <List
-                      rowCount={filteredEnterpriseUsers.length}
-                      rowHeight={86}
-                      rowComponent={EnterpriseUserRow}
-                      rowProps={{}}
-                      style={{ height: Math.min(420, filteredEnterpriseUsers.length * 86), width: "100%" }}
-                    />
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum funcionário encontrado para esta empresa.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : null}
           </TabsContent>
 
+          {/* ── Filiais tab ───────────────────────────────────────────────── */}
           <TabsContent value="filiais" className="space-y-6">
-            {/* Filiais List */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
                   Filiais ({filiais.length})
                 </CardTitle>
-                <CardDescription>
-                  {filiais.length} filial(is) cadastrada(s)
-                </CardDescription>
+                <CardDescription>{filiais.length} filial(is) cadastrada(s)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="filial-search"
-                    placeholder="Buscar por nome ou código..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                  {searchTerm && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                      onClick={() => setSearchTerm("")}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="flex justify-end">
-                  <Button variant="outline" onClick={handleSearchEmployees}>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="filial-search"
+                      placeholder="Buscar por nome ou código..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                    {searchTerm && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                        onClick={() => setSearchTerm("")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setShowEmployeeSearch(true); setEmployeeSearchTerm("") }}
+                  >
                     <Search className="h-4 w-4 mr-2" />
                     Pesquisar Funcionários
                   </Button>
                 </div>
 
-                {/* Table */}
                 {isLoadingFiliais ? (
                   <div className="text-center py-8">
                     <Loader2 className="animate-spin mx-auto h-8 w-8 text-muted-foreground" />
@@ -561,49 +467,60 @@ export default function FiliaisManagementPage() {
                 ) : filteredFiliais.length > 0 ? (
                   <div className="space-y-2">
                     {filteredFiliais.map((filial) => (
-                      <div
-                        key={filial.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">{filial.name}</div>
-                          <div className="text-sm text-muted-foreground">{filial.code}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditClick(filial)}
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteClick(filial)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedFilialId(filial.id === selectedFilialId ? "" : filial.id)}
-                          >
-                            <ChevronDown
-                              className={`h-4 w-4 transition-transform ${
-                                filial.id === selectedFilialId ? "rotate-180" : ""
-                              }`}
-                            />
-                          </Button>
+                      <div key={filial.id}>
+                        <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex-1">
+                            <div className="font-medium">{filial.name}</div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <span className="text-sm text-muted-foreground">{filial.code}</span>
+                              <Badge variant="secondary" className="text-xs font-normal">
+                                {filial.empresa.name}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedFilial(filial)
+                                setFilialForm({ name: filial.name, code: filial.code, empresaId: filial.empresaId })
+                                setIsEditFilialOpen(true)
+                              }}
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setSelectedFilial(filial); setIsDeleteFilialOpen(true) }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const next = filial.id === selectedFilialId ? "" : filial.id
+                                setSelectedFilialId(next)
+                                setFilialUsersPage(1)
+                                setUserSearchTerm("")
+                              }}
+                            >
+                              <ChevronDown
+                                className={`h-4 w-4 transition-transform ${
+                                  filial.id === selectedFilialId ? "rotate-180" : ""
+                                }`}
+                              />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    {searchTerm
-                      ? "Nenhuma filial encontrada para esta busca."
-                      : "Nenhuma filial cadastrada."}
+                    {searchTerm ? "Nenhuma filial encontrada." : "Nenhuma filial cadastrada."}
                   </div>
                 )}
               </CardContent>
@@ -615,54 +532,87 @@ export default function FiliaisManagementPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Usuários da Filial: {filialDetails?.name}
+                    Usuários da Filial: {filiais.find((f) => f.id === selectedFilialId)?.name}
                   </CardTitle>
                   <CardDescription>
-                    {filialUsers.length} usuário(s) nesta filial
+                    {filialUsersTotal} usuário(s) nesta filial
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="user-search"
                       placeholder="Buscar usuários por nome ou email..."
                       value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      onChange={(e) => { setUserSearchTerm(e.target.value); setFilialUsersPage(1) }}
                       className="pl-10"
                     />
                     {userSearchTerm && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                        onClick={() => setUserSearchTerm("")}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                        onClick={() => { setUserSearchTerm(""); setFilialUsersPage(1) }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
 
-                  {/* Users List */}
                   {isLoadingUsers ? (
                     <div className="text-center py-8">
                       <Loader2 className="animate-spin mx-auto h-8 w-8 text-muted-foreground" />
-                      <p className="text-muted-foreground mt-2">Carregando usuários...</p>
                     </div>
                   ) : filialUsers.length > 0 ? (
-                    <List
-                      rowCount={filialUsers.length}
-                      rowHeight={86}
-                      rowComponent={UserRow}
-                      rowProps={{}}
-                      style={{ height: Math.min(420, filialUsers.length * 86), width: "100%" }}
-                    />
+                    <>
+                      <div className="space-y-2">
+                        {filialUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex-1">
+                              <div className="font-medium">{user.firstName} {user.lastName}</div>
+                              <div className="text-sm text-muted-foreground">{user.email}</div>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => handleEditUserFilial(user)}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Editar Empresa/Filial
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <span className="text-sm text-muted-foreground">
+                          Mostrando {filialUsersStart}–{filialUsersEnd} de {filialUsersTotal} usuário(s)
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setFilialUsersPage((p) => Math.max(1, p - 1))}
+                            disabled={filialUsersPage <= 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm">
+                            {filialUsersPage} / {filialUsersTotalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setFilialUsersPage((p) => Math.min(filialUsersTotalPages, p + 1))}
+                            disabled={filialUsersPage >= filialUsersTotalPages}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      {userSearchTerm
-                        ? "Nenhum usuário encontrado para esta busca."
-                        : "Nenhum usuário nesta filial."}
+                      {userSearchTerm ? "Nenhum usuário encontrado." : "Nenhum usuário nesta filial."}
                     </div>
                   )}
                 </CardContent>
@@ -672,63 +622,66 @@ export default function FiliaisManagementPage() {
         </Tabs>
       </div>
 
-      {/* Create/Edit Modal */}
-      <Dialog open={isCreateModalOpen || isEditModalOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsCreateModalOpen(false)
-          setIsEditModalOpen(false)
-          setFormData({ name: "", code: "" })
-        }
-      }}>
+      {/* ── Create/Edit Empresa Modal ─────────────────────────────────────── */}
+      <Dialog
+        open={isCreateEmpresaOpen || isEditEmpresaOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateEmpresaOpen(false)
+            setIsEditEmpresaOpen(false)
+            setEmpresaForm({ name: "", enterprise: "" })
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{selectedFilial ? "Editar Filial" : "Nova Filial"}</DialogTitle>
+            <DialogTitle>{selectedEmpresa ? "Editar Empresa" : "Nova Empresa"}</DialogTitle>
             <DialogDescription>
-              {selectedFilial
-                ? "Atualize as informações da filial"
-                : "Preencha os dados para criar uma nova filial"}
+              {selectedEmpresa ? "Atualize as informações da empresa" : "Preencha os dados para criar uma nova empresa"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="filial-name">Nome</Label>
+              <Label htmlFor="empresa-name">Nome</Label>
               <Input
-                id="filial-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: São Paulo"
+                id="empresa-name"
+                value={empresaForm.name}
+                onChange={(e) => setEmpresaForm({ ...empresaForm, name: e.target.value })}
+                placeholder="Ex: Box Teste"
               />
             </div>
             <div>
-              <Label htmlFor="filial-code">Código</Label>
-              <Input
-                id="filial-code"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="Ex: SP"
-              />
+              <Label htmlFor="empresa-enterprise">Tipo</Label>
+              <Select
+                value={empresaForm.enterprise === "" ? undefined : empresaForm.enterprise}
+                onValueChange={(v) => setEmpresaForm({ ...empresaForm, enterprise: v as Enterprise })}
+              >
+                <SelectTrigger id="empresa-enterprise">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FILIAL_ENTERPRISE_OPTIONS.map((ent) => (
+                    <SelectItem key={ent} value={ent}>
+                      {ent.replaceAll("_", " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setIsCreateModalOpen(false)
-                setIsEditModalOpen(false)
-                setFormData({ name: "", code: "" })
-              }}
+              onClick={() => { setIsCreateEmpresaOpen(false); setIsEditEmpresaOpen(false) }}
             >
               Cancelar
             </Button>
             <Button
-              onClick={selectedFilial ? handleSaveEdit : handleSaveCreate}
-              disabled={createFilial.isPending || updateFilial.isPending}
+              onClick={selectedEmpresa ? handleSaveEditEmpresa : handleSaveCreateEmpresa}
+              disabled={createEmpresa.isPending || updateEmpresa.isPending}
             >
-              {createFilial.isPending || updateFilial.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
+              {createEmpresa.isPending || updateEmpresa.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
               ) : (
                 "Salvar"
               )}
@@ -737,36 +690,130 @@ export default function FiliaisManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* ── Delete Empresa Dialog ─────────────────────────────────────────── */}
+      <AlertDialog open={isDeleteEmpresaOpen} onOpenChange={setIsDeleteEmpresaOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deletar Filial</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Empresa</AlertDialogTitle>
             <AlertDialogDescription>
-              {`Tem certeza que deseja deletar a filial "${selectedFilial?.name ?? ""}"? Esta ação não pode ser desfeita.`}
+              {`Tem certeza que deseja excluir "${selectedEmpresa?.name ?? ""}"? Não é possível excluir empresas com filiais vinculadas.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={deleteFilial.isPending}
+              onClick={() => selectedEmpresa && deleteEmpresa.mutate({ id: selectedEmpresa.id })}
+              disabled={deleteEmpresa.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteFilial.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deletando...
-                </>
-              ) : (
-                "Deletar"
-              )}
+              {deleteEmpresa.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Excluindo...</>
+              ) : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit User Filial Modal */}
+      {/* ── Create/Edit Filial Modal ──────────────────────────────────────── */}
+      <Dialog
+        open={isCreateFilialOpen || isEditFilialOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateFilialOpen(false)
+            setIsEditFilialOpen(false)
+            setFilialForm({ name: "", code: "", empresaId: "" })
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedFilial ? "Editar Filial" : "Nova Filial"}</DialogTitle>
+            <DialogDescription>
+              {selectedFilial ? "Atualize as informações da filial" : "Preencha os dados para criar uma nova filial"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="filial-name">Nome</Label>
+              <Input
+                id="filial-name"
+                value={filialForm.name}
+                onChange={(e) => setFilialForm({ ...filialForm, name: e.target.value })}
+                placeholder="Ex: Venâncio Aires"
+              />
+            </div>
+            <div>
+              <Label htmlFor="filial-code">Código</Label>
+              <Input
+                id="filial-code"
+                value={filialForm.code}
+                onChange={(e) => setFilialForm({ ...filialForm, code: e.target.value.toUpperCase() })}
+                placeholder="Ex: VA"
+              />
+            </div>
+            <div>
+              <Label htmlFor="filial-empresa">Empresa</Label>
+              <Select
+                value={filialForm.empresaId === "" ? undefined : filialForm.empresaId}
+                onValueChange={(v) => setFilialForm({ ...filialForm, empresaId: v })}
+              >
+                <SelectTrigger id="filial-empresa">
+                  <SelectValue placeholder="Selecione a empresa desta filial" />
+                </SelectTrigger>
+                <SelectContent>
+                  {empresas.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setIsCreateFilialOpen(false); setIsEditFilialOpen(false) }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={selectedFilial ? handleSaveEditFilial : handleSaveCreateFilial}
+              disabled={createFilial.isPending || updateFilial.isPending}
+            >
+              {createFilial.isPending || updateFilial.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
+              ) : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Filial Dialog ──────────────────────────────────────────── */}
+      <AlertDialog open={isDeleteFilialOpen} onOpenChange={setIsDeleteFilialOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Filial</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`Tem certeza que deseja excluir "${selectedFilial?.name ?? ""}"? Esta ação não pode ser desfeita.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedFilial && deleteFilial.mutate({ id: selectedFilial.id })}
+              disabled={deleteFilial.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteFilial.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Excluindo...</>
+              ) : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Edit User Filial Modal ────────────────────────────────────────── */}
       <Dialog open={isEditUserFilialOpen} onOpenChange={setIsEditUserFilialOpen}>
         <DialogContent>
           <DialogHeader>
@@ -780,39 +827,36 @@ export default function FiliaisManagementPage() {
               <Label htmlFor="user-enterprise-select">Empresa</Label>
               <Select
                 value={selectedUserEnterprise}
-                onValueChange={(value) => {
-                  const enterpriseValue = value as Enterprise
-                  setSelectedUserEnterprise(enterpriseValue)
-                  if (enterpriseValue !== "Box_Filial" && enterpriseValue !== "Cristallux_Filial") {
-                    setSelectedUserFilialId("")
-                  }
+                onValueChange={(v) => {
+                  setSelectedUserEnterprise(v as Enterprise)
+                  setSelectedUserFilialId("")
                 }}
               >
                 <SelectTrigger id="user-enterprise-select">
                   <SelectValue placeholder="Selecione uma empresa" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ENTERPRISE_VALUES.map((enterprise) => (
-                    <SelectItem key={enterprise} value={enterprise}>
-                      {enterprise.replaceAll("_", " ")}
+                  {ENTERPRISE_VALUES.map((ent) => (
+                    <SelectItem key={ent} value={ent}>
+                      {ent.replaceAll("_", " ")}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            {selectedUserEnterprise === "Box_Filial" || selectedUserEnterprise === "Cristallux_Filial" ? (
+            {(selectedUserEnterprise === "Box_Filial" || selectedUserEnterprise === "Cristallux_Filial") && (
               <div>
                 <Label htmlFor="user-filial-select">Filial</Label>
                 <Select
                   value={selectedUserFilialId || "none"}
-                  onValueChange={(value) => setSelectedUserFilialId(value === "none" ? "" : value)}
+                  onValueChange={(v) => setSelectedUserFilialId(v === "none" ? "" : v)}
                 >
                   <SelectTrigger id="user-filial-select">
                     <SelectValue placeholder="Selecione uma filial" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sem filial</SelectItem>
-                    {filiais.map((f) => (
+                    {filiaisForUserEnterprise.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.name} ({f.code})
                       </SelectItem>
@@ -820,7 +864,7 @@ export default function FiliaisManagementPage() {
                   </SelectContent>
                 </Select>
               </div>
-            ) : null}
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -834,31 +878,21 @@ export default function FiliaisManagementPage() {
             >
               Cancelar
             </Button>
-            <Button
-              onClick={handleSaveUserFilial}
-              disabled={updateUserFilial.isPending}
-            >
+            <Button onClick={handleSaveUserFilial} disabled={updateUserFilial.isPending}>
               {updateUserFilial.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                "Salvar"
-              )}
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
+              ) : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Search Employees Modal */}
+      {/* ── Search Employees Modal ────────────────────────────────────────── */}
       <Dialog
         open={showEmployeeSearch}
         onOpenChange={(open) => {
           setShowEmployeeSearch(open)
-          if (!open) {
-            setEmployeeSearchTerm("")
-          }
+          if (!open) setEmployeeSearchTerm("")
         }}
       >
         <DialogContent className="sm:max-w-2xl">
@@ -868,7 +902,6 @@ export default function FiliaisManagementPage() {
               Digite o nome ou e-mail do colaborador para alterar a filial.
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -891,7 +924,6 @@ export default function FiliaisManagementPage() {
                 </Button>
               )}
             </div>
-
             <div className="space-y-2 max-h-[420px] overflow-auto">
               {employeeSearchTerm.trim().length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -904,18 +936,13 @@ export default function FiliaisManagementPage() {
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex-1">
-                      <div className="font-medium">
-                        {user.firstName} {user.lastName}
-                      </div>
+                      <div className="font-medium">{user.firstName} {user.lastName}</div>
                       <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setShowEmployeeSearch(false)
-                        handleEditUserFilial(user)
-                      }}
+                      onClick={() => { setShowEmployeeSearch(false); handleEditUserFilial(user) }}
                     >
                       <Edit3 className="h-4 w-4 mr-2" />
                       Alterar Empresa/Filial
@@ -924,7 +951,7 @@ export default function FiliaisManagementPage() {
                 ))
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  Nenhum funcionário encontrado para esta busca.
+                  Nenhum funcionário encontrado.
                 </div>
               )}
             </div>

@@ -36,6 +36,7 @@ import { emotionRulerRouter } from "./routers/emotion-ruler";
 import { newUsersHallRouter } from "./routers/new-users-hall";
 import { aiAssistantRouter } from "./routers/ai-assistant";
 import { filiaisRouter } from "./routers/filiais";
+import { empresasRouter } from "./routers/empresas";
 
 /**
  * This is the primary router for your server.
@@ -79,6 +80,7 @@ export const appRouter = createTRPCRouter({
   newUsersHall: newUsersHallRouter,
   aiAssistant: aiAssistantRouter,
   filiais: filiaisRouter,
+  empresas: empresasRouter,
 });
 
 // export type definition of API

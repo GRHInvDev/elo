@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.19.0" as const
+export const APP_CURRENT_VERSION = "1.26.0" as const
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -19,6 +19,50 @@ export interface AppReleaseNote {
  * Incluir somente releases **major** ou **minor** com entrega visível ao usuário.
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
+  {
+    version: "1.26.0",
+    date: "Maio de 2026",
+    items: [
+      "**Restaurante por filial**: agora é possível vincular um restaurante a uma filial específica ao criar ou editar — facilitando a organização e os filtros por unidade.",
+    ],
+  },
+  {
+    version: "1.25.0",
+    date: "Maio de 2026",
+    items: [
+      "**Empresas independentes para filiais**: agora é possível criar empresas personalizadas (como \"Box Teste\" ou \"Cristallux SP\") e vincular cada filial diretamente a uma delas — sem mais depender de categorias fixas do sistema.",
+    ],
+  },
+  {
+    version: "1.24.0",
+    date: "Maio de 2026",
+    items: [
+      "**Régua de Emoções com pontuação por nível**: agora cada opção de resposta tem sua própria quantidade de pontos — quem responde \"Ótimo\" pode ganhar mais ou menos pontos do que quem responde \"Mal\", conforme configurado pelo administrador.",
+      "**Nome personalizado nos níveis**: o administrador pode dar um nome próprio para cada nível da régua (como \"Muito Bem\" ou \"Arrasando!\") em vez do padrão \"Nível 0\", \"Nível 1\".",
+    ],
+  },
+  {
+    version: "1.23.0",
+    date: "Maio de 2026",
+    items: [
+      "**Desativar usuários**: agora é possível desativar um colaborador diretamente na lista de usuários — ele perde o acesso ao sistema imediatamente, sem precisar excluí-lo. Um clique em 'Reativar' devolve o acesso quando necessário.",
+    ],
+  },
+  {
+    version: "1.21.0",
+    date: "Maio de 2026",
+    items: [
+      "**Relatório DRE**: você pode filtrar por restaurante e por filial, e escolher se os números aparecem por empresa e setor, por restaurante ou por filial — para bater o rateio com o jeito que você prefere analisar.",
+    ],
+  },
+  {
+    version: "1.20.0",
+    date: "Maio de 2026",
+    items: [
+      "**Filiais por empresa**: cada filial fica ligada à empresa certa; na hora de escolher a unidade, só aparecem as opções que combinam com o tipo de empresa do colaborador.",
+      "**Cadastro de filiais**: quem administra informa a empresa da filial ao criar ou editar, para manter tudo organizado.",
+    ],
+  },
   {
     version: "1.19.0",
     date: "Abril de 2026",

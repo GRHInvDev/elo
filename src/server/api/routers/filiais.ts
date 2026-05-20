@@ -5,19 +5,25 @@ import { TRPCError } from "@trpc/server"
 import type { RolesConfig } from "@/types/role-config"
 
 const createFilialSchema = z.object({
-  name: z.string().min(2, "Nome da filial deve ter no mínimo 2 caracteres").max(100, "Nome não pode exceder 100 caracteres"),
-  code: z.string()
+  name: z
+    .string()
+    .min(2, "Nome da filial deve ter no mínimo 2 caracteres")
+    .max(100, "Nome não pode exceder 100 caracteres"),
+  code: z
+    .string()
     .min(1, "Código é obrigatório")
     .max(50, "Código não pode exceder 50 caracteres")
-    .transform(val => val.toUpperCase()),
+    .transform((val) => val.toUpperCase()),
+  empresaId: z.string().min(1, "Selecione a empresa à qual esta filial pertence"),
 })
 
 const updateFilialSchema = createFilialSchema.partial().extend({
   id: z.string(),
 })
 
-// Função auxiliar para verificar permissão
-function checkFilialManagementPermission(roleConfig: RolesConfig | null | undefined): void {
+function checkFilialManagementPermission(
+  roleConfig: RolesConfig | null | undefined,
+): void {
   if (!roleConfig) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -35,32 +41,29 @@ function checkFilialManagementPermission(roleConfig: RolesConfig | null | undefi
   }
 }
 
-export const filiaisRouter = createTRPCRouter({
-  // Listar todas as filiais
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.filial.findMany({
-      orderBy: { name: "asc" },
-    })
-  }),
+const empresaSelect = {
+  id: true,
+  name: true,
+  enterprise: true,
+} as const
 
-  // Obter filial por ID
+export const filiaisRouter = createTRPCRouter({
+  list: protectedProcedure
+    .input(z.object({ empresaId: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      return ctx.db.filial.findMany({
+        where: input?.empresaId ? { empresaId: input.empresaId } : undefined,
+        include: { empresa: { select: empresaSelect } },
+        orderBy: { name: "asc" },
+      })
+    }),
+
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const filial = await ctx.db.filial.findUnique({
         where: { id: input.id },
-        include: {
-          users: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              enterprise: true,
-              filialId: true,
-            },
-          },
-        },
+        include: { empresa: { select: empresaSelect } },
       })
 
       if (!filial) {
@@ -73,22 +76,69 @@ export const filiaisRouter = createTRPCRouter({
       return filial
     }),
 
-  // Criar nova filial
+  listUsers: protectedProcedure
+    .input(
+      z.object({
+        filialId: z.string(),
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(5).max(50).default(10),
+        search: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { filialId, page, pageSize, search } = input
+      const skip = (page - 1) * pageSize
+
+      const where = {
+        filialId,
+        ...(search
+          ? {
+              OR: [
+                { firstName: { contains: search, mode: "insensitive" as const } },
+                { lastName: { contains: search, mode: "insensitive" as const } },
+                { email: { contains: search, mode: "insensitive" as const } },
+              ],
+            }
+          : {}),
+      }
+
+      const [users, total] = await Promise.all([
+        ctx.db.user.findMany({
+          where,
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            enterprise: true,
+            filialId: true,
+          },
+          skip,
+          take: pageSize,
+          orderBy: [{ firstName: "asc" }, { email: "asc" }],
+        }),
+        ctx.db.user.count({ where }),
+      ])
+
+      return {
+        users,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      }
+    }),
+
   create: protectedProcedure
     .input(createFilialSchema)
     .mutation(async ({ ctx, input }) => {
-      // Buscar role_config do usuário
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 
-      const roleConfig = user?.role_config as RolesConfig | null
+      checkFilialManagementPermission(user?.role_config as RolesConfig | null)
 
-      // Validar permissão
-      checkFilialManagementPermission(roleConfig)
-
-      // Validar se código já existe
       const existingFilial = await ctx.db.filial.findUnique({
         where: { code: input.code.toUpperCase() },
       })
@@ -100,28 +150,36 @@ export const filiaisRouter = createTRPCRouter({
         })
       }
 
+      const empresa = await ctx.db.empresa.findUnique({
+        where: { id: input.empresaId },
+      })
+
+      if (!empresa) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Empresa não encontrada",
+        })
+      }
+
       return ctx.db.filial.create({
         data: {
           name: input.name,
           code: input.code.toUpperCase(),
+          empresaId: input.empresaId,
         },
+        include: { empresa: { select: empresaSelect } },
       })
     }),
 
-  // Atualizar filial
   update: protectedProcedure
     .input(updateFilialSchema)
     .mutation(async ({ ctx, input }) => {
-      // Buscar role_config do usuário
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 
-      const roleConfig = user?.role_config as RolesConfig | null
-
-      // Validar permissão
-      checkFilialManagementPermission(roleConfig)
+      checkFilialManagementPermission(user?.role_config as RolesConfig | null)
 
       const { id, ...data } = input
       const dataToUpdate = {
@@ -129,7 +187,6 @@ export const filiaisRouter = createTRPCRouter({
         ...(data.code && { code: data.code.toUpperCase() }),
       }
 
-      // Se código foi alterado, validar unicidade
       if (dataToUpdate.code) {
         const existingFilial = await ctx.db.filial.findUnique({
           where: { code: dataToUpdate.code },
@@ -143,28 +200,36 @@ export const filiaisRouter = createTRPCRouter({
         }
       }
 
+      if (dataToUpdate.empresaId) {
+        const empresa = await ctx.db.empresa.findUnique({
+          where: { id: dataToUpdate.empresaId },
+        })
+
+        if (!empresa) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Empresa não encontrada",
+          })
+        }
+      }
+
       return ctx.db.filial.update({
         where: { id },
         data: dataToUpdate,
+        include: { empresa: { select: empresaSelect } },
       })
     }),
 
-  // Deletar filial
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Buscar role_config do usuário
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
         select: { role_config: true },
       })
 
-      const roleConfig = user?.role_config as RolesConfig | null
+      checkFilialManagementPermission(user?.role_config as RolesConfig | null)
 
-      // Validar permissão
-      checkFilialManagementPermission(roleConfig)
-
-      // Verificar se filial tem usuários vinculados
       const usersCount = await ctx.db.user.count({
         where: { filialId: input.id },
       })
@@ -176,8 +241,6 @@ export const filiaisRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.filial.delete({
-        where: { id: input.id },
-      })
+      return ctx.db.filial.delete({ where: { id: input.id } })
     }),
 })
