@@ -217,13 +217,20 @@ export const emotionRulerRouter = createTRPCRouter({
       const today = startOfDay(new Date());
       const userId = ctx.auth.userId;
 
-      // Criar resposta
+      const emotion = await ctx.db.emotionRulerEmotion.findFirst({
+        where: { rulerId: input.rulerId, value: input.emotionValue },
+        select: { points: true },
+      });
+
+      const pointsEarned = emotion?.points ?? 0;
+
       const response = await ctx.db.emotionRulerResponse.create({
         data: {
           userId,
           rulerId: input.rulerId,
           emotionValue: input.emotionValue,
           comment: input.comment,
+          pointsEarned,
         },
       });
 
@@ -255,7 +262,7 @@ export const emotionRulerRouter = createTRPCRouter({
         });
       }
 
-      return response;
+      return { ...response, pointsEarned };
     }),
 
   // Admin: Buscar todas as réguas
@@ -357,12 +364,15 @@ export const emotionRulerRouter = createTRPCRouter({
         startDate: z.date().optional().nullable(),
         endDate: z.date().optional().nullable(),
         backgroundColor: z.string().optional().nullable(),
+        pointsPerResponse: z.number().min(0).default(0),
         emotions: z.array(
           z.object({
             value: z.number().min(0).max(5),
+            label: z.string().optional().nullable(),
             emoji: z.string().optional().nullable(),
             color: z.string(),
             states: z.array(z.string()).default([]),
+            points: z.number().min(0).default(0),
             order: z.number(),
           })
         ),
@@ -414,12 +424,15 @@ export const emotionRulerRouter = createTRPCRouter({
           startDate: input.startDate ?? null,
           endDate: input.endDate ?? null,
           backgroundColor: input.backgroundColor ?? null,
+          pointsPerResponse: input.pointsPerResponse ?? 0,
           emotions: {
             create: input.emotions.map((emotion) => ({
               value: emotion.value,
+              label: emotion.label ?? null,
               emoji: emotion.emoji ?? null,
               color: emotion.color,
               states: emotion.states,
+              points: emotion.points ?? 0,
               order: emotion.order,
             })),
           },
@@ -444,15 +457,18 @@ export const emotionRulerRouter = createTRPCRouter({
         startDate: z.date().optional().nullable(),
         endDate: z.date().optional().nullable(),
         backgroundColor: z.string().optional().nullable(),
+        pointsPerResponse: z.number().min(0).optional(),
         allowedUserIds: z.array(z.string()).optional().nullable(), // TESTE: IDs de usuários específicos
         emotions: z
           .array(
             z.object({
               id: z.string().optional(),
               value: z.number().min(0).max(5),
+              label: z.string().optional().nullable(),
               emoji: z.string().optional().nullable(),
               color: z.string(),
               states: z.array(z.string()).default([]),
+              points: z.number().min(0).default(0),
               order: z.number(),
             })
           )
@@ -521,9 +537,11 @@ export const emotionRulerRouter = createTRPCRouter({
               where: { id: emotion.id },
               data: {
                 value: emotion.value,
+                label: emotion.label ?? null,
                 emoji: emotion.emoji ?? null,
                 color: emotion.color,
                 states: emotion.states,
+                points: emotion.points ?? 0,
                 order: emotion.order,
               },
             });
@@ -532,9 +550,11 @@ export const emotionRulerRouter = createTRPCRouter({
               data: {
                 rulerId: id,
                 value: emotion.value,
+                label: emotion.label ?? null,
                 emoji: emotion.emoji ?? null,
                 color: emotion.color,
                 states: emotion.states,
+                points: emotion.points ?? 0,
                 order: emotion.order,
               },
             });
@@ -660,12 +680,59 @@ export const emotionRulerRouter = createTRPCRouter({
             : 0,
       }));
 
+      // Buscar respostas com usuário para breakdown por área e total de pontos
+      const responsesWithUsers = await ctx.db.emotionRulerResponse.findMany({
+        where: {
+          rulerId: input.rulerId,
+          ...(startDate && endDate
+            ? { createdAt: { gte: startDate, lte: endDate } }
+            : {}),
+        },
+        select: {
+          emotionValue: true,
+          pointsEarned: true,
+          user: { select: { setor: true } },
+        },
+      });
+
+      // Agrupar por área (setor)
+      const areaMap = new Map<string, { count: number; totalEmotion: number; distribution: Record<number, number>; totalPoints: number }>();
+      let totalPoints = 0;
+
+      for (const r of responsesWithUsers) {
+        const setor = r.user.setor ?? "Sem setor";
+        totalPoints += r.pointsEarned;
+        if (!areaMap.has(setor)) {
+          areaMap.set(setor, { count: 0, totalEmotion: 0, distribution: {}, totalPoints: 0 });
+        }
+        const area = areaMap.get(setor)!;
+        area.count++;
+        area.totalEmotion += r.emotionValue;
+        area.distribution[r.emotionValue] = (area.distribution[r.emotionValue] ?? 0) + 1;
+        area.totalPoints += r.pointsEarned;
+      }
+
+      const statsByArea = Array.from(areaMap.entries())
+        .map(([setor, data]) => ({
+          setor,
+          totalResponses: data.count,
+          averageEmotion: data.count > 0 ? Math.round((data.totalEmotion / data.count) * 10) / 10 : 0,
+          emotionDistribution: Object.entries(data.distribution).map(([value, count]) => ({
+            value: parseInt(value),
+            count,
+          })),
+          totalPoints: data.totalPoints,
+        }))
+        .sort((a, b) => b.totalResponses - a.totalResponses);
+
       return {
         totalAccesses,
         totalResponses,
         responseRate:
           totalAccesses > 0 ? (totalResponses / totalAccesses) * 100 : 0,
         emotionPercentages,
+        totalPoints,
+        statsByArea,
       };
     }),
 

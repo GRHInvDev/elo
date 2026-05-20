@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/trpc/react"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
+import type { Enterprise } from "@/types/enterprise"
 
 interface CompleteProfileModalProps {
   isOpen: boolean
@@ -27,6 +28,7 @@ type FilialOption = {
   id: string
   name: string
   code: string
+  enterprise: Enterprise
 }
 
 const enterprises = [
@@ -57,9 +59,17 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
   const [isLoading, setIsLoading] = useState(false)
 
   const { toast } = useToast()
-  const { data: filiaisData = [] } = api.filiais.list.useQuery()
-  const filiais = filiaisData as FilialOption[]
   const shouldRequireFilial = enterprise === "Box_Filial" || enterprise === "Cristallux_Filial"
+
+  const { data: filiaisData = [] } = api.filiais.list.useQuery(undefined, {
+    enabled: shouldRequireFilial && !!enterprise,
+  })
+  const filiais: FilialOption[] = filiaisData.map((f) => ({
+    id: f.id,
+    name: f.name,
+    code: f.code,
+    enterprise: f.empresa.enterprise,
+  }))
 
   // Atualizar os valores quando o modal abrir
   useEffect(() => {
@@ -76,6 +86,14 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       setFilialId("")
     }
   }, [shouldRequireFilial, filialId])
+
+  useEffect(() => {
+    if (!shouldRequireFilial || !filialId) return
+    const allowed = new Set(filiais.map((f) => f.id))
+    if (!allowed.has(filialId)) {
+      setFilialId("")
+    }
+  }, [shouldRequireFilial, filiais, filialId])
 
   const updateProfileMutation = api.user.updateProfile.useMutation({
     onSuccess: () => {
@@ -140,7 +158,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
 
     updateProfileMutation.mutate({
       matricula: matricula.trim(),
-      enterprise: enterprise.trim(),
+      enterprise: enterprise.trim() as Enterprise,
       setor: setor.trim(),
       filialId: shouldRequireFilial ? filialId.trim() : null,
     })

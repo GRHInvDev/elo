@@ -490,11 +490,14 @@ model Restaurant {
   phone       String
   email       String
   active      Boolean     @default(true)
+  filialId    String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  filial      Filial?     @relation(fields: [filialId], references: [id], onDelete: SetNull)
   orders      FoodOrder[]
   menuItems   MenuItem[]
 
+  @@index([filialId])
   @@map("restaurants")
 }
 
@@ -592,14 +595,30 @@ model OrderLog {
   @@map("order_logs")
 }
 
-model Filial {
-  id        String   @id @default(cuid())
-  name      String
-  code      String   @unique @db.VarChar(50) // Ex: "SCS", "RJ-SP"
-  users     User[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Empresa {
+  id         String     @id @default(cuid())
+  name       String
+  enterprise Enterprise @default(Box_Filial)
+  filiais    Filial[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
+  @@index([enterprise])
+  @@map("empresas")
+}
+
+model Filial {
+  id          String       @id @default(cuid())
+  name        String
+  code        String       @unique @db.VarChar(50) // Ex: "SCS", "LGS"
+  empresaId   String
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  users       User[]
+  restaurants Restaurant[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([empresaId])
   @@map("filiais")
 }
 
@@ -1026,17 +1045,18 @@ enum DocRevPeriod {
 
 // Módulo Régua de Emoções
 model EmotionRuler {
-  id              String                    @id @default(cuid())
-  question        String                    @default("Como você está se sentindo hoje?")
-  isActive        Boolean                   @default(true)
-  startDate       DateTime?
-  endDate         DateTime?
-  backgroundColor String? // Cor de fundo do layout
-  emotions        EmotionRulerEmotion[]
-  responses       EmotionRulerResponse[]
-  dailyAccesses   EmotionRulerDailyAccess[]
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
+  id                String                    @id @default(cuid())
+  question          String                    @default("Como você está se sentindo hoje?")
+  isActive          Boolean                   @default(true)
+  startDate         DateTime?
+  endDate           DateTime?
+  backgroundColor   String? // Cor de fundo do layout
+  pointsPerResponse Int                       @default(0) // Pontos concedidos por resposta
+  emotions          EmotionRulerEmotion[]
+  responses         EmotionRulerResponse[]
+  dailyAccesses     EmotionRulerDailyAccess[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
 
   @@map("emotion_rulers")
 }
@@ -1045,9 +1065,11 @@ model EmotionRulerEmotion {
   id      String       @id @default(cuid())
   rulerId String
   value   Int // Valor numérico (0-5, onde 0 é extremamente chateado e 5 é extremamente feliz)
+  label   String? // Rótulo personalizado (ex: "Muito Triste", "Feliz") — exibido no lugar de "Nível X"
   emoji   String? // Emoji para este nível (ex: "😢", "😊")
   color   String // Cor da emoção (ex: "#FF0000" para vermelho, "#00FF00" para verde)
   states  String[]     @default([]) // Estados/emoções para este nível (ex: ["frustrado", "chateado", "triste"])
+  points  Int          @default(0) // Pontos concedidos ao usuário ao selecionar este nível
   order   Int          @default(0) // Ordem na régua
   ruler   EmotionRuler @relation(fields: [rulerId], references: [id], onDelete: Cascade)
 
@@ -1065,6 +1087,7 @@ model EmotionRulerResponse {
   rulerId      String
   emotionValue Int // Valor da emoção selecionada (0-5)
   comment      String? // Comentário opcional
+  pointsEarned Int      @default(0) // Pontos ganhos por esta resposta
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -19,11 +19,12 @@ interface EmotionRulerFormProps {
 
 interface Emotion {
   id?: string
-  label?: string
+  label: string
   value: number
   emoji: string | null
   color: string
   states: string[]
+  points: number
   order: number
 }
 
@@ -38,12 +39,12 @@ export function EmotionRulerForm({
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [backgroundColor, setBackgroundColor] = useState("#ffffff")
   const [emotions, setEmotions] = useState<Emotion[]>([
-    { value: 0, emoji: "😢", color: "#FF0000", states: ["frustrado", "chateado", "triste", "com raiva"], order: 0 },
-    { value: 1, emoji: "😞", color: "#FF6B6B", states: ["desanimado", "preocupado", "ansioso"], order: 1 },
-    { value: 2, emoji: "😐", color: "#FFA500", states: ["neutro", "sem grandes emoções"], order: 2 },
-    { value: 3, emoji: "🙂", color: "#FFD93D", states: ["satisfeito", "tranquilo", "bem"], order: 3 },
-    { value: 4, emoji: "😊", color: "#6BCF7F", states: ["feliz", "animado", "motivado"], order: 4 },
-    { value: 5, emoji: "😄", color: "#00FF00", states: ["extremamente feliz", "animado", "eufórico", "radiante"], order: 5 },
+    { value: 0, label: "Muito Mal", emoji: "😢", color: "#FF0000", states: ["frustrado", "chateado", "triste", "com raiva"], points: 1, order: 0 },
+    { value: 1, label: "Mal", emoji: "😞", color: "#FF6B6B", states: ["desanimado", "preocupado", "ansioso"], points: 2, order: 1 },
+    { value: 2, label: "Mais ou Menos", emoji: "😐", color: "#FFA500", states: ["neutro", "sem grandes emoções"], points: 3, order: 2 },
+    { value: 3, label: "Bem", emoji: "🙂", color: "#FFD93D", states: ["satisfeito", "tranquilo", "bem"], points: 4, order: 3 },
+    { value: 4, label: "Muito Bem", emoji: "😊", color: "#6BCF7F", states: ["feliz", "animado", "motivado"], points: 5, order: 4 },
+    { value: 5, label: "Ótimo", emoji: "😄", color: "#00FF00", states: ["extremamente feliz", "animado", "eufórico", "radiante"], points: 6, order: 5 },
   ])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -66,9 +67,11 @@ export function EmotionRulerForm({
         ruler.emotions.map((e) => ({
           id: e.id,
           value: e.value,
+          label: e.label ?? "",
           emoji: e.emoji,
           color: e.color,
           states: e.states,
+          points: e.points ?? 0,
           order: e.order,
         }))
       )
@@ -78,11 +81,12 @@ export function EmotionRulerForm({
   const handleAddEmotion = () => {
     const maxValue = Math.max(...emotions.map((e) => e.value), 0)
     const newEmotion: Emotion = {
-      label: "Nova Emoção",
+      label: "",
       states: [],
       emoji: null,
       value: Math.min(maxValue + 2, 10),
       color: "#808080",
+      points: 0,
       order: emotions.length,
     }
     setEmotions([...emotions, newEmotion])
@@ -96,7 +100,7 @@ export function EmotionRulerForm({
     setEmotions(emotions.filter((_, i) => i !== index))
   }
 
-  const handleUpdateEmotion = (index: number, field: keyof Emotion, value: string | number | null) => {
+  const handleUpdateEmotion = (index: number, field: keyof Emotion, value: string | number | null | undefined) => {
     const updated = [...emotions]
     updated[index] = { ...updated[index], [field]: value } as Emotion
     setEmotions(updated)
@@ -164,6 +168,7 @@ export function EmotionRulerForm({
         backgroundColor: backgroundColor ?? null,
         emotions: emotions.map((e, i) => ({
           ...e,
+          label: e.label || null,
           order: i,
         })),
       }
@@ -267,7 +272,9 @@ export function EmotionRulerForm({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <GripVertical className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-medium">Nível {emotion.value}</span>
+                    <span className="font-medium">
+                      {emotion.label || `Nível ${emotion.value}`}
+                    </span>
                   </div>
                   <Button
                     type="button"
@@ -278,6 +285,35 @@ export function EmotionRulerForm({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Nome do nível */}
+                  <div className="flex flex-col">
+                    <Label className="text-xs mb-2 h-5 flex items-center">Nome do nível</Label>
+                    <Input
+                      value={emotion.label}
+                      onChange={(e) =>
+                        handleUpdateEmotion(index, "label", e.target.value)
+                      }
+                      placeholder={`Nível ${emotion.value}`}
+                      className="h-9"
+                    />
+                  </div>
+
+                  {/* Pontos */}
+                  <div className="flex flex-col">
+                    <Label className="text-xs mb-2 h-5 flex items-center">Pontos ao selecionar</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={emotion.points}
+                      onChange={(e) =>
+                        handleUpdateEmotion(index, "points", Math.max(0, parseInt(e.target.value) || 0))
+                      }
+                      className="h-9"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

@@ -231,7 +231,7 @@ function PostItem({ post }: PostItemProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
           {/* Coluna da Imagem — aspect-ratio fixo para evitar container retrato */}
           {imageUrls.length > 0 && (
-            <div className="relative aspect-[3/2] md:aspect-[3/2] overflow-hidden bg-muted">
+            <div className="relative h-56 sm:h-64 md:h-auto overflow-hidden bg-muted">
               <ImageCarousel
                 images={imageUrls}
                 alt={post.title}

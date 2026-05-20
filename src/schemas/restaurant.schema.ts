@@ -8,6 +8,7 @@ export const createRestaurantSchema = z.object({
   phone: z.string().min(1, "Telefone é obrigatório"),
   email: z.string().email("Email inválido"),
   active: z.boolean().default(true),
+  filialId: z.string().optional(),
 })
 
 export const updateRestaurantSchema = createRestaurantSchema.partial().extend({

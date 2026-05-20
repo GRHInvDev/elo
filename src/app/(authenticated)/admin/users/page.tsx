@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,7 +37,10 @@ import {
   FileText,
   Filter,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserX,
+  UserCheck,
+  AlertTriangle,
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
 import type { Enterprise } from "@prisma/client"
@@ -107,7 +110,11 @@ export default function UsersManagementPage() {
   })
 
   const { data: allForms } = api.form.list.useQuery()
-  const { data: filiais = [] } = api.filiais.list.useQuery()
+  const { data: filiaisRaw = [] } = api.filiais.list.useQuery()
+  const filiais = useMemo(
+    () => filiaisRaw.map((f) => ({ id: f.id, name: f.name, code: f.code, enterprise: f.empresa.enterprise })),
+    [filiaisRaw],
+  )
 
   const users = usersData?.users ?? []
   const total = usersData?.total ?? 0
@@ -359,6 +366,7 @@ interface UserManagementCardProps {
     email_empresarial?: string | null
     enterprise?: Enterprise | null
     filialId?: string | null
+    is_active?: boolean | null
     lojinha_full_name?: string | null
     lojinha_cpf?: string | null
     lojinha_address?: string | null
@@ -369,7 +377,7 @@ interface UserManagementCardProps {
     lojinha_phone?: string | null
   }
   allForms: { id: string; title: string }[]
-  filiais?: { id: string; name: string; code: string }[]
+  filiais?: { id: string; name: string; code: string; enterprise: Enterprise }[]
   onUserUpdate: () => void
 }
 
@@ -408,9 +416,12 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
   const [showPermissionAutocomplete, setShowPermissionAutocomplete] = useState(false)
   const [showFormAutocomplete, setShowFormAutocomplete] = useState(false)
 
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false)
+
   const { isSudo, canManageBasicUserData, canViewDadosPrivados } = useAccessControl()
   const canEditBasicOnly = canManageBasicUserData() && !isSudo
   const showDadosPrivadosTab = isSudo || canViewDadosPrivados()
+  const canToggleActive = isSudo || canManageBasicUserData()
 
   // Função auxiliar para obter o nome do setor
   const getSetorLabel = (setorValue: string | null | undefined): string => {
@@ -437,6 +448,14 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
   })
   const [isEditingFilial, setIsEditingFilial] = useState(false)
   const [selectedUserFilial, setSelectedUserFilial] = useState<string>(user.filialId ?? "")
+
+  const userEnterpriseRequiresFilial =
+    user.enterprise === "Box_Filial" || user.enterprise === "Cristallux_Filial"
+
+  const filiaisForUserEnterprise = useMemo(() => {
+    if (!userEnterpriseRequiresFilial) return []
+    return (filiais ?? []).filter((f) => f.enterprise === user.enterprise)
+  }, [filiais, user.enterprise, userEnterpriseRequiresFilial])
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(() =>
     extendedRoleConfigFromServer(user.role_config),
   )
@@ -625,6 +644,41 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
     },
   })
 
+  const toggleActive = api.user.updateBasicInfo.useMutation({
+    onSuccess: async () => {
+      const nowActive = user.is_active === false
+      toast({
+        title: nowActive ? "Usuário reativado" : "Usuário desativado",
+        description: nowActive
+          ? `${user.firstName} voltou a ter acesso normal ao sistema.`
+          : `${user.firstName} não poderá mais acessar o sistema normalmente.`,
+      })
+      setShowDeactivateDialog(false)
+      await utils.user.listUsers.invalidate()
+      onUserUpdate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+  const handleToggleActive = () => {
+    const newActive = user.is_active === false
+    if (!newActive) {
+      setShowDeactivateDialog(true)
+    } else {
+      toggleActive.mutate({ userId: user.id, is_active: true })
+    }
+  }
+
+  const handleConfirmDeactivate = () => {
+    toggleActive.mutate({ userId: user.id, is_active: false })
+  }
+
   const handleSaveDadosPrivados = () => {
     updateDadosPrivados.mutate({
       userId: user.id,
@@ -779,50 +833,107 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
     })
   }
 
+  const isUserActive = user.is_active !== false
+
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <User className="h-5 w-5 text-primary" />
+    <>
+      {/* Dialog de confirmação de desativação */}
+      <Dialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Desativar usuário
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja desativar <strong>{user.firstName} {user.lastName}</strong>? Após a desativação, este usuário não conseguirá usar o sistema normalmente. Você pode reativar a qualquer momento.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeactivateDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeactivate}
+              disabled={toggleActive.isPending}
+            >
+              {toggleActive.isPending ? "Desativando..." : "Sim, desativar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">
+                    {user.firstName} {user.lastName}
+                  </CardTitle>
+                  <CardDescription className="mt-0.5">
+                    {user.email}
+                  </CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-lg">
-                  {user.firstName} {user.lastName}
-                </CardTitle>
-                <CardDescription className="mt-0.5">
-                  {user.email}
-                </CardDescription>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {user.setor && (
+                  <Badge variant="outline" className="text-xs">
+                    {getSetorLabel(user.setor)}
+                  </Badge>
+                )}
+                {user.role_config?.sudo && (
+                  <Badge variant="default" className="bg-red-500/10 text-red-700 hover:bg-red-500/20">
+                    <Shield className="mr-1 h-3 w-3" />
+                    Super Admin
+                  </Badge>
+                )}
+                {permissionsData.isTotem && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                    TOTEM
+                  </Badge>
+                )}
+                {!isUserActive && (
+                  <Badge variant="outline" className="bg-muted text-muted-foreground">
+                    Desativado
+                  </Badge>
+                )}
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {user.setor && (
-                <Badge variant="outline" className="text-xs">
-                  {getSetorLabel(user.setor)}
-                </Badge>
-              )}
-              {user.role_config?.sudo && (
-                <Badge variant="default" className="bg-red-500/10 text-red-700 hover:bg-red-500/20">
-                  <Shield className="mr-1 h-3 w-3" />
-                  Super Admin
-                </Badge>
-              )}
-              {permissionsData.isTotem && (
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                  TOTEM
-                </Badge>
-              )}
-              {(user as { is_active?: boolean }).is_active === false && (
-                <Badge variant="outline" className="bg-muted text-muted-foreground">
-                  Desativado
-                </Badge>
-              )}
-            </div>
+            {canToggleActive && (
+              <div className="flex-shrink-0 pt-1">
+                {isUserActive ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleActive}
+                    disabled={toggleActive.isPending}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <UserX className="h-4 w-4 mr-1.5" />
+                    Desativar
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleActive}
+                    disabled={toggleActive.isPending}
+                    className="border-green-500/40 text-green-700 hover:bg-green-50 hover:text-green-700"
+                  >
+                    <UserCheck className="h-4 w-4 mr-1.5" />
+                    Reativar
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
       <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex w-full">
@@ -1064,10 +1175,12 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
                     <Edit3 className="h-4 w-4 mr-2" />
                     Editar Dados
                   </Button>
-                  <Button onClick={() => setIsEditingFilial(true)} size="sm" variant="outline">
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    Alterar Filial
-                  </Button>
+                  {userEnterpriseRequiresFilial ? (
+                    <Button onClick={() => setIsEditingFilial(true)} size="sm" variant="outline">
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Alterar Filial
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -1917,7 +2030,7 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sem filial</SelectItem>
-                    {filiais?.map((f) => (
+                    {filiaisForUserEnterprise.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.name} ({f.code})
                       </SelectItem>
@@ -1954,5 +2067,6 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
         </Dialog>
       </CardContent>
     </Card>
+    </>
   )
 }

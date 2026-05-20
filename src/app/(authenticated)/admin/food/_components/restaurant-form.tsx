@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { createRestaurantSchema, updateRestaurantSchema } from "@/schemas/restaurant.schema"
@@ -31,7 +38,9 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
   })
   
   const utils = api.useUtils()
-  
+
+  const { data: filiais } = api.filiais.list.useQuery(undefined)
+
   const {
     register,
     handleSubmit,
@@ -39,6 +48,7 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
     reset,
     watch,
     setValue,
+    control,
   } = useForm<FormData>({
     // Sempre usar createRestaurantSchema para validação do formulário
     // O id será adicionado no submit quando necessário
@@ -51,6 +61,7 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
       phone: restaurant?.phone ?? "",
       email: restaurant?.email ?? "",
       active: restaurant?.active ?? true,
+      filialId: restaurant?.filialId ?? undefined,
     },
   })
 
@@ -135,6 +146,7 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
         phone: restaurant.phone,
         email: restaurant.email,
         active: restaurant.active,
+        filialId: restaurant.filialId ?? undefined,
       })
     }
   }, [restaurant, reset])
@@ -243,6 +255,32 @@ export default function RestaurantForm({ restaurant, onSuccess }: RestaurantForm
             {errors.email.message}
           </p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="filialId">Filial</Label>
+        <Controller
+          name="filialId"
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value ?? ""}
+              onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
+            >
+              <SelectTrigger id="filialId">
+                <SelectValue placeholder="Selecione uma filial (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {filiais?.map((filial) => (
+                  <SelectItem key={filial.id} value={filial.id}>
+                    {filial.name} ({filial.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
 
       <div className="flex items-center space-x-2">
