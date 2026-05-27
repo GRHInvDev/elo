@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -53,6 +53,13 @@ export function EmotionRulerForm({
     { enabled: !!rulerId }
   )
 
+  const utils = api.useUtils()
+
+  const sortedEmotions = useMemo(
+    () => [...emotions].sort((a, b) => a.value - b.value),
+    [emotions]
+  )
+
   const createMutation = api.emotionRuler.create.useMutation()
   const updateMutation = api.emotionRuler.update.useMutation()
 
@@ -92,47 +99,42 @@ export function EmotionRulerForm({
     setEmotions([...emotions, newEmotion])
   }
 
-  const handleRemoveEmotion = (index: number) => {
+  const handleRemoveEmotion = (emotionValue: number) => {
     if (emotions.length <= 2) {
       toast.error("É necessário ter pelo menos 2 emoções")
       return
     }
-    setEmotions(emotions.filter((_, i) => i !== index))
+    setEmotions(emotions.filter((e) => e.value !== emotionValue))
   }
 
-  const handleUpdateEmotion = (index: number, field: keyof Emotion, value: string | number | null | undefined) => {
-    const updated = [...emotions]
-    updated[index] = { ...updated[index], [field]: value } as Emotion
-    setEmotions(updated)
+  const handleUpdateEmotion = (emotionValue: number, field: keyof Emotion, value: string | number | null | undefined) => {
+    setEmotions(emotions.map((e) =>
+      e.value === emotionValue ? { ...e, [field]: value } as Emotion : e
+    ))
   }
 
-  const handleAddState = (index: number) => {
-    const updated = [...emotions]
-    updated[index] = {
-      ...updated[index],
-      states: [...(updated[index]?.states ?? []), ""],
-    } as Emotion
-    setEmotions(updated)
+  const handleAddState = (emotionValue: number) => {
+    setEmotions(emotions.map((e) =>
+      e.value === emotionValue
+        ? { ...e, states: [...(e.states ?? []), ""] } as Emotion
+        : e
+    ))
   }
 
-  const handleUpdateState = (emotionIndex: number, stateIndex: number, value: string) => {
-    const updated = [...emotions]
-    updated[emotionIndex] = {
-      ...updated[emotionIndex],
-      states: updated[emotionIndex]?.states.map((state, i) =>
-        i === stateIndex ? value : state
-      ),
-    } as Emotion
-    setEmotions(updated)
+  const handleUpdateState = (emotionValue: number, stateIndex: number, value: string) => {
+    setEmotions(emotions.map((e) =>
+      e.value === emotionValue
+        ? { ...e, states: e.states.map((state, i) => i === stateIndex ? value : state) } as Emotion
+        : e
+    ))
   }
 
-  const handleRemoveState = (emotionIndex: number, stateIndex: number) => {
-    const updated = [...emotions]
-    updated[emotionIndex] = {
-      ...updated[emotionIndex],
-      states: updated[emotionIndex]?.states.filter((_, i) => i !== stateIndex),
-    } as Emotion
-    setEmotions(updated)
+  const handleRemoveState = (emotionValue: number, stateIndex: number) => {
+    setEmotions(emotions.map((e) =>
+      e.value === emotionValue
+        ? { ...e, states: e.states.filter((_, i) => i !== stateIndex) } as Emotion
+        : e
+    ))
   }
 
   const handleSubmit = async () => {
@@ -178,10 +180,12 @@ export function EmotionRulerForm({
           id: rulerId,
           ...data,
         })
+        await utils.emotionRuler.getById.invalidate({ id: rulerId })
       } else {
         await createMutation.mutateAsync(data)
       }
 
+      await utils.emotionRuler.getAll.invalidate()
       onSuccess()
     } catch (err) {
       toast.error("Erro ao salvar régua. Tente novamente.")
@@ -262,11 +266,9 @@ export function EmotionRulerForm({
         </div>
 
         <div className="space-y-4">
-          {emotions
-            .sort((a, b) => a.value - b.value)
-            .map((emotion, index) => (
+          {sortedEmotions.map((emotion) => (
               <div
-                key={index}
+                key={emotion.value}
                 className="p-4 border rounded-lg space-y-3"
               >
                 <div className="flex items-center justify-between">
@@ -280,7 +282,7 @@ export function EmotionRulerForm({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleRemoveEmotion(index)}
+                    onClick={() => handleRemoveEmotion(emotion.value)}
                     disabled={emotions.length <= 2}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -294,7 +296,7 @@ export function EmotionRulerForm({
                     <Input
                       value={emotion.label}
                       onChange={(e) =>
-                        handleUpdateEmotion(index, "label", e.target.value)
+                        handleUpdateEmotion(emotion.value, "label", e.target.value)
                       }
                       placeholder={`Nível ${emotion.value}`}
                       className="h-9"
@@ -309,7 +311,7 @@ export function EmotionRulerForm({
                       min="0"
                       value={emotion.points}
                       onChange={(e) =>
-                        handleUpdateEmotion(index, "points", Math.max(0, parseInt(e.target.value) || 0))
+                        handleUpdateEmotion(emotion.value, "points", Math.max(0, parseInt(e.target.value) || 0))
                       }
                       className="h-9"
                     />
@@ -327,7 +329,7 @@ export function EmotionRulerForm({
                       value={emotion.value}
                       onChange={(e) =>
                         handleUpdateEmotion(
-                          index,
+                          emotion.value,
                           "value",
                           parseInt(e.target.value) || 0
                         )
@@ -343,7 +345,7 @@ export function EmotionRulerForm({
                       <AnimatedEmojiPicker
                         value={emotion.emoji}
                         onEmojiSelect={(emoji) =>
-                          handleUpdateEmotion(index, "emoji", emoji)
+                          handleUpdateEmotion(emotion.value, "emoji", emoji)
                         }
                       />
                     </div>
@@ -357,7 +359,7 @@ export function EmotionRulerForm({
                         type="color"
                         value={emotion.color}
                         onChange={(e) =>
-                          handleUpdateEmotion(index, "color", e.target.value)
+                          handleUpdateEmotion(emotion.value, "color", e.target.value)
                         }
                         className="w-16 h-12 cursor-pointer"
                         style={{ padding: '2px' }}
@@ -365,7 +367,7 @@ export function EmotionRulerForm({
                       <Input
                         value={emotion.color}
                         onChange={(e) =>
-                          handleUpdateEmotion(index, "color", e.target.value)
+                          handleUpdateEmotion(emotion.value, "color", e.target.value)
                         }
                         className="flex-1 h-12 text-sm"
                         placeholder="#FF0000"
@@ -382,7 +384,7 @@ export function EmotionRulerForm({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => handleAddState(index)}
+                      onClick={() => handleAddState(emotion.value)}
                     >
                       <Plus className="mr-1 h-3 w-3" />
                       Adicionar
@@ -394,7 +396,7 @@ export function EmotionRulerForm({
                         <Input
                           value={state}
                           onChange={(e) =>
-                            handleUpdateState(index, stateIndex, e.target.value)
+                            handleUpdateState(emotion.value, stateIndex, e.target.value)
                           }
                           placeholder="Ex: frustrado, chateado, triste..."
                         />
@@ -402,7 +404,7 @@ export function EmotionRulerForm({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleRemoveState(index, stateIndex)}
+                          onClick={() => handleRemoveState(emotion.value, stateIndex)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

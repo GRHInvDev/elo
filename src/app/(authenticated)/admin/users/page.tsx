@@ -53,6 +53,7 @@ type ExtendedRolesConfig = RolesConfig & {
   can_create_solicitacoes?: boolean
   can_manage_new_users_hall?: boolean
   can_manage_filial?: boolean
+  can_view_emotion_ruler?: boolean
   can_view_answer_without_admin_access?: boolean
   can_view_add_manual_ped?: boolean
   can_view_dados_privados?: boolean
@@ -399,6 +400,7 @@ function extendedRoleConfigFromServer(role: RolesConfig | null | undefined): Ext
     can_manage_produtos: rc?.can_manage_produtos ?? false,
     can_manage_new_users_hall: rc?.can_manage_new_users_hall ?? false,
     can_manage_filial: rc?.can_manage_filial ?? false,
+    can_view_emotion_ruler: rc?.can_view_emotion_ruler ?? false,
     can_view_answer_without_admin_access: rc?.can_view_answer_without_admin_access ?? false,
     can_view_add_manual_ped: rc?.can_view_add_manual_ped ?? false,
     can_view_dados_privados: rc?.can_view_dados_privados ?? false,
@@ -724,6 +726,7 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
         can_manage_produtos: permissionsData.can_manage_produtos ?? false,
         can_manage_new_users_hall: permissionsData.can_manage_new_users_hall ?? false,
         can_manage_filial: permissionsData.can_manage_filial ?? false,
+        can_view_emotion_ruler: permissionsData.can_view_emotion_ruler ?? false,
         can_view_answer_without_admin_access: permissionsData.can_view_answer_without_admin_access ?? false,
         can_view_add_manual_ped: permissionsData.can_view_add_manual_ped ?? false,
         can_view_dados_privados: permissionsData.can_view_dados_privados ?? false,
@@ -1439,6 +1442,17 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
                                 setPermissionsData({
                                   ...permissionsData,
                                   can_manage_filial: checked
+                                });
+                              }
+                            },
+                            {
+                              id: "view_emotion_ruler",
+                              label: "Ver teste da Régua de Emoções no dashboard",
+                              checked: permissionsData.can_view_emotion_ruler ?? false,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_view_emotion_ruler: checked
                                 });
                               }
                             },
