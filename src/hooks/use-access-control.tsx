@@ -188,6 +188,12 @@ export function useAccessControl() {
     return db_user.role_config.can_manage_quality_management ?? false;
   };
 
+  const canViewEmotionRuler = (): boolean => {
+    if (!db_user?.role_config) return false;
+    if (db_user.role_config.sudo) return true;
+    return db_user.role_config.can_view_emotion_ruler ?? false;
+  };
+
   const canManageEmotionRules = (): boolean => {
     if (!db_user?.role_config) return false;
 
@@ -266,6 +272,7 @@ export function useAccessControl() {
     canManageExtensions,
     canManageBasicUserData,
     canManageProducts,
+    canViewEmotionRuler,
     canManageEmotionRules,
     canManageQualityManagement,
     canViewAnswerWithoutAdminAccess,

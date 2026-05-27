@@ -62,17 +62,17 @@ export const emotionRulerRouter = createTRPCRouter({
       where: { id: userId },
       select: {
         role_config: true,
-        novidades: true,
         is_active: true,
       },
     });
 
-    if (!user?.novidades) {
+    const roleConfig = getEffectiveRoleConfig(user);
+
+    if (roleConfig.isTotem === true) {
       return { shouldShow: false, ruler: null };
     }
 
-    const roleConfig = getEffectiveRoleConfig(user);
-    if (roleConfig.isTotem === true) {
+    if (!roleConfig.can_view_emotion_ruler && !roleConfig.sudo) {
       return { shouldShow: false, ruler: null };
     }
 
