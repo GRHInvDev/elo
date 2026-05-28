@@ -109,14 +109,14 @@ export function EmotionRulerForm({
 
   const handleUpdateEmotion = (emotionValue: number, field: keyof Emotion, value: string | number | null | undefined) => {
     setEmotions(emotions.map((e) =>
-      e.value === emotionValue ? { ...e, [field]: value } as Emotion : e
+      e.value === emotionValue ? { ...e, [field]: value } : e
     ))
   }
 
   const handleAddState = (emotionValue: number) => {
     setEmotions(emotions.map((e) =>
       e.value === emotionValue
-        ? { ...e, states: [...(e.states ?? []), ""] } as Emotion
+        ? { ...e, states: [...(e.states ?? []), ""] }
         : e
     ))
   }
@@ -124,7 +124,7 @@ export function EmotionRulerForm({
   const handleUpdateState = (emotionValue: number, stateIndex: number, value: string) => {
     setEmotions(emotions.map((e) =>
       e.value === emotionValue
-        ? { ...e, states: e.states.map((state, i) => i === stateIndex ? value : state) } as Emotion
+        ? { ...e, states: e.states.map((state, i) => i === stateIndex ? value : state) }
         : e
     ))
   }
@@ -132,7 +132,7 @@ export function EmotionRulerForm({
   const handleRemoveState = (emotionValue: number, stateIndex: number) => {
     setEmotions(emotions.map((e) =>
       e.value === emotionValue
-        ? { ...e, states: e.states.filter((_, i) => i !== stateIndex) } as Emotion
+        ? { ...e, states: e.states.filter((_, i) => i !== stateIndex) }
         : e
     ))
   }
