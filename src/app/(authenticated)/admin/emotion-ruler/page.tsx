@@ -9,14 +9,16 @@ import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import { Plus, Loader2, Settings, BarChart3 } from "lucide-react"
 import { EmotionRulerForm } from "@/components/admin/emotion-ruler/emotion-ruler-form"
-import { EmotionRulerList } from "@/components/admin/emotion-ruler/emotion-ruler-list"
+import { EmotionRulerList, type EmotionRulerPreviewData } from "@/components/admin/emotion-ruler/emotion-ruler-list"
 import { EmotionRulerStats } from "@/components/admin/emotion-ruler/emotion-ruler-stats"
+import { EmotionRulerModal } from "@/components/emotion-ruler/emotion-ruler-modal"
 import { useAccessControl } from "@/hooks/use-access-control"
 
 export default function AdminEmotionRulerPage() {
   const [selectedRulerId, setSelectedRulerId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [activeTab, setActiveTab] = useState("list")
+  const [previewRuler, setPreviewRuler] = useState<EmotionRulerPreviewData | null>(null)
 
   const { hasAdminAccess, isLoading: isLoadingAccess } = useAccessControl()
 
@@ -133,6 +135,7 @@ export default function AdminEmotionRulerPage() {
                 rulers={rulers ?? []}
                 isLoading={isLoading}
                 onEdit={handleEdit}
+                onPreview={setPreviewRuler}
                 onRefresh={refetch}
               />
             </TabsContent>
@@ -143,6 +146,16 @@ export default function AdminEmotionRulerPage() {
           </Tabs>
         )}
       </div>
+      {previewRuler && (
+        <EmotionRulerModal
+          rulerId={previewRuler.id}
+          question={previewRuler.question}
+          emotions={previewRuler.emotions}
+          backgroundColor={previewRuler.backgroundColor}
+          open={!!previewRuler}
+          onOpenChange={(open) => { if (!open) setPreviewRuler(null) }}
+        />
+      )}
     </DashboardShell>
   )
 }

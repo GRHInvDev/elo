@@ -3,9 +3,25 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Edit } from "lucide-react"
+import { Loader2, Edit, Play } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+
+export interface EmotionRulerPreviewData {
+  id: string
+  question: string
+  backgroundColor: string | null
+  emotions: Array<{
+    id: string
+    value: number
+    label: string | null
+    emoji: string | null
+    color: string
+    states: string[]
+    points: number
+    order: number
+  }>
+}
 
 interface EmotionRulerListProps {
   rulers: Array<{
@@ -18,9 +34,11 @@ interface EmotionRulerListProps {
     emotions: Array<{
       id: string
       value: number
+      label: string | null
       emoji: string | null
       color: string
       states: string[]
+      points: number
       order: number
     }>
     _count: {
@@ -32,6 +50,7 @@ interface EmotionRulerListProps {
   }>
   isLoading: boolean
   onEdit: (rulerId: string) => void
+  onPreview: (ruler: EmotionRulerPreviewData) => void
   onRefresh?: () => void
 }
 
@@ -39,6 +58,7 @@ export function EmotionRulerList({
   rulers,
   isLoading,
   onEdit,
+  onPreview,
 }: EmotionRulerListProps) {
   if (isLoading) {
     return (
@@ -77,13 +97,23 @@ export function EmotionRulerList({
                   Criada em {format(new Date(ruler.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => onEdit(ruler.id)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPreview(ruler)}
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Testar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => onEdit(ruler.id)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -117,7 +147,7 @@ export function EmotionRulerList({
                       style={{ borderColor: emotion.color }}
                     >
                       <span className="text-base">{emotion.emoji ?? "•"}</span>
-                      <span>Nível {emotion.value}</span>
+                      <span>{emotion.label ?? `Nível ${emotion.value}`}</span>
                       {emotion.states?.length > 0 && (
                         <span className="text-muted-foreground">
                           ({emotion.states.length} estados)

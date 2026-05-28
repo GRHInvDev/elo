@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.27.0" as const
+export const APP_CURRENT_VERSION = "1.28.0" as const
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -19,6 +19,14 @@ export interface AppReleaseNote {
  * Incluir somente releases **major** ou **minor** com entrega visível ao usuário.
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
+  {
+    version: "1.28.0",
+    date: "Maio de 2026",
+    items: [
+      "**Almoços com novo design**: a página de pedidos de almoço ganhou uma aparência mais moderna e bonita — botões com efeitos, passo a passo mais claro, cores mais agradáveis, e tudo funciona melhor no celular.",
+      "**Ajustes para mobile**: os almoços ficam mais fáceis de pedir no celular, com botões maiores, melhor espaçamento e navegação mais intuitiva.",
+    ],
+  },
   {
     version: "1.26.0",
     date: "Maio de 2026",
