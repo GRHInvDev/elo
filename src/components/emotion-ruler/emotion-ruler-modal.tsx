@@ -140,7 +140,7 @@ export function EmotionRulerModal({
                     )}
                     style={{ backgroundColor: emotion.color }}
                   >
-                    <div className="flex items-center gap-3 md:flex-col">
+                    <div className="flex items-center gap-3 md:flex-col md:w-full overflow-hidden">
                       <div
                         className={cn(
                           "w-10 h-10 rounded-full border-2 border-background/50 dark:border-background/30 shadow-md flex items-center justify-center shrink-0",
@@ -158,7 +158,7 @@ export function EmotionRulerModal({
                       </div>
                       <span
                         className={cn(
-                          "text-xs font-medium md:mt-2 whitespace-nowrap md:text-center",
+                          "text-xs font-medium md:mt-2 text-center w-full leading-tight break-words",
                           isSelected ? "font-bold drop-shadow-sm" : "text-foreground/80"
                         )}
                       >

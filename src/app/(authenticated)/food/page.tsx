@@ -66,19 +66,20 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
   }
 
   return (
-    <div className="space-y-4 mt-4">
-      <h4 className="font-semibold">Opcionais</h4>
+    <div className="space-y-3 mt-4 pt-4 border-t border-border">
+      <h4 className="font-semibold text-foreground tracking-tight">Opcionais</h4>
       {options.data.map(option => (
-        <div key={option.id} className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{option.name}</span>
-            <Badge variant="outline" className="text-xs">{option.required ? "Obrigatória" : "Opcional"}</Badge>
-            {option.multiple && <Badge variant="secondary" className="text-xs">Múltipla</Badge>}
+        <div key={option.id} className="space-y-2 bg-muted/40 rounded-lg p-3 border border-border transition-all hover:border-input dark:hover:border-input">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm md:text-base text-foreground">{option.name}</span>
+            {option.required && <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">Obrigatória</Badge>}
+            {!option.required && <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">Opcional</Badge>}
+            {option.multiple && <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">Múltipla</Badge>}
           </div>
-          {option.description && <div className="text-xs text-muted-foreground">{option.description}</div>}
-          <div className="flex flex-col ml-4 gap-2 mt-2">
+          {option.description && <div className="text-xs text-muted-foreground italic">{option.description}</div>}
+          <div className="flex flex-col gap-2.5 mt-2 ml-1">
             {option.choices.map(choice => (
-              <label key={choice.id} className="flex items-center gap-1 cursor-pointer">
+              <label key={choice.id} className="flex items-center gap-2.5 cursor-pointer hover:text-primary transition-colors">
                 {option.multiple ? (
                   <input
                     type="checkbox"
@@ -94,6 +95,7 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
                         }
                       })
                     }}
+                    className="w-4 h-4 rounded transition-all accent-primary"
                   />
                 ) : (
                   <input
@@ -103,9 +105,10 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
                     onChange={() => {
                       setSelectedChoices(prev => ({ ...prev, [option.id]: [choice.id] }))
                     }}
+                    className="w-4 h-4 transition-all accent-primary"
                   />
                 )}
-                <span>{choice.name}</span>
+                <span className="text-sm md:text-base text-foreground">{choice.name}</span>
               </label>
             ))}
           </div>
@@ -214,15 +217,15 @@ export default function FoodPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800"
       case "CONFIRMED":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800"
       case "DELIVERED":
-        return "bg-green-100 text-green-800"
+        return "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800"
       case "CANCELLED":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-200 border border-red-200 dark:border-red-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-muted-foreground border border-border"
     }
   }
 
@@ -265,17 +268,17 @@ export default function FoodPage() {
   ]
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-2">
         <div>
-          <h1 className="text-3xl font-bold">Almoços</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground tracking-tight">Almoços</h1>
+          <p className="text-muted-foreground mt-1">
             Faça seu pedido de almoço com restaurantes parceiros
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 bg-muted/40 px-4 py-3 rounded-lg border border-border shadow-sm">
+          <Clock className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
+          <span className="text-xs md:text-sm text-foreground font-medium">
             Pedidos até às {FOOD_ORDER_DEADLINE_HOUR}h para hoje
           </span>
         </div>
@@ -283,57 +286,65 @@ export default function FoodPage() {
 
       {/* Alerta de horário */}
       {isAfterDeadline && (
-        <Alert className="border-yellow-400 bg-yellow-50/30">
-          <AlertDescription className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-yellow-600" />
-            O horário limite para pedidos de hoje ({FOOD_ORDER_DEADLINE_HOUR}h) já passou, são {format(now, "HH:mm", { locale: ptBR })}. Seu pedido será para amanhã.
+        <Alert className="border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-amber-50/50 dark:from-amber-900/20 dark:to-amber-900/10 shadow-sm hover:shadow-md transition-all">
+          <AlertDescription className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-3 p-0">
+            <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <span className="text-xs md:text-sm text-amber-900 dark:text-amber-200 font-medium">O horário limite para pedidos de hoje ({FOOD_ORDER_DEADLINE_HOUR}h) já passou, são {format(now, "HH:mm", { locale: ptBR })}. Seu pedido será para amanhã.</span>
           </AlertDescription>
         </Alert>
       )}
 
       {/* Pedido de hoje */}
       {todayOrder.data && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+        <Card className="shadow-sm hover:shadow-md transition-all border border-border bg-card">
+          <CardHeader className="p-3 md:p-6 bg-gradient-to-r from-emerald-50 to-emerald-50/50 dark:from-emerald-900/20 dark:to-emerald-900/10 rounded-t-lg border-b border-emerald-200 dark:border-emerald-800">
+            <CardTitle className="flex items-center gap-3 text-lg md:text-xl text-emerald-900 dark:text-emerald-100 tracking-tight">
+              <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               <span>Seu Pedido de Almoço de Hoje</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          <CardContent className="p-3 md:p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {todayOrder.data?.restaurant && (
-                <p><strong>Restaurante:</strong> {todayOrder.data.restaurant.name}</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Restaurante</p>
+                  <p className="font-semibold text-foreground">{todayOrder.data.restaurant.name}</p>
+                </div>
               )}
               {todayOrder.data?.menuItem && (
-                <>
-                  <p><strong>Prato:</strong> {todayOrder.data.menuItem.name}</p>
-                </>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prato</p>
+                  <p className="font-semibold text-foreground">{todayOrder.data.menuItem.name}</p>
+                </div>
               )}
-              <p><strong>Status:</strong> 
-                <Badge className={`ml-2 ${getStatusColor(todayOrder.data.status)}`}>
-                  {getStatusText(todayOrder.data.status)}
-                </Badge>
-              </p>
-              {todayOrder.data.observations && (
-                <p><strong>Observações:</strong> {todayOrder.data.observations}</p>
-              )}
-              {/* Botão de cancelar pedido */}
-              <div className="flex justify-end w-full">
-                {
-                  !isAfterDeadline && ( 
-                    <Button
-                      variant="destructive"
-                      className="mt-4 w-full md:w-auto"
-                      disabled={deleteOrder.isPending}
-                      onClick={() => deleteOrder.mutate({ id: todayOrder.data?.id ?? "" })}
-                    >
-                      {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : <Trash2 className="h-4 w-4 mr-2 inline" />}
-                      {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido"}
-                    </Button>
-                  )
-                }
+            </div>
+            <div className="flex items-center gap-3 pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</p>
+              <Badge className={`${getStatusColor(todayOrder.data.status)} font-medium transition-all`}>
+                {getStatusText(todayOrder.data.status)}
+              </Badge>
+            </div>
+            {todayOrder.data.observations && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wider mb-1">Observações</p>
+                <p className="text-sm text-blue-900 dark:text-blue-100">{todayOrder.data.observations}</p>
               </div>
+            )}
+            {/* Botão de cancelar pedido */}
+            <div className="flex justify-end w-full pt-2">
+              {
+                !isAfterDeadline && (
+                  <Button
+                    variant="destructive"
+                    className="w-full md:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 transition-all duration-200 focus-visible:ring-2 ring-offset-2"
+                    disabled={deleteOrder.isPending}
+                    onClick={() => deleteOrder.mutate({ id: todayOrder.data?.id ?? "" })}
+                  >
+                    {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : <Trash2 className="h-4 w-4 mr-2 inline" />}
+                    {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido"}
+                  </Button>
+                )
+              }
             </div>
           </CardContent>
         </Card>
@@ -341,43 +352,51 @@ export default function FoodPage() {
 
       {/* Pedido de amanhã */}
       {tomorrowOrder.data && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-blue-600" />
+        <Card className="shadow-sm hover:shadow-md transition-all border border-border bg-card">
+          <CardHeader className="p-3 md:p-6 bg-gradient-to-r from-blue-50 to-blue-50/50 dark:from-blue-900/20 dark:to-blue-900/10 rounded-t-lg border-b border-blue-200 dark:border-blue-800">
+            <CardTitle className="flex items-center gap-3 text-lg md:text-xl text-blue-900 dark:text-blue-100 tracking-tight">
+              <CheckCircle className="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
               <span>Seu Pedido de Almoço de Amanhã</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          <CardContent className="p-3 md:p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {tomorrowOrder.data?.restaurant && (
-                <p><strong>Restaurante:</strong> {tomorrowOrder.data.restaurant.name}</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Restaurante</p>
+                  <p className="font-semibold text-foreground">{tomorrowOrder.data.restaurant.name}</p>
+                </div>
               )}
               {tomorrowOrder.data?.menuItem && (
-                <>
-                  <p><strong>Prato:</strong> {tomorrowOrder.data.menuItem.name}</p>
-                </>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prato</p>
+                  <p className="font-semibold text-foreground">{tomorrowOrder.data.menuItem.name}</p>
+                </div>
               )}
-              <p><strong>Status:</strong> 
-                <Badge className={`ml-2 ${getStatusColor(tomorrowOrder.data.status)}`}>
-                  {getStatusText(tomorrowOrder.data.status)}
-                </Badge>
-              </p>
-              {tomorrowOrder.data.observations && (
-                <p><strong>Observações:</strong> {tomorrowOrder.data.observations}</p>
-              )}
-              {/* Botão de cancelar pedido de amanhã */}
-              <div className="flex justify-end w-full">
-                <Button
-                  variant="destructive"
-                  className="mt-4 w-full md:w-auto"
-                  disabled={deleteOrder.isPending}
-                  onClick={() => deleteOrder.mutate({ id: tomorrowOrder.data?.id ?? "" })}
-                >
-                  {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : <Trash2 className="h-4 w-4 mr-2 inline" />}
-                  {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido de Amanhã"}
-                </Button>
+            </div>
+            <div className="flex items-center gap-3 pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</p>
+              <Badge className={`${getStatusColor(tomorrowOrder.data.status)} font-medium transition-all`}>
+                {getStatusText(tomorrowOrder.data.status)}
+              </Badge>
+            </div>
+            {tomorrowOrder.data.observations && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wider mb-1">Observações</p>
+                <p className="text-sm text-blue-900 dark:text-blue-100">{tomorrowOrder.data.observations}</p>
               </div>
+            )}
+            {/* Botão de cancelar pedido de amanhã */}
+            <div className="flex justify-end w-full pt-2">
+              <Button
+                variant="destructive"
+                className="w-full md:w-auto bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 transition-all duration-200 focus-visible:ring-2 ring-offset-2"
+                disabled={deleteOrder.isPending}
+                onClick={() => deleteOrder.mutate({ id: tomorrowOrder.data?.id ?? "" })}
+              >
+                {deleteOrder.isPending ? <Loader2 className="animate-spin h-4 w-4 mr-2 inline" /> : <Trash2 className="h-4 w-4 mr-2 inline" />}
+                {deleteOrder.isPending ? "Cancelando..." : "Cancelar Pedido de Amanhã"}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -385,18 +404,24 @@ export default function FoodPage() {
 
       {/* Formulário de pedido - fluxo passo a passo */}
       {!blockOrder && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Fazer Novo Pedido</CardTitle>
-            <CardDescription>
+        <Card className="shadow-sm hover:shadow-md transition-all border border-border bg-card">
+          <CardHeader className="p-3 md:p-6">
+            <CardTitle className="text-foreground tracking-tight">Fazer Novo Pedido</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Siga as etapas para fazer seu pedido
             </CardDescription>
-            <div className="flex gap-2 mt-2">
+            <div className="flex flex-wrap gap-3 md:gap-4 mt-6">
               {steps.map((s, idx) => (
-                <div key={s.label} className={`flex items-center gap-1 ${step === idx + 1 ? "font-bold text-primary" : "text-muted-foreground"}`}>
-                  <span className={`rounded-full w-6 h-6 flex items-center justify-center border ${step === idx + 1 ? "bg-primary text-background border-primary" : s.done ? "bg-green-100 border-green-400 text-green-700" : "bg-gray-100 border-gray-300"}`}>{idx + 1}</span>
-                  <span className="text-xs">{s.label}</span>
-                  {idx < steps.length - 1 && <span className="mx-1">→</span>}
+                <div key={s.label} className="flex items-center gap-3">
+                  <div className={`rounded-full w-10 h-10 md:w-9 md:h-9 flex items-center justify-center border-2 font-semibold text-sm transition-all duration-300 shadow-sm ${step === idx + 1 ? "bg-gradient-to-br from-primary to-primary/80 text-white border-primary shadow-md scale-110" : s.done ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-emerald-600 shadow-sm" : "bg-muted border-border text-muted-foreground"}`}>
+                    {idx + 1}
+                  </div>
+                  <span className={`text-xs md:text-sm font-medium transition-colors ${step === idx + 1 ? "text-primary font-semibold" : s.done ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>{s.label}</span>
+                  {idx < steps.length - 1 && (
+                    <div className="hidden md:flex items-center gap-2 mx-1">
+                      <div className="h-0.5 w-8 bg-gradient-to-r from-primary/20 to-primary/5"></div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -404,79 +429,74 @@ export default function FoodPage() {
           <CardContent className="space-y-4">
             {/* Passo 1: Restaurante */}
             {step === 1 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Restaurante</label>
-                <Select value={selectedRestaurant} onValueChange={(v) => { setSelectedRestaurant(v); setStep(2); }} disabled={restaurants.isLoading}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={restaurants.isLoading ? "Carregando restaurantes..." : "Selecione um restaurante"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredRestaurants?.map((restaurant) => (
-                      <SelectItem key={restaurant.id} value={restaurant.id}>
-                        <div className="flex flex-col">
-                          <span>{restaurant.name}</span>
-                          <span className="text-xs text-muted-foreground">{restaurant.city}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4 animate-in fade-in">
+                <div className="space-y-2.5">
+                  <label className="text-sm font-semibold text-foreground">Restaurante</label>
+                  <Select value={selectedRestaurant} onValueChange={(v) => { setSelectedRestaurant(v); setStep(2); }} disabled={restaurants.isLoading}>
+                    <SelectTrigger className="bg-background border-2 border-border rounded-lg transition-colors hover:border-input h-11 md:h-10 focus:ring-2 focus:ring-primary/20">
+                      <SelectValue placeholder={restaurants.isLoading ? "Carregando restaurantes..." : "Selecione um restaurante"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredRestaurants?.map((restaurant) => (
+                        <SelectItem key={restaurant.id} value={restaurant.id} className="cursor-pointer">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{restaurant.name}</span>
+                            <span className="text-xs text-muted-foreground">{restaurant.city}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {restaurants.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Carregando restaurantes...</div>}
                 {selectedRestaurantData && (
-                  <Card className="bg-muted/50 mt-2">
-                    <CardContent className="pt-4">
-                      <div className="space-y-2">
-                        <p className="font-medium">{selectedRestaurantData.name}</p>
-                        <p className="text-sm text-muted-foreground">{selectedRestaurantData.description}</p>
-                        <div className="flex items-center space-x-4 text-sm">
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="h-4 w-4" />
-                            <span>{selectedRestaurantData.address}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Phone className="h-4 w-4" />
-                            <span>{selectedRestaurantData.phone}</span>
-                          </div>
+                  <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all mt-4">
+                    <CardContent className="p-3 md:p-6 pt-4 md:pt-6 space-y-3">
+                      <div>
+                        <h3 className="font-bold text-lg text-foreground tracking-tight">{selectedRestaurantData.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{selectedRestaurantData.description}</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-border">
+                        <div className="flex items-start gap-3">
+                          <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="text-sm text-foreground">{selectedRestaurantData.address}</span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Phone className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="text-sm text-foreground">{selectedRestaurantData.phone}</span>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 )}
-                <div className="flex justify-end mt-4">
-                  <Button disabled={!selectedRestaurant} onClick={() => setStep(2)}>Próximo</Button>
+                <div className="flex justify-end mt-6 pt-4 border-t border-border">
+                  <Button disabled={!selectedRestaurant} onClick={() => setStep(2)} className="bg-gradient-to-r from-primary to-primary/90 hover:shadow-lg hover:scale-105 transition-all duration-200 focus-visible:ring-2 ring-offset-2">Próximo</Button>
                 </div>
               </div>
             )}
 
             {/* Passo 2: Prato */}
             {step === 2 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Prato</label>
-                <Select value={selectedMenuItem} onValueChange={(v) => setSelectedMenuItem(v)} disabled={!selectedRestaurant || menuItems.isLoading}>
-                  <SelectTrigger className="h-24">
-                    <SelectValue placeholder={menuItems.isLoading ? "Carregando prato do dia..." : "Selecione o prato do dia"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {menuItems.data && menuItems.data.length > 0 ? (
-                      menuItems.data.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          <div className="flex items-start gap-3 py-2">
-                            <span className="text-xl">🍽️</span>
-                            <div className="flex flex-col w-full">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-base">{item.name}</span>
-                                <Badge variant="outline" className="text-xs">{item.category}</Badge>
-                              </div>
-                              {item.description && <span className="text-xs text-muted-foreground mt-1">{item.description}</span>}
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="px-4 py-2 text-muted-foreground">Nenhum prato disponível para {format(menuDate, "EEEE", { locale: ptBR })}.</div>
-                    )}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4 animate-in fade-in">
+                <div className="space-y-2.5">
+                  <label className="text-sm font-semibold text-foreground">Prato</label>
+                  <Select value={selectedMenuItem} onValueChange={(v) => setSelectedMenuItem(v)} disabled={!selectedRestaurant || menuItems.isLoading}>
+                    <SelectTrigger className="bg-background border-2 border-border rounded-lg transition-colors hover:border-input min-h-11 md:min-h-10 focus:ring-2 focus:ring-primary/20">
+                      <SelectValue placeholder={menuItems.isLoading ? "Carregando prato do dia..." : "Selecione o prato do dia"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {menuItems.data && menuItems.data.length > 0 ? (
+                        menuItems.data.map((item) => (
+                          <SelectItem key={item.id} value={item.id} className="cursor-pointer">
+                            {item.name}{item.category ? ` — ${item.category}` : ""}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-muted-foreground text-sm">Nenhum prato disponível para {format(menuDate, "EEEE", { locale: ptBR })}.</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {menuItems.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Carregando pratos...</div>}
                 {/* Seleção de opcionais do prato */}
                 {selectedMenuItem && (
@@ -487,44 +507,53 @@ export default function FoodPage() {
                     onValidationChange={setOptionsValid}
                   />
                 )}
-                <div className="flex justify-between mt-4">
-                  <Button variant="outline" onClick={() => { setSelectedMenuItem(""); setStep(1); }}>Voltar</Button>
-                  <Button
-                    disabled={!selectedMenuItem || !optionsValid}
-                    onClick={() => setStep(3)}
-                  >
-                    Próximo
-                  </Button>
-                </div>
                 {!optionsValid && selectedMenuItem && (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
+                  <Alert className="border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-red-50/50 dark:from-red-900/20 dark:to-red-900/10 shadow-sm">
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    <AlertDescription className="text-xs md:text-sm text-red-900 dark:text-red-200 font-medium">
                       Você deve selecionar as opções obrigatórias antes de continuar.
                     </AlertDescription>
                   </Alert>
                 )}
+                <div className="flex flex-col-reverse md:flex-row justify-between gap-3 md:gap-2 mt-6 pt-4 border-t border-border">
+                  <Button variant="outline" className="w-full md:w-auto border-2 hover:bg-muted/50 transition-colors" onClick={() => { setSelectedMenuItem(""); setStep(1); }}>Voltar</Button>
+                  <Button
+                    disabled={!selectedMenuItem || !optionsValid}
+                    onClick={() => setStep(3)}
+                    className="w-full md:w-auto bg-gradient-to-r from-primary to-primary/90 hover:shadow-lg hover:scale-105 transition-all duration-200 focus-visible:ring-2 ring-offset-2"
+                  >
+                    Próximo
+                  </Button>
+                </div>
               </div>
             )}
 
             {/* Passo 3: Confirmação */}
             {step === 3 && (
-              <div className="space-y-4">
-                <div className="bg-muted/50 rounded p-4">
-                  <h3 className="font-semibold mb-2">Resumo do Pedido</h3>
-                  <ul className="text-sm space-y-1">
-                    <li><strong>Restaurante:</strong> {selectedRestaurantData?.name}</li>
-                    <li><strong>Prato:</strong> {selectedMenuItemData?.name}</li>
-                  </ul>
-                  {/* Opcionais selecionados */}
-                  <SelectedOptionsSummary menuItemId={selectedMenuItem} optionChoices={optionChoices} />
+              <div className="space-y-4 animate-in fade-in">
+                <div className="bg-muted/40 rounded-xl p-4 md:p-6 border border-border shadow-sm">
+                  <h3 className="font-bold text-base md:text-lg text-foreground tracking-tight mb-4">Resumo do Pedido</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 p-3 bg-muted/40 rounded-lg border border-border">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Restaurante</p>
+                        <p className="font-semibold text-foreground">{selectedRestaurantData?.name}</p>
+                      </div>
+                      <div className="space-y-2 p-3 bg-muted/40 rounded-lg border border-border">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prato</p>
+                        <p className="font-semibold text-foreground">{selectedMenuItemData?.name}</p>
+                      </div>
+                    </div>
+                    {/* Opcionais selecionados */}
+                    <SelectedOptionsSummary menuItemId={selectedMenuItem} optionChoices={optionChoices} />
+                  </div>
                 </div>
-                <div className="flex justify-between mt-2">
-                  <Button variant="outline" onClick={() => setStep(2)}>Voltar</Button>
-                  <Button 
+                <div className="flex flex-col-reverse md:flex-row justify-between gap-3 md:gap-2 mt-6 pt-4 border-t border-border">
+                  <Button variant="outline" className="w-full md:w-auto border-2 hover:bg-muted/50 transition-colors" onClick={() => setStep(2)}>Voltar</Button>
+                  <Button
                     onClick={handleCreateOrder}
                     disabled={createOrder.isPending}
-                    className="w-48 text-lg h-12"
+                    className="w-full md:w-auto bg-gradient-to-r from-primary to-primary/90 hover:shadow-lg hover:scale-105 transition-all duration-200 focus-visible:ring-2 ring-offset-2 h-11 text-base font-semibold"
                   >
                     {createOrder.isPending ? <Loader2 className="animate-spin h-5 w-5 mr-2 inline" /> : null}
                     {createOrder.isPending ? "Fazendo pedido..." : "Confirmar Pedido"}
@@ -538,49 +567,51 @@ export default function FoodPage() {
 
       {/* Mensagem de bloqueio se já houver pedido */}
       {blockOrder && (
-        <Alert className="border-green-400 bg-green-50/30">
-          <AlertDescription className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            {isAfterDeadline && hasOrderForTomorrow
-              ? "Seu pedido para amanhã já foi registrado com sucesso! Caso precise alterar, cancele o pedido atual antes de fazer um novo."
-              : "Seu pedido para hoje já foi registrado com sucesso! Caso precise alterar, cancele o pedido atual antes de fazer um novo."}
+        <Alert className="border-l-4 border-emerald-500 bg-gradient-to-r from-emerald-50 to-emerald-50/50 dark:from-emerald-900/20 dark:to-emerald-900/10 shadow-sm hover:shadow-md transition-all">
+          <AlertDescription className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-3 p-0">
+            <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+            <span className="text-xs md:text-sm text-emerald-900 dark:text-emerald-200 font-medium">
+              {isAfterDeadline && hasOrderForTomorrow
+                ? "Seu pedido para amanhã já foi registrado com sucesso! Caso precise alterar, cancele o pedido atual antes de fazer um novo."
+                : "Seu pedido para hoje já foi registrado com sucesso! Caso precise alterar, cancele o pedido atual antes de fazer um novo."}
+            </span>
           </AlertDescription>
         </Alert>
       )}
 
       {/* Histórico de pedidos colapsável */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between cursor-pointer select-none" onClick={() => setShowHistory((v) => !v)}>
+      <Card className="shadow-sm hover:shadow-md transition-all border border-border bg-card">
+        <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0 cursor-pointer select-none p-3 md:p-6 hover:bg-muted/50 transition-colors rounded-t-lg" onClick={() => setShowHistory((v) => !v)}>
           <div>
-            <CardTitle>Histórico de Pedidos</CardTitle>
-            <CardDescription>Seus pedidos dos últimos 30 dias</CardDescription>
+            <CardTitle className="text-lg md:text-xl text-foreground tracking-tight">Histórico de Pedidos</CardTitle>
+            <CardDescription className="text-xs md:text-sm text-muted-foreground">Seus pedidos dos últimos 30 dias</CardDescription>
           </div>
-          <Button variant="ghost" size="icon" aria-label="Mostrar/Ocultar histórico">
-            {showHistory ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 transition-transform" aria-label="Mostrar/Ocultar histórico">
+            {showHistory ? <ChevronUp className="h-5 w-5 md:h-6 md:w-6 text-primary" /> : <ChevronDown className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />}
           </Button>
         </CardHeader>
         {showHistory && (
-          <CardContent>
+          <CardContent className="p-3 md:p-6 border-t border-border max-h-[600px] overflow-y-auto">
             {myOrders.isLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Carregando histórico...</div>
+              <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Carregando histórico...</div>
             ) : myOrders.data && myOrders.data.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {myOrders.data.map((order) => (
-                  <Card key={order.id} className="bg-muted/50">
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <p className="font-medium">{order.restaurant?.name}</p>
-                          <p className="text-sm">{order.menuItem.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                  <Card key={order.id} className="bg-muted/40 border border-border shadow-xs hover:shadow-md hover:border-primary/30 transition-all">
+                    <CardContent className="p-3 md:p-4 pt-4 md:pt-4">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
+                        <div className="space-y-2 w-full md:w-auto flex-1">
+                          <p className="font-semibold text-sm md:text-base text-foreground">{order.restaurant?.name}</p>
+                          <p className="text-xs md:text-sm text-foreground">{order.menuItem.name}</p>
+                          <p className="text-xs text-muted-foreground font-medium">
                             {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                           {order.observations && (
-                            <p className="text-xs text-muted-foreground">Obs: {order.observations}</p>
+                            <p className="text-xs text-muted-foreground italic">Obs: {order.observations}</p>
                           )}
                         </div>
                         <div className="text-right space-y-1">
-                          <Badge className={getStatusColor(order.status)}>
+                          <Badge className={`${getStatusColor(order.status)} font-medium transition-all`}>
                             {getStatusText(order.status)}
                           </Badge>
                         </div>
@@ -590,7 +621,7 @@ export default function FoodPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">Nenhum pedido encontrado</p>
+              <p className="text-center text-muted-foreground py-12 text-xs md:text-sm">Nenhum pedido encontrado</p>
             )}
           </CardContent>
         )}
@@ -605,15 +636,22 @@ function SelectedOptionsSummary({ menuItemId, optionChoices }: { menuItemId: str
   if (!options.data || Object.keys(optionChoices).length === 0) return null
 
   return (
-    <div className="mt-4">
-      <h4 className="font-medium mb-1">Opcionais Selecionados:</h4>
-      <ul className="text-xs space-y-1">
+    <div className="space-y-3 p-3 bg-muted/40 rounded-lg border border-border">
+      <h4 className="font-semibold text-sm text-foreground tracking-tight">Opcionais Selecionados</h4>
+      <ul className="text-xs space-y-2">
         {options.data.map(option => {
           const selected = optionChoices[option.id]
           if (!selected || selected.length === 0) return null
           return (
-            <li key={option.id}>
-              <span className="font-semibold">{option.name}:</span> {option.choices.filter(c => selected.includes(c.id)).map(c => c.name).join(", ")}
+            <li key={option.id} className="flex flex-col gap-1">
+              <span className="font-semibold text-foreground">{option.name}</span>
+              <div className="ml-2 flex flex-wrap gap-2">
+                {option.choices.filter(c => selected.includes(c.id)).map(c => (
+                  <Badge key={c.id} variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 border border-blue-200 dark:border-blue-800 text-xs">
+                    {c.name}
+                  </Badge>
+                ))}
+              </div>
             </li>
           )
         })}
