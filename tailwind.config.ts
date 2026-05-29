@@ -45,6 +45,14 @@ export default withUt({
   				DEFAULT: 'hsl(var(--accent))',
   				foreground: 'hsl(var(--accent-foreground))'
   			},
+  			'brand-accent': {
+  				DEFAULT: 'hsl(var(--brand-accent))',
+  				foreground: 'hsl(var(--brand-accent-foreground))'
+  			},
+  			'v2-border-soft': 'hsl(var(--v2-border-soft))',
+  			'v2-card-2': 'hsl(var(--v2-card-2))',
+  			'v2-panel': 'hsl(var(--v2-panel))',
+  			'v2-faint': 'hsl(var(--v2-faint))',
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'

@@ -68,6 +68,27 @@ export function canManageNewUsersHall(roleConfig: RolesConfig | null): boolean {
   return roleConfig.can_manage_new_users_hall === true;
 }
 
+/**
+ * Acesso à Central de Chamados (workspace técnico do v2).
+ *
+ * Concede se:
+ * - É sudo.
+ * - Tem can_manage_requests = true.
+ * - Pode criar formulários (dono natural de chamados — fluxo já existente para owners).
+ *
+ * A página adicional verifica se o usuário é owner de algum form via
+ * api.form.isOwnerOfAnyForm para o caso em que o painel de chamados é dele,
+ * mas a navegação/botão é controlada por esta função.
+ */
+export function canManageRequests(roleConfig: RolesConfig | null): boolean {
+  if (!roleConfig) return false;
+  if (roleConfig.isTotem) return false;
+  if (roleConfig.sudo) return true;
+  if (roleConfig.can_manage_requests) return true;
+  if (roleConfig.can_create_form) return true;
+  return false;
+}
+
 export function canCreateSolicitacoes(roleConfig: RolesConfig | null): boolean {
   if (!roleConfig) return false;
 

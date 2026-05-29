@@ -28,6 +28,7 @@ export type RolesConfig = {
   can_view_answer_without_admin_access?: boolean; // Pode visualizar/responder mensagens e atualizar estados de pedidos sem acesso admin completo
   can_view_add_manual_ped?: boolean; // Pode visualizar e adicionar pedidos manuais de alimentação
   can_view_dados_privados?: boolean; // Pode visualizar e editar dados privados/LGPD de usuários (ex.: pré-cadastro Lojinha)
+  can_manage_requests?: boolean; // Pode atuar como técnico/atendente na Central de Chamados (responder, atualizar status, mover entre colunas).
 
   isTotem?: boolean; // Para usuários TOTEM (acesso limitado)
 }

@@ -27,7 +27,7 @@ function truncate(text: string | null | undefined, max: number): string | null {
 }
 
 /** Evita enviar string vazia ao tRPC; compatível com prefer-nullish-coalescing (não usar `|| undefined` após trim). */
-function trimmedOrUndefined(value: string | undefined): string | undefined {
+function trimmedOrUndefined(value: string | null | undefined): string | undefined {
   const t = value?.trim()
   return t === undefined || t === "" ? undefined : t
 }
@@ -82,10 +82,10 @@ Lista as **ideias em ação** enviadas pelo próprio usuário (autor), com núme
       .int()
       .min(1)
       .max(50)
-      .optional()
-      .describe("Máximo de ideias a retornar (padrão 30)."),
+      .nullable()
+      .describe("Máximo de ideias a retornar (padrão 30; passe null para usar o padrão)."),
   }),
-  execute: async ({ limit }: { limit?: number }) => {
+  execute: async ({ limit }: { limit: number | null }) => {
     try {
       const take = Math.min(limit ?? 30, 50)
       const rows = await api.suggestion.getMySuggestions()
@@ -234,26 +234,26 @@ export const createMyIdea: Tool = {
     problem: z
       .string()
       .max(20000)
-      .optional()
-      .describe("Problema identificado (recomendado)."),
+      .nullable()
+      .describe("Problema identificado (recomendado). Passe null se não for informado."),
     contributionType: contributionTypeSchema.describe(
       "Tipo de contribuição, alinhado ao formulário da intranet.",
     ),
     contributionOther: z
       .string()
       .max(2000)
-      .optional()
-      .describe('Detalhe quando o tipo for OUTRO (ex.: "processo de compras").'),
-    submittedName: z.string().max(200).optional().describe("Nome para exibição (opcional)."),
-    submittedSector: z.string().max(200).optional().describe("Setor para exibição (opcional)."),
+      .nullable()
+      .describe('Detalhe quando o tipo for OUTRO (ex.: "processo de compras"). Passe null se não se aplica.'),
+    submittedName: z.string().max(200).nullable().describe("Nome para exibição. Passe null para usar o padrão do perfil."),
+    submittedSector: z.string().max(200).nullable().describe("Setor para exibição. Passe null para usar o padrão do perfil."),
   }),
   execute: async (input: {
     description: string
-    problem?: string
+    problem: string | null
     contributionType: z.infer<typeof contributionTypeSchema>
-    contributionOther?: string
-    submittedName?: string
-    submittedSector?: string
+    contributionOther: string | null
+    submittedName: string | null
+    submittedSector: string | null
   }) => {
     if (input.contributionType === "OUTRO") {
       const o = input.contributionOther?.trim()
