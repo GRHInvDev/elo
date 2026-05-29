@@ -97,10 +97,10 @@ Lista as reservas de salas de reunião do usuário autenticado para um dia espec
   parameters: z.object({
     dateIso: z
       .string()
-      .optional()
-      .describe('Data no formato ISO UTC (ex.: "2025-04-15T12:00:00Z"). Opcional — padrão: hoje.'),
+      .nullable()
+      .describe('Data no formato ISO UTC (ex.: "2025-04-15T12:00:00Z"). Passe null para usar a data de hoje.'),
   }),
-  execute: async ({ dateIso }: { dateIso?: string }) => {
+  execute: async ({ dateIso }: { dateIso: string | null }) => {
     try {
       const date = dateIso ? new Date(dateIso) : new Date()
       const bookings = await api.booking.listMineForDay({ date })
@@ -326,24 +326,24 @@ Registra uma nova ideia na **caixa de ideias** do usuário (mesmo fluxo da intra
       .string()
       .min(1)
       .describe("Solução proposta / descrição da ideia (campo obrigatório no sistema)"),
-    problem: z.string().optional().describe("Problema identificado (opcional)"),
+    problem: z.string().nullable().describe("Problema identificado. Passe null se não for informado."),
     contributionType: contributionTypeSchema.describe(
       "Tipo: IDEIA_INOVADORA | SUGESTAO_MELHORIA | SOLUCAO_PROBLEMA | OUTRO",
     ),
     contributionOther: z
       .string()
-      .optional()
-      .describe("Texto complementar quando o tipo for OUTRO ou para detalhar a categoria"),
-    submittedName: z.string().optional().describe("Nome informado manualmente pelo usuário (opcional)"),
-    submittedSector: z.string().optional().describe("Setor informado manualmente pelo usuário (opcional)"),
+      .nullable()
+      .describe("Texto complementar quando o tipo for OUTRO ou para detalhar a categoria. Passe null se não se aplica."),
+    submittedName: z.string().nullable().describe("Nome informado manualmente pelo usuário. Passe null para usar o padrão do perfil."),
+    submittedSector: z.string().nullable().describe("Setor informado manualmente pelo usuário. Passe null para usar o padrão do perfil."),
   }),
   execute: async (input: {
     description: string
-    problem?: string
+    problem: string | null
     contributionType: z.infer<typeof contributionTypeSchema>
-    contributionOther?: string
-    submittedName?: string
-    submittedSector?: string
+    contributionOther: string | null
+    submittedName: string | null
+    submittedSector: string | null
   }) => {
     try {
       const problemTrim = input.problem?.trim()
@@ -404,19 +404,19 @@ Consulta e exibe o cardápio do refeitório/restaurante para uma data específic
   parameters: z.object({
     dateIso: z
       .string()
-      .optional()
-      .describe("Data em ISO UTC; se omitido, usa hoje."),
+      .nullable()
+      .describe("Data em ISO UTC. Passe null para usar a data de hoje."),
     restaurantNameContains: z
       .string()
-      .optional()
-      .describe("Parte do nome do restaurante para filtrar (quando houver vários cadastrados)."),
+      .nullable()
+      .describe("Parte do nome do restaurante para filtrar (quando houver vários cadastrados). Passe null para listar sem filtro."),
   }),
   execute: async ({
     dateIso,
     restaurantNameContains,
   }: {
-    dateIso?: string
-    restaurantNameContains?: string
+    dateIso: string | null
+    restaurantNameContains: string | null
   }) => {
     try {
       const day = dateIso ? new Date(dateIso) : new Date()

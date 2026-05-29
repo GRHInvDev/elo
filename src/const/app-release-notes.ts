@@ -3,15 +3,15 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.28.0" as const
+export const APP_CURRENT_VERSION = "1.29.0" as const;
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
-  version: string
+  version: string;
   /** Data de referência (texto livre, pt-BR) */
-  date: string
+  date: string;
   /** Destaques principais */
-  items: string[]
+  items: string[];
 }
 
 /**
@@ -19,6 +19,16 @@ export interface AppReleaseNote {
  * Incluir somente releases **major** ou **minor** com entrega visível ao usuário.
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
+  {
+    version: "1.29.0",
+    date: "Maio de 2026",
+    items: [
+      "**Solicitações com cara nova**: o módulo de Solicitações ganhou um visual moderno, mais leve e organizado — busca rápida pelo tipo de solicitação, filtros por setor e um painel lateral com as solicitações que você já abriu.",
+      "**Veja os detalhes antes de abrir**: ao clicar em um tipo de solicitação, uma janela do lado direito mostra o que vai ser pedido, qual setor responde e quantos campos tem o formulário — sem precisar abrir e fechar a tela.",
+      "**Central de chamados para quem atende**: um espaço novo para quem responde solicitações, com fila de chamados, conversa do lado e botões para mudar o andamento sem trocar de página. Acesse pelo botão **Central de chamados** no topo da página.",
+      "**Liga e desliga o novo visual**: o botão **Novo layout** no canto superior direito troca entre o visual atualizado e o visual antigo. Cada pessoa escolhe o que prefere — começamos com o visual antigo ativado para todos.",
+    ],
+  },
   {
     version: "1.28.0",
     date: "Maio de 2026",
@@ -38,15 +48,7 @@ export const APP_RELEASE_NOTES: AppReleaseNote[] = [
     version: "1.25.0",
     date: "Maio de 2026",
     items: [
-      "**Empresas independentes para filiais**: agora é possível criar empresas personalizadas (como \"Box Teste\" ou \"Cristallux SP\") e vincular cada filial diretamente a uma delas — sem mais depender de categorias fixas do sistema.",
-    ],
-  },
-  {
-    version: "1.24.0",
-    date: "Maio de 2026",
-    items: [
-      "**Régua de Emoções com pontuação por nível**: agora cada opção de resposta tem sua própria quantidade de pontos — quem responde \"Ótimo\" pode ganhar mais ou menos pontos do que quem responde \"Mal\", conforme configurado pelo administrador.",
-      "**Nome personalizado nos níveis**: o administrador pode dar um nome próprio para cada nível da régua (como \"Muito Bem\" ou \"Arrasando!\") em vez do padrão \"Nível 0\", \"Nível 1\".",
+      '**Empresas independentes para filiais**: agora é possível criar empresas personalizadas (como "Box Teste" ou "Cristallux SP") e vincular cada filial diretamente a uma delas — sem mais depender de categorias fixas do sistema.',
     ],
   },
   {
@@ -146,4 +148,4 @@ export const APP_RELEASE_NOTES: AppReleaseNote[] = [
       "**Chat flutuante** e painel integrados ao layout autenticado.",
     ],
   },
-]
+];

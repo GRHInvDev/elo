@@ -399,6 +399,7 @@ export const formsRouter = createTRPCRouter({
                             firstName: true,
                             lastName: true,
                             email: true,
+                            setor: true,
                         }
                     }
                 }

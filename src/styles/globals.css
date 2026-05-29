@@ -28,7 +28,21 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem
+    --radius: 0.5rem;
+
+    /* === Tokens isolados do redesign Solicitações v2 === */
+    /* Não sobrescrevem --accent do shadcn (usado em hover/select global). */
+    --brand-accent: 184 100% 33%;
+    --brand-accent-foreground: 0 0% 100%;
+    --v2-border-soft: 0 0% 92%;
+    --v2-card-2: 0 0% 97%;
+    --v2-panel: 0 0% 100%;
+    --v2-faint: 0 0% 45%;
+    --v2-glow-a: 0 72% 60%;
+    --v2-glow-b: 158 54% 50%;
+    --v2-glow-op: 0.10;
+    --v2-radius-card: 0.75rem;
+    --v2-shadow: 0 1px 2px hsl(0 0% 0% / 0.04), 0 8px 24px -12px hsl(0 0% 0% / 0.08)
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -54,16 +68,65 @@
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
+    --chart-5: 340 75% 55%;
+
+    /* === Tokens isolados do redesign Solicitações v2 (dark) === */
+    --brand-accent: 184 70% 42%;
+    --brand-accent-foreground: 0 0% 100%;
+    --v2-border-soft: 0 0% 18%;
+    --v2-card-2: 0 0% 9%;
+    --v2-panel: 0 0% 6%;
+    --v2-faint: 0 0% 60%;
+    --v2-glow-a: 0 72% 45%;
+    --v2-glow-b: 158 64% 40%;
+    --v2-glow-op: 0.22;
+    --v2-radius-card: 0.75rem;
+    --v2-shadow: 0 1px 2px hsl(0 0% 0% / 0.3), 0 10px 30px -15px hsl(0 0% 0% / 0.5)
   }
+}
+
+/* === Camada ambiente do redesign Solicitações v2 ===
+   Aplicada apenas dentro de containers .v2-scope (não vaza para a app inteira). */
+.v2-scope {
+  position: relative;
+}
+.v2-scope::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60% 55% at 92% 8%, hsl(var(--v2-glow-a) / var(--v2-glow-op)), transparent 60%),
+    radial-gradient(55% 60% at 6% 96%, hsl(var(--v2-glow-b) / var(--v2-glow-op)), transparent 62%);
+  border-radius: inherit;
+}
+.v2-scope > * {
+  position: relative;
+  z-index: 1;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  /*
+    Body fica transparente para que o <canvas> animado (AnimatedBackground, fixed inset-0 -z-10)
+    cubra toda a viewport e não apenas o container central. A cor de fundo sólida é desenhada
+    num pseudo-elemento ::before com z-index mais negativo que o canvas, garantindo a ordem:
+    body::before (cor base) → canvas animado → conteúdo da app.
+  */
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: transparent;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -20;
+    background-color: hsl(var(--background));
+    pointer-events: none;
   }
 }
 

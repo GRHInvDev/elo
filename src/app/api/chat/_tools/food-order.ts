@@ -89,10 +89,10 @@ Lista os pratos disponíveis no cardápio de um restaurante para o dia da semana
     restaurantId: z.string().describe("ID do restaurante obtido via listLunchRestaurants"),
     dateIso: z
       .string()
-      .optional()
-      .describe("Data em ISO para determinar o dia da semana do cardápio; padrão: hoje."),
+      .nullable()
+      .describe("Data em ISO para determinar o dia da semana do cardápio; padrão: hoje (passe null para usar o padrão)."),
   }),
-  execute: async ({ restaurantId, dateIso }: { restaurantId: string; dateIso?: string }) => {
+  execute: async ({ restaurantId, dateIso }: { restaurantId: string; dateIso: string | null }) => {
     try {
       const date = dateIso ? new Date(dateIso) : new Date()
       const dayStart = startOfDayLocal(date)
@@ -162,9 +162,9 @@ Verifica se o usuário autenticado já possui um pedido de refeição registrado
 - Erros de conexão retornam string com prefixo "Erro ao consultar pedido:".
 `,
   parameters: z.object({
-    dateIso: z.string().optional().describe("Data em ISO; apenas o dia é considerado. Padrão: hoje."),
+    dateIso: z.string().nullable().describe("Data em ISO; apenas o dia é considerado. Padrão: hoje (passe null para usar o padrão)."),
   }),
-  execute: async ({ dateIso }: { dateIso?: string }) => {
+  execute: async ({ dateIso }: { dateIso: string | null }) => {
     try {
       const d = dateIso ? new Date(dateIso) : new Date()
       const start = startOfDayLocal(d)
@@ -236,13 +236,13 @@ Finaliza e registra o pedido de refeição do usuário autenticado no sistema da
     menuItemId: z.string().describe("ID do prato escolhido (de listLunchMenuItems)"),
     orderDateIso: z
       .string()
-      .optional()
-      .describe("Data do pedido em ISO; padrão hoje (só o dia importa, não o horário)."),
+      .nullable()
+      .describe("Data do pedido em ISO; padrão hoje (passe null para usar o padrão; só o dia importa, não o horário)."),
     optionChoiceIds: z
       .array(z.string())
-      .optional()
-      .describe("Array com os choiceIds dos opcionais/adicionais selecionados pelo usuário."),
-    observations: z.string().optional().describe("Observações livres (ex.: 'sem sal', 'alergia a amendoim')."),
+      .nullable()
+      .describe("Array com os choiceIds dos opcionais/adicionais selecionados pelo usuário. Passe null se não houver."),
+    observations: z.string().nullable().describe("Observações livres (ex.: 'sem sal', 'alergia a amendoim'). Passe null se não houver."),
   }),
   execute: async ({
     restaurantId,
@@ -253,9 +253,9 @@ Finaliza e registra o pedido de refeição do usuário autenticado no sistema da
   }: {
     restaurantId: string
     menuItemId: string
-    orderDateIso?: string
-    optionChoiceIds?: string[]
-    observations?: string
+    orderDateIso: string | null
+    optionChoiceIds: string[] | null
+    observations: string | null
   }) => {
     try {
       const orderDate = orderDateIso

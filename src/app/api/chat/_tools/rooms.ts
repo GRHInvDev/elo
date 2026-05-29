@@ -3,7 +3,7 @@ import { type Tool } from "ai";
 import { z } from "zod"
 
 const createBookingSchemaForAI = z.object({
-  id: z.string().optional(),
+  id: z.string().nullable().describe('Ignorado — não preencha (passe null).'),
   roomId: z.string().describe('ID da sala a ser reservada'),
   title: z.string().min(1, "Title is required").describe('Título da reunião ou evento (ex.: "Reunião de Alinhamento TI")'),
   start: z.string().describe('Data e hora de início em ISO UTC (ex.: "2025-04-15T14:00:00Z")'),

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { PlusCircle, FileText, LucideFileVideo, LucideKanbanSquare } from "lucide-react"
+import { PlusCircle, FileText, LucideFileVideo, LucideKanbanSquare, LifeBuoy } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { currentUser } from "@clerk/nextjs/server"
@@ -9,7 +9,9 @@ import { FormsSkeleton } from "@/components/forms/forms-skeleton"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { api } from "@/trpc/server"
-import { canViewForms, canCreateForm } from "@/lib/access-control"
+import { canViewForms, canCreateForm, canManageRequests } from "@/lib/access-control"
+import { FormsPageSwitch } from "@/components/forms/v2/forms-page-switch"
+import { FormsListV2 } from "@/components/forms/v2/forms-list-v2"
 
 export const metadata = {
   title: "Solicitações",
@@ -22,7 +24,6 @@ export default async function FormsPage() {
   try {
     user = await currentUser();
   } catch (error) {
-    // Se houver erro ao obter usuário do Clerk, redirecionar para login
     console.warn('[FormsPage] Erro ao obter usuário:', error instanceof Error ? error.message : 'Erro desconhecido');
     redirect("/sign-in?redirect_url=/forms");
   }
@@ -31,18 +32,23 @@ export default async function FormsPage() {
     redirect("/sign-in?redirect_url=/forms")
   }
 
-  // Buscar dados do usuário para verificar permissões
   const userData = await api.user.me()
 
-  // Verificar se o usuário tem permissão para visualizar a página de solicitações
   if (!canViewForms(userData.role_config)) {
     redirect("/dashboard")
   }
 
-  // Verificar se o usuário tem permissão para criar solicitações
   const userCanCreateForm = canCreateForm(userData.role_config)
-  return (
-    <DashboardShell>
+  const userCanManageRequests = canManageRequests(userData.role_config)
+  // Fallback: se não tem flag explícita mas é dono de algum formulário,
+  // também pode acessar a Central (atende seus próprios chamados).
+  const isOwnerOfAnyForm = userCanManageRequests
+    ? true
+    : await api.form.isOwnerOfAnyForm().catch(() => false)
+  const showCentralLink = userCanManageRequests || isOwnerOfAnyForm
+
+  const classicView = (
+    <>
       <div className="flex items-center justify-between mb-8 gap-y-4 flex-col md:flex-row">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Solicitações</h1>
@@ -85,6 +91,14 @@ export default async function FormsPage() {
               Minhas solicitações
             </Button>
           </Link>
+          {showCentralLink && (
+            <Link href="/forms/central">
+              <Button variant="outline" className="w-full">
+                <LifeBuoy className="mr-2 h-4 w-4" />
+                Central de chamados
+              </Button>
+            </Link>
+          )}
           {userCanCreateForm && (
             <Link href="/forms/new">
               <Button className="w-full">
@@ -99,7 +113,19 @@ export default async function FormsPage() {
       <Suspense fallback={<FormsSkeleton />}>
         <FormsList />
       </Suspense>
+    </>
+  )
+
+  const v2View = (
+    <FormsListV2
+      userCanCreateForm={userCanCreateForm}
+      showCentralLink={showCentralLink}
+    />
+  )
+
+  return (
+    <DashboardShell>
+      <FormsPageSwitch classic={classicView} v2={v2View} />
     </DashboardShell>
   )
 }
-// <iframe width="560" height="315" src="https://www.youtube.com/embed/aSRZI9TmcC8?si=r6FZgNmOgoP8lhjP" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>

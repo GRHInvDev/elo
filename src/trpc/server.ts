@@ -71,6 +71,10 @@ export const api = {
       const caller = await createServerCaller();
       return caller.form.getById({ id });
     },
+    isOwnerOfAnyForm: async () => {
+      const caller = await createServerCaller();
+      return caller.form.isOwnerOfAnyForm();
+    },
   },
   formResponse: {
     create: async (input: { formId: string; responses: Array<Record<string, unknown>> }) => {

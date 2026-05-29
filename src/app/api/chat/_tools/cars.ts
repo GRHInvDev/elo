@@ -55,10 +55,10 @@ Lista os veículos da frota que estão LIVRES (sem aluguel ativo sobreposto) par
 - Veículos de outras empresas (enterprise) podem aparecer mas não ser alugáveis pelo usuário.
 `,
   parameters: z.object({
-    startIso: z.string().optional().describe("Início do período em ISO UTC; padrão: agora"),
-    endIso: z.string().optional().describe("Fim do período em ISO UTC; padrão: início + 4 horas"),
+    startIso: z.string().nullable().describe("Início do período em ISO UTC; padrão: agora (passe null para usar o padrão)"),
+    endIso: z.string().nullable().describe("Fim do período em ISO UTC; padrão: início + 4 horas (passe null para usar o padrão)"),
   }),
-  execute: async ({ startIso, endIso }: { startIso?: string; endIso?: string }) => {
+  execute: async ({ startIso, endIso }: { startIso: string | null; endIso: string | null }) => {
     try {
       const startDate = startIso ? new Date(startIso) : new Date()
       const endDate = endIso
@@ -146,23 +146,23 @@ Cria um registro de aluguel de veículo para o usuário autenticado.
     driver: z.string().describe("Nome completo do motorista responsável pelo veículo"),
     possibleEnd: z.string().describe('Data e hora prevista de devolução em ISO UTC (ex.: "2025-04-15T18:00:00Z")'),
     vehicleId: z.string().describe('ID do veículo a ser alugado — obtenha via listAvailableVehiclesNow'),
-    passangers: z.string().optional().describe('Lista de passageiros em texto livre (ex.: "Ana Silva, Carlos Souza")'),
-    startDate: z.string().optional().describe('Data e hora de saída em ISO UTC; padrão: agora')
+    passangers: z.string().nullable().describe('Lista de passageiros em texto livre (ex.: "Ana Silva, Carlos Souza"). Passe null se não houver.'),
+    startDate: z.string().nullable().describe('Data e hora de saída em ISO UTC; padrão: agora (passe null para usar o padrão)')
   }),
   execute: async ({destiny, driver, possibleEnd, vehicleId, passangers, startDate}: {
     destiny: string,
     driver: string,
     possibleEnd: string,
     vehicleId: string,
-    passangers?: string,
-    startDate?: string
+    passangers: string | null,
+    startDate: string | null
   }) => {
     return await api.vehicleRent.create({
       destiny,
       driver,
       possibleEnd: new Date(possibleEnd),
       vehicleId,
-      passangers,
+      passangers: passangers ?? undefined,
       startDate: startDate ? new Date(startDate) : new Date()
     })
   }

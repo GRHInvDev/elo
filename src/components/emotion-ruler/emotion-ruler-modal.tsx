@@ -103,7 +103,11 @@ export function EmotionRulerModal({
       <DialogContent
         className="max-w-4xl w-[95vw] max-h-[90vh] md:max-h-[85vh] p-0 flex flex-col overflow-hidden"
         onInteractOutside={(e) => e.preventDefault()}
-        style={{ backgroundColor: backgroundColor ?? undefined }}
+        style={
+          backgroundColor && backgroundColor.toLowerCase() !== "#ffffff"
+            ? { backgroundColor }
+            : undefined
+        }
       >
         {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-border/50">
