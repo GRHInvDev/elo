@@ -17,7 +17,6 @@ import { ptBR } from "date-fns/locale"
 import { DatePicker } from "@/components/ui/date-picker"
 import * as XLSX from "xlsx"
 import { useEffect } from "react"
-import { Select as UiSelect } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CheckCircle, Loader2 } from "lucide-react"
@@ -53,8 +52,8 @@ export default function OrdersTab({
   const [selectedFilial, setSelectedFilial] = useState<string>(FILIAL_ALL)
   const [page, setPage] = useState(1)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
-  const [exportMonth, setExportMonth] = useState<number>(new Date().getMonth() + 1)
-  const [exportYear, setExportYear] = useState<number>(new Date().getFullYear())
+  const [exportStartDate, setExportStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  const [exportEndDate, setExportEndDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0))
   const [signatureExportDialogOpen, setSignatureExportDialogOpen] = useState(false)
   const [signatureExportDate, setSignatureExportDate] = useState<Date>(new Date())
   const [signatureExportRestaurant, setSignatureExportRestaurant] = useState<string>("")
@@ -256,7 +255,9 @@ export default function OrdersTab({
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Resumo Usuários")
       // Gerar arquivo e baixar
-      XLSX.writeFile(wb, `resumo_pedidos_usuarios_${exportYear}_${String(exportMonth).padStart(2, "0")}.xlsx`)
+      const fileStart = format(exportStartDate, "yyyy-MM-dd")
+      const fileEnd = format(exportEndDate, "yyyy-MM-dd")
+      XLSX.writeFile(wb, `resumo_pedidos_usuarios_${fileStart}_a_${fileEnd}.xlsx`)
       toast.success("Arquivo Excel gerado com sucesso!")
       setExportDialogOpen(false)
     },
@@ -514,50 +515,33 @@ export default function OrdersTab({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Exportar pedidos para Excel</DialogTitle>
+              <DialogDescription>
+                Selecione o período desejado para exportar a relação de usuários e seus pedidos.
+              </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4">
-              <div className="flex gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Mês</label>
-                  <UiSelect value={String(exportMonth)} onValueChange={v => setExportMonth(Number(v))}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="Mês" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>
-                          {new Date(0, i).toLocaleString("pt-BR", { month: "long" })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </UiSelect>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Ano</label>
-                  <UiSelect value={String(exportYear)} onValueChange={v => setExportYear(Number(v))}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="Ano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 6 }, (_, i) => {
-                        const year = new Date().getFullYear() - 2 + i
-                        return (
-                          <SelectItem key={year} value={String(year)}>
-                            {year}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </UiSelect>
-                </div>
+              <div>
+                <Label>Data de início</Label>
+                <DatePicker
+                  date={exportStartDate}
+                  onDateChange={(date: Date) => setExportStartDate(date)}
+                />
               </div>
+              <div>
+                <Label>Data de fim</Label>
+                <DatePicker
+                  date={exportEndDate}
+                  onDateChange={(date: Date) => setExportEndDate(date)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Período selecionado: {format(exportStartDate, "dd/MM/yyyy", { locale: ptBR })} até {format(exportEndDate, "dd/MM/yyyy", { locale: ptBR })}
+              </p>
             </div>
             <DialogFooter>
               <Button
                 onClick={() => {
-                  const startDate = new Date(exportYear, exportMonth - 1, 1)
-                  const endDate = new Date(exportYear, exportMonth, 0)
-                  listToExcel({ startDate, endDate })
+                  listToExcel({ startDate: exportStartDate, endDate: exportEndDate })
                 }}
               >
                 Exportar

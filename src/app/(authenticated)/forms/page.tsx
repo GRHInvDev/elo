@@ -12,6 +12,7 @@ import { api } from "@/trpc/server"
 import { canViewForms, canCreateForm, canManageRequests } from "@/lib/access-control"
 import { FormsPageSwitch } from "@/components/forms/v2/forms-page-switch"
 import { FormsListV2 } from "@/components/forms/v2/forms-list-v2"
+import { LayoutSwitch } from "@/components/ui/layout-switch"
 
 export const metadata = {
   title: "Solicitações",
@@ -51,7 +52,10 @@ export default async function FormsPage() {
     <>
       <div className="flex items-center justify-between mb-8 gap-y-4 flex-col md:flex-row">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Solicitações</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Solicitações</h1>
+            <LayoutSwitch />
+          </div>
           <p className="text-muted-foreground mt-2 mb-4">
             {userCanCreateForm
               ? "Crie, gerencie e responda solicitações personalizadas."

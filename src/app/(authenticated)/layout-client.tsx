@@ -13,7 +13,6 @@ import { AnimationProvider } from "@/contexts/animation-context"
 import { BirthdayConfettiWrapper } from "@/components/birthday/birthday-confetti-wrapper"
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { LayoutPreferenceProvider } from "@/contexts/layout-preference-context"
-import { LayoutSwitch } from "@/components/ui/layout-switch"
 import { LayoutTransitionOverlay } from "@/components/ui/layout-transition-overlay"
 
 export default function AuthenticatedLayoutClient({
@@ -44,7 +43,6 @@ export default function AuthenticatedLayoutClient({
           <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:hidden print:hidden">
             <MainNav />
             <div className="ml-auto flex items-center gap-1">
-              <LayoutSwitch compact />
               <AppReleaseNotesDialog size="small" />
               <SettingsMenu size="small" />
               <UserNav />
@@ -62,7 +60,6 @@ export default function AuthenticatedLayoutClient({
               <h2 className="text-lg ml-8 font-semibold">Grupo R Henz</h2>
             </div>
             <div className="flex items-center gap-3">
-              <LayoutSwitch />
               <UserNav />
             </div>
           </header>
