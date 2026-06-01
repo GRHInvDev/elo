@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Clock, MapPin, Phone, CheckCircle, ChevronDown, ChevronUp, Loader2, Trash2, AlertCircle } from "lucide-react"
+import { Clock, CheckCircle, ChevronDown, ChevronUp, Loader2, Trash2, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -314,7 +314,9 @@ export default function FoodPage() {
               {todayOrder.data?.menuItem && (
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prato</p>
-                  <p className="font-semibold text-foreground">{todayOrder.data.menuItem.name}</p>
+                  <p className="font-semibold text-foreground">
+                    {todayOrder.data.menuItem.name}{todayOrder.data.menuItem.description ? ` — ${todayOrder.data.menuItem.description}` : ""}
+                  </p>
                 </div>
               )}
             </div>
@@ -370,7 +372,9 @@ export default function FoodPage() {
               {tomorrowOrder.data?.menuItem && (
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prato</p>
-                  <p className="font-semibold text-foreground">{tomorrowOrder.data.menuItem.name}</p>
+                  <p className="font-semibold text-foreground">
+                    {tomorrowOrder.data.menuItem.name}{tomorrowOrder.data.menuItem.description ? ` — ${tomorrowOrder.data.menuItem.description}` : ""}
+                  </p>
                 </div>
               )}
             </div>
@@ -451,21 +455,11 @@ export default function FoodPage() {
                 {restaurants.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Carregando restaurantes...</div>}
                 {selectedRestaurantData && (
                   <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all mt-4">
-                    <CardContent className="p-3 md:p-6 pt-4 md:pt-6 space-y-3">
-                      <div>
-                        <h3 className="font-bold text-lg text-foreground tracking-tight">{selectedRestaurantData.name}</h3>
+                    <CardContent className="p-3 md:p-6 pt-4 md:pt-6">
+                      <h3 className="font-bold text-lg text-foreground tracking-tight">{selectedRestaurantData.name}</h3>
+                      {selectedRestaurantData.description && (
                         <p className="text-sm text-muted-foreground mt-1">{selectedRestaurantData.description}</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-border">
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-foreground">{selectedRestaurantData.address}</span>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <Phone className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-foreground">{selectedRestaurantData.phone}</span>
-                        </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -488,7 +482,12 @@ export default function FoodPage() {
                       {menuItems.data && menuItems.data.length > 0 ? (
                         menuItems.data.map((item) => (
                           <SelectItem key={item.id} value={item.id} className="cursor-pointer">
-                            {item.name}{item.category ? ` — ${item.category}` : ""}
+                            <div className="flex flex-col">
+                              <span className="font-medium">{item.name}{item.category ? ` — ${item.category}` : ""}</span>
+                              {item.description && (
+                                <span className="text-xs text-muted-foreground">{item.description}</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))
                       ) : (
@@ -498,6 +497,10 @@ export default function FoodPage() {
                   </Select>
                 </div>
                 {menuItems.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Carregando pratos...</div>}
+                {/* Descrição do prato selecionado */}
+                {selectedMenuItemData?.description && (
+                  <p className="text-sm text-muted-foreground mt-1 px-1">{selectedMenuItemData.description}</p>
+                )}
                 {/* Seleção de opcionais do prato */}
                 {selectedMenuItem && (
                   <MenuItemOptionsSelector
