@@ -179,7 +179,8 @@ export function ImageCarousel({
           className={cn(
             imageFit === "contain"
               ? "object-contain"
-              : "object-cover"
+              : "object-cover",
+            "height-1/2"
           )}
           priority={index === 0}
           onLoadingComplete={(img) => handleImageLoad(index, img.target as HTMLImageElement)}
