@@ -111,9 +111,18 @@ export default function UsersManagementPage() {
   })
 
   const { data: allForms } = api.form.list.useQuery()
+  const { data: empresas = [] } = api.empresas.list.useQuery()
   const { data: filiaisRaw = [] } = api.filiais.list.useQuery()
   const filiais = useMemo(
-    () => filiaisRaw.map((f) => ({ id: f.id, name: f.name, code: f.code, enterprise: f.empresa.enterprise })),
+    () =>
+      filiaisRaw.map((f) => ({
+        id: f.id,
+        name: f.name,
+        code: f.code,
+        enterprise: f.empresa.enterprise,
+        empresaId: f.empresa.id,
+        empresaName: f.empresa.name,
+      })),
     [filiaisRaw],
   )
 
@@ -307,6 +316,7 @@ export default function UsersManagementPage() {
                       }}
                       allForms={allForms ?? []}
                       filiais={filiais}
+                      empresas={empresas}
                       onUserUpdate={() => refetch()}
                     />
                   ))}
@@ -378,7 +388,8 @@ interface UserManagementCardProps {
     lojinha_phone?: string | null
   }
   allForms: { id: string; title: string }[]
-  filiais?: { id: string; name: string; code: string; enterprise: Enterprise }[]
+  filiais?: { id: string; name: string; code: string; enterprise: Enterprise; empresaId: string; empresaName: string }[]
+  empresas?: { id: string; name: string }[]
   onUserUpdate: () => void
 }
 
@@ -410,7 +421,7 @@ function extendedRoleConfigFromServer(role: RolesConfig | null | undefined): Ext
   }
 }
 
-function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: UserManagementCardProps) {
+function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUserUpdate }: UserManagementCardProps) {
   const [activeTab, setActiveTab] = useState("basic")
   const [isEditing, setIsEditing] = useState(false)
   const [permissionSearch, setPermissionSearch] = useState("")
@@ -445,19 +456,28 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
     emailExtension: user.emailExtension ?? "",
     matricula: user.matricula ?? "",
     email_empresarial: user.email_empresarial ?? "",
-    enterprise: user.enterprise ?? "NA",
     is_active: (user as { is_active?: boolean }).is_active ?? true,
   })
-  const [isEditingFilial, setIsEditingFilial] = useState(false)
-  const [selectedUserFilial, setSelectedUserFilial] = useState<string>(user.filialId ?? "")
+  // Modelo novo: o vínculo é feito por Empresa + Filial (salva-se filialId; o enum
+  // enterprise é derivado no servidor a partir de filial.empresa).
+  const [empresaId, setEmpresaId] = useState<string>("")
+  const [basicFilialId, setBasicFilialId] = useState<string>(user.filialId ?? "")
 
-  const userEnterpriseRequiresFilial =
-    user.enterprise === "Box_Filial" || user.enterprise === "Cristallux_Filial"
+  // Sincroniza empresa/filial do formulário com a filial atual do usuário
+  useEffect(() => {
+    const current = filiais.find((f) => f.id === user.filialId)
+    setEmpresaId(current?.empresaId ?? "")
+    setBasicFilialId(user.filialId ?? "")
+  }, [user.filialId, filiais])
 
-  const filiaisForUserEnterprise = useMemo(() => {
-    if (!userEnterpriseRequiresFilial) return []
-    return (filiais ?? []).filter((f) => f.enterprise === user.enterprise)
-  }, [filiais, user.enterprise, userEnterpriseRequiresFilial])
+  const filiaisForEmpresa = useMemo(
+    () => filiais.filter((f) => f.empresaId === empresaId),
+    [filiais, empresaId],
+  )
+  const currentEmpresaName = useMemo(
+    () => filiais.find((f) => f.id === user.filialId)?.empresaName,
+    [filiais, user.filialId],
+  )
   const [permissionsData, setPermissionsData] = useState<ExtendedRolesConfig>(() =>
     extendedRoleConfigFromServer(user.role_config),
   )
@@ -627,25 +647,6 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
     },
   })
 
-  const updateUserFilial = api.user.updateUserFilial.useMutation({
-    onSuccess: async () => {
-      toast({
-        title: "Filial atualizada",
-        description: "A filial do usuário foi atualizada com sucesso.",
-      })
-      setIsEditingFilial(false)
-      await utils.user.listUsers.invalidate()
-      onUserUpdate()
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
-    },
-  })
-
   const toggleActive = api.user.updateBasicInfo.useMutation({
     onSuccess: async () => {
       const nowActive = user.is_active === false
@@ -696,6 +697,14 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
   }
 
   const handleSaveBasicInfo = () => {
+    if (empresaId && !basicFilialId) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Selecione a filial da empresa.",
+        variant: "destructive",
+      })
+      return
+    }
     updateBasicInfo.mutate({
       userId: user.id,
       ...basicData,
@@ -704,8 +713,8 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
       emailExtension: basicData.emailExtension || "",
       matricula: basicData.matricula || "",
       email_empresarial: basicData.email_empresarial || "",
-      enterprise: basicData.enterprise,
       is_active: basicData.is_active,
+      filialId: basicFilialId || null,
     })
   }
 
@@ -827,13 +836,6 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
         })
       }
     }
-  }
-
-  const handleSaveUserFilial = () => {
-    updateUserFilial.mutate({
-      userId: user.id,
-      filialId: selectedUserFilial || null,
-    })
   }
 
   const isUserActive = user.is_active !== false
@@ -1024,18 +1026,40 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="enterprise">Empresa</Label>
+                    <Label htmlFor="empresa">Empresa</Label>
                     <Select
-                      value={basicData.enterprise}
-                      onValueChange={(value) => setBasicData({ ...basicData, enterprise: value as Enterprise })}
+                      value={empresaId}
+                      onValueChange={(value) => {
+                        setEmpresaId(value)
+                        setBasicFilialId("")
+                      }}
                     >
-                      <SelectTrigger id="enterprise">
+                      <SelectTrigger id="empresa">
                         <SelectValue placeholder="Selecione uma empresa" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ENTERPRISE_OPTIONS.filter((opt) => opt.value !== "all").map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
+                        {empresas.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="filial">Filial</Label>
+                    <Select
+                      value={basicFilialId}
+                      onValueChange={setBasicFilialId}
+                      disabled={!empresaId}
+                    >
+                      <SelectTrigger id="filial">
+                        <SelectValue placeholder={empresaId ? "Selecione uma filial" : "Selecione a empresa primeiro"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filiaisForEmpresa.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.name} ({f.code})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1143,7 +1167,7 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Empresa</Label>
-                  <p className="text-sm font-medium">{getEnterpriseLabel(user.enterprise)}</p>
+                  <p className="text-sm font-medium">{currentEmpresaName ?? getEnterpriseLabel(user.enterprise)}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Ramal</Label>
@@ -1178,12 +1202,6 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
                     <Edit3 className="h-4 w-4 mr-2" />
                     Editar Dados
                   </Button>
-                  {userEnterpriseRequiresFilial ? (
-                    <Button onClick={() => setIsEditingFilial(true)} size="sm" variant="outline">
-                      <Edit3 className="h-4 w-4 mr-2" />
-                      Alterar Filial
-                    </Button>
-                  ) : null}
                 </div>
               </div>
             )}
@@ -2022,63 +2040,6 @@ function UserManagementCard({ user, allForms, filiais = [], onUserUpdate }: User
             </TabsContent>
           )}
         </Tabs>
-
-        {/* Dialog: Editar Filial */}
-        <Dialog open={isEditingFilial} onOpenChange={setIsEditingFilial}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Alterar Filial do Usuário</DialogTitle>
-              <DialogDescription>
-                {user.firstName} {user.lastName}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="filial-select">Filial</Label>
-                <Select
-                  value={selectedUserFilial || "none"}
-                  onValueChange={(value) => setSelectedUserFilial(value === "none" ? "" : value)}
-                >
-                  <SelectTrigger id="filial-select">
-                    <SelectValue placeholder="Selecione uma filial" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem filial</SelectItem>
-                    {filiaisForUserEnterprise.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.name} ({f.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsEditingFilial(false)
-                  setSelectedUserFilial(user.filialId ?? "")
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveUserFilial}
-                disabled={updateUserFilial.isPending}
-              >
-                {updateUserFilial.isPending ? (
-                  <>
-                    <span className="animate-spin mr-2">⏳</span>
-                    Salvando...
-                  </>
-                ) : (
-                  "Salvar"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
     </>
