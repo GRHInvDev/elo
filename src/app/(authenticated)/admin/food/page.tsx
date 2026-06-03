@@ -24,7 +24,19 @@ export default function AdminFoodPage() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>("")
   const [selectedStatus, setSelectedStatus] = useState<string>("")
   const [userName, setUserName] = useState<string>("")
+  const [userEmail, setUserEmail] = useState<string>("")
+  const [activeTab, setActiveTab] = useState<string>("orders")
   const [stats, setStats] = useState({ total: 0, pending: 0, confirmed: 0, delivered: 0 })
+
+  // Vindo do relatório DRE: abre a aba de Pedidos já filtrada pela data e e-mail do colaborador
+  const handleOpenOrderFromDre = ({ date, email }: { date: Date; email: string }) => {
+    setSelectedDate(date)
+    setUserEmail(email)
+    setUserName("")
+    setSelectedRestaurant("")
+    setSelectedStatus("")
+    setActiveTab("orders")
+  }
   
   // Verificar acesso ao módulo de comida
   if (!isLoading && !hasAdminAccess("/admin/food")) {
@@ -79,7 +91,7 @@ export default function AdminFoodPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="orders" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="orders">Pedidos</TabsTrigger>
           <TabsTrigger value="restaurants">Restaurantes</TabsTrigger>
@@ -100,6 +112,8 @@ export default function AdminFoodPage() {
             setSelectedStatus={setSelectedStatus}
             userName={userName}
             setUserName={setUserName}
+            userEmail={userEmail}
+            setUserEmail={setUserEmail}
             onStatsChange={setStats}
           />
         </TabsContent>
@@ -125,6 +139,7 @@ export default function AdminFoodPage() {
               <DREReport
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
+                onOpenOrder={handleOpenOrderFromDre}
               />
             </TabsContent>
           )}

@@ -1,37 +1,17 @@
 import { TRPCError } from "@trpc/server"
-import { Enterprise } from "@prisma/client"
-import type { PrismaClient } from "@prisma/client"
-
-export function enterpriseRequiresFilial(enterprise: Enterprise): boolean {
-  return enterprise === Enterprise.Box_Filial || enterprise === Enterprise.Cristallux_Filial
-}
+import type { Enterprise, PrismaClient } from "@prisma/client"
 
 /**
- * Garante que filialId só exista quando a empresa é do tipo Filial e que a filial pertence à mesma empresa.
+ * Modelo novo de vínculo: o usuário é ligado a uma Filial (filialId) e a Empresa
+ * é derivada de `filial.empresa`. O enum legado `enterprise` é mantido em sincronia
+ * com `empresa.enterprise` para compatibilidade com relatórios/exportações antigas.
+ *
+ * Dada uma filial, retorna o enum `enterprise` da empresa dona dela.
  */
-export async function ensureFilialConsistentWithEnterprise(
+export async function resolveEnterpriseFromFilial(
   db: PrismaClient,
-  params: { filialId: string | null; enterprise: Enterprise },
-): Promise<void> {
-  const { filialId, enterprise } = params
-
-  if (!enterpriseRequiresFilial(enterprise)) {
-    if (filialId) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Filial só pode ser informada para empresas do tipo Filial (Box Filial ou Cristallux Filial).",
-      })
-    }
-    return
-  }
-
-  if (!filialId) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Filial é obrigatória para esta empresa.",
-    })
-  }
-
+  filialId: string,
+): Promise<Enterprise> {
   const filial = await db.filial.findUnique({
     where: { id: filialId },
     select: { empresa: { select: { enterprise: true } } },
@@ -44,10 +24,5 @@ export async function ensureFilialConsistentWithEnterprise(
     })
   }
 
-  if (filial.empresa.enterprise !== enterprise) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "A filial selecionada não pertence à empresa do colaborador. Ajuste a empresa ou escolha outra filial.",
-    })
-  }
+  return filial.empresa.enterprise
 }

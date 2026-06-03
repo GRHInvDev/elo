@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/trpc/react"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
-import type { Enterprise } from "@/types/enterprise"
 
 interface CompleteProfileModalProps {
   isOpen: boolean
@@ -24,23 +23,8 @@ interface CompleteProfileModalProps {
   onClose?: () => void
 }
 
-type FilialOption = {
-  id: string
-  name: string
-  code: string
-  enterprise: Enterprise
-}
-
-const enterprises = [
-  { value: "Box", label: "Box" },
-  { value: "Box_Filial", label: "Box Filial" },
-  { value: "Cristallux", label: "Cristallux" },
-  { value: "Cristallux_Filial", label: "Cristallux Filial" },
-]
-
 const setores = [
   { value: "ADMINISTRATIVO", label: "Administrativo" },
-  { value: "COMERCIAL", label: "Comercial" },
   { value: "COMERCIAL", label: "Comercial" },
   { value: "FINANCEIRO", label: "Financeiro" },
   { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
@@ -53,47 +37,43 @@ const setores = [
 
 export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: CompleteProfileModalProps) {
   const [matricula, setMatricula] = useState("")
-  const [enterprise, setEnterprise] = useState("")
+  const [empresaId, setEmpresaId] = useState("")
   const [setor, setSetor] = useState("")
   const [filialId, setFilialId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const { toast } = useToast()
-  const shouldRequireFilial = enterprise === "Box_Filial" || enterprise === "Cristallux_Filial"
 
-  const { data: filiaisData = [] } = api.filiais.list.useQuery(undefined, {
-    enabled: shouldRequireFilial && !!enterprise,
-  })
-  const filiais: FilialOption[] = filiaisData.map((f) => ({
-    id: f.id,
-    name: f.name,
-    code: f.code,
-    enterprise: f.empresa.enterprise,
-  }))
+  const { data: empresas = [] } = api.empresas.list.useQuery(undefined, { enabled: isOpen })
+  const { data: filiaisData = [] } = api.filiais.list.useQuery(undefined, { enabled: isOpen })
 
-  // Atualizar os valores quando o modal abrir
+  // Filiais da empresa selecionada
+  const filiais = useMemo(
+    () => filiaisData.filter((f) => f.empresa.id === empresaId),
+    [filiaisData, empresaId],
+  )
+
+  // Atualizar os valores quando o modal abrir (pré-preenche empresa pela filial atual, se houver)
   useEffect(() => {
     if (isOpen && user) {
       setMatricula(user.matricula ?? "")
-      setEnterprise(user.enterprise ?? "")
       setSetor(user.setor ?? "")
       setFilialId(user.filialId ?? "")
+      const currentFilial = user.filialId
+        ? filiaisData.find((f) => f.id === user.filialId)
+        : undefined
+      setEmpresaId(currentFilial?.empresa.id ?? "")
     }
-  }, [isOpen, user])
+  }, [isOpen, user, filiaisData])
 
+  // Ao trocar de empresa, limpar a filial que não pertence mais à empresa selecionada
   useEffect(() => {
-    if (!shouldRequireFilial && filialId) {
-      setFilialId("")
-    }
-  }, [shouldRequireFilial, filialId])
-
-  useEffect(() => {
-    if (!shouldRequireFilial || !filialId) return
+    if (!filialId) return
     const allowed = new Set(filiais.map((f) => f.id))
     if (!allowed.has(filialId)) {
       setFilialId("")
     }
-  }, [shouldRequireFilial, filiais, filialId])
+  }, [filiais, filialId])
 
   const updateProfileMutation = api.user.updateProfile.useMutation({
     onSuccess: () => {
@@ -128,7 +108,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       return
     }
 
-    if (!enterprise.trim()) {
+    if (!empresaId) {
       toast({
         title: "Campo obrigatório",
         description: "Por favor, selecione sua empresa.",
@@ -145,7 +125,8 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       })
       return
     }
-    if (shouldRequireFilial && !filialId.trim()) {
+
+    if (!filialId.trim()) {
       toast({
         title: "Campo obrigatório",
         description: "Por favor, selecione sua filial.",
@@ -158,9 +139,8 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
 
     updateProfileMutation.mutate({
       matricula: matricula.trim(),
-      enterprise: enterprise.trim() as Enterprise,
       setor: setor.trim(),
-      filialId: shouldRequireFilial ? filialId.trim() : null,
+      filialId: filialId.trim(),
     })
   }
 
@@ -170,9 +150,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
         <DialogHeader>
           <DialogTitle>Perfil Obrigatório</DialogTitle>
           <DialogDescription>
-            Para continuar usando a plataforma, informe seu número de matrícula, empresa e setor.
-            <br />
-            Se a empresa selecionada for Box Filial ou Cristallux Filial, você também precisa escolher a filial.
+            Para continuar usando a plataforma, informe seu número de matrícula, empresa, filial e setor.
             <br />
             {`Se você trabalhar na modalidade PJ, pode anotar "Número da matrícula" como 0!`}
           </DialogDescription>
@@ -191,15 +169,37 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="enterprise">Empresa *</Label>
-            <Select value={enterprise} onValueChange={setEnterprise}>
+            <Label htmlFor="empresa">Empresa *</Label>
+            <Select
+              value={empresaId}
+              onValueChange={(v) => {
+                setEmpresaId(v)
+                setFilialId("")
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione sua empresa" />
               </SelectTrigger>
               <SelectContent>
-                {enterprises.map((ent) => (
-                  <SelectItem key={ent.value} value={ent.value}>
-                    {ent.label}
+                {empresas.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="filial">Filial *</Label>
+            <Select value={filialId} onValueChange={setFilialId} disabled={!empresaId}>
+              <SelectTrigger>
+                <SelectValue placeholder={empresaId ? "Selecione sua filial" : "Selecione a empresa primeiro"} />
+              </SelectTrigger>
+              <SelectContent>
+                {filiais.map((filial) => (
+                  <SelectItem key={filial.id} value={filial.id}>
+                    {filial.name} ({filial.code})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -213,31 +213,14 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
                 <SelectValue placeholder="Selecione seu setor" />
               </SelectTrigger>
               <SelectContent>
-                {setores.map((setor) => (
-                  <SelectItem key={setor.value} value={setor.value}>
-                    {setor.label}
+                {setores.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          {shouldRequireFilial ? (
-            <div className="space-y-2">
-              <Label htmlFor="filial">Filial *</Label>
-              <Select value={filialId} onValueChange={setFilialId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione sua filial" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filiais.map((filial) => (
-                    <SelectItem key={filial.id} value={filial.id}>
-                      {filial.name} ({filial.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
 
           <div className="flex justify-center pt-6">
             <Button

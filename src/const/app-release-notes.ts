@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.29.0" as const;
+export const APP_CURRENT_VERSION = "1.32.0" as const;
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -19,6 +19,29 @@ export interface AppReleaseNote {
  * Incluir somente releases **major** ou **minor** com entrega visível ao usuário.
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
+  {
+    version: "1.32.0",
+    date: "Junho de 2026",
+    items: [
+      "**DRE mostra a empresa de verdade**: o relatório de resultado passou a exibir o nome da empresa cadastrada (em vez da sigla antiga), deixando os agrupamentos mais claros.",
+      "**Busca por e-mail nos pedidos**: a lista de pedidos ganhou um campo dedicado para buscar pelo e-mail do colaborador, separado da busca por nome.",
+    ],
+  },
+  {
+    version: "1.31.0",
+    date: "Junho de 2026",
+    items: [
+      "**Empresa e filial juntas no cadastro**: ao completar o perfil e na tela de Usuários, agora você escolhe a empresa e, em seguida, a filial — o vínculo fica certinho automaticamente.",
+    ],
+  },
+  {
+    version: "1.30.0",
+    date: "Junho de 2026",
+    items: [
+      "**Relatório DRE mais detalhado**: no relatório de resultado por empresa e setor, agora é só clicar em uma linha para abrir a lista das pessoas daquele grupo — com o nome, a empresa, o setor e o valor de cada pedido.",
+      "**Vá direto ao pedido**: ao lado de cada pessoa há um botão que leva você direto para a aba de Pedidos já filtrada por aquela pessoa e data, facilitando achar o pedido exato.",
+    ],
+  },
   {
     version: "1.29.0",
     date: "Maio de 2026",

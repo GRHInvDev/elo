@@ -6,7 +6,7 @@ import { z } from "zod"
 import { type RolesConfig } from "@/types/role-config"
 import { TRPCError } from "@trpc/server"
 import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
-import { ensureFilialConsistentWithEnterprise } from "@/server/validators/filial-enterprise"
+import { resolveEnterpriseFromFilial } from "@/server/validators/filial-enterprise"
 
 
 export const userRouter = createTRPCRouter({
@@ -197,9 +197,10 @@ export const userRouter = createTRPCRouter({
   updateProfile: protectedProcedure
     .input(z.object({
       matricula: z.string().min(1, "Matrícula é obrigatória"),
-      enterprise: z.nativeEnum(Enterprise),
       setor: z.string().min(1, "Setor é obrigatório"),
-      filialId: z.string().nullable(),
+      // Modelo novo: o usuário escolhe Empresa + Filial; gravamos filialId e
+      // derivamos o enum `enterprise` a partir de filial.empresa.
+      filialId: z.string().min(1, "Filial é obrigatória"),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.auth.userId;
@@ -207,10 +208,7 @@ export const userRouter = createTRPCRouter({
         throw new Error("Usuário não autenticado");
       }
 
-      await ensureFilialConsistentWithEnterprise(ctx.db, {
-        filialId: input.filialId,
-        enterprise: input.enterprise,
-      })
+      const enterprise = await resolveEnterpriseFromFilial(ctx.db, input.filialId)
 
       // Primeiro tentar atualizar usuário existente (caso normal em produção)
       try {
@@ -218,7 +216,7 @@ export const userRouter = createTRPCRouter({
           where: { id: userId },
           data: {
             matricula: input.matricula.trim(),
-            enterprise: input.enterprise,
+            enterprise,
             setor: input.setor,
             filialId: input.filialId,
           },
@@ -256,7 +254,7 @@ export const userRouter = createTRPCRouter({
             lastName: null,
             imageUrl: null,
             matricula: input.matricula.trim(),
-            enterprise: input.enterprise,
+            enterprise,
             setor: input.setor,
             filialId: input.filialId,
             role_config: devDefaultRoleConfig,
@@ -611,7 +609,8 @@ export const userRouter = createTRPCRouter({
       emailExtension: z.string().email().optional().or(z.literal("")),
       matricula: z.string().optional().or(z.literal("")),
       email_empresarial: z.string().email().optional().or(z.literal("")),
-      enterprise: z.nativeEnum(Enterprise).optional(),
+      // Modelo novo: empresa é definida pela Filial escolhida; enterprise é derivado.
+      filialId: z.string().nullable().optional(),
       /** Status na empresa: ativo ou desativado. Apenas sudo ou can_manage_dados_basicos_users podem alterar. */
       is_active: z.boolean().optional(),
     }))
@@ -633,7 +632,19 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      const { userId, ...updateData } = input
+      const { userId, filialId, ...updateData } = input
+
+      // Empresa/Filial: quando filialId é informado, deriva o enum enterprise da
+      // empresa dona da filial. filialId === null desvincula a filial (sem mexer no enum).
+      const companyData: { filialId?: string | null; enterprise?: Enterprise } = {}
+      if (filialId !== undefined) {
+        if (filialId) {
+          companyData.filialId = filialId
+          companyData.enterprise = await resolveEnterpriseFromFilial(ctx.db, filialId)
+        } else {
+          companyData.filialId = null
+        }
+      }
 
       // Se o usuário não é sudo, apenas permitir alterar dados básicos (incluindo is_active)
       if (!effectiveConfig.sudo) {
@@ -647,8 +658,8 @@ export const userRouter = createTRPCRouter({
           emailExtension: input.emailExtension,
           matricula: input.matricula,
           email_empresarial: input.email_empresarial,
-          enterprise: input.enterprise,
           is_active: input.is_active,
+          ...companyData,
         }
 
         return ctx.db.user.update({
@@ -659,7 +670,7 @@ export const userRouter = createTRPCRouter({
 
       return ctx.db.user.update({
         where: { id: userId },
-        data: updateData,
+        data: { ...updateData, ...companyData },
       })
     }),
 
@@ -1051,32 +1062,19 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      const nextEnterprise = input.enterprise ?? targetUser.enterprise
-      const requiresFilial =
-        nextEnterprise === Enterprise.Box_Filial ||
-        nextEnterprise === Enterprise.Cristallux_Filial
-
-      let nextFilialId =
+      const nextFilialId =
         input.filialId === undefined ? (targetUser.filialId ?? null) : input.filialId
 
-      if (!requiresFilial) {
-        nextFilialId = null
-      } else if (!nextFilialId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Filial é obrigatória para empresas do tipo Filial",
-        })
-      }
-
-      await ensureFilialConsistentWithEnterprise(ctx.db, {
-        filialId: nextFilialId,
-        enterprise: nextEnterprise,
-      })
+      // Modelo novo: com filial definida, o enum enterprise é derivado da empresa
+      // dona da filial. Sem filial, mantém o enum informado (ou o atual).
+      const nextEnterprise = nextFilialId
+        ? await resolveEnterpriseFromFilial(ctx.db, nextFilialId)
+        : (input.enterprise ?? targetUser.enterprise)
 
       return ctx.db.user.update({
         where: { id: input.userId },
         data: {
-          ...(input.enterprise !== undefined ? { enterprise: input.enterprise } : {}),
+          enterprise: nextEnterprise,
           filialId: nextFilialId,
         },
         select: {

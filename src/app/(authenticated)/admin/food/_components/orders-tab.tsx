@@ -33,6 +33,8 @@ interface OrdersTabProps {
   setSelectedStatus: (status: string) => void
   userName: string
   setUserName: (name: string) => void
+  userEmail: string
+  setUserEmail: (email: string) => void
   onStatsChange?: (s: { total: number; pending: number; confirmed: number; delivered: number }) => void
 }
 
@@ -45,6 +47,8 @@ export default function OrdersTab({
   setSelectedStatus,
   userName,
   setUserName,
+  userEmail,
+  setUserEmail,
   onStatsChange
 }: OrdersTabProps) {
   const FILIAL_ALL = "__all__"
@@ -121,6 +125,7 @@ export default function OrdersTab({
     restaurantId: selectedRestaurant || undefined,
     status: selectedStatus ? (selectedStatus as "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED") : undefined,
     userName: userName || undefined,
+    userEmail: userEmail || undefined,
     filialId: selectedFilial !== FILIAL_ALL ? selectedFilial : undefined,
     page,
     pageSize: PAGE_SIZE,
@@ -135,7 +140,7 @@ export default function OrdersTab({
   // Resetar página quando filtros mudam
   useEffect(() => {
     setPage(1)
-  }, [selectedDate, selectedRestaurant, selectedStatus, userName, selectedFilial])
+  }, [selectedDate, selectedRestaurant, selectedStatus, userName, userEmail, selectedFilial])
 
   // Reportar estatísticas para a página usando contagens do servidor (todos os resultados, não só a página)
   useEffect(() => {
@@ -784,7 +789,7 @@ export default function OrdersTab({
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="flex items-center space-x-2">
               <Label>Data</Label>
               <DatePicker
@@ -842,7 +847,15 @@ export default function OrdersTab({
               <Input
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                placeholder="Buscar por nome ou email..."
+                placeholder="Buscar por nome..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>E-mail do Colaborador</Label>
+              <Input
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="Buscar por e-mail..."
               />
             </div>
           </div>
@@ -872,6 +885,9 @@ export default function OrdersTab({
               }
               if (userName) {
                 filters.push(`Nome: ${userName}`)
+              }
+              if (userEmail) {
+                filters.push(`E-mail: ${userEmail}`)
               }
 
               return filters.length > 0 ? filters.join(" | ") : "Todos os pedidos da data selecionada"

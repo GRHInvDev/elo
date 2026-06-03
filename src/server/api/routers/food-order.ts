@@ -7,6 +7,57 @@ import type { RolesConfig } from "@/types/role-config"
 import { sendFoodOrdersEmail } from "@/server/services/food-order-email"
 import { checkSelfServiceFoodOrderDate } from "@/lib/food-order-self-service-date"
 
+/**
+ * Resolve o intervalo [startDate, endDate] usado pelas consultas do relatório DRE.
+ * Quando startDate/endDate são informados diretamente, têm prioridade; caso contrário
+ * o período é derivado de year/period/date. Mantém o comportamento em UTC.
+ */
+function resolveDrePeriod({
+  year,
+  period,
+  date,
+  startDate,
+  endDate,
+}: {
+  year: number
+  period: "month" | "quarter" | "year"
+  date?: Date
+  startDate?: Date
+  endDate?: Date
+}): { startDate: Date; endDate: Date } {
+  if (startDate && endDate) {
+    return {
+      startDate: new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0, 0)),
+      endDate: new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999)),
+    }
+  }
+  if (period === "year") {
+    return {
+      startDate: new Date(Date.UTC(year, 0, 1)),
+      endDate: new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999)),
+    }
+  }
+  if (period === "quarter" && date) {
+    const quarter = Math.floor(date.getMonth() / 3)
+    const quarterStartMonth = quarter * 3
+    return {
+      startDate: new Date(Date.UTC(year, quarterStartMonth, 1)),
+      endDate: new Date(Date.UTC(year, quarterStartMonth + 3, 0, 23, 59, 59, 999)),
+    }
+  }
+  if (period === "month" && date) {
+    const month = date.getMonth()
+    return {
+      startDate: new Date(Date.UTC(year, month, 1)),
+      endDate: new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)),
+    }
+  }
+  return {
+    startDate: new Date(Date.UTC(year, 0, 1)),
+    endDate: new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999)),
+  }
+}
+
 export const foodOrderRouter = createTRPCRouter({
   // Criar um novo pedido
   create: protectedProcedure
@@ -410,6 +461,7 @@ export const foodOrderRouter = createTRPCRouter({
         restaurantId: z.string().optional(),
         userId: z.string().optional(),
         userName: z.string().optional(),
+        userEmail: z.string().optional(),
         filialId: z.string().optional(),
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(100).default(15),
@@ -440,6 +492,11 @@ export const foodOrderRouter = createTRPCRouter({
           { lastName: { contains: input.userName, mode: "insensitive" } },
           { email: { contains: input.userName, mode: "insensitive" } },
         ]
+      }
+
+      // Filtro dedicado por e-mail (ex.: navegação vinda do relatório DRE)
+      if (input?.userEmail) {
+        userFilter.email = { contains: input.userEmail, mode: "insensitive" }
       }
 
       if (input?.filialId) {
@@ -963,6 +1020,10 @@ export const foodOrderRouter = createTRPCRouter({
     .query(async ({ ctx, input }): Promise<{
       groupBy: "enterprise_sector" | "restaurant" | "filial"
       enterprise: string | null
+      /** Id da Empresa (cadastro novo) dona da filial do colaborador. Null para registros legados sem filial. */
+      empresaId: string | null
+      /** Nome da Empresa (cadastro novo) para exibição no agrupamento por empresa/setor. */
+      empresaName: string | null
       sector: string | null
       restaurantId: string | null
       restaurantName: string | null
@@ -1002,48 +1063,13 @@ export const foodOrderRouter = createTRPCRouter({
       } = input
 
       // Definir o período de busca baseado no tipo selecionado
-      let startDate: Date
-      let endDate: Date
-
-      // Se startDate e endDate foram fornecidos diretamente, usar esses valores
-      if (inputStartDate && inputEndDate) {
-        startDate = new Date(Date.UTC(
-          inputStartDate.getFullYear(),
-          inputStartDate.getMonth(),
-          inputStartDate.getDate(),
-          0,
-          0,
-          0,
-          0
-        ))
-        endDate = new Date(Date.UTC(
-          inputEndDate.getFullYear(),
-          inputEndDate.getMonth(),
-          inputEndDate.getDate(),
-          23,
-          59,
-          59,
-          999
-        ))
-      } else if (period === "year") {
-        startDate = new Date(Date.UTC(year, 0, 1)) // 1 de janeiro
-        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999)) // 31 de dezembro
-      } else if (period === "quarter" && date) {
-        // Para trimestre: calcular trimestre baseado na data
-        const quarter = Math.floor(date.getMonth() / 3)
-        const quarterStartMonth = quarter * 3
-        startDate = new Date(Date.UTC(year, quarterStartMonth, 1))
-        endDate = new Date(Date.UTC(year, quarterStartMonth + 3, 0, 23, 59, 59, 999))
-      } else if (period === "month" && date) {
-        // Para período mensal específico
-        const month = date.getMonth()
-        startDate = new Date(Date.UTC(year, month, 1))
-        endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999))
-      } else {
-        // Fallback: buscar dados de todos os meses do ano
-        startDate = new Date(Date.UTC(year, 0, 1))
-        endDate = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999))
-      }
+      const { startDate, endDate } = resolveDrePeriod({
+        year,
+        period,
+        date,
+        startDate: inputStartDate,
+        endDate: inputEndDate,
+      })
 
       const isBranchEnterpriseEnum = (e: Enterprise): boolean =>
         e === Enterprise.Box_Filial || e === Enterprise.Cristallux_Filial
@@ -1051,6 +1077,8 @@ export const foodOrderRouter = createTRPCRouter({
       type DreAggRow = {
         groupBy: "enterprise_sector" | "restaurant" | "filial"
         enterprise: string | null
+        empresaId: string | null
+        empresaName: string | null
         sector: string | null
         restaurantId: string | null
         restaurantName: string | null
@@ -1099,6 +1127,13 @@ export const foodOrderRouter = createTRPCRouter({
                   id: true,
                   name: true,
                   code: true,
+                  empresa: {
+                    select: {
+                      id: true,
+                      name: true,
+                      enterprise: true,
+                    },
+                  },
                 },
               },
             },
@@ -1129,20 +1164,26 @@ export const foodOrderRouter = createTRPCRouter({
       orders.forEach((order) => {
         const price = order.menuItem.price
         const effectiveRestaurant = order.restaurant ?? order.menuItem.restaurant
-        const enterprise = order.user.enterprise
+        // Empresa (cadastro novo) derivada da filial do colaborador.
+        const empresa = order.user.filial?.empresa ?? null
+        // Enum efetivo: empresa.enterprise quando há filial; senão o enum legado do usuário.
+        const effectiveEnterprise = empresa?.enterprise ?? order.user.enterprise
         const sector = order.user.setor ?? null
 
         let key: string
         let base: Omit<DreAggRow, "totalOrders" | "totalValue" | "valueFromHeadquartersOrders" | "valueFromBranchOrders">
 
-        const enterpriseEnum = order.user.enterprise
-        const fromBranchOrder = isBranchEnterpriseEnum(enterpriseEnum)
+        const fromBranchOrder = isBranchEnterpriseEnum(effectiveEnterprise)
 
         if (groupBy === "enterprise_sector") {
-          key = `${enterprise}-${sector ?? "sem-setor"}`
+          const empresaId = empresa?.id ?? null
+          // Agrupa pela Empresa nova; registros legados sem filial caem no enum.
+          key = `${empresaId ?? `enum:${effectiveEnterprise}`}-${sector ?? "sem-setor"}`
           base = {
             groupBy: "enterprise_sector",
-            enterprise,
+            enterprise: effectiveEnterprise,
+            empresaId,
+            empresaName: empresa?.name ?? null,
             sector,
             restaurantId: null,
             restaurantName: null,
@@ -1156,6 +1197,8 @@ export const foodOrderRouter = createTRPCRouter({
           base = {
             groupBy: "restaurant",
             enterprise: null,
+            empresaId: null,
+            empresaName: null,
             sector: null,
             restaurantId: effectiveRestaurant?.id ?? null,
             restaurantName: effectiveRestaurant?.name ?? "Não informado",
@@ -1170,6 +1213,8 @@ export const foodOrderRouter = createTRPCRouter({
           base = {
             groupBy: "filial",
             enterprise: null,
+            empresaId: null,
+            empresaName: null,
             sector: null,
             restaurantId: null,
             restaurantName: null,
@@ -1201,8 +1246,10 @@ export const foodOrderRouter = createTRPCRouter({
 
       const dreData = Array.from(dreDataMap.values()).sort((a, b) => {
         if (groupBy === "enterprise_sector") {
-          if ((a.enterprise ?? "") !== (b.enterprise ?? "")) {
-            return (a.enterprise ?? "").localeCompare(b.enterprise ?? "")
+          const aLabel = a.empresaName ?? a.enterprise ?? ""
+          const bLabel = b.empresaName ?? b.enterprise ?? ""
+          if (aLabel !== bLabel) {
+            return aLabel.localeCompare(bLabel)
           }
           return (a.sector ?? "").localeCompare(b.sector ?? "")
         }
@@ -1216,4 +1263,113 @@ export const foodOrderRouter = createTRPCRouter({
 
       return dreData
     }),
-}) 
+
+  // Listar os pedidos individuais que compõem uma linha (empresa + setor) do relatório DRE
+  getEnterpriseSectorOrders: protectedProcedure
+    .input(
+      z.object({
+        year: z.number(),
+        period: z.enum(["month", "quarter", "year"]),
+        date: z.date().optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        restaurantId: z.string().optional(),
+        // Filtro de filial do relatório (quando aplicado).
+        filialId: z.string().optional(),
+        // Identidade do grupo: empresa (cadastro novo) da linha clicada. Null = grupo legado sem filial.
+        empresaId: z.string().nullable().optional(),
+        // Enum efetivo da linha (usado para casar o grupo legado sem filial).
+        enterprise: z.string(),
+        sector: z.string().nullable(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const caller = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+      const roleConfig = caller?.role_config as RolesConfig | null
+      const canView = roleConfig?.sudo === true || roleConfig?.can_view_dre_report === true
+      if (!canView) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para visualizar o relatório DRE",
+        })
+      }
+
+      const { startDate, endDate } = resolveDrePeriod({
+        year: input.year,
+        period: input.period,
+        date: input.date,
+        startDate: input.startDate,
+        endDate: input.endDate,
+      })
+
+      // Reproduz a mesma chave de agrupamento do getDREData (empresa + setor),
+      // garantindo que os pedidos listados batam com os totais da linha.
+      const userFilter: Prisma.UserWhereInput = {
+        setor: input.sector ?? null,
+      }
+      if (input.empresaId) {
+        userFilter.filial = { empresaId: input.empresaId }
+        if (input.filialId) userFilter.filialId = input.filialId
+      } else {
+        // Grupo legado: colaboradores sem filial, casados pelo enum.
+        userFilter.filialId = null
+        userFilter.enterprise = input.enterprise as Enterprise
+      }
+
+      const orders = await ctx.db.foodOrder.findMany({
+        where: {
+          orderDate: { gte: startDate, lte: endDate },
+          status: { not: "CANCELLED" },
+          user: userFilter,
+          ...(input.restaurantId
+            ? {
+                OR: [
+                  { restaurantId: input.restaurantId },
+                  { menuItem: { restaurantId: input.restaurantId } },
+                ],
+              }
+            : {}),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              enterprise: true,
+              setor: true,
+              filial: { select: { empresa: { select: { name: true } } } },
+            },
+          },
+          restaurant: { select: { id: true, name: true } },
+          menuItem: {
+            select: {
+              name: true,
+              price: true,
+              restaurant: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: { orderDate: "desc" },
+      })
+
+      return orders.map((order) => ({
+        id: order.id,
+        userId: order.user.id,
+        userName: `${order.user.firstName ?? ""} ${order.user.lastName ?? ""}`.trim(),
+        email: order.user.email,
+        enterprise: order.user.enterprise,
+        empresaName: order.user.filial?.empresa.name ?? null,
+        sector: order.user.setor ?? null,
+        orderDate: order.orderDate,
+        restaurantName: (order.restaurant ?? order.menuItem.restaurant)?.name ?? null,
+        menuItemName: order.menuItem.name,
+        price: order.menuItem.price,
+        status: order.status,
+      }))
+    }),
+})

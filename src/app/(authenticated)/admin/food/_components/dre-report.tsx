@@ -13,7 +13,7 @@ import { DateRangeCalendar } from "@/components/forms/date-range-calendar"
 import { toast } from "sonner"
 import { format, startOfMonth, endOfMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Calculator, FileText, Eye, FileSpreadsheet } from "lucide-react"
+import { Calculator, FileText, Eye, FileSpreadsheet, ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
 import * as XLSX from "xlsx"
 import {
   Dialog,
@@ -32,6 +32,8 @@ type DreGroupBy = "enterprise_sector" | "restaurant" | "filial"
 interface DREApiItem {
   groupBy: DreGroupBy
   enterprise: string | null
+  empresaId: string | null
+  empresaName: string | null
   sector: string | null
   restaurantId: string | null
   restaurantName: string | null
@@ -52,6 +54,8 @@ interface DREData extends DREApiItem {
 interface DREReportProps {
   selectedDate: Date
   setSelectedDate: (date: Date) => void
+  /** Navega para a aba de Pedidos já filtrada por data e e-mail do colaborador. */
+  onOpenOrder?: (params: { date: Date; email: string }) => void
 }
 
 const BRANCH_ENTERPRISES = ["Box_Filial", "Cristallux_Filial"] as const
@@ -63,7 +67,17 @@ function getEnterpriseType(enterprise: string | null): "headquarters" | "branch"
     : "headquarters"
 }
 
-export default function DREReport({ selectedDate }: DREReportProps) {
+// Identidade da Empresa (cadastro novo) para agrupar/comparar linhas do DRE.
+function empresaKey(item: { empresaId: string | null; enterprise: string | null }): string {
+  return item.empresaId ?? `enum:${item.enterprise ?? ""}`
+}
+
+// Rótulo de exibição da Empresa: nome do cadastro novo, com fallback no enum legado.
+function empresaLabel(item: { empresaName: string | null; enterprise: string | null }): string {
+  return item.empresaName ?? item.enterprise ?? "Não informado"
+}
+
+export default function DREReport({ selectedDate, onOpenOrder }: DREReportProps) {
   const [invoiceValue, setInvoiceValue] = useState<string>("")
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(selectedDate))
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(selectedDate))
@@ -73,6 +87,12 @@ export default function DREReport({ selectedDate }: DREReportProps) {
   const [filterFilialId, setFilterFilialId] = useState<string>(FILTER_ALL)
   const [filterEmpresaId, setFilterEmpresaId] = useState<string>(FILTER_ALL)
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
+  const [expandedGroup, setExpandedGroup] = useState<{
+    empresaId: string | null
+    empresaName: string | null
+    enterprise: string | null
+    sector: string | null
+  } | null>(null)
 
   const selectedYear = startDate?.getFullYear() ?? new Date().getFullYear()
 
@@ -97,6 +117,31 @@ export default function DREReport({ selectedDate }: DREReportProps) {
       retry: false,
     },
   )
+
+  const detailQuery = api.foodOrder.getEnterpriseSectorOrders.useQuery(
+    {
+      year: selectedYear,
+      period: "month",
+      date: startDate,
+      startDate: startDate,
+      endDate: endDate,
+      restaurantId: filterRestaurantId === FILTER_ALL ? undefined : filterRestaurantId,
+      filialId: filterFilialId === FILTER_ALL ? undefined : filterFilialId,
+      // Identidade do grupo (empresa do cadastro novo) da linha expandida.
+      empresaId: expandedGroup?.empresaId ?? undefined,
+      enterprise: expandedGroup?.enterprise ?? "",
+      sector: expandedGroup?.sector ?? null,
+    },
+    {
+      enabled: !!(expandedGroup && startDate && endDate),
+      retry: false,
+    },
+  )
+
+  // Fecha a linha expandida quando os filtros/período do relatório mudam
+  useEffect(() => {
+    setExpandedGroup(null)
+  }, [startDate, endDate, groupBy, filterRestaurantId, filterFilialId, filterEmpresaId])
 
   useEffect(() => {
     const err = dreQuery.error
@@ -128,8 +173,9 @@ export default function DREReport({ selectedDate }: DREReportProps) {
 
       if (item.groupBy === "enterprise_sector") {
         if (rateioType === "proportional") {
+          const itemEmpresaKey = empresaKey(item)
           const enterpriseTotal =
-            raw.filter((d) => d.enterprise === item.enterprise).reduce((s, d) => s + d.totalValue, 0) ?? 0
+            raw.filter((d) => empresaKey(d) === itemEmpresaKey).reduce((s, d) => s + d.totalValue, 0) ?? 0
 
           const globalTotal = globalTotalAllRows
 
@@ -231,7 +277,7 @@ export default function DREReport({ selectedDate }: DREReportProps) {
 
       if (item.groupBy === "enterprise_sector") {
         return {
-          Empresa: item.enterprise ?? "",
+          Empresa: empresaLabel(item),
           Setor: item.sector ?? "Não informado",
           ...base,
         }
@@ -559,6 +605,7 @@ export default function DREReport({ selectedDate }: DREReportProps) {
                   <TableRow>
                     {groupBy === "enterprise_sector" ? (
                       <>
+                        <TableHead className="w-8" />
                         <TableHead>Empresa</TableHead>
                         <TableHead>Setor</TableHead>
                       </>
@@ -577,41 +624,145 @@ export default function DREReport({ selectedDate }: DREReportProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredData.map((item, index) => (
-                    <TableRow
-                      key={
-                        groupBy === "enterprise_sector"
-                          ? `${item.enterprise}-${item.sector}-${index}`
-                          : groupBy === "restaurant"
-                            ? `${item.restaurantId ?? "nr"}-${index}`
-                            : `${item.filialId ?? "nf"}-${index}`
-                      }
-                    >
-                      {groupBy === "enterprise_sector" ? (
-                        <>
-                          <TableCell>
-                            <Badge variant="outline">{item.enterprise}</Badge>
+                  {filteredData.map((item, index) => {
+                    const isEnterpriseSector = groupBy === "enterprise_sector"
+                    const rowKey = isEnterpriseSector
+                      ? `${empresaKey(item)}-${item.sector}-${index}`
+                      : groupBy === "restaurant"
+                        ? `${item.restaurantId ?? "nr"}-${index}`
+                        : `${item.filialId ?? "nf"}-${index}`
+                    const isExpanded =
+                      isEnterpriseSector &&
+                      expandedGroup != null &&
+                      empresaKey(expandedGroup) === empresaKey(item) &&
+                      expandedGroup.sector === item.sector
+
+                    return (
+                      <React.Fragment key={rowKey}>
+                        <TableRow
+                          className={isEnterpriseSector ? "cursor-pointer" : undefined}
+                          onClick={
+                            isEnterpriseSector
+                              ? () =>
+                                  setExpandedGroup((prev) =>
+                                    prev != null &&
+                                    empresaKey(prev) === empresaKey(item) &&
+                                    prev.sector === item.sector
+                                      ? null
+                                      : {
+                                          empresaId: item.empresaId,
+                                          empresaName: item.empresaName,
+                                          enterprise: item.enterprise,
+                                          sector: item.sector,
+                                        },
+                                  )
+                              : undefined
+                          }
+                        >
+                          {isEnterpriseSector ? (
+                            <>
+                              <TableCell className="w-8 pr-0">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{empresaLabel(item)}</Badge>
+                              </TableCell>
+                              <TableCell>{item.sector ?? "Não informado"}</TableCell>
+                            </>
+                          ) : null}
+                          {groupBy === "restaurant" ? (
+                            <TableCell>{item.restaurantName ?? "Não informado"}</TableCell>
+                          ) : null}
+                          {groupBy === "filial" ? (
+                            <>
+                              <TableCell>{item.filialName ?? "Não informado"}</TableCell>
+                              <TableCell>{item.filialCode ?? "—"}</TableCell>
+                            </>
+                          ) : null}
+                          <TableCell className="text-right">{item.totalOrders}</TableCell>
+                          <TableCell className="text-right">R$ {item.totalValue.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{item.representativeness.toFixed(2)}%</TableCell>
+                          <TableCell className="text-right">
+                            R$ {item.costCenterRateio?.toFixed(2) ?? "0.00"}
                           </TableCell>
-                          <TableCell>{item.sector ?? "Não informado"}</TableCell>
-                        </>
-                      ) : null}
-                      {groupBy === "restaurant" ? (
-                        <TableCell>{item.restaurantName ?? "Não informado"}</TableCell>
-                      ) : null}
-                      {groupBy === "filial" ? (
-                        <>
-                          <TableCell>{item.filialName ?? "Não informado"}</TableCell>
-                          <TableCell>{item.filialCode ?? "—"}</TableCell>
-                        </>
-                      ) : null}
-                      <TableCell className="text-right">{item.totalOrders}</TableCell>
-                      <TableCell className="text-right">R$ {item.totalValue.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{item.representativeness.toFixed(2)}%</TableCell>
-                      <TableCell className="text-right">
-                        R$ {item.costCenterRateio?.toFixed(2) ?? "0.00"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableRow>
+
+                        {isExpanded ? (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell colSpan={7} className="bg-muted/30 p-0">
+                              <div className="p-3">
+                                {detailQuery.isLoading ? (
+                                  <p className="py-2 text-sm text-muted-foreground">Carregando pedidos...</p>
+                                ) : detailQuery.isError ? (
+                                  <p className="py-2 text-sm text-muted-foreground">
+                                    Erro ao carregar os pedidos deste grupo.
+                                  </p>
+                                ) : detailQuery.data && detailQuery.data.length > 0 ? (
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Pessoa</TableHead>
+                                        <TableHead>Empresa</TableHead>
+                                        <TableHead>Setor</TableHead>
+                                        <TableHead>Data do pedido</TableHead>
+                                        <TableHead>Prato</TableHead>
+                                        <TableHead className="text-right">Valor (R$)</TableHead>
+                                        <TableHead className="text-right">Pedido</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {detailQuery.data.map((order) => (
+                                        <TableRow key={order.id}>
+                                          <TableCell>
+                                            <div className="font-medium">{order.userName || "—"}</div>
+                                            <div className="text-xs text-muted-foreground">{order.email}</div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge variant="outline">{order.empresaName ?? order.enterprise}</Badge>
+                                          </TableCell>
+                                          <TableCell>{order.sector ?? "Não informado"}</TableCell>
+                                          <TableCell>
+                                            {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })}
+                                          </TableCell>
+                                          <TableCell>{order.menuItemName}</TableCell>
+                                          <TableCell className="text-right">R$ {order.price.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="flex items-center gap-1"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                onOpenOrder?.({
+                                                  date: new Date(order.orderDate),
+                                                  email: order.email,
+                                                })
+                                              }}
+                                            >
+                                              <ExternalLink className="h-3.5 w-3.5" />
+                                              Ir para o pedido
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                ) : (
+                                  <p className="py-2 text-sm text-muted-foreground">
+                                    Nenhum pedido encontrado para este grupo.
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
+                      </React.Fragment>
+                    )
+                  })}
                 </TableBody>
               </Table>
 
@@ -720,7 +871,7 @@ export default function DREReport({ selectedDate }: DREReportProps) {
                         <TableRow
                           key={
                             groupBy === "enterprise_sector"
-                              ? `m-${item.enterprise}-${item.sector}-${index}`
+                              ? `m-${empresaKey(item)}-${item.sector}-${index}`
                               : groupBy === "restaurant"
                                 ? `m-${item.restaurantId ?? "nr"}-${index}`
                                 : `m-${item.filialId ?? "nf"}-${index}`
@@ -729,7 +880,7 @@ export default function DREReport({ selectedDate }: DREReportProps) {
                           {groupBy === "enterprise_sector" ? (
                             <>
                               <TableCell>
-                                <Badge variant="outline">{item.enterprise}</Badge>
+                                <Badge variant="outline">{empresaLabel(item)}</Badge>
                               </TableCell>
                               <TableCell>{item.sector ?? "Não informado"}</TableCell>
                             </>
