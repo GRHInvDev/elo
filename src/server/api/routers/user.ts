@@ -7,6 +7,7 @@ import { type RolesConfig } from "@/types/role-config"
 import { TRPCError } from "@trpc/server"
 import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
 import { resolveEnterpriseFromFilial } from "@/server/validators/filial-enterprise"
+import { recordUserAudit, diffFields } from "@/server/audit/user-audit"
 
 
 export const userRouter = createTRPCRouter({
@@ -317,6 +318,7 @@ export const userRouter = createTRPCRouter({
       sector: z.string().optional(),
       search: z.string().optional(),
       enterprise: z.nativeEnum(Enterprise).optional(),
+      filialId: z.string().optional(),
       isAdmin: z.boolean().optional(),
       /** Filtro por status na empresa: active (ativo), inactive (desativado). Omitir = todos. */
       status: z.enum(["active", "inactive"]).optional(),
@@ -354,6 +356,11 @@ export const userRouter = createTRPCRouter({
         where.enterprise = input.enterprise
       }
 
+      // Filtro por filial
+      if (input.filialId) {
+        where.filialId = input.filialId
+      }
+
       // Filtro por status na empresa (ativo / desativado)
       if (input.status === "active") {
         where.is_active = true
@@ -361,32 +368,10 @@ export const userRouter = createTRPCRouter({
         where.is_active = false
       }
 
-      // Filtro por admin (sudo) - será aplicado após buscar os dados
-      // devido à complexidade de filtrar JSON no Prisma
-
-      // Busca por nome ou email
-      if (input.search) {
-        where.OR = [
-          {
-            firstName: {
-              contains: input.search,
-              mode: 'insensitive',
-            }
-          },
-          {
-            lastName: {
-              contains: input.search,
-              mode: 'insensitive',
-            }
-          },
-          {
-            email: {
-              contains: input.search,
-              mode: 'insensitive',
-            }
-          }
-        ]
-      }
+      // Filtro por admin (sudo) e busca por nome/email serão aplicados após
+      // buscar os dados: o admin depende de JSON (role_config) e a busca precisa
+      // ser acento-insensível (não suportado nativamente pelo Prisma/Postgres sem
+      // a extensão unaccent), então normalizamos em memória.
 
       const canViewDadosPrivados = Boolean(effectiveConfig.sudo) || Boolean(effectiveConfig.can_view_dados_privados);
 
@@ -401,6 +386,15 @@ export const userRouter = createTRPCRouter({
           imageUrl: true,
           enterprise: true,
           setor: true,
+          filialId: true,
+          filial: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              empresa: { select: { id: true, name: true } },
+            },
+          },
           extension: true,
           emailExtension: true,
           matricula: true,
@@ -421,10 +415,28 @@ export const userRouter = createTRPCRouter({
         },
       })
 
-      // Aplicar filtro de admin se necessário (filtro em memória para JSON)
+      // Busca por nome/email acento-insensível (remove diacríticos e ignora caixa).
+      // Ex.: buscar "Maira" encontra "Máira", "Maíra", etc.
       let filteredUsers = allUsers
+      if (input.search?.trim()) {
+        const normalize = (value: string) =>
+          value
+            .normalize("NFD")
+            .replace(/[̀-ͯ]/g, "")
+            .toLowerCase()
+        const term = normalize(input.search.trim())
+        filteredUsers = filteredUsers.filter(user => {
+          const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`
+          return (
+            normalize(fullName).includes(term) ||
+            normalize(user.email).includes(term)
+          )
+        })
+      }
+
+      // Aplicar filtro de admin se necessário (filtro em memória para JSON)
       if (input.isAdmin !== undefined) {
-        filteredUsers = allUsers.filter(user => {
+        filteredUsers = filteredUsers.filter(user => {
           const roleConfig = user.role_config as RolesConfig | null
           const isSudo = roleConfig?.sudo === true
           return input.isAdmin ? isSudo : !isSudo
@@ -590,12 +602,33 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.user.update({
+      const before = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: { role_config: true },
+      })
+
+      const updated = await ctx.db.user.update({
         where: { id: input.userId },
         data: {
           role_config: input.roleConfig as RolesConfig,
         },
       })
+
+      // Auditoria: diff por chave de permissão (mostra exatamente o que mudou)
+      const beforeConfig = (before?.role_config ?? {}) as Record<string, unknown>
+      const afterConfig = input.roleConfig as unknown as Record<string, unknown>
+      const permissionKeys = Array.from(
+        new Set([...Object.keys(beforeConfig), ...Object.keys(afterConfig)]),
+      )
+      const changes = diffFields(beforeConfig, afterConfig, permissionKeys)
+      await recordUserAudit(ctx.db, {
+        userId: input.userId,
+        changedById: ctx.auth.userId,
+        action: "PERMISSIONS_UPDATED",
+        changes,
+      })
+
+      return updated
     }),
 
   updateBasicInfo: protectedProcedure
@@ -604,7 +637,8 @@ export const userRouter = createTRPCRouter({
       firstName: z.string().optional(),
       lastName: z.string().optional(),
       email: z.string().email().optional(),
-      setor: z.string().optional(),
+      // Setor: string para definir, null para limpar (Nenhum setor)
+      setor: z.string().nullable().optional(),
       extension: z.string().transform(val => BigInt(val)).optional(),
       emailExtension: z.string().email().optional().or(z.literal("")),
       matricula: z.string().optional().or(z.literal("")),
@@ -646,9 +680,39 @@ export const userRouter = createTRPCRouter({
         }
       }
 
-      // Se o usuário não é sudo, apenas permitir alterar dados básicos (incluindo is_active)
+      // Estado anterior para auditoria (movimentações no cadastro)
+      const auditFields = [
+        "firstName",
+        "lastName",
+        "email",
+        "setor",
+        "extension",
+        "emailExtension",
+        "matricula",
+        "email_empresarial",
+        "filialId",
+        "enterprise",
+      ] as const
+      const before = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          setor: true,
+          extension: true,
+          emailExtension: true,
+          matricula: true,
+          email_empresarial: true,
+          filialId: true,
+          enterprise: true,
+          is_active: true,
+        },
+      })
+
+      let updated: typeof before
       if (!effectiveConfig.sudo) {
-        // Garantir que apenas dados básicos sejam atualizados
+        // Se o usuário não é sudo, apenas permitir alterar dados básicos (incluindo is_active)
         const allowedFields = {
           firstName: input.firstName,
           lastName: input.lastName,
@@ -662,16 +726,37 @@ export const userRouter = createTRPCRouter({
           ...companyData,
         }
 
-        return ctx.db.user.update({
+        updated = await ctx.db.user.update({
           where: { id: userId },
           data: allowedFields,
         })
+      } else {
+        updated = await ctx.db.user.update({
+          where: { id: userId },
+          data: { ...updateData, ...companyData },
+        })
       }
 
-      return ctx.db.user.update({
-        where: { id: userId },
-        data: { ...updateData, ...companyData },
-      })
+      // Auditoria: registra alteração de dados básicos e, separadamente, a mudança de status
+      if (before && updated) {
+        const changes = diffFields(before, updated, [...auditFields])
+        await recordUserAudit(ctx.db, {
+          userId,
+          changedById: ctx.auth.userId,
+          action: "BASIC_INFO_UPDATED",
+          changes,
+        })
+
+        if (before.is_active !== updated.is_active) {
+          await recordUserAudit(ctx.db, {
+            userId,
+            changedById: ctx.auth.userId,
+            action: updated.is_active ? "REACTIVATED" : "DEACTIVATED",
+          })
+        }
+      }
+
+      return updated
     }),
 
   updateDadosPrivados: protectedProcedure
@@ -709,10 +794,49 @@ export const userRouter = createTRPCRouter({
       if (data.lojinha_rg !== undefined) updateData.lojinha_rg = data.lojinha_rg?.trim() ?? null;
       if (data.lojinha_email !== undefined) updateData.lojinha_email = data.lojinha_email?.trim() ?? null;
       if (data.lojinha_phone !== undefined) updateData.lojinha_phone = data.lojinha_phone ? data.lojinha_phone.replace(/\D/g, "") : null;
-      return ctx.db.user.update({
+
+      const lojinhaFields = Object.keys(updateData)
+      const before = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: {
+          lojinha_full_name: true,
+          lojinha_cpf: true,
+          lojinha_address: true,
+          lojinha_neighborhood: true,
+          lojinha_cep: true,
+          lojinha_rg: true,
+          lojinha_email: true,
+          lojinha_phone: true,
+        },
+      });
+
+      const updated = await ctx.db.user.update({
         where: { id: userId },
         data: updateData,
       });
+
+      // Auditoria: registra alteração de dados privados (sem expor valores sensíveis
+      // de quem não pode vê-los — apenas marca quais campos mudaram).
+      if (before) {
+        const changedKeys = lojinhaFields.filter(
+          (k) => (before as Record<string, unknown>)[k] !== (updateData)[k],
+        )
+        const maskedChanges = changedKeys.reduce<Record<string, { from: unknown; to: unknown }>>(
+          (acc, k) => {
+            acc[k] = { from: "***", to: "***" }
+            return acc
+          },
+          {},
+        )
+        await recordUserAudit(ctx.db, {
+          userId,
+          changedById: ctx.auth.userId,
+          action: "DADOS_PRIVADOS_UPDATED",
+          changes: maskedChanges,
+        });
+      }
+
+      return updated;
     }),
 
   // Listar usuários por setor com ramais para visualização pública
@@ -800,7 +924,17 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.user.update({
+      const before = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: {
+          extension: true,
+          emailExtension: true,
+          nameExtension: true,
+          setorExtension: true,
+        },
+      })
+
+      const updated = await ctx.db.user.update({
         where: { id: input.userId },
         data: {
           extension: input.extension,
@@ -820,6 +954,23 @@ export const userRouter = createTRPCRouter({
           setorExtension: true,
         },
       })
+
+      if (before) {
+        const changes = diffFields(before, updated, [
+          "extension",
+          "emailExtension",
+          "nameExtension",
+          "setorExtension",
+        ])
+        await recordUserAudit(ctx.db, {
+          userId: input.userId,
+          changedById: ctx.auth.userId,
+          action: "EXTENSION_UPDATED",
+          changes,
+        })
+      }
+
+      return updated
     }),
 
   // === RAMAIS PERSONALIZADOS ===
@@ -1071,7 +1222,7 @@ export const userRouter = createTRPCRouter({
         ? await resolveEnterpriseFromFilial(ctx.db, nextFilialId)
         : (input.enterprise ?? targetUser.enterprise)
 
-      return ctx.db.user.update({
+      const updated = await ctx.db.user.update({
         where: { id: input.userId },
         data: {
           enterprise: nextEnterprise,
@@ -1086,6 +1237,70 @@ export const userRouter = createTRPCRouter({
           filialId: true,
         },
       })
+
+      const changes = diffFields(
+        { filialId: targetUser.filialId, enterprise: targetUser.enterprise },
+        { filialId: updated.filialId, enterprise: updated.enterprise },
+        ["filialId", "enterprise"],
+      )
+      await recordUserAudit(ctx.db, {
+        userId: input.userId,
+        changedById: ctx.auth.userId,
+        action: "FILIAL_UPDATED",
+        changes,
+      })
+
+      return updated
+    }),
+
+  /** Lista o histórico de movimentações (auditoria) de um usuário, com filtro
+   * opcional por período. Requer permissão de gestão de usuários. */
+  listUserAudit: protectedProcedure
+    .input(z.object({
+      userId: z.string(),
+      from: z.date().optional(),
+      to: z.date().optional(),
+      limit: z.number().min(1).max(200).default(50),
+    }))
+    .query(async ({ ctx, input }) => {
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true, is_active: true },
+      })
+      const effectiveConfig = getEffectiveRoleConfig(currentUser)
+      const hasAccess =
+        Boolean(effectiveConfig.sudo) ||
+        Boolean(effectiveConfig.can_manage_dados_basicos_users)
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para ver as movimentações de usuários",
+        })
+      }
+
+      const createdAt: Prisma.DateTimeFilter = {}
+      if (input.from) createdAt.gte = input.from
+      if (input.to) createdAt.lte = input.to
+
+      const logs = await ctx.db.userAuditLog.findMany({
+        where: {
+          userId: input.userId,
+          ...(input.from || input.to ? { createdAt } : {}),
+        },
+        select: {
+          id: true,
+          action: true,
+          changes: true,
+          createdAt: true,
+          changedBy: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: input.limit,
+      })
+
+      return logs
     }),
 })
 

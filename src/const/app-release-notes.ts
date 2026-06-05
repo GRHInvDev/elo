@@ -3,7 +3,7 @@
  * Lista apenas marcos **major** (quando existirem) e **minors** com impacto de produto — sem patches.
  * `APP_CURRENT_VERSION` segue o package.json (MMP completo).
  */
-export const APP_CURRENT_VERSION = "1.32.0" as const;
+export const APP_CURRENT_VERSION = "1.33.0" as const;
 
 export interface AppReleaseNote {
   /** Versão semântica do marco (minor.0 ou major.0) */
@@ -19,6 +19,17 @@ export interface AppReleaseNote {
  * Incluir somente releases **major** ou **minor** com entrega visível ao usuário.
  */
 export const APP_RELEASE_NOTES: AppReleaseNote[] = [
+  {
+    version: "1.33.0",
+    date: "Junho de 2026",
+    items: [
+      "**Lista de usuários mais prática**: a tela de Usuários agora mostra todo mundo em forma de lista (em vez de cartões grandes), com filtros por setor, empresa, filial e situação (ativos ou desativados). Para editar alguém, é só clicar em **Gerenciar** e abrir a janela com todos os detalhes.",
+      "**Busca que entende acentos**: ao procurar por nome, não precisa se preocupar com acentuação — buscar por \"Maira\" encontra \"Máira\", \"Maíra\" e por aí vai.",
+      "**Histórico de movimentações**: dentro de cada usuário há uma aba **Movimentações** que mostra tudo o que foi alterado no cadastro (dados, permissões, filial, ramal) e quando a pessoa foi desativada ou reativada — com data e quem fez a mudança.",
+      "**Conta desativada sem acesso**: quem está com o cadastro desativado não consegue mais entrar nem visualizar nada na plataforma; ao tentar acessar, vê um aviso explicando a situação.",
+      "**Relatório de almoços mais certo**: no relatório por empresa e setor, cada setor aparece agora em uma única linha por empresa — antes um mesmo setor (como Logística) podia aparecer dividido em duas linhas.",
+    ],
+  },
   {
     version: "1.32.0",
     date: "Junho de 2026",

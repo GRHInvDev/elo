@@ -152,20 +152,27 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
 
-  // Verificação adicional para usuários potencialmente problemáticos
-  // REMOVIDO: Query desnecessária que estava causando headers muito grandes
-  // O role_config completo não é necessário aqui - apenas verificamos se o usuário existe
+  // Verifica existência e status do usuário. Usuários desativados (is_active=false)
+  // não podem acessar nada na plataforma — bloqueamos toda a API aqui.
+  // Selecionamos apenas id + is_active (campos leves) para não inflar headers.
   try {
-    const userExists = await ctx.db.user.findUnique({
+    const userRecord = await ctx.db.user.findUnique({
       where: { id: ctx.auth.userId },
-      select: { id: true } // Apenas verificar se existe, sem buscar role_config
+      select: { id: true, is_active: true }
     });
 
-    if (!userExists) {
+    if (!userRecord) {
       console.warn(`[Protected Procedure] Usuário ${ctx.auth.userId} não encontrado no banco`);
+    } else if (userRecord.is_active === false) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Conta desativada. Você não tem acesso à plataforma.",
+      });
     }
 
   } catch (error) {
+    // Propaga o bloqueio de conta desativada; demais erros não bloqueiam aqui.
+    if (error instanceof TRPCError) throw error;
     console.error('[Protected Procedure] Erro ao verificar usuário:', {
       userId: ctx.auth.userId,
       error: error

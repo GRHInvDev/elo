@@ -99,6 +99,10 @@ model User {
   // Histórico do assistente de IA (sessão por usuário)
   aiAssistantChatSession AiAssistantChatSession?
 
+  // Auditoria de movimentações no cadastro
+  auditLogs    UserAuditLog[] @relation("UserAuditTarget")
+  auditActions UserAuditLog[] @relation("UserAuditActor")
+
   @@map("users")
 }
 
@@ -629,6 +633,36 @@ enum Enterprise {
   Cristallux
   Box_Filial
   Cristallux_Filial
+}
+
+// Movimentações no cadastro de usuários (auditoria): registra cada alteração
+// relevante feita no cadastro — dados básicos, permissões, filial, ramal,
+// dados privados e ativação/desativação — com quem alterou e o que mudou.
+model UserAuditLog {
+  id          String          @id @default(cuid())
+  // Usuário-alvo cujo cadastro foi alterado
+  userId      String
+  user        User            @relation("UserAuditTarget", fields: [userId], references: [id], onDelete: Cascade)
+  // Quem realizou a alteração (mantém histórico mesmo se o autor for removido)
+  changedById String?
+  changedBy   User?           @relation("UserAuditActor", fields: [changedById], references: [id], onDelete: SetNull)
+  action      UserAuditAction
+  // Diff dos campos alterados: { campo: { from, to }, ... }
+  changes     Json?
+  createdAt   DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@map("user_audit_logs")
+}
+
+enum UserAuditAction {
+  BASIC_INFO_UPDATED
+  PERMISSIONS_UPDATED
+  DADOS_PRIVADOS_UPDATED
+  EXTENSION_UPDATED
+  FILIAL_UPDATED
+  DEACTIVATED
+  REACTIVATED
 }
 
 enum ResponseStatus {
