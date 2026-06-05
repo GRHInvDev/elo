@@ -1177,8 +1177,18 @@ export const foodOrderRouter = createTRPCRouter({
 
         if (groupBy === "enterprise_sector") {
           const empresaId = empresa?.id ?? null
-          // Agrupa pela Empresa nova; registros legados sem filial caem no enum.
-          key = `${empresaId ?? `enum:${effectiveEnterprise}`}-${sector ?? "sem-setor"}`
+          // Identidade da empresa para agrupamento: usa o rótulo exibido (nome do
+          // cadastro novo, com fallback no enum legado), normalizado. Assim,
+          // colaboradores ligados à Empresa e os legados (só enum) com o mesmo nome
+          // caem na MESMA empresa — sem linhas duplicadas para a mesma empresa.
+          const empresaGroupLabel = (empresa?.name ?? String(effectiveEnterprise)).trim().toUpperCase()
+          // Setor normalizado (sem acento, caixa e espaços) para unificar variações
+          // do mesmo setor (ex.: "LOGÍSTICA"/"LOGISTICA"/"logistica ").
+          const sectorKey = sector
+            ? sector.trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+            : "sem-setor"
+          // Agrupa pela Empresa (rótulo) + setor normalizado.
+          key = `${empresaGroupLabel}-${sectorKey}`
           base = {
             groupBy: "enterprise_sector",
             enterprise: effectiveEnterprise,
@@ -1276,9 +1286,12 @@ export const foodOrderRouter = createTRPCRouter({
         restaurantId: z.string().optional(),
         // Filtro de filial do relatório (quando aplicado).
         filialId: z.string().optional(),
-        // Identidade do grupo: empresa (cadastro novo) da linha clicada. Null = grupo legado sem filial.
+        // Identidade do grupo: empresa (cadastro novo) da linha clicada. Mantido por
+        // compatibilidade; o casamento agora usa o rótulo da empresa (empresaName/enum).
         empresaId: z.string().nullable().optional(),
-        // Enum efetivo da linha (usado para casar o grupo legado sem filial).
+        // Nome da empresa (cadastro novo) exibido na linha; usado como rótulo do grupo.
+        empresaName: z.string().nullable().optional(),
+        // Enum efetivo da linha (fallback do rótulo quando não há empresa cadastrada).
         enterprise: z.string(),
         sector: z.string().nullable(),
       }),
@@ -1305,25 +1318,20 @@ export const foodOrderRouter = createTRPCRouter({
         endDate: input.endDate,
       })
 
-      // Reproduz a mesma chave de agrupamento do getDREData (empresa + setor),
-      // garantindo que os pedidos listados batam com os totais da linha.
-      const userFilter: Prisma.UserWhereInput = {
-        setor: input.sector ?? null,
-      }
-      if (input.empresaId) {
-        userFilter.filial = { empresaId: input.empresaId }
-        if (input.filialId) userFilter.filialId = input.filialId
-      } else {
-        // Grupo legado: colaboradores sem filial, casados pelo enum.
-        userFilter.filialId = null
-        userFilter.enterprise = input.enterprise as Enterprise
-      }
+      // Reproduz EXATAMENTE a chave de agrupamento do getDREData (rótulo da empresa
+      // + setor normalizado). Aplica os filtros amplos no banco (período, restaurante
+      // e filial do relatório) e faz o casamento fino do grupo em memória — assim os
+      // pedidos listados batem com os totais da linha unificada.
+      const normalizeSector = (s: string | null) =>
+        s ? s.trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : "sem-setor"
+      const targetLabel = (input.empresaName ?? input.enterprise).trim().toUpperCase()
+      const targetSectorKey = normalizeSector(input.sector)
 
-      const orders = await ctx.db.foodOrder.findMany({
+      const rawOrders = await ctx.db.foodOrder.findMany({
         where: {
           orderDate: { gte: startDate, lte: endDate },
           status: { not: "CANCELLED" },
-          user: userFilter,
+          ...(input.filialId ? { user: { filialId: input.filialId } } : {}),
           ...(input.restaurantId
             ? {
                 OR: [
@@ -1342,7 +1350,7 @@ export const foodOrderRouter = createTRPCRouter({
               email: true,
               enterprise: true,
               setor: true,
-              filial: { select: { empresa: { select: { name: true } } } },
+              filial: { select: { empresa: { select: { name: true, enterprise: true } } } },
             },
           },
           restaurant: { select: { id: true, name: true } },
@@ -1355,6 +1363,14 @@ export const foodOrderRouter = createTRPCRouter({
           },
         },
         orderBy: { orderDate: "desc" },
+      })
+
+      const orders = rawOrders.filter((order) => {
+        const empresa = order.user.filial?.empresa ?? null
+        const effectiveEnterprise = empresa?.enterprise ?? order.user.enterprise
+        const label = (empresa?.name ?? String(effectiveEnterprise)).trim().toUpperCase()
+        const sectorKey = normalizeSector(order.user.setor ?? null)
+        return label === targetLabel && sectorKey === targetSectorKey
       })
 
       return orders.map((order) => ({

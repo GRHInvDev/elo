@@ -68,8 +68,11 @@ function getEnterpriseType(enterprise: string | null): "headquarters" | "branch"
 }
 
 // Identidade da Empresa (cadastro novo) para agrupar/comparar linhas do DRE.
-function empresaKey(item: { empresaId: string | null; enterprise: string | null }): string {
-  return item.empresaId ?? `enum:${item.enterprise ?? ""}`
+// Identidade da empresa para cálculo de representatividade/rateio. Usa o rótulo
+// exibido (nome do cadastro novo, com fallback no enum legado), normalizado — para
+// que registros ligados à Empresa e legados (só enum) da mesma empresa somem juntos.
+function empresaKey(item: { empresaName: string | null; enterprise: string | null }): string {
+  return (item.empresaName ?? item.enterprise ?? "").trim().toUpperCase()
 }
 
 // Rótulo de exibição da Empresa: nome do cadastro novo, com fallback no enum legado.
@@ -127,8 +130,10 @@ export default function DREReport({ selectedDate, onOpenOrder }: DREReportProps)
       endDate: endDate,
       restaurantId: filterRestaurantId === FILTER_ALL ? undefined : filterRestaurantId,
       filialId: filterFilialId === FILTER_ALL ? undefined : filterFilialId,
-      // Identidade do grupo (empresa do cadastro novo) da linha expandida.
+      // Identidade do grupo (empresa + setor) da linha expandida. O rótulo da empresa
+      // (empresaName, com fallback no enum) unifica registros novos e legados.
       empresaId: expandedGroup?.empresaId ?? undefined,
+      empresaName: expandedGroup?.empresaName ?? null,
       enterprise: expandedGroup?.enterprise ?? "",
       sector: expandedGroup?.sector ?? null,
     },

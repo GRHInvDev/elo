@@ -18,6 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
@@ -41,6 +42,7 @@ import {
   UserX,
   UserCheck,
   AlertTriangle,
+  History,
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
 import type { Enterprise } from "@prisma/client"
@@ -90,6 +92,7 @@ export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSector, setSelectedSector] = useState<string>("all")
   const [selectedEnterprise, setSelectedEnterprise] = useState<Enterprise | "all">("all")
+  const [selectedFilial, setSelectedFilial] = useState<string>("all")
   const [isAdminFilter, setIsAdminFilter] = useState<boolean | "all">("all")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
   const [offset, setOffset] = useState(0)
@@ -104,6 +107,7 @@ export default function UsersManagementPage() {
     search: searchTerm || undefined,
     sector: selectedSector !== "all" ? selectedSector : undefined,
     enterprise: selectedEnterprise !== "all" ? selectedEnterprise : undefined,
+    filialId: selectedFilial !== "all" ? selectedFilial : undefined,
     isAdmin: isAdminFilter !== "all" ? isAdminFilter : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
     limit,
@@ -133,7 +137,23 @@ export default function UsersManagementPage() {
   // Reset offset quando filtros mudarem
   useEffect(() => {
     setOffset(0)
-  }, [searchTerm, selectedSector, selectedEnterprise, isAdminFilter, statusFilter])
+  }, [searchTerm, selectedSector, selectedEnterprise, selectedFilial, isAdminFilter, statusFilter])
+
+  // Filiais disponíveis para o filtro (restritas à empresa selecionada, quando houver)
+  const filialOptions = useMemo(
+    () =>
+      selectedEnterprise === "all"
+        ? filiais
+        : filiais.filter((f) => f.enterprise === selectedEnterprise),
+    [filiais, selectedEnterprise],
+  )
+
+  // Ao trocar a empresa, limpa a filial se ela não pertencer mais ao conjunto
+  useEffect(() => {
+    if (selectedFilial !== "all" && !filialOptions.some((f) => f.id === selectedFilial)) {
+      setSelectedFilial("all")
+    }
+  }, [filialOptions, selectedFilial])
 
   // Verificar se tem acesso
   if (!hasAccess) {
@@ -197,7 +217,7 @@ export default function UsersManagementPage() {
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Filtro de Setor */}
               <div>
                 <Label htmlFor="sector">Setor</Label>
@@ -233,6 +253,27 @@ export default function UsersManagementPage() {
                     {ENTERPRISE_OPTIONS.map((enterprise) => (
                       <SelectItem key={enterprise.value} value={enterprise.value}>
                         {enterprise.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro de Filial */}
+              <div>
+                <Label htmlFor="filial">Filial</Label>
+                <Select
+                  value={selectedFilial}
+                  onValueChange={setSelectedFilial}
+                >
+                  <SelectTrigger id="filial">
+                    <SelectValue placeholder="Selecione uma filial" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as filiais</SelectItem>
+                    {filialOptions.map((filial) => (
+                      <SelectItem key={filial.id} value={filial.id}>
+                        {filial.name} ({filial.code}){selectedEnterprise === "all" ? ` — ${filial.empresaName}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -306,9 +347,9 @@ export default function UsersManagementPage() {
               </div>
             ) : users.length > 0 ? (
               <>
-                <div className="space-y-4">
+                <div className="divide-y rounded-md border">
                   {users.map((user) => (
-                    <UserManagementCard
+                    <UserListRow
                       key={user.id}
                       user={{
                         ...user,
@@ -351,7 +392,7 @@ export default function UsersManagementPage() {
               </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm || selectedSector !== "all" || selectedEnterprise !== "all" || isAdminFilter !== "all"
+                {searchTerm || selectedSector !== "all" || selectedEnterprise !== "all" || selectedFilial !== "all" || isAdminFilter !== "all" || statusFilter !== "all"
                   ? "Nenhum usuário encontrado para estes filtros."
                   : "Nenhum usuário encontrado."}
               </div>
@@ -377,6 +418,7 @@ interface UserManagementCardProps {
     email_empresarial?: string | null
     enterprise?: Enterprise | null
     filialId?: string | null
+    filial?: { id: string; name: string; code: string; empresa: { id: string; name: string } } | null
     is_active?: boolean | null
     lojinha_full_name?: string | null
     lojinha_cpf?: string | null
@@ -391,6 +433,8 @@ interface UserManagementCardProps {
   filiais?: { id: string; name: string; code: string; enterprise: Enterprise; empresaId: string; empresaName: string }[]
   empresas?: { id: string; name: string }[]
   onUserUpdate: () => void
+  /** Quando renderizado dentro de um modal, remove a borda/sombra do Card externo. */
+  embedded?: boolean
 }
 
 /** Reconstrói o estado de permissões a partir do JSON persistido (evita UI defasada após refetch). */
@@ -421,7 +465,99 @@ function extendedRoleConfigFromServer(role: RolesConfig | null | undefined): Ext
   }
 }
 
-function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUserUpdate }: UserManagementCardProps) {
+/**
+ * Linha compacta da listagem de usuários. Mostra um resumo (nome, email, setor,
+ * empresa, filial, status) e abre a gestão completa num modal padrão (fade-in).
+ */
+function UserListRow(props: UserManagementCardProps) {
+  const { user } = props
+  const [open, setOpen] = useState(false)
+
+  const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email
+  const setorLabel = user.setor
+    ? (AVAILABLE_SETORES.find((s) => s.value === user.setor)?.label ?? user.setor)
+    : null
+  const empresaLabel =
+    user.filial?.empresa?.name ??
+    (user.enterprise
+      ? (ENTERPRISE_OPTIONS.find((o) => o.value === user.enterprise)?.label ?? String(user.enterprise))
+      : null)
+  const filialLabel = user.filial ? `${user.filial.name} (${user.filial.code})` : null
+  const isSudo = user.role_config?.sudo === true
+  const isTotem = (user.role_config as ExtendedRolesConfig)?.isTotem === true
+  const isActive = user.is_active !== false
+
+  return (
+    <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+          <User className="h-5 w-5 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate font-medium">{fullName}</p>
+            {!isActive && (
+              <Badge variant="outline" className="bg-muted text-muted-foreground">
+                Desativado
+              </Badge>
+            )}
+            {isSudo && (
+              <Badge variant="default" className="bg-red-500/10 text-red-700 hover:bg-red-500/20">
+                <Shield className="mr-1 h-3 w-3" />
+                Super Admin
+              </Badge>
+            )}
+            {isTotem && (
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                TOTEM
+              </Badge>
+            )}
+          </div>
+          <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {setorLabel && (
+              <Badge variant="outline" className="text-xs font-normal">
+                {setorLabel}
+              </Badge>
+            )}
+            {empresaLabel && (
+              <Badge variant="secondary" className="text-xs font-normal">
+                {empresaLabel}
+              </Badge>
+            )}
+            {filialLabel && (
+              <Badge variant="outline" className="text-xs font-normal">
+                {filialLabel}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-shrink-0 sm:pl-3">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Settings className="mr-1.5 h-4 w-4" />
+              Gerenciar
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Gerenciar usuário: {fullName}</DialogTitle>
+              <DialogDescription>
+                Edite dados, permissões, filial e veja as movimentações do usuário.
+              </DialogDescription>
+            </DialogHeader>
+            <UserManagementCard {...props} embedded />
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  )
+}
+
+function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUserUpdate, embedded = false }: UserManagementCardProps) {
   const [activeTab, setActiveTab] = useState("basic")
   const [isEditing, setIsEditing] = useState(false)
   const [permissionSearch, setPermissionSearch] = useState("")
@@ -709,7 +845,7 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
       userId: user.id,
       ...basicData,
       extension: basicData.extension?.toString(),
-      setor: basicData.setor === "none" ? "" : basicData.setor,
+      setor: basicData.setor === "none" ? null : basicData.setor,
       emailExtension: basicData.emailExtension || "",
       matricula: basicData.matricula || "",
       email_empresarial: basicData.email_empresarial || "",
@@ -869,7 +1005,7 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
         </DialogContent>
       </Dialog>
 
-      <Card className="overflow-hidden">
+      <Card className={embedded ? "overflow-hidden border-0 shadow-none" : "overflow-hidden"}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
@@ -975,6 +1111,11 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
                 <span className="sm:hidden">Privados</span>
               </TabsTrigger>
             )}
+            <TabsTrigger value="movimentacoes" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">Movimentações</span>
+              <span className="sm:hidden">Movim.</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* Tab: Dados Básicos */}
@@ -2039,9 +2180,177 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
               )}
             </TabsContent>
           )}
+
+          {/* Tab: Movimentações (auditoria) */}
+          <TabsContent value="movimentacoes" className="mt-4">
+            <UserMovimentacoesTab
+              userId={user.id}
+              enabled={activeTab === "movimentacoes"}
+              filiais={filiais}
+            />
+          </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
     </>
+  )
+}
+
+// Rótulos amigáveis para o histórico de movimentações
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  BASIC_INFO_UPDATED: "Dados básicos atualizados",
+  PERMISSIONS_UPDATED: "Permissões atualizadas",
+  DADOS_PRIVADOS_UPDATED: "Dados privados atualizados",
+  EXTENSION_UPDATED: "Ramal atualizado",
+  FILIAL_UPDATED: "Empresa / Filial atualizada",
+  DEACTIVATED: "Usuário desativado",
+  REACTIVATED: "Usuário reativado",
+}
+
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  firstName: "Nome",
+  lastName: "Sobrenome",
+  email: "E-mail",
+  setor: "Setor",
+  extension: "Ramal",
+  emailExtension: "E-mail do ramal",
+  nameExtension: "Nome do ramal",
+  setorExtension: "Setor do ramal",
+  matricula: "Matrícula",
+  email_empresarial: "E-mail empresarial",
+  filialId: "Filial",
+  enterprise: "Empresa",
+  lojinha_full_name: "Nome completo (privado)",
+  lojinha_cpf: "CPF",
+  lojinha_address: "Endereço",
+  lojinha_neighborhood: "Bairro",
+  lojinha_cep: "CEP",
+  lojinha_rg: "RG",
+  lojinha_email: "E-mail (privado)",
+  lojinha_phone: "Telefone",
+  sudo: "Super Admin",
+  admin_pages: "Rotas administrativas",
+  isTotem: "TOTEM",
+}
+
+function formatAuditValue(
+  field: string,
+  value: unknown,
+  filiais: { id: string; name: string; code: string }[],
+): string {
+  if (value === null || value === undefined || value === "") return "—"
+  if (typeof value === "boolean") return value ? "Sim" : "Não"
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "—"
+  if (typeof value === "number") return value.toString()
+  if (typeof value === "string") {
+    if (field === "filialId") {
+      const f = filiais.find((x) => x.id === value)
+      return f ? `${f.name} (${f.code})` : value
+    }
+    if (field === "enterprise") {
+      return ENTERPRISE_OPTIONS.find((o) => o.value === value)?.label ?? value
+    }
+    if (field === "setor") {
+      return AVAILABLE_SETORES.find((s) => s.value === value)?.label ?? value
+    }
+    return value
+  }
+  return JSON.stringify(value)
+}
+
+/** Histórico de movimentações no cadastro do usuário (auditoria). */
+function UserMovimentacoesTab({
+  userId,
+  enabled,
+  filiais,
+}: {
+  userId: string
+  enabled: boolean
+  filiais: { id: string; name: string; code: string }[]
+}) {
+  const { data: logs, isLoading } = api.user.listUserAudit.useQuery(
+    { userId },
+    { enabled },
+  )
+
+  if (isLoading) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
+        <p className="mt-2 text-sm text-muted-foreground">Carregando movimentações...</p>
+      </div>
+    )
+  }
+
+  if (!logs || logs.length === 0) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        Nenhuma movimentação registrada para este usuário.
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Histórico das alterações feitas no cadastro (mais recentes primeiro).
+      </p>
+      <div className="space-y-2">
+        {logs.map((log) => {
+          const author = log.changedBy
+            ? `${log.changedBy.firstName ?? ""} ${log.changedBy.lastName ?? ""}`.trim() ||
+              log.changedBy.email
+            : "Sistema"
+          const changes = (log.changes ?? {}) as Record<string, { from: unknown; to: unknown }>
+          const isDeactivation = log.action === "DEACTIVATED"
+          const isReactivation = log.action === "REACTIVATED"
+          return (
+            <div
+              key={log.id}
+              className="rounded-lg border bg-muted/20 p-3 text-sm"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Badge
+                  variant="outline"
+                  className={
+                    isDeactivation
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      : isReactivation
+                        ? "border-green-500/40 bg-green-50 text-green-700"
+                        : ""
+                  }
+                >
+                  {AUDIT_ACTION_LABELS[log.action] ?? log.action}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(log.createdAt).toLocaleString("pt-BR")}
+                </span>
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Por: <span className="font-medium text-foreground">{author}</span>
+              </p>
+              {Object.keys(changes).length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {Object.entries(changes).map(([field, diff]) => (
+                    <li key={field} className="text-xs">
+                      <span className="font-medium">
+                        {AUDIT_FIELD_LABELS[field] ?? field}:
+                      </span>{" "}
+                      <span className="text-muted-foreground line-through">
+                        {formatAuditValue(field, diff.from, filiais)}
+                      </span>{" "}
+                      <span aria-hidden>→</span>{" "}
+                      <span className="text-foreground">
+                        {formatAuditValue(field, diff.to, filiais)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
