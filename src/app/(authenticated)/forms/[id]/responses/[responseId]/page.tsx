@@ -1,7 +1,4 @@
 import { api } from "@/trpc/server"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft } from "lucide-react"
-import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -13,6 +10,7 @@ import { ResponseDetails } from "@/components/forms/response-details"
 import { EditResponseButton } from "@/components/forms/edit-response-button"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
+import { FormsSubPageShell } from "@/components/forms/v2/forms-sub-page-shell"
 import { canAccessForm } from "@/lib/access-control"
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
@@ -92,27 +90,19 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
 
   return (
     <DashboardShell>
-      <div className="mb-8">
-        <Link href={`/forms/${id}/responses`}>
-          <Button variant="ghost" className="pl-0">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Voltar para respostas
-          </Button>
-        </Link>
-
-        <div className="mt-4">
-          <div className="flex items-center gap-2">
-            {response.number && (
-              <span className="text-lg font-mono text-muted-foreground">
-                {formatFormResponseNumber(response.number)}
-              </span>
-            )}
-            <h1 className="text-3xl font-bold tracking-tight">Detalhes da Resposta</h1>
-          </div>
-          <p className="text-muted-foreground mt-2">Formulário: {response.form.title}</p>
-        </div>
-      </div>
-
+      <FormsSubPageShell
+        backHref={`/forms/${id}/responses`}
+        backLabel="Voltar para respostas"
+        title="Detalhes da Resposta"
+        titlePrefix={
+          response.number ? (
+            <span className="text-lg font-mono text-muted-foreground">
+              {formatFormResponseNumber(response.number)}
+            </span>
+          ) : undefined
+        }
+        description={`Formulário: ${response.form.title}`}
+      >
       <div className="space-y-8">
         <Card>
           <CardHeader>
@@ -188,6 +178,7 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
           </CardContent>
         </Card>
       </div>
+      </FormsSubPageShell>
     </DashboardShell>
   )
 }

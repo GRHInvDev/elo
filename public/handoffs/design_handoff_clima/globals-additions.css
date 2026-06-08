@@ -1,0 +1,60 @@
+/* ============================================================
+   Adicionar ao final de src/styles/globals.css
+   Animações do redesign do Weather Widget ("Céu dinâmico").
+   Todas em CSS/transform (sem JS de animação) e desligadas
+   automaticamente quando prefers-reduced-motion: reduce.
+   ============================================================ */
+
+/* Atmosfera (camada de fundo do card) */
+.wx-atmo   { position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none; }
+
+.wx-glow   { position:absolute; width:200px; height:200px; right:-40px; top:-60px; border-radius:9999px;
+             animation:wxPulse 6s ease-in-out infinite; }
+@keyframes wxPulse { 0%,100%{ transform:scale(1); opacity:.9 } 50%{ transform:scale(1.12); opacity:1 } }
+
+.wx-star   { position:absolute; background:#fff; border-radius:9999px; opacity:.5;
+             animation:wxTwinkle 3.2s ease-in-out infinite; }
+@keyframes wxTwinkle { 0%,100%{ opacity:.25 } 50%{ opacity:.95 } }
+
+.wx-line   { position:absolute; top:-16%; width:1.6px; height:22%; border-radius:2px;
+             animation:wxFall linear infinite; }
+@keyframes wxFall { 0%{ transform:translateY(-30px) } 100%{ transform:translateY(440px) } }
+
+.wx-snowf  { position:absolute; top:-6%; width:5px; height:5px; border-radius:9999px;
+             background:rgba(255,255,255,.85); animation:wxSnow linear infinite; }
+@keyframes wxSnow { 0%{ transform:translateY(-20px) translateX(0) } 100%{ transform:translateY(420px) translateX(18px) } }
+
+.wx-blob   { position:absolute; width:160px; height:64px; left:-60px; border-radius:9999px; filter:blur(8px);
+             animation:wxDrift 22s linear infinite; }
+@keyframes wxDrift { 0%{ transform:translateX(-80px) } 100%{ transform:translateX(460px) } }
+
+.wx-flash  { position:absolute; inset:0; background:rgba(255,255,255,.5); opacity:0;
+             animation:wxFlash 7s linear infinite; }
+@keyframes wxFlash { 0%,92%,100%{ opacity:0 } 93%{ opacity:.55 } 95%{ opacity:0 } 96%{ opacity:.4 } }
+
+/* Ícone (elementos internos do SVG) */
+.wx-rays   { transform-box:fill-box; transform-origin:center; animation:wxSpin 26s linear infinite; }
+@keyframes wxSpin { to{ transform:rotate(360deg) } }
+
+.wx-float  { display:inline-flex; line-height:0; animation:wxFloat 5s ease-in-out infinite; }
+@keyframes wxFloat { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-4px) } }
+
+.wx-rain .wx-drop  { animation:wxDropFall 1s linear infinite; animation-delay:calc(var(--d) * .18s); }
+@keyframes wxDropFall { 0%{ opacity:0; transform:translateY(-2px) } 30%{ opacity:1 } 100%{ opacity:0; transform:translateY(10px) } }
+
+.wx-snow .wx-flake { animation:wxFlakeFall 2.4s ease-in-out infinite; animation-delay:calc(var(--d) * .4s); }
+@keyframes wxFlakeFall { 0%{ opacity:0; transform:translateY(-2px) } 30%{ opacity:1 } 100%{ opacity:0; transform:translateY(12px) } }
+
+.wx-bolt   { animation:wxBolt 3.5s ease-in-out infinite; }
+@keyframes wxBolt { 0%,90%,100%{ opacity:.95 } 93%{ opacity:.3 } 95%{ opacity:1 } }
+
+.wx-fog2   { animation:wxFog 3s ease-in-out infinite; }
+@keyframes wxFog { 0%,100%{ transform:translateX(0) } 50%{ transform:translateX(4px) } }
+
+/* Acessibilidade: desliga tudo com reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .wx-glow, .wx-star, .wx-line, .wx-snowf, .wx-blob, .wx-flash,
+  .wx-rays, .wx-float, .wx-rain .wx-drop, .wx-snow .wx-flake, .wx-bolt, .wx-fog2 {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clima · Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --page:#eef0f3; --panel:#ffffff; --ink:#15191e; --sub:#6b7280; --bd:#e3e6ea;
+    --brand:#00a8b3;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif; background:var(--page); color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- chrome da página ---------- */
+  .pg{max-width:1240px; margin:0 auto; padding:34px 28px 80px}
+  .pg-head{display:flex; flex-direction:column; gap:6px; margin-bottom:6px}
+  .pg-kicker{font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--brand)}
+  .pg-title{font-size:30px; font-weight:800; letter-spacing:-.02em; margin:0}
+  .pg-lede{font-size:15px; color:var(--sub); max-width:720px; line-height:1.55; margin:2px 0 0}
+
+  .pg-note{background:var(--panel); border:1px solid var(--bd); border-radius:14px; padding:16px 18px; margin:20px 0 4px; font-size:13.5px; line-height:1.6; color:#374151}
+  .pg-note b{color:var(--ink)}
+  .pg-note ul{margin:8px 0 0; padding-left:18px}
+  .pg-note li{margin:3px 0}
+
+  /* ---------- barra de controle ---------- */
+  .ctrl{position:sticky; top:0; z-index:30; background:rgba(238,240,243,.82); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--bd); margin:22px -28px 0; padding:14px 28px;
+    display:flex; flex-wrap:wrap; align-items:center; gap:18px}
+  .ctrl-grp{display:flex; align-items:center; gap:8px}
+  .ctrl-lbl{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--sub)}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{appearance:none; border:1px solid var(--bd); background:#fff; color:#374151; font-family:inherit;
+    font-size:13px; font-weight:600; padding:7px 13px; border-radius:999px; cursor:pointer; transition:all .15s}
+  .chip:hover{border-color:#c3c9d1}
+  .chip.on{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .seg{display:inline-flex; background:#fff; border:1px solid var(--bd); border-radius:999px; padding:3px}
+  .seg button{appearance:none; border:0; background:transparent; font-family:inherit; font-size:13px; font-weight:600;
+    color:#374151; padding:6px 14px; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px}
+  .seg button.on{background:var(--ink); color:#fff}
+
+  /* ---------- grid de variações ---------- */
+  .section{margin-top:34px}
+  .section-h{display:flex; align-items:baseline; gap:10px; margin-bottom:16px}
+  .section-h h2{font-size:13px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sub); margin:0}
+  .section-h span{font-size:13px; color:#9aa1ab}
+
+  .row{display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start}
+  .frame{display:flex; flex-direction:column; gap:10px}
+  .frame-h{display:flex; flex-direction:column; gap:1px}
+  .frame-t{font-size:14px; font-weight:700}
+  .frame-d{font-size:12px; color:var(--sub)}
+  .frame-stage{background:#fff; border:1px solid var(--bd); border-radius:20px; padding:14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04), 0 14px 30px -22px rgba(0,0,0,.16)}
+
+  .stage-desktop{width:340px}
+  .stage-desktop .wx-card{width:312px; height:372px}
+  .stage-mobile{width:380px}
+  .stage-mobile .wx-card{width:352px; height:196px}
+
+  /* ============================================================
+     CARD base
+     ============================================================ */
+  .wx-card{position:relative; border-radius:18px; overflow:hidden; font-family:'Inter',sans-serif}
+  .wx-content{position:relative; z-index:3; height:100%; display:flex; flex-direction:column; padding:16px 17px}
+  .wx-top{display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:600}
+  .wx-loc{display:flex; align-items:center; gap:5px; font-weight:700; font-size:13px}
+  .wx-loc-pin{width:7px; height:7px; border-radius:999px; display:inline-block}
+
+  .wx-hero{display:flex; align-items:center; gap:12px; margin-top:6px}
+  .wx-hero-ico{flex-shrink:0}
+  .wx-temp{font-size:58px; font-weight:800; line-height:.92; letter-spacing:-.03em}
+  .wx-deg{font-weight:500; opacity:.7}
+  .wx-cond{font-size:15px; font-weight:600; margin-top:3px}
+  .wx-feels{font-size:12px; margin-top:3px}
+
+  /* faixa horária */
+  .wx-hours{display:flex; justify-content:space-between; gap:2px; margin-top:auto; padding-top:12px; border-top:1px solid transparent}
+  .wx-hour{display:flex; flex-direction:column; align-items:center; gap:5px; flex:1}
+  .wx-hh{font-size:10.5px; font-weight:600}
+  .wx-ht{font-size:12.5px; font-weight:700}
+  .wx-hour.is-now .wx-ht{font-weight:800}
+
+  /* rodapé sky */
+  .wx-foot{display:flex; gap:14px; margin-top:13px; padding-top:12px; border-top:1px solid rgba(255,255,255,.16)}
+  .wx-foot-col{flex:1; min-width:0}
+  .wx-foot-arc{flex:0 0 auto}
+  .wx-mlbl{font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px}
+  .wx-mini-row{display:flex; gap:12px; font-size:12px; font-weight:600; margin-top:9px}
+
+  /* uv */
+  .wx-uv{display:flex; flex-direction:column; gap:5px}
+  .wx-uv-track{position:relative; height:5px; border-radius:999px; overflow:visible}
+  .wx-uv-fill{position:absolute; inset:0 auto 0 0; height:100%; border-radius:999px}
+  .wx-uv-dot{position:absolute; top:50%; transform:translateY(-50%); width:10px; height:10px; border-radius:999px; background:#fff; box-shadow:0 0 0 2px rgba(0,0,0,.12)}
+  .wx-uv-lbl{font-size:11.5px; font-weight:700}
+
+  /* arco */
+  .wx-arc{display:flex; flex-direction:column; align-items:center; gap:2px}
+  .wx-arc-times{display:flex; gap:12px; font-size:11px; font-weight:600}
+
+  /* ---------- glass ---------- */
+  .wx-glow-accent{position:absolute; inset:0; z-index:2; pointer-events:none}
+  .wx-glass-hero{display:flex; align-items:center; gap:12px; margin-top:8px; padding:10px 12px;
+    border:1px solid; border-radius:15px; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px)}
+  .wx-glass-hero .wx-temp{font-size:46px}
+  .wx-glass-maxmin{margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:3px; font-size:13px; font-weight:700}
+  .wx-glass-panel{margin-top:9px; padding:4px 11px 9px; border:1px solid; border-radius:15px; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px)}
+  .wx-glass-panel .wx-hours{border-top:0; margin-top:0; padding-top:9px}
+  .wx-chips{display:grid; grid-template-columns:repeat(2,1fr); gap:7px; margin-top:9px}
+  .wx-chip{display:flex; flex-direction:column; gap:1px; padding:7px 10px; border:1px solid; border-radius:11px;
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px)}
+  .wx-chip-k{font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.04em}
+  .wx-chip-v{font-size:13.5px; font-weight:700}
+  .wx-glass-mstats{display:flex; justify-content:space-between; gap:8px; margin-top:auto; padding-top:10px;
+    font-size:12px; font-weight:700; border-top:1px solid rgba(255,255,255,.16)}
+  .wx-glass-mstats i{display:block; font-style:normal; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-bottom:1px}
+
+  /* mobile compact */
+  .wx-mobile-stats{display:flex; gap:14px; margin-top:auto; padding-top:10px; font-size:12px; font-weight:600}
+
+  /* ---------- editorial ---------- */
+  .wx-editorial{background:#fff; color:#15191e; border:1px solid #e6e9ed; padding:0}
+  .wx-editorial .wx-content{padding:0}
+  .wx-ed-top{display:flex; align-items:flex-start; justify-content:space-between; padding:17px 18px 0}
+  .wx-ed-loc{font-size:15px; font-weight:700; letter-spacing:-.01em}
+  .wx-ed-time{font-size:12px; color:#8a9099; margin-top:2px; font-weight:500}
+  .wx-ed-iconwrap{width:64px; height:64px; border-radius:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0}
+  .wx-ed-hero{display:flex; align-items:flex-end; justify-content:space-between; padding:8px 18px 4px; gap:12px}
+  .wx-ed-temp{font-size:62px; font-weight:800; line-height:.9; letter-spacing:-.035em}
+  .wx-ed-deg{font-size:22px; font-weight:600; color:#9aa1ab; margin-left:2px}
+  .wx-ed-maxmin{display:flex; flex-direction:column; gap:6px; text-align:right; padding-bottom:6px}
+  .wx-ed-maxmin>div{display:flex; flex-direction:column}
+  .wx-ed-maxmin .wx-ed-k{font-size:10px}
+  .wx-ed-maxmin b{font-size:14px; font-weight:700}
+  .wx-ed-k{font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#9aa1ab}
+  .wx-ed-chart{padding:6px 14px 2px}
+  .wx-ed-hourrow{display:flex; justify-content:space-between; padding:2px 4px 0; font-size:10.5px; color:#9aa1ab; font-weight:600}
+  .wx-ed-metrics{display:grid; grid-template-columns:1fr 1fr; gap:0; margin-top:auto; border-top:1px solid #eef0f3}
+  .wx-ed-m{display:flex; flex-direction:column; gap:2px; padding:11px 18px}
+  .wx-ed-m:nth-child(odd){border-right:1px solid #eef0f3}
+  .wx-ed-m:not(:nth-child(-n+2)){border-top:1px solid #eef0f3}
+  .wx-ed-m b{font-size:14px; font-weight:700}
+  /* editorial mobile: métricas em linha única compacta */
+  .wx-ed-metrics.is-mobile{grid-template-columns:repeat(3,1fr)}
+  .wx-ed-metrics.is-mobile .wx-ed-m{padding:9px 12px; border-top:0 !important}
+  .wx-ed-metrics.is-mobile .wx-ed-m:not(:last-child){border-right:1px solid #eef0f3}
+  .stage-mobile .wx-editorial .wx-ed-top{padding:13px 16px 0}
+  .stage-mobile .wx-editorial .wx-ed-hero{padding:4px 16px 8px}
+  .stage-mobile .wx-editorial .wx-ed-temp{font-size:42px}
+  .stage-mobile .wx-editorial .wx-ed-iconwrap{width:48px; height:48px}
+
+  /* ============================================================
+     ATMOSFERA + animações (sutis, performáticas)
+     ============================================================ */
+  .wx-atmo{position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none}
+  .wx-glow{position:absolute; width:200px; height:200px; right:-40px; top:-60px; border-radius:999px; animation:wxPulse 6s ease-in-out infinite}
+  @keyframes wxPulse{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.12);opacity:1}}
+  .wx-star{position:absolute; background:#fff; border-radius:999px; opacity:.5; animation:wxTwinkle 3.2s ease-in-out infinite}
+  @keyframes wxTwinkle{0%,100%{opacity:.25}50%{opacity:.95}}
+  .wx-line{position:absolute; top:-16%; width:1.6px; height:22%; border-radius:2px; animation:wxFall linear infinite}
+  @keyframes wxFall{0%{transform:translateY(-30px)}100%{transform:translateY(440px)}}
+  .wx-snowf{position:absolute; top:-6%; width:5px; height:5px; border-radius:999px; background:rgba(255,255,255,.85); animation:wxSnow linear infinite}
+  @keyframes wxSnow{0%{transform:translateY(-20px) translateX(0)}100%{transform:translateY(420px) translateX(18px)}}
+  .wx-blob{position:absolute; width:160px; height:64px; left:-60px; border-radius:999px; filter:blur(8px); animation:wxDrift linear infinite; animation-duration:22s}
+  @keyframes wxDrift{0%{transform:translateX(-80px)}100%{transform:translateX(460px)}}
+  .wx-flash{position:absolute; inset:0; background:rgba(255,255,255,.5); opacity:0; animation:wxFlash 7s linear infinite}
+  @keyframes wxFlash{0%,92%,100%{opacity:0}93%{opacity:.55}95%{opacity:0}96%{opacity:.4}}
+
+  /* ícone interno */
+  .wx-rays{transform-box:fill-box; transform-origin:center; animation:wxSpin 26s linear infinite}
+  @keyframes wxSpin{to{transform:rotate(360deg)}}
+  .wx-float{animation:wxFloat 4.5s ease-in-out infinite}
+  .wx-hero-ico{animation:wxFloat 5s ease-in-out infinite}
+  @keyframes wxFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .wx-rain .wx-drop{animation:wxDropFall 1s linear infinite; animation-delay:calc(var(--d)*.18s)}
+  @keyframes wxDropFall{0%{opacity:0;transform:translateY(-2px)}30%{opacity:1}100%{opacity:0;transform:translateY(10px)}}
+  .wx-snow .wx-flake{animation:wxFlakeFall 2.4s ease-in-out infinite; animation-delay:calc(var(--d)*.4s)}
+  @keyframes wxFlakeFall{0%{opacity:0;transform:translateY(-2px)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
+  .wx-bolt{animation:wxBolt 3.5s ease-in-out infinite}
+  @keyframes wxBolt{0%,90%,100%{opacity:.95}93%{opacity:.3}95%{opacity:1}}
+  .wx-fog2{animation:wxFog 3s ease-in-out infinite}
+  @keyframes wxFog{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+
+  @media (prefers-reduced-motion: reduce){
+    .wx-glow,.wx-star,.wx-line,.wx-snowf,.wx-blob,.wx-flash,.wx-rays,.wx-float,.wx-hero-ico,
+    .wx-drop,.wx-flake,.wx-bolt,.wx-fog2{animation:none !important}
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script src="weather-core.js"></script>
+  <script type="text/babel" src="variations.jsx"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    const WC = window.WeatherCore;
+
+    function App(){
+      const [cond, setCond] = useState("partly");
+      const [night, setNight] = useState(false);
+      const data = WC.makeData(cond, night, "Box");
+
+      const variants = [
+        { id:"sky",  C: window.CardSky,       t:"A · Céu dinâmico",  d:"Full-bleed, cor segue o tempo e a hora" },
+        { id:"glass",C: window.CardGlass,      t:"B · Vidro",          d:"Glassmorphism sobre céu atmosférico" },
+        { id:"edit", C: window.CardEditorial,  t:"C · Editorial",      d:"Card claro, tipografia forte + curva de temperatura" },
+      ];
+
+      return (
+        <div className="pg">
+          <div className="pg-head">
+            <span className="pg-kicker">Intranet · Dashboard</span>
+            <h1 className="pg-title">Redesign do componente de Clima</h1>
+            <p className="pg-lede">Três direções visuais, todas adaptando a cor à condição do tempo e ao período (dia/noite),
+            com ícones ilustrados e animações sutis. Mantêm a mesma fonte de dados gratuita (Open-Meteo) e agora exibem
+            previsão por hora, sensação térmica, máx/mín, índice UV e nascer/pôr do sol.</p>
+          </div>
+
+          <div className="pg-note">
+            <b>O que mudou de funcional:</b>
+            <ul>
+              <li><b>Mais condições detectáveis</b> — mapa WMO completo: névoa, garoa, chuva congelante, neve, pancadas e tempestade (antes tudo virava "chuva" ou "nublado").</li>
+              <li><b>Mais informação exibível</b> — faixa por hora, sensação térmica, máxima/mínima do dia, índice UV e nascer/pôr do sol.</li>
+              <li><b>Mesma otimização</b> — sem dependências novas, animações em CSS/transform, respeita <code>prefers-reduced-motion</code>.</li>
+            </ul>
+            Use os controles abaixo para ver como cada variação responde a cada clima. <b>Escolha 1 direção</b> (ou misture elementos) e eu finalizo no formato React do app.
+          </div>
+
+          <div className="ctrl">
+            <div className="ctrl-grp">
+              <span className="ctrl-lbl">Condição</span>
+              <div className="chips">
+                {WC.CONDITION_LIST.map(c =>
+                  <button key={c.key} className={"chip"+(cond===c.key?" on":"")} onClick={()=>setCond(c.key)}>{c.label}</button>)}
+              </div>
+            </div>
+            <div className="ctrl-grp">
+              <span className="ctrl-lbl">Período</span>
+              <div className="seg">
+                <button className={night?"":"on"} onClick={()=>setNight(false)}>☀ Dia</button>
+                <button className={night?"on":""} onClick={()=>setNight(true)}>☾ Noite</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="section">
+            <div className="section-h"><h2>Desktop</h2><span>card vertical · 3ª coluna do grid (≈ 340 × 400)</span></div>
+            <div className="row">
+              {variants.map(v=>(
+                <div className="frame" key={v.id}>
+                  <div className="frame-h"><span className="frame-t">{v.t}</span><span className="frame-d">{v.d}</span></div>
+                  <div className="frame-stage stage-desktop"><v.C data={data} format="desktop" /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="section">
+            <div className="section-h"><h2>Mobile</h2><span>card horizontal · slide do carrossel (aspect-video)</span></div>
+            <div className="row">
+              {variants.map(v=>(
+                <div className="frame" key={v.id}>
+                  <div className="frame-h"><span className="frame-t">{v.t}</span></div>
+                  <div className="frame-stage stage-mobile"><v.C data={data} format="mobile" /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
