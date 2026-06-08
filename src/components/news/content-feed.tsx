@@ -31,7 +31,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { VisuallyHidden } from "@/components/ui/visually-hidden"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -46,12 +45,10 @@ import { useTheme } from "next-themes"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { MultipleImageUpload } from "@/components/ui/multiple-image-upload"
 import { ImageCarousel } from "@/components/ui/image-carousel"
-import { OptimizedImage } from "@/components/ui/optimized-image"
 import { ImageViewer } from "@/components/ui/image-viewer"
-import { LazyIframe } from "@/components/ui/lazy-iframe"
 import { MonacoEditor } from "@/components/ui/monaco-editor"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
-import type { PostWithAuthor, EventWithAuthor, FlyerWithAuthor, ContentFeedProps } from "@/types/content-feed"
+import type { PostWithAuthor, EventWithAuthor, ContentFeedProps } from "@/types/content-feed"
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })
@@ -83,12 +80,10 @@ export function ContentFeed({
 
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
   const { data: events } = api.event.list.useQuery()
-  const { data: flyers } = api.flyer.list.useQuery()
 
   // Type cast dos dados para incluir role_config
   const postsWithRoleConfig = posts as PostWithAuthor[] | undefined
   const eventsWithRoleConfig = events as EventWithAuthor[] | undefined
-  const flyersWithRoleConfig = flyers as FlyerWithAuthor[] | undefined
 
   // Intersection Observer para carregar mais posts
   useEffect(() => {
@@ -212,10 +207,9 @@ export function ContentFeed({
         </CardHeader>
         <CardContent className="p-0 md:p-6">
           <Tabs defaultValue="posts">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="posts">Posts</TabsTrigger>
               <TabsTrigger value="events">Eventos</TabsTrigger>
-              <TabsTrigger value="flyers">Encartes</TabsTrigger>
               <TabsTrigger value="birthdays">Aniversários</TabsTrigger>
             </TabsList>
             <TabsContent value="posts" className="mt-4">
@@ -282,84 +276,6 @@ export function ContentFeed({
                           {format(event.startDate, "PPPp", { locale: ptBR })}
                         </div>
                       </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent value="flyers" className="mt-4">
-              {!flyersWithRoleConfig?.length ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum encarte publicado.</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  {flyersWithRoleConfig?.map((flyer) => (
-                    <Card key={flyer.id} className="flex flex-col">
-                      <CardHeader>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border">
-                            <AvatarImage src={flyer.author.imageUrl ?? undefined} />
-                            <AvatarFallback>{flyer.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground flex items-center">
-                              {flyer.author.firstName}
-                              {flyer.author.role_config?.sudo ? (
-                                <LucideVerified className={"ml-2 text-blue-500 size-4"} />
-                              ) : (
-                                <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(flyer.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                            </p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <h3 className="font-semibold mb-2">{flyer.title}</h3>
-                        <div className="flex items-center justify-center">
-                          {flyer.iframe ? (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <div className="relative aspect-[1/1.414] w-full cursor-pointer overflow-hidden rounded-md">
-                                  <OptimizedImage
-                                    src={flyer.imageUrl || "/placeholder.svg"}
-                                    alt={flyer.title}
-                                    fill
-                                    className="object-cover transition-transform hover:scale-105"
-                                  />
-                                </div>
-                              </DialogTrigger>
-                              <DialogContent className="block h-full w-full max-w-none p-0 sm:h-[95vh] sm:w-auto sm:max-w-7xl sm:rounded-lg">
-                                <VisuallyHidden>
-                                  <DialogTitle>Encarte: {flyer.title}</DialogTitle>
-                                </VisuallyHidden>
-                                <div className="w-full h-full">
-                                  <LazyIframe
-                                    src={flyer.iframe}
-                                    title={`Encarte: ${flyer.title}`}
-                                    autoLoad={false}
-                                  />
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          ) : (
-                            <div className="relative aspect-[1/1.414] w-full overflow-hidden rounded-md">
-                              <OptimizedImage
-                                src={flyer.imageUrl || "/placeholder.svg"}
-                                alt={flyer.title}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                      {flyer.description && (
-                        <CardFooter>
-                          <p className="text-sm text-muted-foreground">{flyer.description}</p>
-                        </CardFooter>
-                      )}
                     </Card>
                   ))}
                 </div>
