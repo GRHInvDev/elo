@@ -1,6 +1,6 @@
 import { api } from "@/trpc/server"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Pencil, FileText, MessageSquare } from "lucide-react"
+import { Pencil, FileText, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { FormPreview } from "@/components/forms/form-preview"
@@ -9,6 +9,7 @@ import { ptBR } from "date-fns/locale"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { FormDescription } from "@/components/forms/form-description"
+import { FormsSubPageShell, FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
 import { CreateManualResponseButtonWrapper } from "@/components/forms/create-manual-response-button-wrapper"
 import { canEditForm } from "@/lib/access-control"
 
@@ -62,69 +63,64 @@ export default async function FormPage({ params }: FormPageProps) {
     }
   }
 
+  const canEdit = canEditForm(
+    userData.role_config,
+    userData.id,
+    form.id,
+    {
+      userId: form.userId,
+      ownerIds: form.ownerIds,
+      isPrivate: form.isPrivate,
+      allowedUsers: form.allowedUsers,
+      allowedSectors: form.allowedSectors,
+    },
+    userData.setor
+  )
+
   return (
     <DashboardShell>
-      <div className="mb-8">
-        <Link href="/forms">
-          <Button variant="ghost" className="pl-0">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Voltar para solicitações
-          </Button>
-        </Link>
-
-        <div className="flex md:items-center gap-y-4 justify-between mt-4 flex-col md:flex-row">
-          <div className="max-w-2/3 w-2/3">
-            <h1 className="text-3xl text-wrap font-bold tracking-tight">{form.title}</h1>
-            <p className="text-muted-foreground mt-2">
+      <FormsSubPageShell
+        backHref="/forms"
+        backLabel="Voltar para solicitações"
+        title={form.title}
+        description={
+          <>
+            <p>
               Criado {formatDistanceToNow(new Date(form.createdAt), { addSuffix: true, locale: ptBR })}
             </p>
-            <div className="text-wrap">
-              <FormDescription description={form.description} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 ">
-            <Link href={`/forms/${form.id}/responses`}>
-              <Button variant="outline" className="col-span-1 w-full">
+            <FormDescription description={form.description} className="mt-2" />
+          </>
+        }
+        actions={
+          <>
+            <Link href={`/forms/${form.id}/responses`} className="flex-1 md:flex-none">
+              <Button variant="outline" className="w-full">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Respostas
               </Button>
             </Link>
-            {
-              canEditForm(
-                userData.role_config,
-                userData.id,
-                form.id,
-                {
-                  userId: form.userId,
-                  ownerIds: form.ownerIds,
-                  isPrivate: form.isPrivate,
-                  allowedUsers: form.allowedUsers,
-                  allowedSectors: form.allowedSectors,
-                },
-                userData.setor
-              ) &&
-              <Link href={`/forms/${form.id}/edit`}>
-                <Button variant="outline" className="col-span-1 w-full">
+            {canEdit && (
+              <Link href={`/forms/${form.id}/edit`} className="flex-1 md:flex-none">
+                <Button variant="outline" className="w-full">
                   <Pencil className="mr-2 h-4 w-4" />
                   Editar
                 </Button>
               </Link>
-            }
-            <Link href={`/forms/${form.id}/respond`}>
-              <Button className="col-span-1 w-full">
+            )}
+            <Link href={`/forms/${form.id}/respond`} className="flex-1 md:flex-none">
+              <Button className="w-full">
                 <FileText className="mr-2 h-4 w-4" />
                 Abrir nova solicitação
               </Button>
             </Link>
             <CreateManualResponseButtonWrapper formId={form.id} formFields={form.fields as unknown as Field[]} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-card/60 p-6 rounded-lg border">
-        <FormPreview title={form.title} fields={form.fields as unknown as Field[]} readOnly />
-      </div>
+          </>
+        }
+      >
+        <FormsPanel>
+          <FormPreview title={form.title} fields={form.fields as unknown as Field[]} readOnly />
+        </FormsPanel>
+      </FormsSubPageShell>
     </DashboardShell>
   )
 }

@@ -2,8 +2,6 @@
 
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
-import { OptimizedImage } from "@/components/ui/optimized-image"
-import Link from "next/link"
 import { useEffect, useState } from "react"
 import { WeatherWidget } from "@/components/dashboard/weather-widget"
 import type { Enterprise } from "@/types/enterprise"
@@ -55,12 +53,17 @@ export function VideosCarousel({ itens, className, enterprise }: MainCarouselPro
           </div>
         ))}
         
-        {/* Segunda coluna - Banner */}
+        {/* Segunda coluna - Vídeo Box */}
         <div className="w-full h-[400px]">
           <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
-            <Link className="relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
-              <OptimizedImage className="object-cover" fill src="/banners/Banners-intranet-3.png" alt="box"/>
-            </Link>
+            <iframe
+              src="https://www.youtube.com/embed/iSdz3gxUpAI"
+              title="Box"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              className="w-full h-full"
+              allowFullScreen
+              loading="lazy"
+            ></iframe>
           </div>
         </div>
 
@@ -102,9 +105,15 @@ export function VideosCarousel({ itens, className, enterprise }: MainCarouselPro
             ))}
             <CarouselItem className="pl-2 md:pl-4 basis-full">
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg">
-                <Link className="relative size-full flex items-center bg-black" href="https://www.boxdistribuidor.com.br/sobre">
-                  <OptimizedImage className="object-cover" fill src="/banners/Banners-intranet-3.png" alt="box"/>
-                </Link>
+                <iframe
+                  src="https://www.youtube.com/embed/iSdz3gxUpAI"
+                  title="Box"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  className="absolute inset-0 w-full h-full"
+                  allowFullScreen
+                  loading="lazy"
+                  style={{ touchAction: 'pan-x pinch-zoom' }}
+                ></iframe>
               </div>
             </CarouselItem>
             <CarouselItem className="pl-2 md:pl-4 basis-full">

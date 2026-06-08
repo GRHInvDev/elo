@@ -13,7 +13,6 @@ import {
   LucidePhone,
   LucideMegaphone,
   SearchCheck,
-  Book,
   FileText,
   Heart,
   DoorOpen,
@@ -44,12 +43,6 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
         icon: LucideCalendar,
         describe: "Página para visualizar e criar eventos",
         href: "/events",
-      },
-      {
-        title: "Encartes",
-        icon: LucideNewspaper,
-        describe: "Página para visualizar e criar encartes",
-        href: "/flyers",
       },
       {
         title: "Aniversários",
@@ -101,7 +94,7 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
     {
       title: "Anúncios",
       icon: LucideMegaphone,
-      describe: "Aniversariantes, Hall de entrada, Eventos, Encartes e Notícias",
+      describe: "Aniversariantes, Hall de entrada, Eventos e Notícias",
       children: [
         {
           title: "Aniversariantes do Mês",
@@ -120,12 +113,6 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
           icon: LucideCalendar,
           describe: "Página para visualizar e criar eventos",
           href: "/events",
-        },
-        {
-          title: "Encartes",
-          icon: Book,
-          describe: "Página para visualizar e criar encartes",
-          href: "/flyers",
         },
         {
           title: "Notícias",

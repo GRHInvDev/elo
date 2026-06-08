@@ -2,6 +2,7 @@ import { api } from "@/trpc/server"
 import { notFound, redirect } from "next/navigation"
 import { ResponsesList } from "@/components/forms/responses-list"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
+import { FormsSubPageShell } from "@/components/forms/v2/forms-sub-page-shell"
 import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {
@@ -43,23 +44,15 @@ export default async function ResponsesPage({ params }: ResponsesPageProps) {
 
   return (
     <DashboardShell>
-      <div className="mb-8">
-        {/*
-        <Link href={`/forms/${id}`}>
-          <Button variant="ghost" className="pl-0">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Voltar para a solicitação
-          </Button>
-        </Link>
-        */}
-
-        <div className="mt-4">
-          <h1 className="text-3xl font-bold tracking-tight">Respostas: {form.title}</h1>
-          <p className="text-muted-foreground mt-2">Visualize e gerencie as respostas enviadas para esta solicitação.</p>
-        </div>
-      </div>
-      <ResponsesList formId={id} />
-    </DashboardShell >
+      <FormsSubPageShell
+        backHref={`/forms/${id}`}
+        backLabel="Voltar para a solicitação"
+        title={`Respostas: ${form.title}`}
+        description="Visualize e gerencie as respostas enviadas para esta solicitação."
+      >
+        <ResponsesList formId={id} />
+      </FormsSubPageShell>
+    </DashboardShell>
   )
 }
 
