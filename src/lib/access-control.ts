@@ -140,6 +140,15 @@ export function canViewCars(roleConfig: RolesConfig | null): boolean {
   return !roleConfig.isTotem;
 }
 
+export function canViewEmotionRuler(roleConfig: RolesConfig | null): boolean {
+  // Régua de Emoções é um módulo restrito (não liberado para todos).
+  // Acesso somente para sudo ou quem tem a permissão explícita; nunca TOTEM/desativado.
+  if (!roleConfig) return false;
+  if (roleConfig.isTotem) return false;
+  if (roleConfig.sudo) return true;
+  return roleConfig.can_view_emotion_ruler === true;
+}
+
 /**
  * Verifica se o usuário pode acessar um formulário específico
  * 
