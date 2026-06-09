@@ -3,19 +3,21 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { startOfDay, endOfDay } from "date-fns";
 import { getEffectiveRoleConfig } from "@/lib/effective-role-config";
+import { canViewEmotionRuler } from "@/lib/access-control";
 
 export const emotionRulerRouter = createTRPCRouter({
   // Buscar a régua ativa
   getActive: protectedProcedure.query(async ({ ctx }) => {
     const today = new Date();
 
-    // Validar se o usuário tem a flag de novidades
+    // Módulo restrito: só usuários autorizados (sudo ou can_view_emotion_ruler).
+    // Usuários desativados/TOTEM são mascarados por getEffectiveRoleConfig.
     const user = await ctx.db.user.findUnique({
       where: { id: ctx.auth.userId },
-      select: { novidades: true },
+      select: { role_config: true, is_active: true },
     });
 
-    if (!user?.novidades) {
+    if (!canViewEmotionRuler(getEffectiveRoleConfig(user))) {
       return null;
     }
 
@@ -137,6 +139,19 @@ export const emotionRulerRouter = createTRPCRouter({
       const today = startOfDay(new Date());
       const userId = ctx.auth.userId;
 
+      // Módulo restrito: só usuários autorizados registram acesso.
+      const accessUser = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: { role_config: true, is_active: true },
+      });
+
+      if (!canViewEmotionRuler(getEffectiveRoleConfig(accessUser))) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem acesso à régua de emoções.",
+        });
+      }
+
       // Verificar se já existe acesso hoje
       const existingAccess = await ctx.db.emotionRulerDailyAccess.findUnique({
         where: {
@@ -173,6 +188,19 @@ export const emotionRulerRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const today = startOfDay(new Date());
       const userId = ctx.auth.userId;
+
+      // Módulo restrito: só usuários autorizados registram fechamento.
+      const dismissUser = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: { role_config: true, is_active: true },
+      });
+
+      if (!canViewEmotionRuler(getEffectiveRoleConfig(dismissUser))) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem acesso à régua de emoções.",
+        });
+      }
 
       const access = await ctx.db.emotionRulerDailyAccess.findUnique({
         where: {
@@ -216,6 +244,19 @@ export const emotionRulerRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const today = startOfDay(new Date());
       const userId = ctx.auth.userId;
+
+      // Módulo restrito: bloquear envio de resposta de quem não tem acesso.
+      const responder = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: { role_config: true, is_active: true },
+      });
+
+      if (!canViewEmotionRuler(getEffectiveRoleConfig(responder))) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem acesso à régua de emoções.",
+        });
+      }
 
       const emotion = await ctx.db.emotionRulerEmotion.findFirst({
         where: { rulerId: input.rulerId, value: input.emotionValue },

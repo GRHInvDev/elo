@@ -18,6 +18,7 @@ import {
   DoorOpen,
 } from "lucide-react"
 import { type RolesConfig } from "@/types/role-config"
+import { canViewEmotionRuler } from "@/lib/access-control"
 
 export interface RouteItem {
   title: string
@@ -140,7 +141,7 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
           describe: "Página para requisitar processos internos para os setores, como marketing, TI, inovação e compras",
           href: "/forms",
         },
-        ...(novidades ? [{
+        ...(canViewEmotionRuler(roleConfig ?? null) ? [{
           title: "Régua de Emoções",
           icon: Heart,
           describe: "Identifique o nível de sentimento para acompanhamento do RH",

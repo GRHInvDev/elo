@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { LucideLink, Menu, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { AppReleaseNotesDialog } from "@/components/ui/app-release-notes-dialog"
 import { SettingsMenu } from "@/components/ui/settings-menu"
 import { Separator } from "./separator"
@@ -81,6 +82,47 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
     const hasActiveChild = hasChildren && item.children?.some(child =>
       child.href === pathname || child.children?.some(grandChild => grandChild.href === pathname)
     )
+
+    if (hasChildren && collapsed) {
+      // Sidebar colapsada: filhos do grupo ficam acessíveis via flyout (Popover),
+      // já que o accordion inline depende de !collapsed e os esconderia por completo.
+      return (
+        <Popover key={item.title}>
+          <PopoverTrigger asChild>
+            <button
+              className={cn(
+                "flex items-center justify-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted hover:text-primary",
+                hasActiveChild && "text-primary bg-muted",
+              )}
+              title={item.describe}
+            >
+              <item.icon className="size-5 shrink-0" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="right" align="start" className="w-56 p-1">
+            <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{item.title}</p>
+            <div className="space-y-1">
+              {item.children?.map((child) =>
+                child.href ? (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    onClick={() => onLinkClick?.()}
+                    className={cn(
+                      "flex items-center gap-3 px-2 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted hover:text-primary",
+                      pathname === child.href ? "text-primary bg-muted" : "text-muted-foreground",
+                    )}
+                  >
+                    <child.icon className="size-4 shrink-0" />
+                    <span className="truncate">{child.title}</span>
+                  </Link>
+                ) : null,
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )
+    }
 
     if (hasChildren) {
       // Render group item
