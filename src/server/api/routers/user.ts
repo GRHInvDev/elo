@@ -343,10 +343,11 @@ export const userRouter = createTRPCRouter({
 
       const where: Prisma.UserWhereInput = {}
 
-      // Busca por setor
+      // Filtro por setor: igualdade exata (case-insensitive). Antes usava `contains`,
+      // o que casava substrings — ex.: "TI" trazia ADMINISTRATIVO, LOGISTICA, etc.
       if (input.sector) {
         where.setor = {
-          contains: input.sector,
+          equals: input.sector,
           mode: 'insensitive',
         }
       }
