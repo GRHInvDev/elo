@@ -10,7 +10,6 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
 import { AnimatedEmoji } from "@/components/emotion-ruler/animated-emoji"
-import { Star } from "lucide-react"
 
 interface EmotionRulerModalProps {
   rulerId: string
@@ -71,19 +70,13 @@ export function EmotionRulerModal({
     setIsSubmitting(true)
 
     try {
-      const result = await createResponse.mutateAsync({
+      await createResponse.mutateAsync({
         rulerId,
         emotionValue: selectedValue,
         comment: comment.trim() || undefined,
       })
 
-      if (result.pointsEarned > 0) {
-        toast.success(`Resposta registrada! Você ganhou ${result.pointsEarned} ponto${result.pointsEarned !== 1 ? "s" : ""}!`, {
-          icon: <Star className="h-4 w-4 text-yellow-500" />,
-        })
-      } else {
-        toast.success("Resposta registrada com sucesso!")
-      }
+      toast.success("Resposta registrada com sucesso!")
 
       onOpenChange(false)
     } catch (error) {
