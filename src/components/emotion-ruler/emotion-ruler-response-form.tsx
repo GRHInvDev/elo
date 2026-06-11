@@ -90,8 +90,8 @@ export function EmotionRulerResponseForm() {
     )
   }
 
-  // Ordenar emoções por valor
-  const sortedEmotions = (Array.isArray(ruler.emotions) ? ruler.emotions : []).sort((a, b) => a.value - b.value)
+  // Ordenar emoções pela sequência definida no admin (campo order)
+  const sortedEmotions = (Array.isArray(ruler.emotions) ? ruler.emotions : []).sort((a, b) => a.order - b.order)
 
   // Debug: verificar se os emojis estão sendo carregados
   if (process.env.NODE_ENV === 'development') {
@@ -232,7 +232,7 @@ export function EmotionRulerResponseForm() {
                             times: [0, 0.5, 1]
                           }}
                         >
-                          Nível {emotion.value}
+                          {emotion.label ?? `Nível ${emotion.value}`}
                         </motion.span>
                       </div>
                     </motion.button>
@@ -256,7 +256,10 @@ export function EmotionRulerResponseForm() {
                       transition={{ delay: 0.1 }}
                       className="text-sm font-medium text-center text-foreground"
                     >
-                      Você selecionou o nível {selectedValue}
+                      {(() => {
+                        const sel = sortedEmotions.find((e) => e.value === selectedValue)
+                        return `Você selecionou: ${sel?.label ?? `Nível ${selectedValue}`}`
+                      })()}
                     </motion.p>
                     {(() => {
                       const selectedEmotion = sortedEmotions.find((e) => e.value === selectedValue)

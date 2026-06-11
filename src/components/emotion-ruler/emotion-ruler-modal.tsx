@@ -87,7 +87,7 @@ export function EmotionRulerModal({
     }
   }
 
-  const sortedEmotions = (Array.isArray(emotions) ? emotions : []).sort((a, b) => a.value - b.value)
+  const sortedEmotions = (Array.isArray(emotions) ? emotions : []).sort((a, b) => a.order - b.order)
 
   if (sortedEmotions.length === 0) return null
 

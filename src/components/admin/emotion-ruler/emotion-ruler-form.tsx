@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +10,8 @@ import { toast } from "sonner"
 import { Loader2, Plus, Trash2, GripVertical } from "lucide-react"
 import { DatePicker } from "@/components/ui/date-picker"
 import { AnimatedEmojiPicker } from "./animated-emoji-picker"
+import { DragDropContext, Droppable, Draggable, type OnDragEndResponder } from "@hello-pangea/dnd"
+import { cn } from "@/lib/utils"
 
 interface EmotionRulerFormProps {
   rulerId: string | null
@@ -54,11 +56,6 @@ export function EmotionRulerForm({
   )
 
   const utils = api.useUtils()
-
-  const sortedEmotions = useMemo(
-    () => [...emotions].sort((a, b) => a.value - b.value),
-    [emotions]
-  )
 
   const createMutation = api.emotionRuler.create.useMutation()
   const updateMutation = api.emotionRuler.update.useMutation()
@@ -135,6 +132,21 @@ export function EmotionRulerForm({
         ? { ...e, states: e.states.filter((_, i) => i !== stateIndex) }
         : e
     ))
+  }
+
+  const handleDragEnd: OnDragEndResponder = (result) => {
+    if (!result.destination) return
+
+    const from = result.source.index
+    const to = result.destination.index
+    if (from === to) return
+
+    const reordered = [...emotions]
+    const [moved] = reordered.splice(from, 1)
+    if (!moved) return
+    reordered.splice(to, 0, moved)
+
+    setEmotions(reordered.map((e, i) => ({ ...e, order: i })))
   }
 
   const handleSubmit = async () => {
@@ -265,15 +277,45 @@ export function EmotionRulerForm({
           </Button>
         </div>
 
-        <div className="space-y-4">
-          {sortedEmotions.map((emotion) => (
+        <p className="text-xs text-muted-foreground">
+          Arraste pela alça <GripVertical className="inline h-3 w-3 align-text-bottom" /> para
+          alterar a ordem em que os níveis aparecem na régua.
+        </p>
+
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="emotion-ruler-levels">
+            {(provided) => (
               <div
-                key={emotion.value}
-                className="p-4 border rounded-lg space-y-3"
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="space-y-4"
               >
+                {emotions.map((emotion, index) => (
+                  <Draggable
+                    key={emotion.value}
+                    draggableId={String(emotion.value)}
+                    index={index}
+                  >
+                    {(dragProvided, dragSnapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        className={cn(
+                          "p-4 border rounded-lg space-y-3 bg-card",
+                          dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary"
+                        )}
+                        style={dragProvided.draggableProps.style}
+                      >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <GripVertical className="h-5 w-5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      {...dragProvided.dragHandleProps}
+                      className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary rounded"
+                      aria-label="Arrastar para reordenar"
+                    >
+                      <GripVertical className="h-5 w-5" />
+                    </button>
                     <span className="font-medium">
                       {emotion.label || `Nível ${emotion.value}`}
                     </span>
@@ -417,9 +459,15 @@ export function EmotionRulerForm({
                     )}
                   </div>
                 </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
               </div>
-            ))}
-        </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
 
       {/* Botões */}
