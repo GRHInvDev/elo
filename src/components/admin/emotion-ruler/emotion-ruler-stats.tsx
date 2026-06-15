@@ -44,6 +44,30 @@ const EMOTION_COLORS: Record<number, string> = {
   5: "#16a34a",
 }
 
+// Escapa texto controlado pelo usuário/admin antes de interpolar no HTML do relatório PDF.
+const escapeHtml = (s: string): string =>
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+
+// Resolve o nível exibido na exportação a partir do valor armazenado (emotionValue, 0-indexado).
+// O usuário percebe os níveis pela posição na régua (1-indexada, baseada em `order`), então
+// exibimos o nome do nível quando definido ou "Nível {order + 1}" para evitar o "nível abaixo".
+function makeLevelLabelResolver(
+  emotions?: Array<{ value: number; label: string | null; order: number }>
+) {
+  const byValue = new Map((emotions ?? []).map((e) => [e.value, e]))
+  return (value: number): string => {
+    const emotion = byValue.get(value)
+    const label = emotion?.label?.trim()
+    if (label) return label
+    return `Nível ${(emotion?.order ?? value) + 1}`
+  }
+}
+
 const AREA_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#f59e0b",
   "#3b82f6", "#10b981", "#f43f5e", "#06b6d4", "#a855f7",
@@ -74,20 +98,25 @@ export function EmotionRulerStats({ rulers }: EmotionRulerStatsProps) {
     }
 
     try {
-      const result = await utils.emotionRuler.getResponses.fetch({
-        rulerId: selectedRulerId,
-        startDate,
-        endDate,
-        limit: 10000,
-        offset: 0,
-      })
+      const [result, ruler] = await Promise.all([
+        utils.emotionRuler.getResponses.fetch({
+          rulerId: selectedRulerId,
+          startDate,
+          endDate,
+          limit: 10000,
+          offset: 0,
+        }),
+        utils.emotionRuler.getById.fetch({ id: selectedRulerId }),
+      ])
+
+      const getLevelLabel = makeLevelLabelResolver(ruler?.emotions)
 
       const dataToExport = result.responses.map((response) => ({
         "Nome": `${response.user.firstName ?? ""} ${response.user.lastName ?? ""}`.trim() || "N/A",
         "Email": response.user.email ?? "N/A",
         "Setor": response.user.setor ?? "N/A",
         "Empresa": response.user.enterprise ?? "N/A",
-        "Nível de Emoção": response.emotionValue,
+        "Nível de Emoção": getLevelLabel(response.emotionValue),
         "Comentário": response.comment ?? "",
         "Pontos Ganhos": (response as { pointsEarned?: number }).pointsEarned ?? 0,
         "Data/Hora": format(new Date(response.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
@@ -111,26 +140,31 @@ export function EmotionRulerStats({ rulers }: EmotionRulerStatsProps) {
     }
 
     try {
-      const result = await utils.emotionRuler.getResponses.fetch({
-        rulerId: selectedRulerId,
-        startDate,
-        endDate,
-        limit: 10000,
-        offset: 0,
-      })
+      const [result, ruler] = await Promise.all([
+        utils.emotionRuler.getResponses.fetch({
+          rulerId: selectedRulerId,
+          startDate,
+          endDate,
+          limit: 10000,
+          offset: 0,
+        }),
+        utils.emotionRuler.getById.fetch({ id: selectedRulerId }),
+      ])
 
-      const rulerName = rulers.find((r) => r.id === selectedRulerId)?.question ?? "Régua de Emoções"
+      const getLevelLabel = makeLevelLabelResolver(ruler?.emotions)
+
+      const rulerName = escapeHtml(rulers.find((r) => r.id === selectedRulerId)?.question ?? "Régua de Emoções")
       const periodLabel = startDate && endDate
         ? `${format(startDate, "dd/MM/yyyy", { locale: ptBR })} a ${format(endDate, "dd/MM/yyyy", { locale: ptBR })}`
         : "Todo o período"
 
       const rows = result.responses.map((r) => `
         <tr>
-          <td>${`${r.user.firstName ?? ""} ${r.user.lastName ?? ""}`.trim() || "N/A"}</td>
-          <td>${r.user.setor ?? "N/A"}</td>
-          <td>${r.user.enterprise ?? "N/A"}</td>
-          <td style="text-align:center">${r.emotionValue}</td>
-          <td>${r.comment ?? ""}</td>
+          <td>${escapeHtml(`${r.user.firstName ?? ""} ${r.user.lastName ?? ""}`.trim() || "N/A")}</td>
+          <td>${escapeHtml(r.user.setor ?? "N/A")}</td>
+          <td>${escapeHtml(r.user.enterprise ?? "N/A")}</td>
+          <td style="text-align:center">${escapeHtml(getLevelLabel(r.emotionValue))}</td>
+          <td>${escapeHtml(r.comment ?? "")}</td>
           <td style="text-align:center">${(r as { pointsEarned?: number }).pointsEarned ?? 0}</td>
           <td>${format(new Date(r.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</td>
         </tr>
