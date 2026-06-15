@@ -189,9 +189,10 @@ export function useAccessControl() {
   };
 
   const canViewEmotionRuler = (): boolean => {
+    // Liberado para todos os usuários, exceto TOTEM/desativado
+    // (alinhado ao helper canViewEmotionRuler em @/lib/access-control).
     if (!db_user?.role_config) return false;
-    if (db_user.role_config.sudo) return true;
-    return db_user.role_config.can_view_emotion_ruler ?? false;
+    return !db_user.role_config.isTotem;
   };
 
   const canManageEmotionRules = (): boolean => {
