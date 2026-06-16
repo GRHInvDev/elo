@@ -4,13 +4,14 @@ import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusUpdateButton } from "@/components/forms/status-update-button"
 import { ResponseDetails } from "@/components/forms/response-details"
 import { EditResponseButton } from "@/components/forms/edit-response-button"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { FormsSubPageShell } from "@/components/forms/v2/forms-sub-page-shell"
+import { FormsSubPageShell, FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
+import { FormSectionCard } from "@/components/forms/v2/form-section-card"
+import { FileText } from "lucide-react"
 import { canAccessForm } from "@/lib/access-control"
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
@@ -112,51 +113,47 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
         }
         description={`Formulário: ${response.form.title}`}
       >
-      <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row gap-y-4 justify-between items-center md:items-start">
-              <div className="flex flex-col md:flex-row items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={response.user.imageUrl ?? ""} alt={response.user.firstName ?? "Usuário"} />
-                  <AvatarFallback>
-                    {response.user.firstName?.charAt(0) ?? response.user.email.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="overflow-hidden text-xl md:text-2xl text-center md:text-start overflow-ellipsis">
-                    {response.user.firstName
-                      ? `${response.user.firstName} ${response.user.lastName ?? ""}`
-                      : response.user.email}
-                  </CardTitle>
-                  <CardDescription className="overflow-hidden text-center md:text-start overflow-ellipsis">{response.user.email}</CardDescription>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {getStatusBadge(response.status)}
-                {response.statusComment && (
-                  <p className="text-sm text-muted-foreground max-w-[300px] text-right">{response.statusComment}</p>
-                )}
+      <div className="space-y-6">
+        <FormsPanel>
+          <div className="flex flex-col md:flex-row gap-y-4 justify-between items-center md:items-start">
+            <div className="flex flex-col md:flex-row items-center gap-3">
+              <Avatar>
+                <AvatarImage src={response.user.imageUrl ?? ""} alt={response.user.firstName ?? "Usuário"} />
+                <AvatarFallback>
+                  {response.user.firstName?.charAt(0) ?? response.user.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <h2 className="overflow-hidden text-xl md:text-2xl font-semibold leading-tight tracking-tight text-center md:text-start overflow-ellipsis">
+                  {response.user.firstName
+                    ? `${response.user.firstName} ${response.user.lastName ?? ""}`
+                    : response.user.email}
+                </h2>
+                <p className="overflow-hidden text-sm text-muted-foreground text-center md:text-start overflow-ellipsis">{response.user.email}</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Data de envio:</p>
-                <p className="font-medium">
-                  {format(new Date(response.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Última atualização:</p>
-                <p className="font-medium">
-                  {formatDistanceToNow(new Date(response.updatedAt), { addSuffix: true, locale: ptBR })}
-                </p>
-              </div>
+            <div className="flex flex-col items-end gap-2">
+              {getStatusBadge(response.status)}
+              {response.statusComment && (
+                <p className="text-sm text-muted-foreground max-w-[300px] text-right">{response.statusComment}</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[hsl(var(--v2-border-soft))] pt-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Data de envio:</p>
+              <p className="font-medium">
+                {format(new Date(response.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Última atualização:</p>
+              <p className="font-medium">
+                {formatDistanceToNow(new Date(response.updatedAt), { addSuffix: true, locale: ptBR })}
+              </p>
+            </div>
+          </div>
+        </FormsPanel>
 
         <div className="flex justify-end gap-2">
           <EditResponseButton
@@ -174,18 +171,16 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Respostas</CardTitle>
-            <CardDescription>Detalhes das respostas enviadas pelo usuário</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponseDetails
-              responseData={response.responses as Record<string, string | number | string[] | File[] | null | undefined>[]}
-              formFields={response.form.fields as unknown as Field[]}
-            />
-          </CardContent>
-        </Card>
+        <FormSectionCard
+          icon={FileText}
+          title="Respostas"
+          description="Detalhes das respostas enviadas pelo usuário"
+        >
+          <ResponseDetails
+            responseData={response.responses as Record<string, string | number | string[] | File[] | null | undefined>[]}
+            formFields={response.form.fields as unknown as Field[]}
+          />
+        </FormSectionCard>
       </div>
       </FormsSubPageShell>
     </DashboardShell>
