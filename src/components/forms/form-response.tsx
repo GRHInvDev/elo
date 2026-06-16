@@ -15,7 +15,7 @@ import { z } from "zod"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { CheckCircle2, Send } from "lucide-react"
+import { CheckCircle2, Send, Lock } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 // Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
@@ -356,16 +356,22 @@ export function FormResponseComponent({
           )}
 
           {field.type === "dynamic" && (
-            <div className="p-3 bg-muted rounded-md border border-muted-foreground/30">
-              <p className="text-sm font-medium">
-                {watch(field.name) ? (
-                  watch(field.name)
-                ) : (
-                  <span className="text-muted-foreground italic">
-                    Coletando seu {field.dynamicType === "user_name" ? "nome" : "setor"}...
-                  </span>
-                )}
-              </p>
+            <div className="rounded-[var(--v2-radius-card,0.75rem)] border border-[hsl(var(--v2-border-soft,var(--border)))] bg-muted/40 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-sm font-medium">
+                  {watch(field.name) ? (
+                    watch(field.name)
+                  ) : (
+                    <span className="text-muted-foreground italic">
+                      Coletando seu {field.dynamicType === "user_name" ? "nome" : "setor"}...
+                    </span>
+                  )}
+                </p>
+                <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                  Preenchido automaticamente
+                </span>
+              </div>
               <input type="hidden" {...register(field.name)} />
             </div>
           )}

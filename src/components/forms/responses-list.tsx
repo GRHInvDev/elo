@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { api } from "@/trpc/react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Eye, FileText, Loader2, MessageSquare } from "lucide-react"
 import Link from "next/link"
@@ -196,8 +196,8 @@ export function ResponsesList({ formId }: { formId: string }) {
       <ResponsesFilters filters={filters} onFiltersChange={onFiltersChange} />
       <div className="grid grid-cols-1 gap-6">
         {responses.map((response) => (
-          <Card key={response.id}>
-            <CardHeader className="pb-3">
+          <FormsPanel key={response.id} className="p-0">
+            <div className="p-6 pb-3">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
                   <Avatar>
@@ -207,12 +207,12 @@ export function ResponsesList({ formId }: { formId: string }) {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-lg">
+                    <h3 className="text-lg font-semibold leading-none tracking-tight">
                       {response.user.firstName
                         ? `${response.user.firstName} ${response.user.lastName ?? ""}`
                         : response.user.email}
-                    </CardTitle>
-                    <CardDescription>
+                    </h3>
+                    <div className="mt-1.5 text-sm text-muted-foreground">
                       Enviado {formatDistanceToNow(new Date(response.createdAt), { addSuffix: true, locale: ptBR })} <br />
                       {/* Campos personalizados selecionados */}
                       {(form?.fields as unknown as Field[] | undefined)?.filter(f => f.showInList).map(field => (
@@ -220,8 +220,8 @@ export function ResponsesList({ formId }: { formId: string }) {
                           {field.label}: <strong>{formatResponseValue(response.responses[0]?.[field.name])}</strong>
                         </div>
                       ))}
-                    </CardDescription>
-                    <CardContent className="pt-2 px-0">
+                    </div>
+                    <div className="pt-2">
                       {!!(response.FormResponseChat || response.formResponseChat) ? (
                         (response.FormResponseChat?.length ?? 0) > 0 || (response.formResponseChat?.length ?? 0) > 0 ? (
                           <div className="mt-2 space-y-2">
@@ -264,7 +264,7 @@ export function ResponsesList({ formId }: { formId: string }) {
                           <p className="text-[10px] text-muted-foreground italic">Carregando mensagens...</p>
                         </div>
                       )}
-                    </CardContent>
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -274,8 +274,8 @@ export function ResponsesList({ formId }: { formId: string }) {
                   )}
                 </div>
               </div>
-            </CardHeader>
-            < CardFooter className="flex flex-col md:flex-row gap-y-2 items-end justify-between pt-3 border-t" >
+            </div>
+            <div className="flex flex-col md:flex-row gap-y-2 items-end justify-between border-t border-[hsl(var(--v2-border-soft))] p-6 pt-3">
               <Link href={`/forms/${formId}/responses/${response.id}`}>
                 <Button variant="outline" size="sm">
                   <Eye className="h-4 w-4 mr-1" />
@@ -289,8 +289,8 @@ export function ResponsesList({ formId }: { formId: string }) {
                   currentComment={response.statusComment ?? ""}
                 />
               )}
-            </CardFooter>
-          </Card>
+            </div>
+          </FormsPanel>
         ))
         }
       </div >
