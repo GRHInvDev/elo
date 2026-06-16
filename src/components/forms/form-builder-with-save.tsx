@@ -10,12 +10,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, Loader2, Users } from "lucide-react"
+import { AlertCircle, FileText, Loader2, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserSearch } from "@/components/forms/user-search"
 import { FormVisibilitySettings } from "@/components/forms/form-visibility-settings"
 import { FormSpreadsheetExportSettings } from "@/components/forms/form-spreadsheet-export-settings"
+import { FormSectionCard } from "@/components/forms/v2/form-section-card"
+import { cn } from "@/lib/utils"
+
+/** Classe do botão primário no visual do módulo Solicitações (teal da marca). */
+const ACCENT_BTN =
+  "bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]"
 
 interface FormBuilderWithSaveProps {
   mode: "create" | "edit"
@@ -76,7 +81,7 @@ export function FormBuilderWithSave({
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
-  
+
   // Usar refs para rastrear valores anteriores e evitar loops infinitos
   const prevInitialsRef = useRef({
     initialTitle,
@@ -201,17 +206,12 @@ export function FormBuilderWithSave({
   return (
     <div className="space-y-8">
       {/* Seção de Responsáveis */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Responsáveis do Formulário
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Adicione um ou mais responsáveis que poderão ver e interagir com todas as respostas deste formulário.
-          </p>
+      <FormSectionCard
+        icon={Users}
+        title="Responsáveis do Formulário"
+        description="Adicione um ou mais responsáveis que poderão ver e interagir com todas as respostas deste formulário."
+      >
+        <div className="space-y-4">
           <UserSearch
             users={usersAndSectors?.map(user => ({
               id: user.id,
@@ -229,35 +229,33 @@ export function FormBuilderWithSave({
               {ownerIds.length} responsável(is) selecionado(s)
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </FormSectionCard>
 
-      <Card>
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Título do Formulário</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Digite o título do formulário"
-                className="text-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição (opcional)</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Digite uma descrição para o formulário"
-                rows={3}
-              />
-            </div>
+      <FormSectionCard icon={FileText} title="Informações da solicitação">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Título do Formulário</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Digite o título do formulário"
+              className="text-lg"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição (opcional)</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Digite uma descrição para o formulário"
+              rows={3}
+            />
+          </div>
+        </div>
+      </FormSectionCard>
 
       <FormVisibilitySettings
         isPrivate={isPrivate}
@@ -298,7 +296,7 @@ export function FormBuilderWithSave({
         <Button variant="outline" onClick={() => router.push("/forms")} disabled={isLoading}>
           Cancelar
         </Button>
-        <Button onClick={handleSave} disabled={isLoading}>
+        <Button onClick={handleSave} disabled={isLoading} className={cn(ACCENT_BTN)}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {mode === "create" ? "Criar Formulário" : "Salvar Alterações"}
         </Button>

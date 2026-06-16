@@ -15,12 +15,17 @@ import { z } from "zod"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, Send } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 // Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { Field } from "@/lib/form-types"
+import { cn } from "@/lib/utils"
+
+/** Classe do botão primário no visual do módulo Solicitações (teal da marca). */
+const ACCENT_BTN =
+  "bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]"
 
 /** Valores iniciais vazios para nova solicitação (após envio ou fluxo equivalente). */
 function buildEmptyFormValues(fields: Field[]): Record<string, unknown> {
@@ -228,6 +233,7 @@ export function FormResponseComponent({
             Voltar para formulários
           </Button>
           <Button
+            className={cn(ACCENT_BTN)}
             onClick={() => {
               const empty = buildEmptyFormValues(fields)
               reset(empty)
@@ -372,9 +378,12 @@ export function FormResponseComponent({
 
       <Button
         type="submit"
-        className="mt-6"
+        className={cn("mt-6", ACCENT_BTN)}
         disabled={customIsSubmitting ?? isSubmitting}
       >
+        {!isEditing && customIsSubmitting === undefined && (
+          <Send className="mr-2 h-4 w-4" />
+        )}
         {customIsSubmitting !== undefined
           ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
           : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar Resposta"))

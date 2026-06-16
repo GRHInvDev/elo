@@ -219,7 +219,11 @@ function UserSelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
-        <Command>
+        <Command filter={(value, search) => {
+          const normalize = (s: string) =>
+            s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+          return normalize(value).includes(normalize(search)) ? 1 : 0
+        }}>
           <CommandInput placeholder="Buscar usuário..." />
           <CommandList>
             <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
@@ -2340,7 +2344,7 @@ export default function AdminSuggestionsPage() {
                   value={analystFilter}
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
-                  adminOnly={true}
+                  adminOnly={false}
                   placeholder="Selecionar responsável..."
                 />
                 {analystFilter && (
@@ -2422,7 +2426,7 @@ export default function AdminSuggestionsPage() {
                   value={analystFilter}
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
-                  adminOnly={true}
+                  adminOnly={false}
                   placeholder="Selecionar responsável..."
                 />
                 {analystFilter && (

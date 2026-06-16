@@ -1,13 +1,22 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { useAnimation } from "@/contexts/animation-context"
 
 export function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { isAnimationEnabled } = useAnimation()
   const animationRef = useRef<number | null>(null)
-  
+  // Renderizamos o canvas via portal direto no <body> (ver retorno) para que o
+  // `fixed inset-0` cubra SEMPRE a viewport inteira, idempotentemente, sem ficar
+  // preso a um containing block de algum ancestral (transform/filter/etc.).
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Criar blobs apenas uma vez usando useMemo
   const createBlobs = (width: number, height: number) => Array.from({ length: 6 }, () => ({
     x: Math.random() * width,
@@ -17,10 +26,12 @@ export function AnimatedBackground() {
     ySpeed: (Math.random() - 0.5) * 0.7,
     color: Math.random() > 0.5 ? "#14b8a6" : "#ef4444",
   }))
-  
+
   const blobsRef = useRef<ReturnType<typeof createBlobs>>([])
 
   useEffect(() => {
+    if (!mounted) return
+
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -32,7 +43,7 @@ export function AnimatedBackground() {
       const { innerWidth, innerHeight } = window
       canvas.width = innerWidth
       canvas.height = innerHeight
-      
+
       // Recriar blobs quando o canvas for redimensionado
       if (blobsRef.current.length === 0) {
         blobsRef.current = createBlobs(innerWidth, innerHeight)
@@ -46,7 +57,7 @@ export function AnimatedBackground() {
     const animate = () => {
       // Limpar apenas a área necessária, não todo o canvas a cada frame
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      
+
       // Desenhar cada forma com blur
       for (const blob of blobsRef.current) {
         // Atualizar posição
@@ -98,7 +109,18 @@ export function AnimatedBackground() {
         animationRef.current = null
       }
     }
-  }, [isAnimationEnabled])
+  }, [isAnimationEnabled, mounted])
 
-  return <canvas ref={canvasRef} className="fixed inset-0 -z-10 w-full h-full" aria-hidden="true" />
+  if (!mounted) return null
+
+  // Portal para o <body>: garante cobertura full-viewport independente da árvore
+  // de containers/stacking em que o provider está inserido.
+  return createPortal(
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none fixed inset-0 -z-10 h-screen w-screen print:hidden"
+      aria-hidden="true"
+    />,
+    document.body,
+  )
 }

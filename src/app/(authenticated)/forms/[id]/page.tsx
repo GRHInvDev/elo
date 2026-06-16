@@ -80,8 +80,11 @@ export default async function FormPage({ params }: FormPageProps) {
   return (
     <DashboardShell>
       <FormsSubPageShell
-        backHref="/forms"
-        backLabel="Voltar para solicitações"
+        breadcrumbs={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Solicitações", href: "/forms" },
+          { label: form.title },
+        ]}
         title={form.title}
         description={
           <>

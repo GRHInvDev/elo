@@ -33,8 +33,12 @@ export default async function EditFormPage({ params }: EditFormPageProps) {
   return (
     <DashboardShell>
       <FormsSubPageShell
-        backHref={`/forms/${id}`}
-        backLabel="Voltar para a solicitação"
+        breadcrumbs={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Solicitações", href: "/forms" },
+          { label: form.title, href: `/forms/${id}` },
+          { label: "Editar" },
+        ]}
         title="Editar Solicitação"
         description="Edite os campos e configurações da solicitação."
       >

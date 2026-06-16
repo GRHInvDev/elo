@@ -1443,6 +1443,7 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
                                 "Agendar Salas",
                                 "Agendar Carros",
                                 "Visualizar Relatório DRE",
+                                "Editar dados de usuários",
                                 "Alterar ramal de usuários",
                                 "Gerenciar produtos da loja",
                                 "Visualizar/Responder pedidos sem acesso admin",
@@ -1472,6 +1473,7 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
                                 "Agendar Salas",
                                 "Agendar Carros",
                                 "Visualizar Relatório DRE",
+                                "Editar dados de usuários",
                                 "Alterar ramal de usuários",
                                 "Gerenciar produtos da loja",
                                 "Visualizar/Responder pedidos sem acesso admin",
@@ -1557,6 +1559,17 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
                                     ? [...(permissionsData.admin_pages || []), "/admin", "/admin/food"]
                                       .filter((page, index, arr) => arr.indexOf(page) === index)
                                     : permissionsData.admin_pages || []
+                                });
+                              }
+                            },
+                            {
+                              id: "manage_dados_basicos_users",
+                              label: "Editar dados de usuários",
+                              checked: permissionsData.can_manage_dados_basicos_users ?? false,
+                              onChange: (checked: boolean) => {
+                                setPermissionsData({
+                                  ...permissionsData,
+                                  can_manage_dados_basicos_users: checked
                                 });
                               }
                             },
@@ -1725,6 +1738,9 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
                         {permissionsData.can_view_dre_report && (
                           <Badge variant="secondary">Visualizar DRE</Badge>
                         )}
+                        {permissionsData.can_manage_dados_basicos_users && (
+                          <Badge variant="secondary">Editar Usuários</Badge>
+                        )}
                         {permissionsData.can_manage_extensions && (
                           <Badge variant="secondary">Alterar Ramais</Badge>
                         )}
@@ -1749,6 +1765,7 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
                           !permissionsData.can_create_booking &&
                           !permissionsData.can_locate_cars &&
                           !permissionsData.can_view_dre_report &&
+                          !permissionsData.can_manage_dados_basicos_users &&
                           !permissionsData.can_manage_extensions &&
                           !permissionsData.can_manage_produtos &&
                           !permissionsData.can_manage_filial &&

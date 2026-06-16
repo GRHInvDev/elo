@@ -91,8 +91,17 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
   return (
     <DashboardShell>
       <FormsSubPageShell
-        backHref={`/forms/${id}/responses`}
-        backLabel="Voltar para respostas"
+        breadcrumbs={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Solicitações", href: "/forms" },
+          { label: response.form.title, href: `/forms/${id}` },
+          { label: "Respostas", href: `/forms/${id}/responses` },
+          {
+            label: response.number
+              ? formatFormResponseNumber(response.number)
+              : "Detalhes",
+          },
+        ]}
         title="Detalhes da Resposta"
         titlePrefix={
           response.number ? (
