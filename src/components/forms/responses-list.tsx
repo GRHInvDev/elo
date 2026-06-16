@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { StatusUpdateButton } from "./status-update-button"
 import { ResponsesFilters, type ResponsesFiltersState } from "./responses-filters"
 import { FormResponsesExportDialog } from "@/components/forms/form-responses-export-dialog"
+import { FormResponsesExportByUserDialog } from "@/components/forms/form-responses-export-by-user-dialog"
 import type { FormResponse, ChatMessage } from "@/types/form-responses"
 import type { Field } from "@/lib/form-types"
 
@@ -68,7 +69,12 @@ export function ResponsesList({ formId }: { formId: string }) {
     return (
       <>
         {canExportSpreadsheet && form ? (
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex justify-end gap-2">
+            <FormResponsesExportByUserDialog
+              formId={formId}
+              formTitle={form.title}
+              fields={(form.fields as unknown as Field[]) ?? []}
+            />
             <FormResponsesExportDialog
               formId={formId}
               formTitle={form.title}
@@ -174,7 +180,12 @@ export function ResponsesList({ formId }: { formId: string }) {
     <div className="space-y-6">
       {paginacao()}
       {canExportSpreadsheet && form ? (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <FormResponsesExportByUserDialog
+            formId={formId}
+            formTitle={form.title}
+            fields={(form.fields as unknown as Field[]) ?? []}
+          />
           <FormResponsesExportDialog
             formId={formId}
             formTitle={form.title}

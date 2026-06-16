@@ -2,11 +2,12 @@
 
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
+import { LayoutList } from "lucide-react"
 import { FieldTypeSelector } from "@/components/forms/field-type-selector"
 import { FieldEditor } from "@/components/forms/field-editor"
 import { FormPreview } from "@/components/forms/form-preview"
 import { FieldList } from "@/components/forms/field-list"
+import { FormSectionCard } from "@/components/forms/v2/form-section-card"
 import { type Field, type FieldType, createDefaultField } from "@/lib/form-types"
 
 export function FormBuilder({fields, setFields}:{fields: Field[], setFields: (fields: Field[])=>void}) {
@@ -49,21 +50,18 @@ export function FormBuilder({fields, setFields}:{fields: Field[], setFields: (fi
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-1">
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Campos do Formulário</h2>
-            <div className="mb-6">
-              <FieldList
-                fields={fields}
-                selectedFieldId={selectedFieldId}
-                onSelectField={setSelectedFieldId}
-                onRemoveField={removeField}
-                onMoveField={moveField}
-              />
-            </div>
-            <FieldTypeSelector onSelect={addField} />
-          </CardContent>
-        </Card>
+        <FormSectionCard icon={LayoutList} title="Campos do Formulário">
+          <div className="mb-6">
+            <FieldList
+              fields={fields}
+              selectedFieldId={selectedFieldId}
+              onSelectField={setSelectedFieldId}
+              onRemoveField={removeField}
+              onMoveField={moveField}
+            />
+          </div>
+          <FieldTypeSelector onSelect={addField} />
+        </FormSectionCard>
       </div>
 
       <div className="lg:col-span-2">
@@ -74,25 +72,21 @@ export function FormBuilder({fields, setFields}:{fields: Field[], setFields: (fi
           </TabsList>
 
           <TabsContent value="editor">
-            <Card>
-              <CardContent className="p-6">
-                {selectedField ? (
-                  <FieldEditor field={selectedField} onChange={updateField} />
-                ) : (
-                  <div className="text-center py-10 text-muted-foreground">
-                    Selecione um campo para editar ou adicione um novo campo
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <FormSectionCard>
+              {selectedField ? (
+                <FieldEditor field={selectedField} onChange={updateField} />
+              ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                  Selecione um campo para editar ou adicione um novo campo
+                </div>
+              )}
+            </FormSectionCard>
           </TabsContent>
 
           <TabsContent value="preview">
-            <Card>
-              <CardContent className="p-6">
-                <FormPreview title={formTitle} setTitle={setFormTitle} fields={fields} />
-              </CardContent>
-            </Card>
+            <FormSectionCard>
+              <FormPreview title={formTitle} setTitle={setFormTitle} fields={fields} />
+            </FormSectionCard>
           </TabsContent>
         </Tabs>
       </div>

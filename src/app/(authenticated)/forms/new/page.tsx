@@ -13,8 +13,11 @@ export default async function NewFormPage() {
   return (
     <DashboardShell>
       <FormsSubPageShell
-        backHref="/forms"
-        backLabel="Voltar para formulários"
+        breadcrumbs={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Solicitações", href: "/forms" },
+          { label: "Novo formulário" },
+        ]}
         title="Novo Formulário"
         description="Crie um novo formulário personalizado com os campos que desejar."
       >

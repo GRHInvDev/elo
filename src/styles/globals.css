@@ -96,9 +96,13 @@
   inset: 0;
   pointer-events: none;
   z-index: 0;
+  /* Glows de tamanho FIXO (rem) ancorados nos cantos: assim o efeito ambiente
+     permanece consistente e não estica/clipa em páginas internas longas
+     (ex.: responder/personalizar um formulário). */
   background:
-    radial-gradient(60% 55% at 92% 8%, hsl(var(--v2-glow-a) / var(--v2-glow-op)), transparent 60%),
-    radial-gradient(55% 60% at 6% 96%, hsl(var(--v2-glow-b) / var(--v2-glow-op)), transparent 62%);
+    radial-gradient(42rem 34rem at 100% 0, hsl(var(--v2-glow-a) / var(--v2-glow-op)), transparent 70%),
+    radial-gradient(42rem 34rem at 0 100%, hsl(var(--v2-glow-b) / var(--v2-glow-op)), transparent 70%);
+  background-repeat: no-repeat;
   border-radius: inherit;
 }
 .v2-scope > * {

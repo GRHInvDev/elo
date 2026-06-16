@@ -13,8 +13,11 @@ export default async function MyResponsesPage() {
   return (
     <DashboardShell>
       <FormsSubPageShell
-        backHref="/forms"
-        backLabel="Voltar para solicitações"
+        breadcrumbs={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Solicitações", href: "/forms" },
+          { label: "Minhas solicitações" },
+        ]}
         title="Minhas solicitações"
         description="Visualize e acompanhe o status de todas as suas respostas a solicitações."
       >

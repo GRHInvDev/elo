@@ -197,14 +197,17 @@ export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarPr
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-background border-r", className)}>
+    <div className={cn("flex flex-col h-full bg-background/70 backdrop-blur-xl border-r", className)}>
 
       {/* Logo */}
-      <div className="flex items-center justify-center p-6">
+      <div className="flex flex-col items-center gap-1 p-6">
         <div className="flex items-center gap-2">
           <LucideLink className="size-6 -rotate-45" />
-          {!collapsed && <h1 className="text-2xl font-bold">elo</h1>}
+          {!collapsed && <h1 className="text-2xl font-bold leading-none">elo</h1>}
         </div>
+        {!collapsed && (
+          <span className="text-xs font-medium text-muted-foreground">Grupo R Henz</span>
+        )}
       </div>
 
       {/* Navigation Items */}

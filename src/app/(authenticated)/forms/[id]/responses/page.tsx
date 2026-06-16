@@ -45,8 +45,12 @@ export default async function ResponsesPage({ params }: ResponsesPageProps) {
   return (
     <DashboardShell>
       <FormsSubPageShell
-        backHref={`/forms/${id}`}
-        backLabel="Voltar para a solicitação"
+        breadcrumbs={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Solicitações", href: "/forms" },
+          { label: form.title, href: `/forms/${id}` },
+          { label: "Respostas" },
+        ]}
         title={`Respostas: ${form.title}`}
         description="Visualize e gerencie as respostas enviadas para esta solicitação."
       >

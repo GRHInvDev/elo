@@ -21,7 +21,6 @@ import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { api } from "@/trpc/react"
-import { LayoutSwitch } from "@/components/ui/layout-switch"
 import type { Field } from "@/lib/form-types"
 import { FormQuickOpenDrawer, type CatalogForm } from "./form-quick-open-drawer"
 import { RequestStatusPill } from "./request-status-pill"
@@ -120,7 +119,6 @@ export function FormsListV2({ userCanCreateForm, showCentralLink }: FormsListV2P
             <h1 className="text-[28px] font-bold leading-tight tracking-[-0.025em]">
               Solicitações
             </h1>
-            <LayoutSwitch />
           </div>
           <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
             Escolha um tipo de solicitação e abra um chamado para o setor responsável.
