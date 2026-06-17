@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { DateRangePicker } from "@/components/forms/date-range-picker"
 import { api } from "@/trpc/react"
+import { downloadBase64File, XLSX_MIME } from "@/lib/download-file"
 import type { Field } from "@/lib/form-types"
 import { Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -43,15 +44,9 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
     }
   }, [open, exportableFields])
 
-  const exportMutation = api.formResponse.exportSpreadsheetCsv.useMutation({
+  const exportMutation = api.formResponse.exportSpreadsheetXlsx.useMutation({
     onSuccess: (data) => {
-      const blob = new Blob([data.csv], { type: "text/csv;charset=utf-8" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = data.filename
-      a.click()
-      URL.revokeObjectURL(url)
+      downloadBase64File(data.xlsxBase64, data.filename, XLSX_MIME)
       if (data.truncated) {
         toast.warning("Exportação limitada", {
           description: `Foram incluídas no máximo ${data.rowCount} linhas. Refine o período se precisar de outro recorte.`,
@@ -109,7 +104,7 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-hidden sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Exportar respostas (CSV)</DialogTitle>
+          <DialogTitle>Exportar respostas (XLSX)</DialogTitle>
           <DialogDescription>
             Escolha o período (opcional) e os campos do formulário &quot;{formTitle}&quot;. Sempre incluímos número,
             data, status e dados do respondente.
@@ -138,7 +133,7 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
             </div>
             {fields.some((f) => f.type === "file") && (
               <p className="text-xs text-muted-foreground">
-                Campos de arquivo não entram no CSV; abra o detalhe de cada resposta para ver anexos.
+                Campos de arquivo não entram na planilha; abra o detalhe de cada resposta para ver anexos.
               </p>
             )}
             <ScrollArea className="h-[220px] rounded-md border p-3">
@@ -174,7 +169,7 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
             ) : (
               <>
                 <Download className="mr-2 h-4 w-4" />
-                Baixar CSV
+                Baixar XLSX
               </>
             )}
           </Button>

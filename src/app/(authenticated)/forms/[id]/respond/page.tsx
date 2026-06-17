@@ -27,6 +27,9 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
     notFound()
   }
 
+  const fields = form.fields as unknown as Field[]
+  const requiredCount = fields.filter((f) => f.required).length
+
   // Verificar se o usuário tem permissão para acessar este formulário
   if (!canAccessForm(
     userData.role_config,
@@ -56,7 +59,16 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
         description={<FormDescription description={form.description} />}
       >
         <FormsPanel>
-          <FormResponseComponent formId={id} fields={form.fields as unknown as Field[]} />
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--v2-border-soft))] pb-4">
+            <h2 className="text-lg font-semibold tracking-tight">Preencha sua solicitação</h2>
+            {requiredCount > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {requiredCount} {requiredCount === 1 ? "campo obrigatório" : "campos obrigatórios"} · marcados com{" "}
+                <span className="text-[hsl(0_72%_58%)]">*</span>
+              </span>
+            )}
+          </div>
+          <FormResponseComponent formId={id} fields={fields} />
         </FormsPanel>
       </FormsSubPageShell>
     </DashboardShell>

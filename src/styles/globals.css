@@ -86,24 +86,26 @@
 }
 
 /* === Camada ambiente do redesign Solicitações v2 ===
-   Aplicada apenas dentro de containers .v2-scope (não vaza para a app inteira). */
+   O brilho de identidade é renderizado a NÍVEL DE LAYOUT (viewport), não preso ao
+   container centralizado — assim cobre toda a tela junto com o canvas animado, de
+   forma consistente em todas as páginas v2 (catálogo, central, responder, etc.). */
 .v2-scope {
   position: relative;
 }
 .v2-scope::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  /* Glows de tamanho FIXO (rem) ancorados nos cantos: assim o efeito ambiente
+  z-index: -5;
+  /* Glows de tamanho FIXO (rem) ancorados nos cantos da viewport: o efeito ambiente
      permanece consistente e não estica/clipa em páginas internas longas
-     (ex.: responder/personalizar um formulário). */
+     (ex.: responder/personalizar um formulário). Fica acima do canvas animado
+     (body, z -10) e abaixo do conteúdo da página. */
   background:
     radial-gradient(42rem 34rem at 100% 0, hsl(var(--v2-glow-a) / var(--v2-glow-op)), transparent 70%),
     radial-gradient(42rem 34rem at 0 100%, hsl(var(--v2-glow-b) / var(--v2-glow-op)), transparent 70%);
   background-repeat: no-repeat;
-  border-radius: inherit;
 }
 .v2-scope > * {
   position: relative;

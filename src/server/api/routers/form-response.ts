@@ -6,11 +6,8 @@ import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario, mockEmailTagFormulario } from "@/lib/mail/html-mock"
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 import type { Field } from "@/lib/form-types"
-import {
-  buildCsvFromRows,
-  formatSpreadsheetCell,
-  sanitizeExportFilename,
-} from "@/lib/form-csv-export"
+import { formatSpreadsheetCell } from "@/lib/form-csv-export"
+import { buildXlsxBase64FromRows, sanitizeXlsxFilename } from "@/lib/form-xlsx-export"
 
 const MAX_SPREADSHEET_EXPORT_ROWS = 8_000
 
@@ -471,10 +468,10 @@ export const formResponseRouter = createTRPCRouter({
     }),
 
   /**
-   * Exporta respostas em CSV (UTF-8 com BOM). Só responsáveis do formulário;
+   * Exporta respostas em planilha .xlsx (base64). Só responsáveis do formulário;
    * o formulário precisa ter `spreadsheetExportEnabled`.
    */
-  exportSpreadsheetCsv: protectedProcedure
+  exportSpreadsheetXlsx: protectedProcedure
     .input(
       z.object({
         formId: z.string(),
@@ -588,21 +585,21 @@ export const formResponseRouter = createTRPCRouter({
         return [...staticCells, ...fieldCells]
       })
 
-      const csv = buildCsvFromRows(headers, bodyRows)
+      const xlsxBase64 = buildXlsxBase64FromRows(headers, bodyRows, "Respostas")
 
       return {
-        csv,
-        filename: sanitizeExportFilename(`${form.title ?? "formulario"}-export`),
+        xlsxBase64,
+        filename: sanitizeXlsxFilename(`${form.title ?? "formulario"}-export`),
         truncated: rows.length >= MAX_SPREADSHEET_EXPORT_ROWS,
         rowCount: rows.length,
       }
     }),
 
   /**
-   * Exporta respostas agrupadas por usuário em CSV (UTF-8 com BOM).
+   * Exporta respostas agrupadas por usuário em planilha .xlsx (base64).
    * Colunas: Respondente, E-mail, Setor, Total de envios, Número, Data envio, Status + campos selecionados.
    */
-  exportByUserCsv: protectedProcedure
+  exportByUserXlsx: protectedProcedure
     .input(
       z.object({
         formId: z.string(),
@@ -721,11 +718,11 @@ export const formResponseRouter = createTRPCRouter({
         return [...staticCells, ...fieldCells]
       })
 
-      const csv = buildCsvFromRows(headers, bodyRows)
+      const xlsxBase64 = buildXlsxBase64FromRows(headers, bodyRows, "Por usuário")
 
       return {
-        csv,
-        filename: sanitizeExportFilename(`${form.title ?? "formulario"}-por-usuario`),
+        xlsxBase64,
+        filename: sanitizeXlsxFilename(`${form.title ?? "formulario"}-por-usuario`),
         truncated: rows.length >= MAX_SPREADSHEET_EXPORT_ROWS,
         rowCount: rows.length,
       }

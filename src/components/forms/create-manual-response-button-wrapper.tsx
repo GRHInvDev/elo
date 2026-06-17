@@ -8,15 +8,16 @@ import type { Field } from "@/lib/form-types"
 interface CreateManualResponseButtonWrapperProps {
     formId: string
     formFields: Field[]
+    className?: string
 }
 
-export function CreateManualResponseButtonWrapper({ formId, formFields }: CreateManualResponseButtonWrapperProps) {
+export function CreateManualResponseButtonWrapper({ formId, formFields, className }: CreateManualResponseButtonWrapperProps) {
     const { data: userData } = api.user.me.useQuery()
 
     if (!canCreateSolicitacoes(userData?.role_config ?? null)) {
         return null
     }
 
-    return <CreateManualResponseButton formId={formId} formFields={formFields} />
+    return <CreateManualResponseButton formId={formId} formFields={formFields} className={className} />
 }
 

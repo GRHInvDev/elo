@@ -123,8 +123,8 @@ export function ResponseContextMenu({
     if (currentIndex < statusOrder.length - 1) {
       const nextStatus = statusOrder[currentIndex + 1]!
       const labels: Record<ResponseStatus, string> = {
-        NOT_STARTED: "Em Progresso",
-        IN_PROGRESS: "Concluído",
+        NOT_STARTED: "Não iniciado",
+        IN_PROGRESS: "Em progresso",
         COMPLETED: "Concluído",
       }
       return labels[nextStatus] ?? ""
