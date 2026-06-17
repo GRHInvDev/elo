@@ -6,7 +6,9 @@ export const createVehicleSchema = z.object({
   model: z.string().min(1, "Modelo é obrigatório"),
   plate: z.string().min(1, "Placa é obrigatória").max(7, "Placa deve ter no máximo 7 caracteres"),
   imageUrl: z.string().url("URL da imagem inválida"),
-  enterprise: EnterpriseEnum,
+  // Vínculo no padrão novo: o veículo pertence a uma Filial e a Empresa (enum
+  // legado `enterprise`) é derivada de `filial.empresa` no servidor.
+  filialId: z.string().min(1, "Selecione a filial"),
   kilometers: z.number().or(z.string().regex(/^\d+$/).transform(Number)),
   availble: z.boolean().optional().default(true),
 })
