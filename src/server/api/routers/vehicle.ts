@@ -4,6 +4,13 @@ import { z } from "zod"
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { createVehicleSchema, updateVehicleSchema, vehicleIdSchema } from "@/schemas/vehicle.schema"
+import { resolveEnterpriseFromFilial } from "@/server/validators/filial-enterprise"
+
+// Inclui a filial (com a empresa dona) nas leituras de veículos para que a UI
+// possa filtrar/exibir no padrão novo (empresa + filial).
+const filialInclude = {
+  filial: { include: { empresa: { select: { id: true, name: true, enterprise: true } } } },
+} as const
 
 export const vehicleRouter = createTRPCRouter({
   getAvailable: protectedProcedure
@@ -67,6 +74,7 @@ export const vehicleRouter = createTRPCRouter({
         orderBy: {
           model: "asc",
         },
+        include: filialInclude,
       })
 
       return availableVehicles.map((v) => ({
@@ -81,6 +89,8 @@ export const vehicleRouter = createTRPCRouter({
         limit: z.number().min(1).max(100).nullish(),
         cursor: z.string().nullish(),
         enterprise: z.enum(["NA", "Box", "RHenz", "Cristallux"]).optional(),
+        empresaId: z.string().optional(),
+        filialId: z.string().optional(),
         availble: z.boolean().optional(),
         checkDate: z.string().optional(),
         checkTime: z.string().optional(),
@@ -88,20 +98,24 @@ export const vehicleRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const limit = input.limit ?? 50
-      const { cursor, enterprise, availble, checkDate, checkTime } = input
+      const { cursor, enterprise, empresaId, filialId, availble, checkDate, checkTime } = input
 
-      // Buscar veículos baseados nos filtros básicos
+      // Buscar veículos baseados nos filtros básicos. Filtro no padrão novo
+      // (empresa/filial) tem precedência; `enterprise` é mantido por compat.
       let vehicles = await ctx.db.vehicle.findMany({
         take: limit + 1,
         where: {
           enterprise: enterprise,
           availble: availble,
+          ...(filialId ? { filialId } : {}),
+          ...(empresaId ? { filial: { empresaId } } : {}),
         },
         cursor: cursor ? { id: cursor } : undefined,
         orderBy: {
           model: "asc",
         },
         include: {
+          ...filialInclude,
           rents: {
             where: {
               finished: false,
@@ -163,6 +177,7 @@ export const vehicleRouter = createTRPCRouter({
     const vehicle = await ctx.db.vehicle.findUnique({
       where: { id: input.id },
       include: {
+        ...filialInclude,
         rents: {
           include: {
             user: {
@@ -206,12 +221,16 @@ export const vehicleRouter = createTRPCRouter({
       })
     }
 
+    // A empresa (enum legado) é derivada da filial selecionada.
+    const enterprise = await resolveEnterpriseFromFilial(ctx.db, input.filialId)
+
     return ctx.db.vehicle.create({
       data: {
         model: input.model,
         plate: input.plate,
         imageUrl: input.imageUrl,
-        enterprise: input.enterprise,
+        filialId: input.filialId,
+        enterprise,
         kilometers: BigInt(input.kilometers.toString()),
         availble: input.availble,
       },
@@ -257,11 +276,17 @@ export const vehicleRouter = createTRPCRouter({
       // Converter kilometers para BigInt se fornecido
       const kilometers = data.kilometers ? BigInt(data.kilometers.toString()) : undefined
 
+      // Se a filial mudou, recalcular a empresa (enum legado) a partir dela.
+      const enterprise = data.filialId
+        ? await resolveEnterpriseFromFilial(ctx.db, data.filialId)
+        : undefined
+
       return ctx.db.vehicle.update({
         where: { id },
         data: {
           ...data,
           kilometers,
+          ...(enterprise ? { enterprise } : {}),
         },
       })
     }),

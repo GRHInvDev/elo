@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
-import type { Enterprise, Vehicle } from "@prisma/client"
+import type { Vehicle } from "@prisma/client"
 
 import { api } from "@/trpc/react"
 import { VehicleCard } from "@/components/vehicles/vehicle-card"
-import { EnterpriseFilter } from "@/components/ui/enterprise-filter"
+import { EmpresaFilialFilter, type EmpresaFilialValue } from "@/components/ui/empresa-filial-filter"
 import { VehicleCardSkeleton } from "@/components/vehicles/vehicle-card-skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,8 +19,8 @@ import { Clock, Filter } from "lucide-react"
 type VehicleWithNumberKm = Omit<Vehicle, "kilometers"> & { kilometers: number }
 
 function VehiclesPageContent() {
-  const searchParams = useSearchParams()
-  const enterprise = searchParams.get("enterprise") as Enterprise | null
+  // Filtro no padrão novo (empresa → filial)
+  const [empresaFilial, setEmpresaFilial] = useState<EmpresaFilialValue>({ empresaId: "", filialId: "" })
 
   // Estados para filtros de data e horário específicos
   const [selectedDate, setSelectedDate] = useState<string>("")
@@ -45,17 +44,17 @@ function VehiclesPageContent() {
     },
   )
 
-  const vehicles: VehicleWithNumberKm[] =
-    specificFilterData?.items?.map(
-      (vehicle): VehicleWithNumberKm => ({
-        ...vehicle,
-        kilometers: Number(vehicle.kilometers),
-      }),
-    ) ?? []
-
-  const filteredVehicles = enterprise
-    ? vehicles?.filter((vehicle) => vehicle.enterprise === enterprise)
-    : vehicles
+  // Filtra por filial/empresa (padrão novo) antes de mapear quilometragem.
+  const filteredVehicles: VehicleWithNumberKm[] = (specificFilterData?.items ?? [])
+    .filter((vehicle) => {
+      if (empresaFilial.filialId) return vehicle.filialId === empresaFilial.filialId
+      if (empresaFilial.empresaId) return vehicle.filial?.empresa.id === empresaFilial.empresaId
+      return true
+    })
+    .map((vehicle) => ({
+      ...vehicle,
+      kilometers: Number(vehicle.kilometers),
+    }))
 
   // Funções para controlar os filtros
   const applyFilters = () => {
@@ -131,7 +130,7 @@ function VehiclesPageContent() {
       </Card>
 
       <div className="flex flex-col md:flex-row gap-4 mb-4">
-        <EnterpriseFilter selectedEnterprise={enterprise ?? undefined} />
+        <EmpresaFilialFilter value={empresaFilial} onChange={setEmpresaFilial} />
       </div>
 
       {isLoading && (

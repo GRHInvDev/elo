@@ -256,11 +256,16 @@ model Vehicle {
   model      String
   plate      String        @unique
   imageUrl   String
+  // Enum legado mantido em sincronia com `filial.empresa.enterprise` para
+  // compatibilidade com relatórios/exibições antigas. A fonte da verdade é a filial.
   enterprise Enterprise
+  filialId   String?
+  filial     Filial?       @relation(fields: [filialId], references: [id], onDelete: SetNull)
   kilometers BigInt
   availble   Boolean       @default(true)
   rents      VehicleRent[]
 
+  @@index([filialId])
   @@map("vehicles")
 }
 
@@ -619,6 +624,7 @@ model Filial {
   empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
   users       User[]
   restaurants Restaurant[]
+  vehicles    Vehicle[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

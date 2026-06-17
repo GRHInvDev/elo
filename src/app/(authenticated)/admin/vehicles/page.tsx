@@ -50,11 +50,17 @@ export default function VehiclesAdminClient() {
     }
   }
 
-  const filteredVehicles = vehicles?.items?.filter(vehicle =>
-    vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.enterprise.toLowerCase().includes(searchTerm.toLowerCase())
-  ) ?? []
+  const filteredVehicles = vehicles?.items?.filter(vehicle => {
+    const term = searchTerm.toLowerCase()
+    return (
+      vehicle.model.toLowerCase().includes(term) ||
+      vehicle.plate.toLowerCase().includes(term) ||
+      vehicle.enterprise.toLowerCase().includes(term) ||
+      (vehicle.filial?.name.toLowerCase().includes(term) ?? false) ||
+      (vehicle.filial?.code.toLowerCase().includes(term) ?? false) ||
+      (vehicle.filial?.empresa.name.toLowerCase().includes(term) ?? false)
+    )
+  }) ?? []
 
   if (isLoading) {
     return (
@@ -110,9 +116,9 @@ export default function VehiclesAdminClient() {
               onSuccess={() => {
                 setIsCreateDialogOpen(false)
                 void refetch()
-              } } onCancel={function (): void {
-                throw new Error("Function not implemented.")
-              } }            />
+              }}
+              onCancel={() => setIsCreateDialogOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -199,7 +205,11 @@ export default function VehiclesAdminClient() {
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Empresa:</span>
-                          <span>{vehicle.enterprise}</span>
+                          <span>{vehicle.filial?.empresa.name ?? vehicle.enterprise}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Filial:</span>
+                          <span>{vehicle.filial ? `${vehicle.filial.name} (${vehicle.filial.code})` : "—"}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Quilometragem:</span>
@@ -232,10 +242,11 @@ export default function VehiclesAdminClient() {
                                 setIsEditDialogOpen(false)
                                 setSelectedVehicle(null)
                                 void refetch()
-                              }} onCancel={function (): void {
-                                throw new Error("Function not implemented.")
-                              } }
-
+                              }}
+                              onCancel={() => {
+                                setIsEditDialogOpen(false)
+                                setSelectedVehicle(null)
+                              }}
                             />
                           </DialogContent>
                         </Dialog>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { z } from "zod"
@@ -15,14 +15,6 @@ import { toast } from "sonner"
 import { createVehicleSchema } from "@/schemas/vehicle.schema"
 import type { Vehicle } from "@prisma/client"
 
-const enterpriseOptions = [
-  { value: "NA", label: "N/A" },
-  { value: "Box", label: "Box" },
-  { value: "RHenz", label: "RHenz" },
-  { value: "Cristallux", label: "Cristallux" },
-  { value: "Box_Filial", label: "Box Filial" },
-]
-
 interface VehicleFormProps {
   vehicle?: Vehicle
   onSuccess: () => void
@@ -34,6 +26,11 @@ interface VehicleFormProps {
 export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("")
+  // Estado local da empresa para a cascata empresa → filial (padrão novo).
+  const [empresaId, setEmpresaId] = useState("")
+
+  const { data: empresas = [] } = api.empresas.list.useQuery()
+  const { data: filiaisData = [] } = api.filiais.list.useQuery()
 
   const {
     register,
@@ -47,18 +44,43 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
       model: vehicle.model,
       plate: vehicle.plate,
       imageUrl: vehicle.imageUrl || "",
-      enterprise: vehicle.enterprise as "NA" | "Box" | "RHenz" | "Cristallux" | "Box_Filial",
+      filialId: vehicle.filialId ?? "",
       kilometers: Number(vehicle.kilometers),
       availble: vehicle.availble,
     } : {
       model: "",
       plate: "",
       imageUrl: "",
-      enterprise: "NA" as const,
+      filialId: "",
       kilometers: 0,
       availble: true,
     },
   })
+
+  const filialId = watch("filialId")
+
+  // Filiais da empresa selecionada
+  const filiais = useMemo(
+    () => filiaisData.filter((f) => f.empresa.id === empresaId),
+    [filiaisData, empresaId],
+  )
+
+  // Ao editar, pré-seleciona a empresa a partir da filial atual do veículo.
+  useEffect(() => {
+    if (vehicle?.filialId && filiaisData.length > 0) {
+      const current = filiaisData.find((f) => f.id === vehicle.filialId)
+      if (current) setEmpresaId(current.empresa.id)
+    }
+  }, [vehicle?.filialId, filiaisData])
+
+  // Ao trocar de empresa, limpa a filial que não pertence mais à empresa.
+  useEffect(() => {
+    if (!filialId) return
+    const allowed = new Set(filiais.map((f) => f.id))
+    if (!allowed.has(filialId)) {
+      setValue("filialId", "")
+    }
+  }, [filiais, filialId, setValue])
 
   // Atualizar o campo imageUrl quando uma nova imagem for enviada
   useEffect(() => {
@@ -96,8 +118,6 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
       setIsLoading(false)
     }
   }
-
-  const selectedEnterprise = watch("enterprise")
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -147,27 +167,52 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="enterprise">Empresa *</Label>
+          <Label htmlFor="empresa">Empresa *</Label>
           <Select
-            value={selectedEnterprise}
-            onValueChange={(value) => setValue("enterprise", value as "NA" | "Box" | "RHenz" | "Cristallux" | "Box_Filial")}
+            value={empresaId}
+            onValueChange={(value) => {
+              setEmpresaId(value)
+              setValue("filialId", "")
+            }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione uma empresa" />
+              <SelectValue placeholder="Selecione a empresa" />
             </SelectTrigger>
             <SelectContent>
-              {enterpriseOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+              {empresas.map((emp) => (
+                <SelectItem key={emp.id} value={emp.id}>
+                  {emp.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {errors.enterprise && (
-            <p className="text-sm text-destructive">{errors.enterprise.message}</p>
-          )}
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="filial">Filial *</Label>
+          <Select
+            value={filialId ?? ""}
+            onValueChange={(value) => setValue("filialId", value, { shouldValidate: true })}
+            disabled={!empresaId}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={empresaId ? "Selecione a filial" : "Selecione a empresa primeiro"} />
+            </SelectTrigger>
+            <SelectContent>
+              {filiais.map((filial) => (
+                <SelectItem key={filial.id} value={filial.id}>
+                  {filial.name} ({filial.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.filialId && (
+            <p className="text-sm text-destructive">{errors.filialId.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="kilometers">Kilometragem *</Label>
           <Input

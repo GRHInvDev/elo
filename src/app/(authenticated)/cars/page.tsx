@@ -16,6 +16,7 @@ import { FinishRentButton } from "@/components/vehicles/finish-rent-button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { VehicleCalendar } from "@/components/vehicles/vehicle-calendar"
 import { RentForm } from "@/components/vehicles/rent-form"
+import { EmpresaFilialFilter, type EmpresaFilialValue } from "@/components/ui/empresa-filial-filter"
 import { Edit } from "lucide-react"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -27,6 +28,8 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<string>("")
   const [selectedTime, setSelectedTime] = useState<string>("")
   const [filterApplied, setFilterApplied] = useState(false)
+  // Filtro no padrão novo (empresa → filial)
+  const [empresaFilial, setEmpresaFilial] = useState<EmpresaFilialValue>({ empresaId: "", filialId: "" })
 
   // Buscar dados do usuário e reservas ativas
   const { data: userData } = api.user.me.useQuery()
@@ -47,6 +50,13 @@ export default function DashboardPage() {
 
   // Verificar se o usuário tem permissão para fazer reservas
   const canReserve = userData ? canLocateCars(userData.role_config) : false
+
+  // Aplicar filtro de empresa/filial (padrão novo) sobre os veículos disponíveis
+  const filteredVehicles = (availableVehicles?.items ?? []).filter((vehicle) => {
+    if (empresaFilial.filialId) return vehicle.filialId === empresaFilial.filialId
+    if (empresaFilial.empresaId) return vehicle.filial?.empresa.id === empresaFilial.empresaId
+    return true
+  })
 
   // Função para abrir o modal de edição
   const openEditModal = (rent: VehicleRent & { vehicle: Vehicle }) => {
@@ -158,18 +168,21 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Car className="h-5 w-5" />
-              Veículos Disponíveis ({availableVehicles?.items?.length ?? 0})
+              Veículos Disponíveis ({filteredVehicles.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+              <EmpresaFilialFilter value={empresaFilial} onChange={setEmpresaFilial} />
+            </div>
             {isLoadingVehicles ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Carregando veículos disponíveis...</p>
               </div>
-            ) : availableVehicles?.items?.length ? (
+            ) : filteredVehicles.length ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {availableVehicles.items.map((vehicle) => (
+                {filteredVehicles.map((vehicle) => (
                   <Card key={vehicle.id} className="p-4">
                     <div className="relative aspect-video h-32 w-full overflow-hidden rounded-lg mb-3">
                       <Image
