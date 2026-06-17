@@ -305,11 +305,18 @@ function CatalogRow({ form, onOpen }: CatalogRowProps) {
   const sectorLabel = getSector(form)
   const fieldsArr = getFieldsArray(form)
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
       className={cn(
-        "group flex w-full items-center gap-4 rounded-[var(--v2-radius-card)] border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.9)] p-4 text-left transition-all",
+        "group flex w-full cursor-pointer items-center gap-4 rounded-[var(--v2-radius-card)] border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.9)] p-4 text-left transition-all",
         "hover:-translate-y-0.5 hover:border-[hsl(var(--brand-accent)/.4)] hover:shadow-[var(--v2-shadow)]",
         "backdrop-blur-sm",
       )}
@@ -337,18 +344,20 @@ function CatalogRow({ form, onOpen }: CatalogRowProps) {
         </div>
       </div>
       <div className="hidden shrink-0 gap-2 sm:flex">
-        <span
-          className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground"
+        <Link
+          href={`/forms/${form.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[hsl(var(--v2-border-soft))] px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-[hsl(var(--brand-accent)/.4)] hover:text-foreground"
         >
           <Eye className="h-3.5 w-3.5" /> Ver
-        </span>
+        </Link>
         <span
           className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[hsl(var(--brand-accent))] px-3 text-xs font-medium text-[hsl(var(--brand-accent-foreground))]"
         >
           Abrir solicitação <ArrowRight className="h-3.5 w-3.5" />
         </span>
       </div>
-    </button>
+    </div>
   )
 }
 

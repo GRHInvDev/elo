@@ -14,9 +14,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { toast } from "sonner"
-import { CheckCircle2, Send, Lock } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { CheckCircle2, Send, Lock, RefreshCw, FileText } from "lucide-react"
 // Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -221,19 +221,29 @@ export function FormResponseComponent({
 
   if (isSubmitted && !isEditing) {
     return (
-      <div className="space-y-6">
-        <Alert className="bg-success/10 border-success">
-          <CheckCircle2 className="h-4 w-4 text-success" />
-          <AlertTitle>Resposta enviada com sucesso!</AlertTitle>
-          <AlertDescription>Sua resposta foi registrada. Obrigado por participar.</AlertDescription>
-        </Alert>
+      <div>
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[hsl(158_64%_45%/.25)] bg-[hsl(158_64%_45%/.12)] text-[hsl(158_64%_45%)]">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-[17px] font-semibold">Solicitação enviada com sucesso!</h3>
+            <p className="mt-1.5 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+              Os dados foram registrados e os responsáveis serão notificados. Acompanhe o
+              andamento em &ldquo;Minhas solicitações&rdquo;.
+            </p>
+          </div>
+        </div>
 
-        <div className="flex justify-between md:flex-row flex-col gap-y-2">
-          <Button variant="outline" onClick={() => router.push("/forms")}>
-            Voltar para formulários
-          </Button>
+        <div className="mt-6 flex flex-col justify-end gap-2 border-t border-[hsl(var(--v2-border-soft))] pt-5 md:flex-row">
+          <Link href="/forms/my-responses">
+            <Button variant="ghost" className="w-full md:w-auto">
+              <FileText className="mr-2 h-4 w-4" />
+              Ver minhas solicitações
+            </Button>
+          </Link>
           <Button
-            className={cn(ACCENT_BTN)}
+            className={cn("w-full md:w-auto", ACCENT_BTN)}
             onClick={() => {
               const empty = buildEmptyFormValues(fields)
               reset(empty)
@@ -243,6 +253,7 @@ export function FormResponseComponent({
               router.refresh()
             }}
           >
+            <RefreshCw className="mr-2 h-4 w-4" />
             Abrir nova solicitação
           </Button>
         </div>
@@ -392,7 +403,7 @@ export function FormResponseComponent({
         )}
         {customIsSubmitting !== undefined
           ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
-          : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar Resposta"))
+          : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar solicitação"))
         }
       </Button>
     </form>

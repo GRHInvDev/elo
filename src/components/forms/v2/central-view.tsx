@@ -45,6 +45,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { VirtualizedQueue } from "./virtualized-queue"
 import { VirtualizedBoard } from "./virtualized-board"
 import { TagsManagerModal } from "@/app/(authenticated)/forms/kanban/_components/tags-manager-modal"
+import { EditResponseModal } from "@/components/forms/edit-response-modal"
+import type { OnDragEndResponder } from "@hello-pangea/dnd"
 
 type View = "fila" | "quadro"
 type Tab = "ALL" | ResponseStatus
@@ -77,6 +79,9 @@ export function CentralView() {
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
   const [tagsModalOpen, setTagsModalOpen] = React.useState(false)
+  const [editResponseId, setEditResponseId] = React.useState<string | null>(null)
+  const [editFormId, setEditFormId] = React.useState<string | null>(null)
+  const [editModalOpen, setEditModalOpen] = React.useState(false)
 
   const { data, isLoading, refetch } = api.formResponse.listKanBan.useQuery({
     tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
@@ -84,10 +89,11 @@ export function CentralView() {
   const { data: availableTags = [] } = api.formResponse.getTags.useQuery()
   const utils = api.useUtils()
 
-  const responses = React.useMemo<FormResponse[]>(
-    () => (data ?? []) as unknown as FormResponse[],
-    [data],
-  )
+  // Estado local para feedback otimista do arrastar (drag-and-drop)
+  const [responses, setResponses] = React.useState<FormResponse[]>([])
+  React.useEffect(() => {
+    setResponses((data ?? []) as unknown as FormResponse[])
+  }, [data])
 
   React.useEffect(() => {
     if (responses.length > 0 && !selectedId) {
@@ -154,6 +160,44 @@ export function CentralView() {
       toast.success("Chamado assumido e movido para Em progresso")
     } else {
       toast.success("Você está atendendo este chamado")
+    }
+  }
+
+  // Arrastar um card para outro nível (coluna de status)
+  const onDragEnd: OnDragEndResponder = (result) => {
+    const { destination, source, draggableId } = result
+    if (!destination) return
+    if (destination.droppableId === source.droppableId) return
+
+    const newStatus = destination.droppableId as ResponseStatus
+    // Feedback imediato na UI
+    setResponses((prev) =>
+      prev.map((r) => (r.id === draggableId ? { ...r, status: newStatus } : r)),
+    )
+    updateStatus.mutate({ responseId: draggableId, status: newStatus })
+    toast.success(`Chamado movido para ${STATUS_META[newStatus].label}`)
+  }
+
+  // Abrir o chamado no painel de detalhes (visão Fila)
+  function handleOpenDetails(id: string) {
+    setSelectedId(id)
+    setView("fila")
+  }
+
+  function handleEdit(id: string, formId: string) {
+    setEditResponseId(id)
+    setEditFormId(formId)
+    setEditModalOpen(true)
+  }
+
+  function handleMoveToNextStatus(id: string, currentStatus: ResponseStatus) {
+    const currentIndex = STATUS_ORDER.indexOf(currentStatus)
+    if (currentIndex < STATUS_ORDER.length - 1) {
+      const nextStatus = STATUS_ORDER[currentIndex + 1]!
+      setResponses((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: nextStatus } : r)),
+      )
+      updateStatus.mutate({ responseId: id, status: nextStatus })
     }
   }
 
@@ -413,14 +457,31 @@ export function CentralView() {
       ) : (
         <VirtualizedBoard
           responses={responses}
-          onSelect={(id) => {
-            setSelectedId(id)
-            setView("fila")
-          }}
+          availableTags={availableTags}
+          onSelect={handleOpenDetails}
+          onDragEnd={onDragEnd}
+          onOpenDetails={handleOpenDetails}
+          onEdit={handleEdit}
+          onOpenChat={handleOpenDetails}
+          onMoveToNextStatus={handleMoveToNextStatus}
+          onOpenTagsManager={() => setTagsModalOpen(true)}
         />
       )}
 
       <TagsManagerModal open={tagsModalOpen} onOpenChange={setTagsModalOpen} />
+
+      {editResponseId && editFormId && (
+        <EditResponseModal
+          responseId={editResponseId}
+          formId={editFormId}
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false)
+            setEditResponseId(null)
+            setEditFormId(null)
+          }}
+        />
+      )}
     </div>
   )
 }
