@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { ChevronLeft, ChevronRight, CalendarIcon, List, Car, Clock, MapPin, Users } from "lucide-react"
 import {
     format,
+    startOfDay,
     startOfMonth,
     endOfMonth,
     eachDayOfInterval,
@@ -33,6 +34,27 @@ function utcToLocalDate(date: Date | string | null | undefined): Date | null {
     if (!date) return null
     const d = new Date(date)
     return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds())
+}
+
+// Paleta de cores estável por reserva: cada reserva recebe sempre a mesma cor,
+// que é estendida por todos os dias do seu intervalo no calendário.
+const RESERVATION_COLORS = [
+    { bar: "bg-blue-500/20 hover:bg-blue-500/30 text-blue-800 dark:text-blue-200", border: "border-blue-500/60" },
+    { bar: "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-200", border: "border-emerald-500/60" },
+    { bar: "bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200", border: "border-amber-500/60" },
+    { bar: "bg-violet-500/20 hover:bg-violet-500/30 text-violet-800 dark:text-violet-200", border: "border-violet-500/60" },
+    { bar: "bg-rose-500/20 hover:bg-rose-500/30 text-rose-800 dark:text-rose-200", border: "border-rose-500/60" },
+    { bar: "bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-800 dark:text-cyan-200", border: "border-cyan-500/60" },
+    { bar: "bg-orange-500/20 hover:bg-orange-500/30 text-orange-800 dark:text-orange-200", border: "border-orange-500/60" },
+    { bar: "bg-teal-500/20 hover:bg-teal-500/30 text-teal-800 dark:text-teal-200", border: "border-teal-500/60" },
+] as const
+
+function colorForReservation(id: string): (typeof RESERVATION_COLORS)[number] {
+    let hash = 0
+    for (let i = 0; i < id.length; i++) {
+        hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+    }
+    return RESERVATION_COLORS[hash % RESERVATION_COLORS.length]!
 }
 
 function CalendarSkeleton() {
@@ -117,6 +139,44 @@ export function VehicleCalendar() {
         return grouped
     }, [reservationsData])
 
+    // Reservas distribuídas por TODOS os dias do seu intervalo (start → possibleEnd),
+    // limitado ao mês visível. Usado pela visão de calendário para estender a cor
+    // da reserva por toda a sua duração. Ordena por início (e id) para manter as
+    // faixas em ordem estável entre dias consecutivos.
+    const spanningByDay = useMemo(() => {
+        const grouped: Record<string, inferProcedureOutput<AppRouter['vehicleRent']['getCalendarReservations']>[number][]> = {}
+        if (!reservationsData) return grouped
+
+        const monthStart = startOfMonth(currentDate)
+        const monthEnd = endOfMonth(currentDate)
+
+        reservationsData.forEach((reservation) => {
+            const start = utcToLocalDate(reservation.startDate)
+            if (!start) return
+            const end = utcToLocalDate(reservation.possibleEnd) ?? start
+
+            const rangeStart = startOfDay(start) < monthStart ? monthStart : startOfDay(start)
+            const rangeEnd = startOfDay(end) > monthEnd ? monthEnd : startOfDay(end)
+            if (rangeStart > rangeEnd) return
+
+            eachDayOfInterval({ start: rangeStart, end: rangeEnd }).forEach((day) => {
+                const key = format(day, "yyyy-MM-dd")
+                grouped[key] ??= []
+                grouped[key]?.push(reservation)
+            })
+        })
+
+        Object.values(grouped).forEach((list) =>
+            list.sort((a, b) => {
+                const sa = utcToLocalDate(a.startDate)?.getTime() ?? 0
+                const sb = utcToLocalDate(b.startDate)?.getTime() ?? 0
+                return sa - sb || a.id.localeCompare(b.id)
+            }),
+        )
+
+        return grouped
+    }, [reservationsData, currentDate])
+
     // Navigation functions
     const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1))
     const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
@@ -199,7 +259,7 @@ export function VehicleCalendar() {
 
                             {calendarDays.map((day) => {
                                 const dateKey = format(day, "yyyy-MM-dd")
-                                const dayReservations = reservationsByDay[dateKey] ?? []
+                                const dayReservations = spanningByDay[dateKey] ?? []
                                 const isToday = isSameDay(day, new Date())
 
                                 return (
@@ -227,19 +287,38 @@ export function VehicleCalendar() {
                                             )}
                                         </div>
 
-                                        <div className="mt-1 space-y-1 overflow-y-auto max-h-[calc(100%-24px)]">
-                                            {dayReservations.slice(0, 3).map((reservation) => (
-                                                <button
-                                                    key={reservation.id}
-                                                    onClick={() => setSelectedEvent(reservation)}
-                                                    className="w-full text-left p-1 text-xs rounded bg-secondary/50 hover:bg-secondary truncate block"
-                                                >
-                                                    <div className="font-medium truncate">{reservation.vehicle.model}</div>
-                                                    <div className="truncate text-muted-foreground">
-                                                        {reservation.user.firstName} {reservation.user.lastName}
-                                                    </div>
-                                                </button>
-                                            ))}
+                                        <div className="mt-1 space-y-0.5 overflow-y-auto max-h-[calc(100%-24px)]">
+                                            {dayReservations.slice(0, 3).map((reservation) => {
+                                                const start = utcToLocalDate(reservation.startDate)
+                                                const end = utcToLocalDate(reservation.possibleEnd) ?? start
+                                                const isStart = start ? isSameDay(day, start) : false
+                                                const isEnd = end ? isSameDay(day, end) : false
+                                                // Mostra o rótulo no início da reserva ou no início da semana
+                                                // (domingo), mantendo a faixa "limpa" nos dias de continuação.
+                                                const showLabel = isStart || day.getDay() === 0
+                                                const color = colorForReservation(reservation.id)
+
+                                                return (
+                                                    <button
+                                                        key={reservation.id}
+                                                        onClick={() => setSelectedEvent(reservation)}
+                                                        title={`${reservation.vehicle.model} — ${reservation.user.firstName ?? ""} ${reservation.user.lastName ?? ""}`}
+                                                        className={cn(
+                                                            "w-full text-left text-[11px] leading-5 h-5 px-1 truncate border-y transition-colors",
+                                                            color.bar,
+                                                            color.border,
+                                                            isStart ? "rounded-l-md border-l" : "border-l-0",
+                                                            isEnd ? "rounded-r-md border-r" : "border-r-0",
+                                                        )}
+                                                    >
+                                                        {showLabel ? (
+                                                            <span className="font-medium truncate">{reservation.vehicle.model}</span>
+                                                        ) : (
+                                                            <span aria-hidden>&nbsp;</span>
+                                                        )}
+                                                    </button>
+                                                )
+                                            })}
 
                                             {dayReservations.length > 3 && (
                                                 <div className="text-xs text-muted-foreground text-center">

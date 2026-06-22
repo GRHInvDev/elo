@@ -1,13 +1,102 @@
 import "server-only";
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import type { PrismaClient } from "@prisma/client"
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
-import { createVehicleRentSchema, finishRentSchema, vehicleRentIdSchema, editVehicleRentSchema, finishRentWithoutUsageSchema } from "@/schemas/vehicle-rent.schema"
+import { createVehicleRentSchema, createVehicleRentForUserSchema, finishRentSchema, vehicleRentIdSchema, editVehicleRentSchema, finishRentWithoutUsageSchema } from "@/schemas/vehicle-rent.schema"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailReservaCarro } from "@/lib/mail/html-mock"
-import { canLocateCars } from "@/lib/access-control"
+import { canLocateCars, hasAdminAccess } from "@/lib/access-control"
 import type { RolesConfig } from "@/types/role-config"
+
+// Campos comuns de criação de reserva (usados pelo fluxo self-service e pelo
+// agendamento manual feito por um admin em nome de outro usuário).
+type CreateRentFields = {
+  vehicleId: string
+  startDate?: Date
+  possibleEnd: Date
+  driver: string
+  destiny: string
+  passangers?: string | null
+}
+
+// Deslocamento de -3h aplicado às datas de reserva (compat. com o armazenamento
+// existente). Centralizado para que a criação e a checagem de disponibilidade
+// usem exatamente a mesma referência de tempo.
+function shiftRentDate(date: Date): Date {
+  const d = new Date(date)
+  d.setHours(d.getHours() - 3)
+  return d
+}
+
+/**
+ * Cria uma reserva para `userId`. Concentra a validação de campos, o ajuste de
+ * fuso (-3h) e a checagem de conflito dentro de uma transação atômica. As
+ * verificações de permissão ficam em cada procedure (self-service x admin).
+ */
+async function createRentForUser(db: PrismaClient, userId: string, input: CreateRentFields) {
+  const { vehicleId, startDate, possibleEnd, driver, destiny, passangers } = input
+
+  const newStartDate = shiftRentDate(startDate ?? new Date())
+  const newPossibleEnd = shiftRentDate(possibleEnd ?? new Date())
+
+  if (!possibleEnd) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "A data de término prevista é obrigatória." })
+  }
+
+  if (!driver || driver.trim().length <= 2) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Nome do motorista é obrigatório e deve ter pelo menos 3 caracteres." })
+  }
+
+  if (!destiny || destiny.trim().length <= 2) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Destino é obrigatório e deve ter pelo menos 3 caracteres." })
+  }
+
+  // Transação para garantir que a checagem de disponibilidade e a criação sejam atômicas.
+  return db.$transaction(async (tx) => {
+    const vehicle = await tx.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: { id: true, kilometers: true },
+    })
+
+    if (!vehicle) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Veículo não encontrado" })
+    }
+
+    const conflictingRent = await tx.vehicleRent.findFirst({
+      where: {
+        vehicleId: vehicleId,
+        finished: false,
+        AND: [
+          { startDate: { lt: newPossibleEnd } },
+          { possibleEnd: { gt: newStartDate } },
+        ],
+      },
+    })
+
+    if (conflictingRent) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "Este veículo não está mais disponível para reserva no período solicitado. Por favor, tente outro horário.",
+      })
+    }
+
+    return tx.vehicleRent.create({
+      data: {
+        userId,
+        startDate: newStartDate,
+        possibleEnd: newPossibleEnd,
+        vehicleId: vehicleId,
+        initialKm: BigInt(vehicle.kilometers.toString()),
+        driver: driver || "",
+        destiny: destiny || "",
+        passangers: passangers ?? null,
+      },
+      include: { vehicle: true },
+    })
+  })
+}
 
 
 export const vehicleRentRouter = createTRPCRouter({
@@ -304,6 +393,41 @@ export const vehicleRentRouter = createTRPCRouter({
       return reservations
     }),
 
+  // Verifica se um veículo está disponível para um intervalo (sem criar nada).
+  // Usado pelo catálogo de reserva para apontar "Disponível" / "Ocupado".
+  checkAvailability: protectedProcedure
+    .input(
+      z.object({
+        vehicleId: z.string(),
+        startDate: z.date(),
+        possibleEnd: z.date(),
+        excludeRentId: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const start = shiftRentDate(input.startDate)
+      const end = shiftRentDate(input.possibleEnd)
+
+      if (end <= start) {
+        return { available: false, reason: "invalid_interval" as const }
+      }
+
+      const conflict = await ctx.db.vehicleRent.findFirst({
+        where: {
+          vehicleId: input.vehicleId,
+          finished: false,
+          AND: [
+            { startDate: { lt: end } },
+            { possibleEnd: { gt: start } },
+          ],
+          ...(input.excludeRentId ? { id: { not: input.excludeRentId } } : {}),
+        },
+        select: { id: true },
+      })
+
+      return { available: !conflict, reason: conflict ? ("conflict" as const) : null }
+    }),
+
   create: protectedProcedure.input(createVehicleRentSchema).mutation(async ({ ctx, input }) => {
     // Verificar se o usuário tem permissão para fazer agendamentos de carros
     const db_user = await ctx.db.user.findUnique({
@@ -318,105 +442,39 @@ export const vehicleRentRouter = createTRPCRouter({
       })
     }
 
-    const userId = ctx.auth.userId
-    const { vehicleId, startDate, possibleEnd, driver, destiny, passangers } = input
+    return createRentForUser(ctx.db, ctx.auth.userId, input)
+  }),
 
-    console.log("Input completo:", input)
-    console.log("Campos extraídos:", { vehicleId, startDate, possibleEnd, driver, destiny, passangers })
-
-    const newStartDate = new Date(startDate ?? new Date()).setHours(new Date(startDate ?? new Date()).getHours() - 3);
-    const newPossibleEnd = new Date(possibleEnd ?? new Date()).setHours(new Date(possibleEnd ?? new Date()).getHours() - 3);
-
-    if (!possibleEnd) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "A data de término prevista é obrigatória.",
-      })
-    }
-
-    if (!driver || driver.trim().length <= 2) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Nome do motorista é obrigatório e deve ter pelo menos 3 caracteres.",
-      })
-    }
-
-    if (!destiny || destiny.trim().length <= 2) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Destino é obrigatório e deve ter pelo menos 3 caracteres.",
-      })
-    }
-
-    // Usar uma transação para garantir que a verificação de disponibilidade e a criação da reserva sejam atômicas
-    return ctx.db.$transaction(async (tx) => {
-      // 1. Verificar se o veículo existe
-      const vehicle = await tx.vehicle.findUnique({
-        where: { id: vehicleId },
-        select: { id: true, kilometers: true },
-      })
-
-      console.log("Veículo encontrado:", vehicle)
-
-      if (!vehicle) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Veículo não encontrado",
-        })
-      }
-
-      // 2. Verificar novamente a disponibilidade dentro da transação para evitar race conditions
-      const conflictingRent = await tx.vehicleRent.findFirst({
-        where: {
-          vehicleId: vehicleId,
-          finished: false,
-          AND: [
-            {
-              startDate: {
-                lt: new Date(newPossibleEnd),
-              },
-            },
-            {
-              possibleEnd: {
-                gt: new Date(newStartDate),
-              },
-            },
-          ],
-        },
-      })
-
-      if (conflictingRent) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Este veículo não está mais disponível para reserva no período solicitado. Por favor, tente outro horário.",
-        })
-      }
-
-      // 3. Criar a reserva
-      const rentData = {
-        userId,
-        startDate: new Date(newStartDate),
-        possibleEnd: new Date(newPossibleEnd),
-        vehicleId: vehicleId,
-        initialKm: BigInt(vehicle.kilometers.toString()),
-        driver: driver || "",
-        destiny: destiny || "",
-        passangers: passangers ?? null,
-      }
-
-      console.log("Dados a serem salvos no banco:", rentData)
-
-      const rent = await tx.vehicleRent.create({
-        data: rentData,
-        include: {
-          vehicle: true,
-        },
-      })
-
-      console.log("Reserva criada com sucesso:", rent.id)
-
-      return rent
+  // Agendamento manual feito por um admin em nome de outro usuário (painel admin).
+  // Gateado pela permissão da rota /admin/vehicles (ou sudo).
+  createForUser: protectedProcedure.input(createVehicleRentForUserSchema).mutation(async ({ ctx, input }) => {
+    const db_user = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true },
     })
+
+    if (!hasAdminAccess(db_user?.role_config as RolesConfig | null, "/admin/vehicles")) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para criar agendamentos para outros usuários",
+      })
+    }
+
+    const { userId, ...rentInput } = input
+
+    const targetUser = await ctx.db.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    })
+
+    if (!targetUser) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Usuário selecionado não encontrado",
+      })
+    }
+
+    return createRentForUser(ctx.db, userId, rentInput)
   }),
 
   finish: protectedProcedure.input(finishRentSchema).mutation(async ({ ctx, input }) => {
