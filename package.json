@@ -1,6 +1,6 @@
 {
   "name": "elo",
-  "version": "1.47.0",
+  "version": "1.50.1",
   "private": true,
   "type": "module",
   "scripts": {

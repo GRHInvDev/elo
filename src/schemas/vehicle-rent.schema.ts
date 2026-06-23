@@ -9,6 +9,12 @@ export const createVehicleRentSchema = z.object({
   destiny: z.string(),
 })
 
+// Agendamento criado por um admin em nome de outro usuário (painel admin).
+// Reaproveita os mesmos campos da reserva e adiciona o usuário alvo.
+export const createVehicleRentForUserSchema = createVehicleRentSchema.extend({
+  userId: z.string().min(1, "Selecione o usuário"),
+})
+
 export const updateVehicleRentSchema = z.object({
   endDate: z.date().optional(),
   finished: z.boolean().optional(),
@@ -54,6 +60,7 @@ export const finishRentWithoutUsageSchema = z.object({
 })
 
 export type CreateVehicleRentInput = z.infer<typeof createVehicleRentSchema>
+export type CreateVehicleRentForUserInput = z.infer<typeof createVehicleRentForUserSchema>
 export type UpdateVehicleRentInput = z.infer<typeof updateVehicleRentSchema>
 export type EditVehicleRentInput = z.infer<typeof editVehicleRentSchema>
 export type FinishRentInput = z.infer<typeof finishRentSchema>

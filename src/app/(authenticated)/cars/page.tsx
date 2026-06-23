@@ -2,13 +2,10 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Car, Calendar, LucideFileVideo, User2Icon, MapPin, PlusCircle } from "lucide-react"
+import { Car, Calendar, LucideFileVideo, User2Icon, MapPin, Edit } from "lucide-react"
 import { api } from "@/trpc/react"
 import type { VehicleRent, Vehicle } from "@prisma/client"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { canViewCars, canLocateCars } from "@/lib/access-control"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { RolesConfig } from "@/types/role-config"
+import { canLocateCars } from "@/lib/access-control"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -17,71 +14,53 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { VehicleCalendar } from "@/components/vehicles/vehicle-calendar"
 import { RentForm } from "@/components/vehicles/rent-form"
 import { EmpresaFilialFilter, type EmpresaFilialValue } from "@/components/ui/empresa-filial-filter"
-import { Edit } from "lucide-react"
 import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
 export default function DashboardPage() {
+  const utils = api.useUtils()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedRent, setSelectedRent] = useState<(VehicleRent & { vehicle: Vehicle }) | null>(null)
-  const [selectedDate, setSelectedDate] = useState<string>("")
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [filterApplied, setFilterApplied] = useState(false)
+  // Veículo escolhido para reservar (abre o modal de intervalo + disponibilidade)
+  const [reserveVehicle, setReserveVehicle] = useState<Vehicle | null>(null)
   // Filtro no padrão novo (empresa → filial)
   const [empresaFilial, setEmpresaFilial] = useState<EmpresaFilialValue>({ empresaId: "", filialId: "" })
 
-  // Buscar dados do usuário e reservas ativas
+  // Dados do usuário e reservas ativas
   const { data: userData } = api.user.me.useQuery()
   const { data: activeRent } = api.vehicleRent.getMyActiveRent.useQuery()
 
-  // Buscar veículos disponíveis quando filtro for aplicado
-  const { data: availableVehicles, isLoading: isLoadingVehicles } = api.vehicle.getAll.useQuery(
-    {
-      limit: 100,
-      availble: true,
-      checkDate: filterApplied ? selectedDate : undefined,
-      checkTime: filterApplied ? selectedTime : undefined,
-    },
-    {
-      enabled: filterApplied,
-    }
-  )
+  // Catálogo: todos os veículos disponíveis (sem exigir filtro de data antes)
+  const { data: vehiclesData, isLoading: isLoadingVehicles } = api.vehicle.getAll.useQuery({
+    limit: 100,
+    availble: true,
+  })
 
   // Verificar se o usuário tem permissão para fazer reservas
   const canReserve = userData ? canLocateCars(userData.role_config) : false
 
-  // Aplicar filtro de empresa/filial (padrão novo) sobre os veículos disponíveis
-  const filteredVehicles = (availableVehicles?.items ?? []).filter((vehicle) => {
+  // Filtro de empresa/filial (padrão novo) sobre o catálogo
+  const filteredVehicles = (vehiclesData?.items ?? []).filter((vehicle) => {
     if (empresaFilial.filialId) return vehicle.filialId === empresaFilial.filialId
     if (empresaFilial.empresaId) return vehicle.filial?.empresa.id === empresaFilial.empresaId
     return true
   })
 
-  // Função para abrir o modal de edição
+  // Funções dos modais
   const openEditModal = (rent: VehicleRent & { vehicle: Vehicle }) => {
     setSelectedRent(rent)
     setIsEditModalOpen(true)
   }
 
-  // Função para fechar o modal
   const closeEditModal = () => {
     setIsEditModalOpen(false)
     setSelectedRent(null)
   }
 
-  // Função para aplicar filtros
-  const applyFilters = () => {
-    if (selectedDate && selectedTime) {
-      setFilterApplied(true)
-    }
-  }
-
-  // Função para limpar filtros
-  const clearFilters = () => {
-    setSelectedDate("")
-    setSelectedTime("")
-    setFilterApplied(false)
+  // Fecha o modal de reserva e atualiza catálogo/reservas ativas
+  const closeReserveModal = () => {
+    setReserveVehicle(null)
+    void utils.vehicleRent.getMyActiveRent.invalidate()
+    void utils.vehicle.getAll.invalidate()
   }
 
   return (
@@ -99,9 +78,7 @@ export default function DashboardPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                Tutorial: Reserva de carros
-              </DialogTitle>
+              <DialogTitle>Tutorial: Reserva de carros</DialogTitle>
             </DialogHeader>
             <DialogFooter>
               <iframe className="w-full aspect-video" src="https://www.youtube.com/embed/oNtTySjnJSw?si=M8ZcgXk1ox0vpYMd" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
@@ -110,134 +87,10 @@ export default function DashboardPage() {
         </Dialog>
       </div>
 
-      {/* Filtros por Data e Horário */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Filtrar Veículos Disponíveis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 items-end">
-            <div className="flex-1">
-              <Label htmlFor="filter-date">Data</Label>
-              <Input
-                id="filter-date"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="filter-time">Horário</Label>
-              <Input
-                id="filter-time"
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={applyFilters}
-                disabled={!selectedDate || !selectedTime}
-                className="flex items-center gap-2"
-              >
-                <Calendar className="h-4 w-4" />
-                Aplicar Filtro
-              </Button>
-              {(selectedDate || selectedTime) && (
-                <Button
-                  variant="outline"
-                  onClick={clearFilters}
-                  className="flex items-center gap-2"
-                >
-                  Limpar
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Resultados dos Filtros */}
-      {filterApplied && (
+      {/* Reservas ativas do usuário */}
+      {activeRent && activeRent.length > 0 && (
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Car className="h-5 w-5" />
-              Veículos Disponíveis ({filteredVehicles.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <EmpresaFilialFilter value={empresaFilial} onChange={setEmpresaFilial} />
-            </div>
-            {isLoadingVehicles ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Carregando veículos disponíveis...</p>
-              </div>
-            ) : filteredVehicles.length ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredVehicles.map((vehicle) => (
-                  <Card key={vehicle.id} className="p-4">
-                    <div className="relative aspect-video h-32 w-full overflow-hidden rounded-lg mb-3">
-                      <Image
-                        src={vehicle.imageUrl || "/placeholder.svg"}
-                        alt={vehicle.model}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 256px"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold">{vehicle.model}</h3>
-                          <p className="text-sm text-muted-foreground">{vehicle.plate}</p>
-                        </div>
-                        <Badge variant="outline">{vehicle.enterprise}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Car className="h-4 w-4" />
-                        <span>{Number(vehicle.kilometers).toLocaleString()} km</span>
-                      </div>
-                      <Button
-                        className="w-full"
-                        disabled={!canReserve}
-                        asChild={canReserve}
-                      >
-                        {canReserve ? (
-                          <Link href={`/cars/details/${vehicle.id}?date=${selectedDate}&time=${selectedTime}`}>
-                            Reservar para {new Date(selectedDate).toLocaleDateString('pt-BR')}
-                          </Link>
-                        ) : (
-                          <span>Sem permissão para reservar</span>
-                        )}
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium">Nenhum veículo disponível</h3>
-                <p className="text-muted-foreground">
-                  Não há veículos disponíveis para a data e horário selecionados.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-          {activeRent?.map((actvRent: VehicleRent & { vehicle: Vehicle }, i: number) => (
+          {activeRent.map((actvRent: VehicleRent & { vehicle: Vehicle }, i: number) => (
             <div key={i} className="mb-4 border-b last:border-0">
               <CardHeader>
                 <CardTitle>Veículo Reservado</CardTitle>
@@ -284,11 +137,7 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditModal(actvRent)}
-                >
+                <Button variant="outline" size="sm" onClick={() => openEditModal(actvRent)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Editar Reserva
                 </Button>
@@ -297,40 +146,100 @@ export default function DashboardPage() {
             </div>
           ))}
         </Card>
-      </div>
-      {activeRent && activeRent.length > 0 && canReserve && (
-        <div className="flex items-center justify-center w-full mt-4">
-          <Link href="/cars/details">
-            <Button>
-              Reservar um novo veículo
-              <PlusCircle className="size-4 ml-2" />
-            </Button>
-          </Link>
-        </div>
       )}
-      {(!activeRent || activeRent.length === 0) && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <h2 className="mb-2 text-xl font-semibold">
-              {canReserve ? "Nenhum veículo reservado" : "Visualização de Veículos"}
-            </h2>
-            <p className="mb-6 text-center text-muted-foreground">
-              {canReserve
-                ? "Você não possui nenhum veículo reservado no momento."
-                : "Você pode visualizar os veículos disponíveis, mas não possui permissão para fazer reservas."
-              }
+
+      {/* Catálogo de veículos disponíveis para reserva */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Car className="h-5 w-5" />
+            Veículos disponíveis para reserva ({filteredVehicles.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <EmpresaFilialFilter value={empresaFilial} onChange={setEmpresaFilial} />
+          </div>
+
+          {isLoadingVehicles ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando veículos...</p>
+            </div>
+          ) : filteredVehicles.length ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredVehicles.map((vehicle) => (
+                <Card key={vehicle.id} className="p-4">
+                  <div className="relative aspect-video h-32 w-full overflow-hidden rounded-lg mb-3">
+                    <Image
+                      src={vehicle.imageUrl || "/placeholder.svg"}
+                      alt={vehicle.model}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 256px"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold">{vehicle.model}</h3>
+                        <p className="text-sm text-muted-foreground">{vehicle.plate}</p>
+                      </div>
+                      <Badge variant="outline">{vehicle.enterprise}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Car className="h-4 w-4" />
+                      <span>{Number(vehicle.kilometers).toLocaleString()} km</span>
+                    </div>
+                    <Button
+                      className="w-full"
+                      disabled={!canReserve}
+                      onClick={() => canReserve && setReserveVehicle(vehicle)}
+                    >
+                      {canReserve ? "Reservar" : "Sem permissão para reservar"}
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium">Nenhum veículo disponível</h3>
+              <p className="text-muted-foreground">
+                Não há veículos disponíveis para o filtro selecionado.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {!canReserve && (
+        <Card className="mb-6">
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <h2 className="mb-2 text-xl font-semibold">Visualização de Veículos</h2>
+            <p className="text-center text-muted-foreground">
+              Você pode visualizar os veículos disponíveis, mas não possui permissão para fazer reservas.
             </p>
-            {canReserve && (
-              <Button asChild>
-                <Link href="/cars/details">Reservar um veículo</Link>
-              </Button>
-            )}
           </CardContent>
         </Card>
       )}
+
       <Card className="container place-self-center p-8 mt-4">
         <VehicleCalendar />
       </Card>
+
+      {/* Modal de reserva: pede o intervalo e aponta disponibilidade */}
+      <Dialog open={!!reserveVehicle} onOpenChange={(open) => !open && closeReserveModal()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reservar Veículo</DialogTitle>
+          </DialogHeader>
+          {reserveVehicle && (
+            <RentForm vehicle={reserveVehicle} isModal onCloseModal={closeReserveModal} />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de edição de reserva */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
@@ -349,7 +258,15 @@ export default function DashboardPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Link auxiliar para a visão de catálogo dedicada (filtro por data/horário) */}
+      {canReserve && (
+        <div className="mt-6 flex items-center justify-center">
+          <Link href="/cars/details" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+            Ver catálogo com filtro por data e horário específicos
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
-

@@ -59,28 +59,18 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
 
   const filialId = watch("filialId")
 
-  // Filiais da empresa selecionada
+  // Empresa efetiva (fonte única da verdade): a escolha explícita do usuário tem
+  // precedência; senão, deriva da filial salva/selecionada. Assim, ao editar um
+  // veículo a empresa aparece preenchida assim que `filiaisData` carrega, sem
+  // depender de efeitos que poderiam apagar a filial salva.
+  const empresaFromFilial = filiaisData.find((f) => f.id === filialId)?.empresa.id ?? ""
+  const effectiveEmpresaId = empresaId !== "" ? empresaId : empresaFromFilial
+
+  // Filiais da empresa efetiva
   const filiais = useMemo(
-    () => filiaisData.filter((f) => f.empresa.id === empresaId),
-    [filiaisData, empresaId],
+    () => filiaisData.filter((f) => f.empresa.id === effectiveEmpresaId),
+    [filiaisData, effectiveEmpresaId],
   )
-
-  // Ao editar, pré-seleciona a empresa a partir da filial atual do veículo.
-  useEffect(() => {
-    if (vehicle?.filialId && filiaisData.length > 0) {
-      const current = filiaisData.find((f) => f.id === vehicle.filialId)
-      if (current) setEmpresaId(current.empresa.id)
-    }
-  }, [vehicle?.filialId, filiaisData])
-
-  // Ao trocar de empresa, limpa a filial que não pertence mais à empresa.
-  useEffect(() => {
-    if (!filialId) return
-    const allowed = new Set(filiais.map((f) => f.id))
-    if (!allowed.has(filialId)) {
-      setValue("filialId", "")
-    }
-  }, [filiais, filialId, setValue])
 
   // Atualizar o campo imageUrl quando uma nova imagem for enviada
   useEffect(() => {
@@ -169,7 +159,7 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
         <div className="space-y-2">
           <Label htmlFor="empresa">Empresa *</Label>
           <Select
-            value={empresaId}
+            value={effectiveEmpresaId}
             onValueChange={(value) => {
               setEmpresaId(value)
               setValue("filialId", "")
@@ -193,10 +183,10 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
           <Select
             value={filialId ?? ""}
             onValueChange={(value) => setValue("filialId", value, { shouldValidate: true })}
-            disabled={!empresaId}
+            disabled={!effectiveEmpresaId}
           >
             <SelectTrigger>
-              <SelectValue placeholder={empresaId ? "Selecione a filial" : "Selecione a empresa primeiro"} />
+              <SelectValue placeholder={effectiveEmpresaId ? "Selecione a filial" : "Selecione a empresa primeiro"} />
             </SelectTrigger>
             <SelectContent>
               {filiais.map((filial) => (

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Search, Edit, Trash2, BarChart3, Car, TrendingUp } from "lucide-react"
+import { Plus, Search, Edit, Trash2, BarChart3, Car, TrendingUp, CalendarPlus } from "lucide-react"
 import Image from "next/image"
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VehicleForm } from "@/components/admin/vehicles/vehicle-form"
+import { ManualRentForm } from "@/components/admin/vehicles/manual-rent-form"
 import { VehicleMetrics } from "@/components/admin/vehicles/vehicle-metrics"
 import { VehicleUsageHistory } from "@/components/admin/vehicles/vehicle-usage-history"
 import { UserRanking } from "@/components/admin/vehicles/user-ranking"
@@ -23,6 +24,7 @@ export default function VehiclesAdminClient() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isRentDialogOpen, setIsRentDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
@@ -101,26 +103,46 @@ export default function VehiclesAdminClient() {
             Gerencie a frota de veículos da empresa
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Veículo
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Criar Novo Veículo</DialogTitle>
-            </DialogHeader>
-            <VehicleForm
-              onSuccess={() => {
-                setIsCreateDialogOpen(false)
-                void refetch()
-              }}
-              onCancel={() => setIsCreateDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Dialog open={isRentDialogOpen} onOpenChange={setIsRentDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                Novo Agendamento
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Novo Agendamento</DialogTitle>
+              </DialogHeader>
+              <ManualRentForm
+                onSuccess={() => setIsRentDialogOpen(false)}
+                onCancel={() => setIsRentDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Veículo
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Criar Novo Veículo</DialogTitle>
+              </DialogHeader>
+              <VehicleForm
+                onSuccess={() => {
+                  setIsCreateDialogOpen(false)
+                  void refetch()
+                }}
+                onCancel={() => setIsCreateDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Tabs defaultValue="vehicles" className="space-y-6">
@@ -209,7 +231,11 @@ export default function VehiclesAdminClient() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Filial:</span>
-                          <span>{vehicle.filial ? `${vehicle.filial.name} (${vehicle.filial.code})` : "—"}</span>
+                          {vehicle.filial ? (
+                            <span>{`${vehicle.filial.name} (${vehicle.filial.code})`}</span>
+                          ) : (
+                            <Badge variant="destructive">Sem filial</Badge>
+                          )}
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Quilometragem:</span>
