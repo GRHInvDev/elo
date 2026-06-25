@@ -42,7 +42,7 @@ export interface SuggestionsKanbanBoardProps<
   onDragEnd: OnDragEndResponder
   onOpenSuggestion: (suggestion: T) => void
   /** Clique direito sobre um card — recebe a ideia e a posição do cursor. */
-  onContextMenuSuggestion?: (suggestion: T) => void
+  onContextMenuSuggestion?: (suggestion: T, position: { x: number; y: number }) => void
 }
 
 const SKELETON_CARDS_PER_COLUMN = 3
@@ -155,7 +155,7 @@ export function SuggestionsKanbanBoard<T extends SuggestionsKanbanCard>({
                               onContextMenu={(e) => {
                                 if (!onContextMenuSuggestion) return
                                 e.preventDefault()
-                                onContextMenuSuggestion(s)
+                                onContextMenuSuggestion(s, { x: e.clientX, y: e.clientY })
                               }}
                             >
                               <CardContent className="p-2 md:p-3">

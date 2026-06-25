@@ -1938,6 +1938,7 @@ export default function AdminSuggestionsPage() {
   // Menu de ações (clique direito no card): editar ou excluir
   const [actionsSuggestion, setActionsSuggestion] = useState<SuggestionLocal | null>(null)
   const [isActionsDialogOpen, setIsActionsDialogOpen] = useState(false)
+  const [actionsPosition, setActionsPosition] = useState<{ x: number; y: number } | null>(null)
 
   const deleteSuggestionMutation = api.suggestion.deleteAdmin.useMutation({
     onSuccess: () => {
@@ -1955,8 +1956,9 @@ export default function AdminSuggestionsPage() {
     },
   })
 
-  const openActionsDialog = (suggestion: SuggestionLocal) => {
+  const openActionsDialog = (suggestion: SuggestionLocal, position: { x: number; y: number }) => {
     setActionsSuggestion(suggestion)
+    setActionsPosition(position)
     setIsActionsDialogOpen(true)
   }
 
@@ -2618,8 +2620,12 @@ export default function AdminSuggestionsPage() {
         open={isActionsDialogOpen}
         onOpenChange={(open) => {
           setIsActionsDialogOpen(open)
-          if (!open) setActionsSuggestion(null)
+          if (!open) {
+            setActionsSuggestion(null)
+            setActionsPosition(null)
+          }
         }}
+        position={actionsPosition}
         ideaNumber={actionsSuggestion?.ideaNumber}
         isDeleting={deleteSuggestionMutation.isPending}
         onEdit={() => {
