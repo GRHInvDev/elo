@@ -793,6 +793,14 @@ export const suggestionRouter = createTRPCRouter({
       return updatedSuggestion
     }),
 
+  // Excluir ideia (admin). Os vínculos de KPI são removidos em cascata pelo schema.
+  deleteAdmin: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.suggestion.delete({ where: { id: input.id } })
+      return { success: true, id: input.id }
+    }),
+
   // Editar descrição quando status é NEW (Não avaliado)
   updateDescription: protectedProcedure
     .input(z.object({

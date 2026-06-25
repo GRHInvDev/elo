@@ -28,6 +28,7 @@ import { DoubtsPopup } from "@/components/ui/doubts-popup"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EvaluatorDashboardTab } from "@/components/admin/suggestion/evaluator-dashboard-tab"
 import { SuggestionsKanbanBoard } from "@/components/admin/suggestion/suggestions-kanban-board"
+import { IdeaActionsDialog } from "@/components/admin/suggestion/idea-actions-dialog"
 import { RejectionReasonClarifyDialog } from "@/components/admin/suggestion/rejection-reason-clarify-dialog"
 import type { SuggestionAiEnhancement } from "@/types/suggestion-ai-enhancement"
 import { parseSuggestionAiEnhancement } from "@/types/suggestion-ai-enhancement"
@@ -1934,6 +1935,31 @@ export default function AdminSuggestionsPage() {
     setIsSuggestionModalOpen(false)
   }
 
+  // Menu de ações (clique direito no card): editar ou excluir
+  const [actionsSuggestion, setActionsSuggestion] = useState<SuggestionLocal | null>(null)
+  const [isActionsDialogOpen, setIsActionsDialogOpen] = useState(false)
+
+  const deleteSuggestionMutation = api.suggestion.deleteAdmin.useMutation({
+    onSuccess: () => {
+      toast({ title: "Ideia excluída", description: "A ideia foi removida com sucesso." })
+      setIsActionsDialogOpen(false)
+      setActionsSuggestion(null)
+      void refetch()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+  const openActionsDialog = (suggestion: SuggestionLocal) => {
+    setActionsSuggestion(suggestion)
+    setIsActionsDialogOpen(true)
+  }
+
   useEffect(() => {
     if (!selectedSuggestion?.id || !isSuggestionModalOpen) return
     const row = dbSuggestions.find((s) => s.id === selectedSuggestion.id)
@@ -2516,6 +2542,7 @@ export default function AdminSuggestionsPage() {
           kanbanColumns={kanbanColumns}
           onDragEnd={onDragEnd}
           onOpenSuggestion={openSuggestionModal}
+          onContextMenuSuggestion={openActionsDialog}
         />
       </div>
         </TabsContent>
@@ -2585,6 +2612,28 @@ export default function AdminSuggestionsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Menu de ações da ideia (clique direito no card) */}
+      <IdeaActionsDialog
+        open={isActionsDialogOpen}
+        onOpenChange={(open) => {
+          setIsActionsDialogOpen(open)
+          if (!open) setActionsSuggestion(null)
+        }}
+        ideaNumber={actionsSuggestion?.ideaNumber}
+        isDeleting={deleteSuggestionMutation.isPending}
+        onEdit={() => {
+          if (!actionsSuggestion) return
+          const target = actionsSuggestion
+          setIsActionsDialogOpen(false)
+          setActionsSuggestion(null)
+          openSuggestionModal(target)
+        }}
+        onDelete={() => {
+          if (!actionsSuggestion) return
+          deleteSuggestionMutation.mutate({ id: actionsSuggestion.id })
+        }}
+      />
 
       {/* Modal de Gerenciamento de Classificações */}
       <Dialog open={isClassificationModalOpen} onOpenChange={setIsClassificationModalOpen}>
