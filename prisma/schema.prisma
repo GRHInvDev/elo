@@ -632,6 +632,21 @@ model Filial {
   @@map("filiais")
 }
 
+// Lista gerenciável de setores da empresa. É a fonte da verdade para o
+// dropdown/filtro de setor na gestão de usuários. `User.setor` continua sendo
+// uma string que guarda o `value` do setor (mantido por compatibilidade com os
+// vários usos existentes: forms, ramais, agrupamentos).
+model Setor {
+  id        String   @id @default(cuid())
+  name      String   @unique // Rótulo exibido. Ex.: "Recursos Humanos"
+  value     String   @unique // Valor persistido em User.setor. Ex.: "RECURSOS_HUMANOS"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("setores")
+}
+
 enum Enterprise {
   NA
   Box

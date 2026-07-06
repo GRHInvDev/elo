@@ -318,6 +318,8 @@ export const userRouter = createTRPCRouter({
       sector: z.string().optional(),
       search: z.string().optional(),
       enterprise: z.nativeEnum(Enterprise).optional(),
+      /** Filtro por empresa cadastrada (model Empresa), via filial vinculada ao usuário. */
+      empresaId: z.string().optional(),
       filialId: z.string().optional(),
       isAdmin: z.boolean().optional(),
       /** Filtro por status na empresa: active (ativo), inactive (desativado). Omitir = todos. */
@@ -352,9 +354,14 @@ export const userRouter = createTRPCRouter({
         }
       }
 
-      // Filtro por empresa
+      // Filtro por empresa (enum legado — mantido por compatibilidade)
       if (input.enterprise) {
         where.enterprise = input.enterprise
+      }
+
+      // Filtro por empresa cadastrada: filtra pela empresa da filial do usuário.
+      if (input.empresaId) {
+        where.filial = { empresaId: input.empresaId }
       }
 
       // Filtro por filial
