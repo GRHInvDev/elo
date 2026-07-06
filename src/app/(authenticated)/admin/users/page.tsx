@@ -61,22 +61,16 @@ type ExtendedRolesConfig = RolesConfig & {
   can_view_dados_privados?: boolean
 }
 import { ADMIN_ROUTES } from "@/const/admin-routes"
+import { SetoresDialog } from "./_components/setores-dialog"
 
-// Lista de setores disponíveis
-const AVAILABLE_SETORES = [
-  { value: "none", label: "Nenhum setor" },
-  { value: "ADMINISTRATIVO", label: "Administrativo" },
-  { value: "COMERCIAL", label: "Comercial" },
-  { value: "FINANCEIRO", label: "Financeiro" },
-  { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
-  { value: "TI", label: "Tecnologia da Informação" },
-  { value: "INOVACAO", label: "Inovação" },
-  { value: "MARKETING", label: "Marketing" },
-  { value: "PRODUCAO", label: "Produção" },
-  { value: "COMPRAS", label: "Compras" },
-  { value: "LOGISTICA", label: "Logística" },
-]
+// Setor agora é uma lista gerenciável (tabela Setor), carregada via api.setores.list.
+export type SetorItem = { id: string; name: string; value: string; active: boolean }
 
+/** Rótulo de um setor a partir do seu `value`, com fallback para o próprio valor. */
+function setorLabelFrom(setores: SetorItem[], value: string | null | undefined): string {
+  if (!value) return "Não informado"
+  return setores.find((s) => s.value === value)?.name ?? value
+}
 
 const ENTERPRISE_OPTIONS: { value: Enterprise | "all"; label: string }[] = [
   { value: "all", label: "Todas as empresas" },
@@ -91,7 +85,7 @@ const ENTERPRISE_OPTIONS: { value: Enterprise | "all"; label: string }[] = [
 export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSector, setSelectedSector] = useState<string>("all")
-  const [selectedEnterprise, setSelectedEnterprise] = useState<Enterprise | "all">("all")
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string>("all")
   const [selectedFilial, setSelectedFilial] = useState<string>("all")
   const [isAdminFilter, setIsAdminFilter] = useState<boolean | "all">("all")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
@@ -106,7 +100,7 @@ export default function UsersManagementPage() {
   const { data: usersData, isLoading, refetch } = api.user.listUsers.useQuery({
     search: searchTerm || undefined,
     sector: selectedSector !== "all" ? selectedSector : undefined,
-    enterprise: selectedEnterprise !== "all" ? selectedEnterprise : undefined,
+    empresaId: selectedEmpresaId !== "all" ? selectedEmpresaId : undefined,
     filialId: selectedFilial !== "all" ? selectedFilial : undefined,
     isAdmin: isAdminFilter !== "all" ? isAdminFilter : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -116,6 +110,7 @@ export default function UsersManagementPage() {
 
   const { data: allForms } = api.form.list.useQuery()
   const { data: empresas = [] } = api.empresas.list.useQuery()
+  const { data: setores = [] } = api.setores.list.useQuery()
   const { data: filiaisRaw = [] } = api.filiais.list.useQuery()
   const filiais = useMemo(
     () =>
@@ -137,15 +132,15 @@ export default function UsersManagementPage() {
   // Reset offset quando filtros mudarem
   useEffect(() => {
     setOffset(0)
-  }, [searchTerm, selectedSector, selectedEnterprise, selectedFilial, isAdminFilter, statusFilter])
+  }, [searchTerm, selectedSector, selectedEmpresaId, selectedFilial, isAdminFilter, statusFilter])
 
   // Filiais disponíveis para o filtro (restritas à empresa selecionada, quando houver)
   const filialOptions = useMemo(
     () =>
-      selectedEnterprise === "all"
+      selectedEmpresaId === "all"
         ? filiais
-        : filiais.filter((f) => f.enterprise === selectedEnterprise),
-    [filiais, selectedEnterprise],
+        : filiais.filter((f) => f.empresaId === selectedEmpresaId),
+    [filiais, selectedEmpresaId],
   )
 
   // Ao trocar a empresa, limpa a filial se ela não pertencer mais ao conjunto
@@ -175,11 +170,16 @@ export default function UsersManagementPage() {
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Gerenciamento de Usuários</h2>
-          <p className="text-muted-foreground">
-            Gerencie permissões, dados básicos e configurações avançadas de usuários
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Gerenciamento de Usuários</h2>
+            <p className="text-muted-foreground">
+              Gerencie permissões, dados básicos e configurações avançadas de usuários
+            </p>
+          </div>
+          {(isSudo || canManageBasicUserData()) && (
+            <SetoresDialog setores={setores} />
+          )}
         </div>
 
         {/* Barra de pesquisa e filtros */}
@@ -230,29 +230,30 @@ export default function UsersManagementPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os setores</SelectItem>
-                    {AVAILABLE_SETORES.filter(s => s.value !== "none").map((setor) => (
-                      <SelectItem key={setor.value} value={setor.value}>
-                        {setor.label}
+                    {setores.map((setor) => (
+                      <SelectItem key={setor.id} value={setor.value}>
+                        {setor.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Filtro de Empresa */}
+              {/* Filtro de Empresa (cadastro real) */}
               <div>
                 <Label htmlFor="enterprise">Empresa</Label>
                 <Select
-                  value={selectedEnterprise}
-                  onValueChange={(value) => setSelectedEnterprise(value as Enterprise | "all")}
+                  value={selectedEmpresaId}
+                  onValueChange={setSelectedEmpresaId}
                 >
                   <SelectTrigger id="enterprise">
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ENTERPRISE_OPTIONS.map((enterprise) => (
-                      <SelectItem key={enterprise.value} value={enterprise.value}>
-                        {enterprise.label}
+                    <SelectItem value="all">Todas as empresas</SelectItem>
+                    {empresas.map((empresa) => (
+                      <SelectItem key={empresa.id} value={empresa.id}>
+                        {empresa.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -273,7 +274,7 @@ export default function UsersManagementPage() {
                     <SelectItem value="all">Todas as filiais</SelectItem>
                     {filialOptions.map((filial) => (
                       <SelectItem key={filial.id} value={filial.id}>
-                        {filial.name} ({filial.code}){selectedEnterprise === "all" ? ` — ${filial.empresaName}` : ""}
+                        {filial.name} ({filial.code}){selectedEmpresaId === "all" ? ` — ${filial.empresaName}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -358,6 +359,7 @@ export default function UsersManagementPage() {
                       allForms={allForms ?? []}
                       filiais={filiais}
                       empresas={empresas}
+                      setores={setores}
                       onUserUpdate={() => refetch()}
                     />
                   ))}
@@ -392,7 +394,7 @@ export default function UsersManagementPage() {
               </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                {searchTerm || selectedSector !== "all" || selectedEnterprise !== "all" || selectedFilial !== "all" || isAdminFilter !== "all" || statusFilter !== "all"
+                {searchTerm || selectedSector !== "all" || selectedEmpresaId !== "all" || selectedFilial !== "all" || isAdminFilter !== "all" || statusFilter !== "all"
                   ? "Nenhum usuário encontrado para estes filtros."
                   : "Nenhum usuário encontrado."}
               </div>
@@ -432,6 +434,7 @@ interface UserManagementCardProps {
   allForms: { id: string; title: string }[]
   filiais?: { id: string; name: string; code: string; enterprise: Enterprise; empresaId: string; empresaName: string }[]
   empresas?: { id: string; name: string }[]
+  setores?: SetorItem[]
   onUserUpdate: () => void
   /** Quando renderizado dentro de um modal, remove a borda/sombra do Card externo. */
   embedded?: boolean
@@ -475,7 +478,7 @@ function UserListRow(props: UserManagementCardProps) {
 
   const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email
   const setorLabel = user.setor
-    ? (AVAILABLE_SETORES.find((s) => s.value === user.setor)?.label ?? user.setor)
+    ? ((props.setores ?? []).find((s) => s.value === user.setor)?.name ?? user.setor)
     : null
   const empresaLabel =
     user.filial?.empresa?.name ??
@@ -557,7 +560,7 @@ function UserListRow(props: UserManagementCardProps) {
   )
 }
 
-function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUserUpdate, embedded = false }: UserManagementCardProps) {
+function UserManagementCard({ user, allForms, filiais = [], empresas = [], setores = [], onUserUpdate, embedded = false }: UserManagementCardProps) {
   const [activeTab, setActiveTab] = useState("basic")
   const [isEditing, setIsEditing] = useState(false)
   const [permissionSearch, setPermissionSearch] = useState("")
@@ -573,11 +576,8 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
   const canToggleActive = isSudo || canManageBasicUserData()
 
   // Função auxiliar para obter o nome do setor
-  const getSetorLabel = (setorValue: string | null | undefined): string => {
-    if (!setorValue) return "Não informado"
-    const setor = AVAILABLE_SETORES.find(s => s.value === setorValue)
-    return setor ? setor.label : setorValue
-  }
+  const getSetorLabel = (setorValue: string | null | undefined): string =>
+    setorLabelFrom(setores, setorValue)
   const getEnterpriseLabel = (enterpriseValue: Enterprise | null | undefined): string => {
     if (!enterpriseValue) return "N/A"
     const opt = ENTERPRISE_OPTIONS.find(o => o.value === enterpriseValue)
@@ -1158,9 +1158,10 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
                         <SelectValue placeholder="Selecione um setor" />
                       </SelectTrigger>
                       <SelectContent>
-                        {AVAILABLE_SETORES.map((setor) => (
-                          <SelectItem key={setor.value} value={setor.value}>
-                            {setor.label}
+                        <SelectItem value="none">Nenhum setor</SelectItem>
+                        {setores.map((setor) => (
+                          <SelectItem key={setor.id} value={setor.value}>
+                            {setor.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2204,6 +2205,7 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], onUse
               userId={user.id}
               enabled={activeTab === "movimentacoes"}
               filiais={filiais}
+              setores={setores}
             />
           </TabsContent>
         </Tabs>
@@ -2254,6 +2256,7 @@ function formatAuditValue(
   field: string,
   value: unknown,
   filiais: { id: string; name: string; code: string }[],
+  setores: SetorItem[],
 ): string {
   if (value === null || value === undefined || value === "") return "—"
   if (typeof value === "boolean") return value ? "Sim" : "Não"
@@ -2268,7 +2271,7 @@ function formatAuditValue(
       return ENTERPRISE_OPTIONS.find((o) => o.value === value)?.label ?? value
     }
     if (field === "setor") {
-      return AVAILABLE_SETORES.find((s) => s.value === value)?.label ?? value
+      return setores.find((s) => s.value === value)?.name ?? value
     }
     return value
   }
@@ -2280,10 +2283,12 @@ function UserMovimentacoesTab({
   userId,
   enabled,
   filiais,
+  setores,
 }: {
   userId: string
   enabled: boolean
   filiais: { id: string; name: string; code: string }[]
+  setores: SetorItem[]
 }) {
   const { data: logs, isLoading } = api.user.listUserAudit.useQuery(
     { userId },
@@ -2354,11 +2359,11 @@ function UserMovimentacoesTab({
                         {AUDIT_FIELD_LABELS[field] ?? field}:
                       </span>{" "}
                       <span className="text-muted-foreground line-through">
-                        {formatAuditValue(field, diff.from, filiais)}
+                        {formatAuditValue(field, diff.from, filiais, setores)}
                       </span>{" "}
                       <span aria-hidden>→</span>{" "}
                       <span className="text-foreground">
-                        {formatAuditValue(field, diff.to, filiais)}
+                        {formatAuditValue(field, diff.to, filiais, setores)}
                       </span>
                     </li>
                   ))}

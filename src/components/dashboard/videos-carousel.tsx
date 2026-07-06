@@ -103,19 +103,6 @@ export function VideosCarousel({
             ))}
             <CarouselItem className="basis-full pl-2 md:pl-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-2xl shadow-lg">
-                <iframe
-                  src="https://www.youtube.com/embed/iSdz3gxUpAI"
-                  title="Box"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  className="absolute inset-0 h-full w-full"
-                  allowFullScreen
-                  loading="lazy"
-                  style={{ touchAction: "pan-x pinch-zoom" }}
-                ></iframe>
-              </div>
-            </CarouselItem>
-            <CarouselItem className="basis-full pl-2 md:pl-4">
-              <div className="relative aspect-video w-full overflow-hidden rounded-2xl shadow-lg">
                 <WeatherWidget className="h-full" enterprise={enterprise} />
               </div>
             </CarouselItem>
