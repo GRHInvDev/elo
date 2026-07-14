@@ -18,12 +18,11 @@ import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import type { RouterOutputs } from "@/trpc/react"
-import { Plus, Edit, Trash2, Check, ChevronsUpDown, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle, Sparkles, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Check, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle, Sparkles, Loader2 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { SingleUserSearch } from "@/components/forms/single-user-search"
 import { DoubtsPopup } from "@/components/ui/doubts-popup"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EvaluatorDashboardTab } from "@/components/admin/suggestion/evaluator-dashboard-tab"
@@ -175,100 +174,52 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
-// Componente para seleção de usuário responsável
+// Nome de exibição de um usuário/analista (nome completo ou email)
+function getPersonDisplayName(person: { firstName: string | null; lastName: string | null; email: string } | null | undefined): string | null {
+  if (!person) return null
+  if (person.firstName && person.lastName) {
+    return `${person.firstName} ${person.lastName}`
+  }
+  return person.email
+}
+
+// Componente para seleção de usuário responsável (padronizado com SingleUserSearch)
 function UserSelector({
   value,
   onValueChange,
   disabled = false,
-  adminOnly = false,
-  placeholder = "Selecionar responsável..."
+  placeholder = "Selecionar responsável...",
+  fallbackSelectedLabel
 }: {
   value: string | null
   onValueChange: (value: string | null) => void
   disabled?: boolean
-  adminOnly?: boolean
   placeholder?: string
+  /** Nome exibido quando o usuário selecionado não está na lista carregada */
+  fallbackSelectedLabel?: string | null
 }) {
-  const [open, setOpen] = useState(false)
+  // Buscar todos os usuários para seleção de responsável
+  const { data: allUsers = [] } = api.user.listAll.useQuery()
 
-  // Buscar usuários para seleção de responsável
-  const { data: allUsers = [] } = adminOnly
-    ? api.user.listAdmins.useQuery()
-    : api.user.listAll.useQuery()
-
-  const selectedUser = allUsers.find(user => user.id === value)
-
-  const getUserDisplayName = (user: typeof allUsers[0]) => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`
-    }
-    return user.email
-  }
+  const users = useMemo(() =>
+    allUsers.map(user => ({
+      id: user.id,
+      name: getPersonDisplayName(user) ?? user.email,
+      email: user.email,
+      setor: user.setor,
+    })), [allUsers])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-          disabled={disabled}
-        >
-          {selectedUser ? getUserDisplayName(selectedUser) : placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0">
-        <Command filter={(value, search) => {
-          const normalize = (s: string) =>
-            s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
-          return normalize(value).includes(normalize(search)) ? 1 : 0
-        }}>
-          <CommandInput placeholder="Buscar usuário..." />
-          <CommandList>
-            <CommandEmpty>Nenhum usuário encontrado.</CommandEmpty>
-            <CommandGroup>
-              <CommandItem
-                onSelect={() => {
-                  onValueChange(null)
-                  setOpen(false)
-                }}
-                className="text-muted-foreground"
-              >
-                <Check className="mr-2 h-4 w-4 opacity-0" />
-                Não atribuído
-              </CommandItem>
-              {allUsers.map((user) => (
-                <CommandItem
-                  key={user.id}
-                  value={`${user.firstName ?? ''} ${user.lastName ?? ''} ${user.email}`.toLowerCase()}
-                  onSelect={() => {
-                    onValueChange(user.id)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={`mr-2 h-4 w-4 ${value === user.id ? "opacity-100" : "opacity-0"
-                      }`}
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-medium">
-                      {getUserDisplayName(user)}
-                    </span>
-                    {user.setor && (
-                      <span className="text-xs text-muted-foreground">
-                        {user.setor}
-                      </span>
-                    )}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <SingleUserSearch
+      users={users}
+      value={value}
+      onValueChange={onValueChange}
+      disabled={disabled}
+      placeholder={placeholder}
+      searchPlaceholder="Buscar por nome, email ou setor..."
+      clearLabel="Não atribuído"
+      fallbackSelectedLabel={fallbackSelectedLabel}
+    />
   )
 }
 
@@ -1674,8 +1625,8 @@ function SuggestionDetailsModal({
           <UserSelector
             value={responsibleUser}
             onValueChange={setResponsibleUser}
-            adminOnly={true}
             placeholder="Selecionar responsável..."
+            fallbackSelectedLabel={getPersonDisplayName(suggestion.analyst)}
           />
         </div>
 
@@ -2351,7 +2302,6 @@ export default function AdminSuggestionsPage() {
                   value={authorFilter}
                   onValueChange={(value) => setAuthorFilter(value)}
                   disabled={false}
-                  adminOnly={false}
                   placeholder="Selecionar autor..."
                 />
                 {authorFilter && (
@@ -2372,7 +2322,6 @@ export default function AdminSuggestionsPage() {
                   value={analystFilter}
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
-                  adminOnly={false}
                   placeholder="Selecionar responsável..."
                 />
                 {analystFilter && (
@@ -2454,7 +2403,6 @@ export default function AdminSuggestionsPage() {
                   value={analystFilter}
                   onValueChange={(value) => setAnalystFilter(value)}
                   disabled={false}
-                  adminOnly={false}
                   placeholder="Selecionar responsável..."
                 />
                 {analystFilter && (
@@ -2475,7 +2423,6 @@ export default function AdminSuggestionsPage() {
                   value={authorFilter}
                   onValueChange={(value) => setAuthorFilter(value)}
                   disabled={false}
-                  adminOnly={false}
                   placeholder="Selecionar autor..."
                 />
                 {authorFilter && (
@@ -3146,8 +3093,8 @@ function SuggestionItem({
                   onValueChange={(userId: string | null) => {
                     update(s.id, { analystId: userId })
                   }}
-                  adminOnly={true}
                   placeholder="Selecionar responsável..."
+                  fallbackSelectedLabel={getPersonDisplayName(s.analyst)}
                 />
               </div>
 
@@ -4054,7 +4001,6 @@ function CreateSuggestionModal({
                       userId: value
                     }))
                   }}
-                  adminOnly={false}
                   placeholder="Selecionar colaborador..."
                 />
                 <p className="text-xs text-muted-foreground">
@@ -4179,7 +4125,6 @@ function CreateSuggestionModal({
                 <UserSelector
                   value={formData.analystId}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, analystId: value }))}
-                  adminOnly={true}
                   placeholder="Selecionar responsável..."
                 />
               </div>
