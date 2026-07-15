@@ -38,6 +38,7 @@ import { aiAssistantRouter } from "./routers/ai-assistant";
 import { filiaisRouter } from "./routers/filiais";
 import { empresasRouter } from "./routers/empresas";
 import { setoresRouter } from "./routers/setores";
+import { bannerRouter } from "./routers/banner";
 
 /**
  * This is the primary router for your server.
@@ -83,6 +84,7 @@ export const appRouter = createTRPCRouter({
   filiais: filiaisRouter,
   empresas: empresasRouter,
   setores: setoresRouter,
+  banner: bannerRouter,
 });
 
 // export type definition of API

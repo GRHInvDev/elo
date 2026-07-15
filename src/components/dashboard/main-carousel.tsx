@@ -3,12 +3,15 @@
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import { OptimizedImage } from "@/components/ui/optimized-image"
+import Link from "next/link"
 import { useEffect, useState } from "react"
 
 interface MainCarouselProps {
   itens: {
     imageRef: string
     title: string
+    /** Quando presente, o banner vira clicável (links externos abrem em nova aba). */
+    href?: string | null
   }[],
   className?: string
 }
@@ -55,8 +58,9 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
         }}
       >
         <CarouselContent>
-          {itens.map((item, index) => (
-            <CarouselItem key={index} className="w-full h-96">
+          {itens.map((item, index) => {
+            const isExternal = item.href?.startsWith("http") ?? false
+            const image = (
               <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
                 <OptimizedImage
                   alt={item.title}
@@ -65,8 +69,26 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
                   className="object-cover"
                 />
               </div>
-            </CarouselItem>
-          ))}
+            )
+
+            return (
+              <CarouselItem key={index} className="w-full h-96">
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    target={isExternal ? "_blank" : undefined}
+                    rel={isExternal ? "noopener noreferrer" : undefined}
+                    aria-label={item.title}
+                    className="block w-full h-full"
+                  >
+                    {image}
+                  </Link>
+                ) : (
+                  image
+                )}
+              </CarouselItem>
+            )
+          })}
         </CarouselContent>
       </Carousel>
 

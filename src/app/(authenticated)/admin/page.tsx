@@ -31,6 +31,7 @@ const ADMIN_HOME_SECTIONS: {
     title: "Comunicação na intranet",
     subtitle: "Conteúdo para colaboradores e engajamento",
     routeIds: [
+      "/admin/banners",
       "/admin/birthday",
       "/admin/hall-entrada",
       "/admin/news",

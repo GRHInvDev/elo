@@ -12,6 +12,7 @@ import {
   FileText,
   DoorOpen,
   Building2,
+  GalleryHorizontal,
 } from "lucide-react"
 
 export interface AdminRoute {
@@ -78,6 +79,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     description: "Configurar salas e gerenciar reservas",
     icon: MapPin,
     path: "/admin/rooms",
+    requiresBasicAdmin: true,
+  },
+  {
+    id: "/admin/banners",
+    title: "Gerenciar Banners",
+    description: "Banners do carrossel principal do dashboard",
+    icon: GalleryHorizontal,
+    path: "/admin/banners",
     requiresBasicAdmin: true,
   },
   {

@@ -116,27 +116,17 @@ export default function DashboardPage() {
     });
   }, [user?.role_config, user?.novidades]);
 
-  const posts: {
-    imageRef: string;
-    title: string;
-  }[] = [
-    {
-      imageRef: "/banners/Banners-intranet-1.png",
-      title: "Banners-intranet-1",
-    },
-    {
-      imageRef: "/banners/Banners-intranet-2.png",
-      title: "Banners-intranet-2",
-    },
-    {
-      imageRef: "/banners/Banners-intranet-4.png",
-      title: "Banners-intranet-4",
-    },
-    {
-      imageRef: "/banners/Banners-intranet-6.jpg",
-      title: "Banners-intranet-6",
-    },
-  ];
+  // Banners do carrossel principal, gerenciáveis em /admin/banners
+  const { data: banners } = api.banner.list.useQuery();
+  const posts = useMemo(
+    () =>
+      (banners ?? []).map((banner) => ({
+        imageRef: banner.imageUrl,
+        title: banner.title,
+        href: banner.linkUrl,
+      })),
+    [banners],
+  );
 
   const videos: {
     imageRef: string;
