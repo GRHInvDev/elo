@@ -74,7 +74,7 @@ export function MainCarousel({ itens, isTotem = false, className }: MainCarousel
                   // Perfil Totem: imagem própria do totem (fallback para a base).
                   <OptimizedImage
                     alt={item.title}
-                    src={item.imageRefTotem || base}
+                    src={item.imageRefTotem ?? base}
                     fill
                     className="object-cover"
                   />
@@ -84,7 +84,7 @@ export function MainCarousel({ itens, isTotem = false, className }: MainCarousel
                     <div className="absolute inset-0 md:hidden">
                       <OptimizedImage
                         alt={item.title}
-                        src={item.imageRefMobile || base}
+                        src={item.imageRefMobile ?? base}
                         fill
                         className="object-cover"
                       />
