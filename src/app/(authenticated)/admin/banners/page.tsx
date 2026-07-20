@@ -47,6 +47,8 @@ type BannerItem = {
   id: string
   title: string
   imageUrl: string
+  imageUrlMobile: string | null
+  imageUrlTotem: string | null
   linkUrl: string | null
   published: boolean
   order: number
@@ -55,6 +57,8 @@ type BannerItem = {
 type BannerForm = {
   title: string
   imageUrl: string
+  imageUrlMobile: string
+  imageUrlTotem: string
   linkUrl: string
   published: boolean
   order: number
@@ -63,9 +67,59 @@ type BannerForm = {
 const emptyForm: BannerForm = {
   title: "",
   imageUrl: "",
+  imageUrlMobile: "",
+  imageUrlTotem: "",
   linkUrl: "",
   published: true,
   order: 0,
+}
+
+/**
+ * Slot de upload de imagem do banner (Desktop / Mobile / Totem). Reutilizável:
+ * mostra o preview atual, o botão de upload padrão e, quando opcional e já
+ * preenchido, permite remover para voltar ao fallback da imagem base.
+ */
+function BannerImageSlot({
+  label,
+  hint,
+  value,
+  onChange,
+  onClear,
+  onError,
+}: {
+  label: string
+  hint: string
+  value: string
+  onChange: (url: string) => void
+  onClear?: () => void
+  onError: (error: Error) => void
+}) {
+  return (
+    <div className="grid gap-2 rounded-md border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label>{label}</Label>
+        {onClear && value && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground"
+            onClick={onClear}
+          >
+            <Trash2 className="mr-1 h-3 w-3" />
+            Remover
+          </Button>
+        )}
+      </div>
+      {value && (
+        <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted">
+          <OptimizedImage alt={label} src={value} fill className="object-cover" />
+        </div>
+      )}
+      <UPLTButton onImageUrlGenerated={onChange} onUploadError={onError} />
+      <p className="text-xs text-muted-foreground">{hint}</p>
+    </div>
+  )
 }
 
 export default function BannersManagementPage() {
@@ -139,6 +193,13 @@ export default function BannersManagementPage() {
 
   const isSaving = createBanner.isPending || updateBanner.isPending
 
+  const onUploadError = (error: Error) =>
+    toast({
+      title: "Erro no upload",
+      description: error.message,
+      variant: "destructive",
+    })
+
   const openCreate = () => {
     setSelectedBanner(null)
     setForm({ ...emptyForm, order: banners.length })
@@ -150,6 +211,8 @@ export default function BannersManagementPage() {
     setForm({
       title: banner.title,
       imageUrl: banner.imageUrl,
+      imageUrlMobile: banner.imageUrlMobile ?? "",
+      imageUrlTotem: banner.imageUrlTotem ?? "",
       linkUrl: banner.linkUrl ?? "",
       published: banner.published,
       order: banner.order,
@@ -172,6 +235,8 @@ export default function BannersManagementPage() {
     const payload = {
       title: form.title.trim(),
       imageUrl: form.imageUrl,
+      imageUrlMobile: form.imageUrlMobile === "" ? null : form.imageUrlMobile,
+      imageUrlTotem: form.imageUrlTotem === "" ? null : form.imageUrlTotem,
       linkUrl: form.linkUrl.trim() === "" ? null : form.linkUrl.trim(),
       published: form.published,
       order: form.order,
@@ -392,35 +457,42 @@ export default function BannersManagementPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Imagem</Label>
-                {form.imageUrl && (
-                  <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted">
-                    <OptimizedImage
-                      alt="Banner atual"
-                      src={form.imageUrl}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <UPLTButton
-                  onImageUrlGenerated={(url) =>
-                    setForm((f) => ({ ...f, imageUrl: url }))
-                  }
-                  onUploadError={(error: Error) => {
-                    toast({
-                      title: "Erro no upload",
-                      description: error.message,
-                      variant: "destructive",
-                    })
-                  }}
-                />
-                {selectedBanner && (
+              <div className="grid gap-3">
+                <div>
+                  <Label>Imagens do banner</Label>
                   <p className="text-xs text-muted-foreground">
-                    Envie uma nova imagem apenas se quiser substituir a atual.
+                    A imagem <strong>Desktop</strong> é obrigatória e serve de
+                    base. Mobile e Totem são opcionais: se ficarem em branco, o
+                    banner usa a imagem Desktop nesses contextos.
                   </p>
-                )}
+                </div>
+                <BannerImageSlot
+                  label="Desktop (obrigatória)"
+                  hint="Exibida em telas maiores. Formato panorâmico (recomendado ~1920×384)."
+                  value={form.imageUrl}
+                  onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                  onError={onUploadError}
+                />
+                <BannerImageSlot
+                  label="Mobile (opcional)"
+                  hint="Exibida em celulares. Ideal um recorte mais quadrado/vertical."
+                  value={form.imageUrlMobile}
+                  onChange={(url) =>
+                    setForm((f) => ({ ...f, imageUrlMobile: url }))
+                  }
+                  onClear={() => setForm((f) => ({ ...f, imageUrlMobile: "" }))}
+                  onError={onUploadError}
+                />
+                <BannerImageSlot
+                  label="Totem (opcional)"
+                  hint="Exibida para usuários de perfil Totem (quiósque)."
+                  value={form.imageUrlTotem}
+                  onChange={(url) =>
+                    setForm((f) => ({ ...f, imageUrlTotem: url }))
+                  }
+                  onClear={() => setForm((f) => ({ ...f, imageUrlTotem: "" }))}
+                  onError={onUploadError}
+                />
               </div>
             </div>
             <DialogFooter>

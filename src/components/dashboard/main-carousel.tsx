@@ -8,15 +8,22 @@ import { useEffect, useState } from "react"
 
 interface MainCarouselProps {
   itens: {
+    /** Imagem base/desktop (obrigatória). */
     imageRef: string
+    /** Imagem para telas pequenas; ausente → usa `imageRef`. */
+    imageRefMobile?: string | null
+    /** Imagem para perfil Totem; ausente → usa `imageRef`. */
+    imageRefTotem?: string | null
     title: string
     /** Quando presente, o banner vira clicável (links externos abrem em nova aba). */
     href?: string | null
   }[],
+  /** Usuário de perfil Totem: usa a imagem de totem (com fallback para a base). */
+  isTotem?: boolean
   className?: string
 }
 
-export function MainCarousel({ itens, className }: MainCarouselProps) {
+export function MainCarousel({ itens, isTotem = false, className }: MainCarouselProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
@@ -60,14 +67,39 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
         <CarouselContent>
           {itens.map((item, index) => {
             const isExternal = item.href?.startsWith("http") ?? false
+            const base = item.imageRef || "/placeholder.svg"
             const image = (
               <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
-                <OptimizedImage
-                  alt={item.title}
-                  src={item.imageRef || "/placeholder.svg"}
-                  fill
-                  className="object-cover"
-                />
+                {isTotem ? (
+                  // Perfil Totem: imagem própria do totem (fallback para a base).
+                  <OptimizedImage
+                    alt={item.title}
+                    src={item.imageRefTotem || base}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <>
+                    {/* Mobile: recorte próprio (fallback para a base) */}
+                    <div className="absolute inset-0 md:hidden">
+                      <OptimizedImage
+                        alt={item.title}
+                        src={item.imageRefMobile || base}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    {/* Desktop: imagem base */}
+                    <div className="absolute inset-0 hidden md:block">
+                      <OptimizedImage
+                        alt={item.title}
+                        src={base}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             )
 
