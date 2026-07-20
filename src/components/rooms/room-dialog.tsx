@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { addHours, format, parse } from "date-fns"
+import { addHours, parse } from "date-fns"
 import { Calendar } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { DateInputBR, TimeInputBR } from "@/components/ui/br-datetime-input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
@@ -116,18 +117,17 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="date">Data</Label>
-              <Input id="date" name="date" type="date" required min={format(new Date(), "yyyy-MM-dd")} />
+              <DateInputBR id="date" name="date" required minToday />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="time">Horário</Label>
-              <Input
-                id="time"
-                name="time"
-                type="time"
-                required
-              />
+              <TimeInputBR id="time" name="time" required />
             </div>
           </div>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            Dica: digite <span className="font-medium">H</span> nos campos de data
+            e horário para preencher com hoje e o horário atual.
+          </p>
           <div className="grid gap-2">
             <Label htmlFor="duration">Duração (horas)</Label>
             <Input id="duration" name="duration" type="number" step="0.1" required />

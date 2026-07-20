@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn, formatDateForInput } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { DateInputBR, TimeInputBR } from "@/components/ui/br-datetime-input"
 import { useToast } from "@/hooks/use-toast"
 import { AvatarFallback, AvatarImage, Avatar } from "../ui/avatar"
 import { useAuth } from "@clerk/nextjs"
@@ -224,19 +225,28 @@ function UpdateBookingDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="date">Data</Label>
-              <Input id="date" name="date" type="date" defaultValue={formatDateForInput(booking.start)} required min={format(new Date(), "yyyy-MM-dd")} />
+              <DateInputBR
+                id="date"
+                name="date"
+                defaultValue={booking.start}
+                required
+                minToday
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="time">Horário</Label>
-              <Input
+              <TimeInputBR
                 id="time"
                 name="time"
-                type="time"
+                defaultValue={booking.start}
                 required
-                defaultValue={format(booking.start, "HH:mm")}
               />
             </div>
           </div>
+          <p className="-mt-2 text-xs text-muted-foreground">
+            Dica: digite <span className="font-medium">H</span> nos campos de data
+            e horário para preencher com hoje e o horário atual.
+          </p>
           <div className="grid gap-2">
             <Label htmlFor="duration">Duração (horas)</Label>
             <Input id="duration" name="duration" type="number" defaultValue={differenceInHours(booking.end, booking.start)} required />
