@@ -122,6 +122,8 @@ export default function DashboardPage() {
     () =>
       (banners ?? []).map((banner) => ({
         imageRef: banner.imageUrl,
+        imageRefMobile: banner.imageUrlMobile,
+        imageRefTotem: banner.imageUrlTotem,
         title: banner.title,
         href: banner.linkUrl,
       })),
@@ -169,6 +171,7 @@ export default function DashboardPage() {
               !hasTodayBirthdays && "md:col-span-1",
             )}
             itens={posts}
+            isTotem={isTotem}
           />
         )}
         {hasTodayBirthdays && (

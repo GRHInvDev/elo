@@ -41,12 +41,16 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Smartphone,
+  Monitor,
 } from "lucide-react"
 
 type BannerItem = {
   id: string
   title: string
   imageUrl: string
+  imageUrlMobile: string | null
+  imageUrlTotem: string | null
   linkUrl: string | null
   published: boolean
   order: number
@@ -55,6 +59,8 @@ type BannerItem = {
 type BannerForm = {
   title: string
   imageUrl: string
+  imageUrlMobile: string
+  imageUrlTotem: string
   linkUrl: string
   published: boolean
   order: number
@@ -63,6 +69,8 @@ type BannerForm = {
 const emptyForm: BannerForm = {
   title: "",
   imageUrl: "",
+  imageUrlMobile: "",
+  imageUrlTotem: "",
   linkUrl: "",
   published: true,
   order: 0,
@@ -150,6 +158,8 @@ export default function BannersManagementPage() {
     setForm({
       title: banner.title,
       imageUrl: banner.imageUrl,
+      imageUrlMobile: banner.imageUrlMobile ?? "",
+      imageUrlTotem: banner.imageUrlTotem ?? "",
       linkUrl: banner.linkUrl ?? "",
       published: banner.published,
       order: banner.order,
@@ -172,6 +182,8 @@ export default function BannersManagementPage() {
     const payload = {
       title: form.title.trim(),
       imageUrl: form.imageUrl,
+      imageUrlMobile: form.imageUrlMobile === "" ? null : form.imageUrlMobile,
+      imageUrlTotem: form.imageUrlTotem === "" ? null : form.imageUrlTotem,
       linkUrl: form.linkUrl.trim() === "" ? null : form.linkUrl.trim(),
       published: form.published,
       order: form.order,
@@ -183,6 +195,58 @@ export default function BannersManagementPage() {
       createBanner.mutate(payload)
     }
   }
+
+  // Campo de imagem reutilizável para cada tamanho de tela (desktop/mobile/totem).
+  const renderImageField = (
+    field: "imageUrl" | "imageUrlMobile" | "imageUrlTotem",
+    label: string,
+    description: string,
+    required = false,
+  ) => (
+    <div className="grid gap-2 rounded-lg border p-3">
+      <div className="flex items-center gap-2">
+        <Label className="font-semibold">{label}</Label>
+        {required ? (
+          <Badge variant="secondary">Obrigatória</Badge>
+        ) : (
+          <Badge variant="outline">Opcional</Badge>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">{description}</p>
+      {form[field] && (
+        <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted">
+          <OptimizedImage
+            alt={label}
+            src={form[field]}
+            fill
+            className="object-cover"
+          />
+          {!required && (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="absolute right-2 top-2 h-7"
+              onClick={() => setForm((f) => ({ ...f, [field]: "" }))}
+            >
+              <Trash2 className="mr-1 h-3.5 w-3.5" />
+              Remover
+            </Button>
+          )}
+        </div>
+      )}
+      <UPLTButton
+        onImageUrlGenerated={(url) => setForm((f) => ({ ...f, [field]: url }))}
+        onUploadError={(error: Error) => {
+          toast({
+            title: "Erro no upload",
+            description: error.message,
+            variant: "destructive",
+          })
+        }}
+      />
+    </div>
+  )
 
   if (!isLoadingAccess && !hasAccess) {
     return (
@@ -265,6 +329,20 @@ export default function BannersManagementPage() {
                       ) : (
                         <p className="text-xs text-muted-foreground">Sem link</p>
                       )}
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {banner.imageUrlMobile && (
+                          <Badge variant="outline" className="gap-1 text-[10px]">
+                            <Smartphone className="h-3 w-3" />
+                            Mobile
+                          </Badge>
+                        )}
+                        {banner.imageUrlTotem && (
+                          <Badge variant="outline" className="gap-1 text-[10px]">
+                            <Monitor className="h-3 w-3" />
+                            Totem
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <Badge
@@ -392,30 +470,31 @@ export default function BannersManagementPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label>Imagem</Label>
-                {form.imageUrl && (
-                  <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted">
-                    <OptimizedImage
-                      alt="Banner atual"
-                      src={form.imageUrl}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
+              <div className="grid gap-3">
+                <div className="grid gap-0.5">
+                  <Label className="text-base">Imagens do banner</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Envie uma imagem por tamanho de tela. As variações Mobile e
+                    Totem são opcionais — quando não enviadas, o carrossel usa a
+                    imagem padrão (Desktop).
+                  </p>
+                </div>
+                {renderImageField(
+                  "imageUrl",
+                  "Desktop (padrão)",
+                  "Exibida em telas grandes e como fallback das demais. Ideal em formato horizontal (ex.: 1920×640).",
+                  true,
                 )}
-                <UPLTButton
-                  onImageUrlGenerated={(url) =>
-                    setForm((f) => ({ ...f, imageUrl: url }))
-                  }
-                  onUploadError={(error: Error) => {
-                    toast({
-                      title: "Erro no upload",
-                      description: error.message,
-                      variant: "destructive",
-                    })
-                  }}
-                />
+                {renderImageField(
+                  "imageUrlMobile",
+                  "Mobile",
+                  "Exibida em celulares (telas menores que 768px). Ideal em formato mais quadrado/vertical.",
+                )}
+                {renderImageField(
+                  "imageUrlTotem",
+                  "Totem",
+                  "Exibida para usuários Totem. Ideal em formato vertical (retrato).",
+                )}
                 {selectedBanner && (
                   <p className="text-xs text-muted-foreground">
                     Envie uma nova imagem apenas se quiser substituir a atual.

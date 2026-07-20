@@ -242,15 +242,19 @@ model Flyer {
 
 /// Banners do carrossel principal do dashboard. Gerenciados em /admin/banners.
 /// `linkUrl` é opcional: quando preenchido, o banner vira clicável.
+/// `imageUrl` é a imagem padrão (desktop). `imageUrlMobile` e `imageUrlTotem`
+/// são variações opcionais por tamanho de tela; quando ausentes, cai no padrão.
 model Banner {
-  id        String   @id @default(cuid())
-  title     String
-  imageUrl  String
-  linkUrl   String?
-  published Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  title          String
+  imageUrl       String
+  imageUrlMobile String?
+  imageUrlTotem  String?
+  linkUrl        String?
+  published      Boolean  @default(true)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("banners")
 }

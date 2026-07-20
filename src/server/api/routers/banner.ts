@@ -47,6 +47,9 @@ const linkUrlSchema = z
 const bannerInputSchema = z.object({
   title: z.string().trim().min(1, "Título é obrigatório").max(120),
   imageUrl: z.string().min(1, "Imagem é obrigatória"),
+  // Variações opcionais por tamanho de tela; quando ausentes, cai na imageUrl.
+  imageUrlMobile: z.string().nullish(),
+  imageUrlTotem: z.string().nullish(),
   linkUrl: linkUrlSchema.nullish(),
   published: z.boolean().default(true),
   order: z.number().int().min(0).default(0),
@@ -84,7 +87,12 @@ export const bannerRouter = createTRPCRouter({
       checkPermission(user?.role_config as RolesConfig | null)
 
       return ctx.db.banner.create({
-        data: { ...input, linkUrl: input.linkUrl ?? null },
+        data: {
+          ...input,
+          imageUrlMobile: input.imageUrlMobile ?? null,
+          imageUrlTotem: input.imageUrlTotem ?? null,
+          linkUrl: input.linkUrl ?? null,
+        },
       })
     }),
 
@@ -104,9 +112,23 @@ export const bannerRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Banner não encontrado" })
       }
 
-      // Se a imagem foi trocada, remover a antiga do UploadThing.
+      // Se alguma imagem foi trocada/removida, apagar a antiga do UploadThing.
       if (input.imageUrl && input.imageUrl !== banner.imageUrl) {
         await deleteUploadedImage(banner.imageUrl)
+      }
+      if (
+        input.imageUrlMobile !== undefined &&
+        banner.imageUrlMobile &&
+        input.imageUrlMobile !== banner.imageUrlMobile
+      ) {
+        await deleteUploadedImage(banner.imageUrlMobile)
+      }
+      if (
+        input.imageUrlTotem !== undefined &&
+        banner.imageUrlTotem &&
+        input.imageUrlTotem !== banner.imageUrlTotem
+      ) {
+        await deleteUploadedImage(banner.imageUrlTotem)
       }
 
       const { id, ...data } = input
@@ -130,6 +152,8 @@ export const bannerRouter = createTRPCRouter({
       }
 
       await deleteUploadedImage(banner.imageUrl)
+      if (banner.imageUrlMobile) await deleteUploadedImage(banner.imageUrlMobile)
+      if (banner.imageUrlTotem) await deleteUploadedImage(banner.imageUrlTotem)
 
       return ctx.db.banner.delete({ where: { id: input.id } })
     }),

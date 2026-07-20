@@ -8,15 +8,22 @@ import { useEffect, useState } from "react"
 
 interface MainCarouselProps {
   itens: {
+    /** Imagem padrão (desktop) e fallback para as demais variações. */
     imageRef: string
+    /** Imagem para telas mobile (< 768px). Quando ausente, usa `imageRef`. */
+    imageRefMobile?: string | null
+    /** Imagem para usuários Totem. Quando ausente, usa `imageRef`. */
+    imageRefTotem?: string | null
     title: string
     /** Quando presente, o banner vira clicável (links externos abrem em nova aba). */
     href?: string | null
   }[],
+  /** Exibe a variação Totem das imagens quando o usuário é de um Totem. */
+  isTotem?: boolean
   className?: string
 }
 
-export function MainCarousel({ itens, className }: MainCarouselProps) {
+export function MainCarousel({ itens, isTotem = false, className }: MainCarouselProps) {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
@@ -60,14 +67,41 @@ export function MainCarousel({ itens, className }: MainCarouselProps) {
         <CarouselContent>
           {itens.map((item, index) => {
             const isExternal = item.href?.startsWith("http") ?? false
+            const desktopSrc = item.imageRef || "/placeholder.svg"
+            const mobileSrc = item.imageRefMobile ?? desktopSrc
+            const totemSrc = item.imageRefTotem ?? desktopSrc
+
+            // Totem: variação própria (dispositivo fixo). Demais: alterna entre
+            // mobile (< 768px) e desktop via breakpoint do Tailwind.
             const image = (
               <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
-                <OptimizedImage
-                  alt={item.title}
-                  src={item.imageRef || "/placeholder.svg"}
-                  fill
-                  className="object-cover"
-                />
+                {isTotem ? (
+                  <OptimizedImage
+                    alt={item.title}
+                    src={totemSrc}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 md:hidden">
+                      <OptimizedImage
+                        alt={item.title}
+                        src={mobileSrc}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="absolute inset-0 hidden md:block">
+                      <OptimizedImage
+                        alt={item.title}
+                        src={desktopSrc}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             )
 
