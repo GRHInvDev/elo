@@ -89,13 +89,15 @@ export function MainCarousel({ itens, isTotem = false, className }: MainCarousel
                         className="object-cover"
                       />
                     </div>
-                    {/* Desktop: imagem base */}
+                    {/* Desktop: imagem base inteira (sem corte); a largura do
+                        banner varia conforme o card de aniversariantes, então
+                        a arte é redimensionada para caber e fica centralizada. */}
                     <div className="absolute inset-0 hidden md:block">
                       <OptimizedImage
                         alt={item.title}
                         src={base}
                         fill
-                        className="object-cover"
+                        imageFit="contain"
                       />
                     </div>
                   </>
