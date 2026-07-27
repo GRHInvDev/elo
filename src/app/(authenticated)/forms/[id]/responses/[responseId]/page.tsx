@@ -195,7 +195,7 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
         </div>
 
         <FormSectionCard
-          icon={FileText}
+          icon={<FileText />}
           title="Respostas"
           description="Detalhes das respostas enviadas pelo usuário"
         >

@@ -1,13 +1,21 @@
 "use client"
 
 import * as React from "react"
-import type { LucideIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 interface FormSectionCardProps {
-  /** Ícone opcional exibido no cabeçalho (badge teal). */
-  icon?: LucideIcon
+  /**
+   * Ícone opcional exibido no cabeçalho (badge teal). Recebe o elemento já
+   * renderizado — `icon={<FileText />}` — e não o componente.
+   *
+   * Este componente é client: um Server Component não consegue passar funções
+   * pela fronteira RSC (o serializador lança "Functions cannot be passed
+   * directly to Client Components", mascarado em produção como erro genérico
+   * de render). Como ReactNode, funciona nos dois lados. O tamanho do ícone
+   * fica a cargo do próprio cartão, via `[&>svg]`.
+   */
+  icon?: React.ReactNode
   /** Título da seção. Quando omitido, o cabeçalho não é renderizado. */
   title?: React.ReactNode
   /** Descrição curta abaixo do título. */
@@ -22,13 +30,13 @@ interface FormSectionCardProps {
  * sombra, badge teal de ícone e título 15px/600.
  */
 export function FormSectionCard({
-  icon: Icon,
+  icon,
   title,
   description,
   children,
   className,
 }: FormSectionCardProps) {
-  const hasHeader = Boolean(Icon ?? title ?? description)
+  const hasHeader = Boolean(icon ?? title ?? description)
 
   return (
     <section
@@ -39,9 +47,9 @@ export function FormSectionCard({
     >
       {hasHeader && (
         <div className="mb-5 flex items-start gap-3">
-          {Icon && (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[hsl(var(--brand-accent)/.2)] bg-[hsl(var(--brand-accent)/.1)] text-[hsl(var(--brand-accent))]">
-              <Icon className="h-5 w-5" />
+          {icon && (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[hsl(var(--brand-accent)/.2)] bg-[hsl(var(--brand-accent)/.1)] text-[hsl(var(--brand-accent))] [&>svg]:h-5 [&>svg]:w-5">
+              {icon}
             </div>
           )}
           {(title ?? description) && (
