@@ -12,6 +12,23 @@ import { buildXlsxBase64FromRows, sanitizeXlsxFilename } from "@/lib/form-xlsx-e
 const MAX_SPREADSHEET_EXPORT_ROWS = 8_000
 
 /**
+ * Campos de usuário que podem trafegar para o cliente.
+ *
+ * NUNCA usar `user: true` em respostas de formulário: o registro completo de
+ * User carrega dados sensíveis (role_config, matricula, email_empresarial e o
+ * pré-cadastro da Lojinha — CPF, RG, endereço, CEP e telefone). Como estes
+ * procedures são consumidos por componentes client (dialog do quadro, modal de
+ * edição, botão de status), o retorno vai inteiro para o navegador.
+ */
+const PUBLIC_USER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  imageUrl: true,
+} satisfies Prisma.UserSelect
+
+/**
  * Gera o próximo número sequencial para um novo chamado
  * Começa a partir do número 210
  */
@@ -1233,7 +1250,7 @@ export const formResponseRouter = createTRPCRouter({
         },
         include: {
           form: true,
-          user: true, // Incluir autor para notificação
+          user: { select: PUBLIC_USER_SELECT }, // Incluir autor para notificação
         },
       })
 
@@ -1316,18 +1333,10 @@ export const formResponseRouter = createTRPCRouter({
               fields: true,
               userId: true,
               ownerIds: true,
-              user: true,
+              user: { select: PUBLIC_USER_SELECT },
             },
           },
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              imageUrl: true,
-            },
-          },
+          user: { select: PUBLIC_USER_SELECT },
         },
       })
 
@@ -1643,7 +1652,7 @@ export const formResponseRouter = createTRPCRouter({
             tags: updatedTags,
           },
           include: {
-            user: true,
+            user: { select: PUBLIC_USER_SELECT },
             form: true,
           }
         }),
@@ -1731,7 +1740,7 @@ export const formResponseRouter = createTRPCRouter({
             tags: updatedTags,
           },
           include: {
-            user: true,
+            user: { select: PUBLIC_USER_SELECT },
             form: true,
           }
         }),

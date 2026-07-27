@@ -1,4 +1,5 @@
 import { api } from "@/trpc/server"
+import { TRPCError } from "@trpc/server"
 import { notFound, redirect } from "next/navigation"
 import { formatDistanceToNow, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -32,7 +33,29 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
 
   const userData = await api.user.me()
   const form = await api.form.getById(id)
-  const response = await api.formResponse.getById(responseId)
+
+  // `formResponse.getById` lança TRPCError (NOT_FOUND / FORBIDDEN) em vez de
+  // retornar null. Sem este tratamento o erro sobe pelo Server Component e o
+  // Next renderiza "Application error: a server-side exception has occurred"
+  // — inclusive para links antigos de resposta já excluída.
+  let response: Awaited<ReturnType<typeof api.formResponse.getById>> | null = null
+  let responseDenied = false
+
+  try {
+    response = await api.formResponse.getById(responseId)
+  } catch (error) {
+    if (!(error instanceof TRPCError)) throw error
+    if (error.code === "FORBIDDEN") {
+      responseDenied = true
+    } else if (error.code !== "NOT_FOUND") {
+      throw error
+    }
+  }
+
+  // redirect()/notFound() lançam exceções de controle do Next — chamar fora do catch.
+  if (responseDenied) {
+    redirect(`/forms/${id}/responses`)
+  }
 
   if (!form || !response) {
     notFound()
@@ -176,9 +199,15 @@ export default async function ResponseDetailsPage({ params }: ResponseDetailsPag
           title="Respostas"
           description="Detalhes das respostas enviadas pelo usuário"
         >
+          {/* `responses` e `fields` são colunas Json: podem vir null/malformadas
+              e quebrariam a renderização no servidor. */}
           <ResponseDetails
-            responseData={response.responses as Record<string, string | number | string[] | File[] | null | undefined>[]}
-            formFields={response.form.fields as unknown as Field[]}
+            responseData={
+              Array.isArray(response.responses)
+                ? (response.responses as Record<string, string | number | string[] | File[] | null | undefined>[])
+                : []
+            }
+            formFields={Array.isArray(response.form.fields) ? (response.form.fields as unknown as Field[]) : []}
           />
         </FormSectionCard>
       </div>
