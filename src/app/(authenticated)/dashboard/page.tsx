@@ -421,10 +421,10 @@ export default function DashboardPage() {
                   <FaFacebook className="flex-shrink-0 text-blue-600" />
                   <div className="flex flex-wrap gap-x-2 text-sm">
                     <Link
-                      href={"https://facebook.com/fiosecia.boxdistribuidor"}
+                      href={"https://facebook.com/boxdistribui"}
                       className="text-primary hover:underline"
                     >
-                      @fiosecia.boxdistribuidor
+                      @boxdistribui
                     </Link>
                     <span className="text-muted-foreground">|</span>
                     <Link
