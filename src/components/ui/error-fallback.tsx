@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -22,6 +23,49 @@ export interface ErrorFallbackProps {
   scope: BoundaryScope
 }
 
+const CHUNK_RELOAD_KEY = "elo:chunk-reload-at"
+
+/**
+ * Janela mínima entre dois reloads automáticos. Se o chunk continuar faltando
+ * logo após recarregar, o segundo erro cai dentro da janela e a tela de erro
+ * aparece em vez de entrar em loop de reload.
+ */
+const CHUNK_RELOAD_COOLDOWN_MS = 60_000
+
+const CHUNK_ERROR_PATTERN =
+  /loading chunk \S+ failed|loading css chunk|failed to fetch dynamically imported module|importing a module script failed/i
+
+/**
+ * Identifica falha de download de chunk — o build que gerou a página saiu do ar
+ * (deploy novo) e os arquivos que ela referencia respondem 404.
+ */
+function isChunkLoadError(error: Error): boolean {
+  return error.name === "ChunkLoadError" || CHUNK_ERROR_PATTERN.test(error.message)
+}
+
+/**
+ * Marca a tentativa de reload e diz se ela pode acontecer agora.
+ *
+ * Sem `sessionStorage` (modo privado em Safari antigo) não há como registrar a
+ * tentativa, então o reload automático é desligado para não arriscar loop — o
+ * usuário ainda tem o botão de recarregar.
+ */
+function claimAutoReload(): boolean {
+  try {
+    const raw = window.sessionStorage.getItem(CHUNK_RELOAD_KEY)
+    const lastAttempt = raw === null ? 0 : Number(raw)
+
+    if (Number.isFinite(lastAttempt) && Date.now() - lastAttempt < CHUNK_RELOAD_COOLDOWN_MS) {
+      return false
+    }
+
+    window.sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * Monta o relatório técnico do erro em texto puro.
  *
@@ -37,6 +81,7 @@ function buildErrorReport(
     `escopo: ${scope}`,
     `tipo: ${error.name.length > 0 ? error.name : "Error"}`,
     `mensagem: ${error.message.length > 0 ? error.message : "(sem mensagem)"}`,
+    `chunkLoadError: ${isChunkLoadError(error) ? "sim" : "nao"}`,
   ]
 
   if (error.digest) {
@@ -84,19 +129,40 @@ async function copyToClipboard(text: string): Promise<boolean> {
 }
 
 /**
- * Tela de falha do app: mensagem para o usuário final e o erro real logado no
- * console e disponível na própria página, para diagnóstico em aparelhos onde
- * não dá para abrir o inspetor.
+ * Tela de falha do app.
+ *
+ * Falha de chunk é tratada à parte: ela não é defeito da aplicação, e sim uma
+ * aba que ficou aberta durante um deploy novo. Nesse caso a página se recarrega
+ * sozinha — o HTML novo referencia os chunks novos e a navegação segue. Para os
+ * demais erros, mostra mensagem ao usuário e deixa o erro real acessível no
+ * console e na própria tela, para diagnóstico em aparelhos sem inspetor.
  */
 export function ErrorFallback({ error, reset, scope }: ErrorFallbackProps) {
   const [copyState, setCopyState] = useState<"idle" | "done" | "failed">("idle")
+  const [autoReloadGaveUp, setAutoReloadGaveUp] = useState(false)
+  const reloadAttemptedRef = useRef(false)
   const report = buildErrorReport(error, scope)
+  const chunkError = isChunkLoadError(error)
 
   useEffect(() => {
     // Log estruturado: é isto que aparece no Web Inspector / console remoto.
     console.error(`[elo] erro de client side (${scope})`, error)
     console.error(`[elo] relatório\n${report}`)
   }, [error, report, scope])
+
+  useEffect(() => {
+    if (!chunkError || reloadAttemptedRef.current) {
+      return
+    }
+    reloadAttemptedRef.current = true
+
+    if (claimAutoReload()) {
+      window.location.reload()
+      return
+    }
+
+    setAutoReloadGaveUp(true)
+  }, [chunkError])
 
   const handleCopy = useCallback(() => {
     void copyToClipboard(report).then((copied) => {
@@ -108,14 +174,29 @@ export function ErrorFallback({ error, reset, scope }: ErrorFallbackProps) {
     window.location.reload()
   }, [])
 
+  // Recarregando: não mostra tela de erro, o usuário não precisa saber disso.
+  if (chunkError && !autoReloadGaveUp) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-4 bg-background px-4 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+        <p className="text-sm text-muted-foreground" role="status">
+          Atualizando para a versão mais recente…
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-10">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-xl">Algo quebrou por aqui</CardTitle>
+          <CardTitle className="text-xl">
+            {chunkError ? "Não foi possível atualizar a página" : "Algo quebrou por aqui"}
+          </CardTitle>
           <CardDescription>
-            A página não conseguiu carregar. Você pode tentar de novo — se
-            continuar, copie os detalhes abaixo e envie para o time de TI.
+            {chunkError
+              ? "A versão aberta no seu aparelho ficou desatualizada e a atualização automática não funcionou. Feche a aba e abra a intranet de novo."
+              : "A página não conseguiu carregar. Você pode tentar de novo — se continuar, copie os detalhes abaixo e envie para o time de TI."}
           </CardDescription>
         </CardHeader>
 
