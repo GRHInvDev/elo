@@ -5,6 +5,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/sign-out(.*)',
+  // Diagnóstico de sessão: precisa responder também para quem NÃO está logado,
+  // senão o middleware redireciona e o JSON nunca aparece.
+  '/api/auth/status',
   '/api/webhooks/clerk(.*)',
   '/api/cron(.*)'
 ])
