@@ -5,7 +5,12 @@ import { Loader2 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 
+import { SilentErrorBoundary } from "@/components/ui/silent-error-boundary"
+
 const SIGN_IN_SELECTOR = '[data-clerk-component="SignIn"]'
+
+/** Trava de segurança: se a rede não responder, o overlay não fica preso. */
+const SUBMIT_SAFETY_TIMEOUT_MS = 25_000
 
 function attachSubmitListener(
   onSubmit: () => void,
@@ -21,45 +26,47 @@ function attachSubmitListener(
 }
 
 /**
- * Na etapa de código (factor-one), cobre o card com loading enquanto o Clerk valida
- * (`fetchStatus`) e, em fallback, após envio do formulário até a rede responder.
+ * Observa se o Clerk está validando o código e reporta ao shell.
+ *
+ * Vive isolado num componente próprio porque depende de `useSignInSignal`, que
+ * é API **experimental** do Clerk: se ela mudar ou sair numa atualização, o
+ * hook quebra. Enquanto essa chamada era ancestral do `<SignIn>`, uma falha
+ * dela levava o formulário de login embora junto — e login em branco é bem pior
+ * do que perder o indicador de carregamento. Aqui o estrago fica contido pelo
+ * SilentErrorBoundary que envolve este componente.
  */
-export function SignInVerificationLoadingShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
-  const isCodeStep = pathname.includes("factor-one")
+function SignInFetchWatcher({
+  onBusyChange,
+}: {
+  onBusyChange: (busy: boolean) => void
+}) {
   const { fetchStatus } = useSignInSignal()
-  const [submitPending, setSubmitPending] = useState(false)
-  const prevFetchRef = useRef(fetchStatus)
+  const previousFetchRef = useRef(fetchStatus)
   const safetyTimerRef = useRef<number | null>(null)
 
-  const signalBusy = isCodeStep && fetchStatus === "fetching"
-  const showOverlay = isCodeStep && (signalBusy || submitPending)
-
   useEffect(() => {
-    if (!isCodeStep) {
-      setSubmitPending(false)
-      return
-    }
-
+    // Fallback para quando o sinal do Clerk não cobre o envio: marcamos ocupado
+    // no submit do form e liberamos quando a rede responder.
     const onSubmit = () => {
-      setSubmitPending(true)
-      if (safetyTimerRef.current != null) window.clearTimeout(safetyTimerRef.current)
+      onBusyChange(true)
+      if (safetyTimerRef.current !== null) {
+        window.clearTimeout(safetyTimerRef.current)
+      }
       safetyTimerRef.current = window.setTimeout(() => {
-        setSubmitPending(false)
+        onBusyChange(false)
         safetyTimerRef.current = null
-      }, 25_000)
+      }, SUBMIT_SAFETY_TIMEOUT_MS)
     }
 
     let detach: (() => void) | null = null
     const tryAttach = (): boolean => {
-      const r = attachSubmitListener(onSubmit)
-      if (r) {
-        detach = () => r.detach()
-        return true
-      }
-      return false
+      const attached = attachSubmitListener(onSubmit)
+      if (!attached) return false
+      detach = () => attached.detach()
+      return true
     }
 
+    // O Clerk monta o form por script; se ainda não está lá, tenta de novo.
     let retryId: number | null = null
     if (!tryAttach()) {
       retryId = window.setTimeout(() => {
@@ -68,26 +75,59 @@ export function SignInVerificationLoadingShell({ children }: { children: ReactNo
     }
 
     return () => {
-      if (retryId != null) window.clearTimeout(retryId)
+      if (retryId !== null) window.clearTimeout(retryId)
       detach?.()
-      if (safetyTimerRef.current != null) window.clearTimeout(safetyTimerRef.current)
+      if (safetyTimerRef.current !== null) {
+        window.clearTimeout(safetyTimerRef.current)
+      }
     }
-  }, [isCodeStep, pathname])
+  }, [onBusyChange])
 
   useEffect(() => {
-    if (fetchStatus === "fetching") {
-      setSubmitPending(false)
+    // Enquanto o próprio Clerk indica busca em andamento, o overlay dele manda;
+    // e na transição de volta para idle a resposta chegou.
+    if (
+      fetchStatus === "fetching" ||
+      (previousFetchRef.current === "fetching" && fetchStatus === "idle")
+    ) {
+      onBusyChange(false)
     }
-    if (prevFetchRef.current === "fetching" && fetchStatus === "idle") {
-      setSubmitPending(false)
-    }
-    prevFetchRef.current = fetchStatus
-  }, [fetchStatus])
+    previousFetchRef.current = fetchStatus
+  }, [fetchStatus, onBusyChange])
+
+  const signalBusy = fetchStatus === "fetching"
+
+  useEffect(() => {
+    if (signalBusy) onBusyChange(true)
+  }, [signalBusy, onBusyChange])
+
+  return null
+}
+
+/**
+ * Na etapa de código (factor-one), cobre o card com loading enquanto o Clerk
+ * valida a identidade.
+ *
+ * O indicador é conforto de UX, não funcionalidade: `children` — o card com o
+ * `<SignIn>` — é renderizado sempre, independente do que aconteça com o
+ * observador de estado.
+ */
+export function SignInVerificationLoadingShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+  const isCodeStep = pathname.includes("factor-one")
+  const [busy, setBusy] = useState(false)
 
   return (
     <div className="relative w-full min-w-0 max-w-full">
       {children}
-      {showOverlay ? (
+
+      {isCodeStep ? (
+        <SilentErrorBoundary label="sign-in-signal">
+          <SignInFetchWatcher onBusyChange={setBusy} />
+        </SilentErrorBoundary>
+      ) : null}
+
+      {isCodeStep && busy ? (
         <div
           aria-busy="true"
           aria-live="polite"
