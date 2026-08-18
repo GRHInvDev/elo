@@ -13,6 +13,7 @@ import {
   DoorOpen,
   Building2,
   GalleryHorizontal,
+  Activity,
 } from "lucide-react"
 
 export interface AdminRoute {
@@ -25,6 +26,14 @@ export interface AdminRoute {
 }
 
 export const ADMIN_ROUTES: AdminRoute[] = [
+  {
+    id: "/admin/logs",
+    title: "Logs de Acesso",
+    description: "Navegação dos colaboradores e chamadas de API lentas",
+    icon: Activity,
+    path: "/admin/logs",
+    requiresBasicAdmin: true,
+  },
   {
     id: "/admin",
     title: "Painel Admin",

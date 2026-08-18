@@ -103,6 +103,9 @@ model User {
   auditLogs    UserAuditLog[] @relation("UserAuditTarget")
   auditActions UserAuditLog[] @relation("UserAuditActor")
 
+  // Trilha de acesso (navegação e chamadas lentas de API)
+  accessLogs AccessLog[] @relation("AccessLogUser")
+
   @@map("users")
 }
 
@@ -1193,4 +1196,52 @@ model EmotionRulerDailyAccess {
   @@index([rulerId, date])
   @@index([date])
   @@map("emotion_ruler_daily_accesses")
+}
+
+/// Trilha de acesso da intranet.
+///
+/// Guarda dois tipos de evento no mesmo lugar para que a análise cruze navegação
+/// e backend na mesma linha do tempo:
+/// - PAGE_VIEW: uma navegação de página, gravada sempre.
+/// - API_CALL: uma chamada tRPC, gravada só quando passa do limiar de lentidão
+///   ou quando falha. Registrar toda chamada acrescentaria uma escrita por
+///   request no mesmo banco que se quer diagnosticar.
+///
+/// Retenção de 30 dias, aplicada por /api/cron/access_logs.
+model AccessLog {
+  id String @id @default(cuid())
+
+  kind AccessLogKind
+
+  /// Rota da página (/dashboard) ou caminho do procedure tRPC (user.me).
+  path String
+
+  /// Autor do acesso. Nulo quando o usuário é removido — o registro sobrevive.
+  userId String?
+  user   User?   @relation("AccessLogUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  /// Duração em ms. Em PAGE_VIEW só existe no carregamento inicial (Navigation
+  /// Timing); navegações client-side não têm marco de início confiável.
+  durationMs Int?
+
+  /// Falso quando a chamada terminou em erro.
+  ok Boolean @default(true)
+
+  /// Código do erro tRPC (ex.: FORBIDDEN, INTERNAL_SERVER_ERROR) quando ok=false.
+  errorCode String?
+
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+  @@index([path, createdAt])
+  @@index([userId, createdAt])
+  @@map("access_logs")
+}
+
+enum AccessLogKind {
+  PAGE_VIEW
+  API_CALL
 }
