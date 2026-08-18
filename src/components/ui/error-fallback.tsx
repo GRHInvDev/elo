@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 
+import { claimAutoReload } from "@/lib/auto-reload"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -25,13 +26,6 @@ export interface ErrorFallbackProps {
 
 const CHUNK_RELOAD_KEY = "elo:chunk-reload-at"
 
-/**
- * Janela mínima entre dois reloads automáticos. Se o chunk continuar faltando
- * logo após recarregar, o segundo erro cai dentro da janela e a tela de erro
- * aparece em vez de entrar em loop de reload.
- */
-const CHUNK_RELOAD_COOLDOWN_MS = 60_000
-
 const CHUNK_ERROR_PATTERN =
   /loading chunk \S+ failed|loading css chunk|failed to fetch dynamically imported module|importing a module script failed/i
 
@@ -43,28 +37,6 @@ function isChunkLoadError(error: Error): boolean {
   return error.name === "ChunkLoadError" || CHUNK_ERROR_PATTERN.test(error.message)
 }
 
-/**
- * Marca a tentativa de reload e diz se ela pode acontecer agora.
- *
- * Sem `sessionStorage` (modo privado em Safari antigo) não há como registrar a
- * tentativa, então o reload automático é desligado para não arriscar loop — o
- * usuário ainda tem o botão de recarregar.
- */
-function claimAutoReload(): boolean {
-  try {
-    const raw = window.sessionStorage.getItem(CHUNK_RELOAD_KEY)
-    const lastAttempt = raw === null ? 0 : Number(raw)
-
-    if (Number.isFinite(lastAttempt) && Date.now() - lastAttempt < CHUNK_RELOAD_COOLDOWN_MS) {
-      return false
-    }
-
-    window.sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
-    return true
-  } catch {
-    return false
-  }
-}
 
 /**
  * Monta o relatório técnico do erro em texto puro.
@@ -156,7 +128,7 @@ export function ErrorFallback({ error, reset, scope }: ErrorFallbackProps) {
     }
     reloadAttemptedRef.current = true
 
-    if (claimAutoReload()) {
+    if (claimAutoReload(CHUNK_RELOAD_KEY)) {
       window.location.reload()
       return
     }
