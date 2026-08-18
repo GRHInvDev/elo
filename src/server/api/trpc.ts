@@ -14,7 +14,6 @@ import { currentUser } from "@clerk/nextjs/server"
 
 import { db } from "@/server/db";
 import type { RolesConfig } from "@/types/role-config";
-import { SLOW_CALL_THRESHOLD_MS } from "@/const/access-log";
 
 // Type definitions for tRPC context
 export interface TRPCContext {
@@ -117,45 +116,19 @@ export const createCallerFactory = t.createCallerFactory;
 export const createTRPCRouter = t.router;
 
 /**
- * Cronometra a procedure e, quando ela passa do limiar ou falha, grava um
- * AccessLog do tipo API_CALL. É esta trilha que responde "qual chamada está
- * segurando o sistema", visível em /admin/logs.
+ * Cronometra cada procedure e registra a duração no log da função.
  *
- * A escrita é aguardada de propósito: em serverless a função pode ser suspensa
- * assim que a resposta sai, e um insert solto se perderia justamente nos casos
- * que interessam. O custo só incide em chamadas que já passaram do limiar ou
- * falharam, onde alguns milissegundos a mais não mudam o quadro.
+ * Aplicado também nas procedures autenticadas: antes só o `publicProcedure`
+ * passava por aqui, o que deixava praticamente todo o sistema sem medição de
+ * tempo. Com isso, `[TRPC] <path> took <n>ms` aparece nos logs da plataforma
+ * para qualquer chamada.
  */
-const timingMiddleware = t.middleware(async ({ ctx, next, path }) => {
+const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
 
   const result = await next();
 
-  const durationMs = Date.now() - start;
-  console.log(`[TRPC] ${path} took ${durationMs}ms to execute`);
-
-  const isSlow = durationMs >= SLOW_CALL_THRESHOLD_MS;
-  // O próprio router de logs fica de fora, senão registrar acesso gera acesso.
-  const isSelfReferential = path.startsWith("accessLog.");
-
-  if ((!result.ok || isSlow) && !isSelfReferential) {
-    try {
-      await ctx.db.accessLog.create({
-        data: {
-          kind: "API_CALL",
-          path,
-          userId: ctx.auth.userId ?? null,
-          durationMs,
-          ok: result.ok,
-          errorCode: result.ok ? null : result.error.code,
-          userAgent: ctx.headers.get("user-agent")?.slice(0, 512),
-        },
-      });
-    } catch (error) {
-      // Diagnóstico nunca pode derrubar a chamada original.
-      console.error("[TRPC] falha ao gravar AccessLog:", error);
-    }
-  }
+  console.log(`[TRPC] ${path} took ${Date.now() - start}ms to execute`);
 
   return result;
 });

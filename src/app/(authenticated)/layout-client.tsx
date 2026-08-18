@@ -14,7 +14,6 @@ import { BirthdayConfettiWrapper } from "@/components/birthday/birthday-confetti
 import FloatingChatButton from "@/components/ai/floating-chat-button"
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context"
 import { HeaderBreadcrumb } from "@/components/ui/header-breadcrumb"
-import { PageViewTracker } from "@/components/access-log/page-view-tracker"
 
 export default function AuthenticatedLayoutClient({
   children,
@@ -73,7 +72,6 @@ export default function AuthenticatedLayoutClient({
           </main>
         </div>
       </div>
-      <PageViewTracker />
       <AnimatedBackground />
       <div className="print:hidden">
         <BirthdayConfettiWrapper />

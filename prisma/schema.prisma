@@ -1198,16 +1198,16 @@ model EmotionRulerDailyAccess {
   @@map("emotion_ruler_daily_accesses")
 }
 
-/// Trilha de acesso da intranet.
+/// Trilha de acesso da intranet — **MÓDULO DESATIVADO**.
 ///
-/// Guarda dois tipos de evento no mesmo lugar para que a análise cruze navegação
-/// e backend na mesma linha do tempo:
-/// - PAGE_VIEW: uma navegação de página, gravada sempre.
-/// - API_CALL: uma chamada tRPC, gravada só quando passa do limiar de lentidão
-///   ou quando falha. Registrar toda chamada acrescentaria uma escrita por
-///   request no mesmo banco que se quer diagnosticar.
+/// Nenhum código lê ou escreve nesta tabela hoje. O modelo e a migration
+/// permanecem de propósito: a tabela existe no banco, e remover o modelo faria
+/// o schema divergir dele. Dropar a tabela, se for a decisão, pede uma
+/// migration própria e deliberada.
 ///
-/// Retenção de 30 dias, aplicada por /api/cron/access_logs.
+/// Quando estava ativo, guardava dois tipos de evento na mesma linha do tempo:
+/// PAGE_VIEW para cada navegação e API_CALL para chamadas tRPC lentas ou com
+/// erro, com retenção de 30 dias.
 model AccessLog {
   id String @id @default(cuid())
 

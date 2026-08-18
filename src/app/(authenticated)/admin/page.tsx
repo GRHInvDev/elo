@@ -46,7 +46,6 @@ const ADMIN_HOME_SECTIONS: {
       "/admin/rooms",
       "/admin/vehicles",
       "/admin/filiais",
-      "/admin/logs",
     ],
   },
   {
