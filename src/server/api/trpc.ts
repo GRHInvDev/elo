@@ -14,6 +14,7 @@ import { currentUser } from "@clerk/nextjs/server"
 
 import { db } from "@/server/db";
 import type { RolesConfig } from "@/types/role-config";
+import { SLOW_CALL_THRESHOLD_MS } from "@/const/access-log";
 
 // Type definitions for tRPC context
 export interface TRPCContext {
@@ -116,24 +117,45 @@ export const createCallerFactory = t.createCallerFactory;
 export const createTRPCRouter = t.router;
 
 /**
- * Middleware for timing procedure execution and adding an artificial delay in development.
+ * Cronometra a procedure e, quando ela passa do limiar ou falha, grava um
+ * AccessLog do tipo API_CALL. É esta trilha que responde "qual chamada está
+ * segurando o sistema", visível em /admin/logs.
  *
- * You can remove this if you don't like it, but it can help catch unwanted waterfalls by simulating
- * network latency that would occur in production but not in local development.
+ * A escrita é aguardada de propósito: em serverless a função pode ser suspensa
+ * assim que a resposta sai, e um insert solto se perderia justamente nos casos
+ * que interessam. O custo só incide em chamadas que já passaram do limiar ou
+ * falharam, onde alguns milissegundos a mais não mudam o quadro.
  */
-const timingMiddleware = t.middleware(async ({ next, path }) => {
+const timingMiddleware = t.middleware(async ({ ctx, next, path }) => {
   const start = Date.now();
-
-  // if (t._config.isDev) {
-  //   // artificial delay in dev
-  //   const waitMs = Math.floor(Math.random() * 400) + 100;
-  //   await new Promise((resolve) => setTimeout(resolve, waitMs));
-  // }
 
   const result = await next();
 
-  const end = Date.now();
-  console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
+  const durationMs = Date.now() - start;
+  console.log(`[TRPC] ${path} took ${durationMs}ms to execute`);
+
+  const isSlow = durationMs >= SLOW_CALL_THRESHOLD_MS;
+  // O próprio router de logs fica de fora, senão registrar acesso gera acesso.
+  const isSelfReferential = path.startsWith("accessLog.");
+
+  if ((!result.ok || isSlow) && !isSelfReferential) {
+    try {
+      await ctx.db.accessLog.create({
+        data: {
+          kind: "API_CALL",
+          path,
+          userId: ctx.auth.userId ?? null,
+          durationMs,
+          ok: result.ok,
+          errorCode: result.ok ? null : result.error.code,
+          userAgent: ctx.headers.get("user-agent")?.slice(0, 512),
+        },
+      });
+    } catch (error) {
+      // Diagnóstico nunca pode derrubar a chamada original.
+      console.error("[TRPC] falha ao gravar AccessLog:", error);
+    }
+  }
 
   return result;
 });
@@ -147,7 +169,7 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
 
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(timingMiddleware).use(async ({ ctx, next }) => {
   if (!ctx.auth.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }
