@@ -39,12 +39,14 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
         describe: "Página principal da intranet",
         href: "/dashboard",
       },
+      /*
       {
         title: "Eventos",
         icon: LucideCalendar,
         describe: "Página para visualizar e criar eventos",
         href: "/events",
       },
+      */
       {
         title: "Aniversários",
         icon: LucideCake,
@@ -109,12 +111,14 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
           describe: "Comunicação de novos colaboradores na intranet",
           href: "/forms/hall-entrada",
         },
+        /*
         {
           title: "Eventos",
           icon: LucideCalendar,
           describe: "Página para visualizar e criar eventos",
           href: "/events",
         },
+        */
         {
           title: "Notícias",
           icon: LucideNewspaper,
