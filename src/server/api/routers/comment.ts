@@ -126,14 +126,7 @@ export const commentRouter = createTRPCRouter({
       }
 
       // Verifica se o usuário é o autor do comentário
-      const user = await ctx.db.user.findUnique({
-        where: { id: userId },
-        select: { role_config: true },
-      })
-      const roleConfig = user?.role_config as RolesConfig | null
-      const isSudo = roleConfig?.sudo === true
-
-      if (existingComment.userId !== userId && !isSudo) {
+      if (existingComment.userId !== userId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para editar este comentário",
