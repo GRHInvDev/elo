@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import type { RolesConfig } from "@/types/role-config"
 
 const createCommentSchema = z.object({
   postId: z.string(),
@@ -25,33 +26,11 @@ export const commentRouter = createTRPCRouter({
       })
     }
 
-    // Verifica se o usuário já comentou neste post
-    const existingComment = await ctx.db.coment.findUnique({
-      where: {
-        userId_postId: {
-          userId,
-          postId,
-        },
-      },
-    })
-
-    if (existingComment) {
-      // Atualiza o comentário existente
-      return ctx.db.coment.update({
-        where: {
-          id: existingComment.id,
-        },
-        data: {
-          comment,
-        },
-      })
-    }
-
     await ctx.db.post.update({
-        where: { id: postId },
-        data: {
-            commentsCount: post.commentsCount+1
-        }
+      where: { id: postId },
+      data: {
+        commentsCount: post.commentsCount + 1,
+      },
     })
 
     // Cria um novo comentário
@@ -60,6 +39,16 @@ export const commentRouter = createTRPCRouter({
         userId,
         postId,
         comment,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            imageUrl: true,
+          },
+        },
       },
     })
   }),
@@ -81,7 +70,14 @@ export const commentRouter = createTRPCRouter({
     }
 
     // Verifica se o usuário é o autor do comentário
-    if (comment.userId !== userId) {
+    const user = await ctx.db.user.findUnique({
+      where: { id: userId },
+      select: { role_config: true },
+    })
+    const roleConfig = user?.role_config as RolesConfig | null
+    const isSudo = roleConfig?.sudo === true
+
+    if (comment.userId !== userId && !isSudo) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Você não tem permissão para remover este comentário",
@@ -89,16 +85,16 @@ export const commentRouter = createTRPCRouter({
     }
 
     const post = await ctx.db.post.findUnique({
-        where: {
-            id: comment.postId
-        }
+      where: {
+        id: comment.postId,
+      },
     })
 
     await ctx.db.post.update({
-        where: { id: comment.postId },
-        data: {
-            commentsCount: post?.commentsCount && post?.commentsCount > 0  ? post?.commentsCount-1 : 0
-        }
+      where: { id: comment.postId },
+      data: {
+        commentsCount: post?.commentsCount && post?.commentsCount > 0 ? post?.commentsCount - 1 : 0,
+      },
     })
 
     return ctx.db.coment.delete({
@@ -130,7 +126,14 @@ export const commentRouter = createTRPCRouter({
       }
 
       // Verifica se o usuário é o autor do comentário
-      if (existingComment.userId !== userId) {
+      const user = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: { role_config: true },
+      })
+      const roleConfig = user?.role_config as RolesConfig | null
+      const isSudo = roleConfig?.sudo === true
+
+      if (existingComment.userId !== userId && !isSudo) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para editar este comentário",
@@ -169,17 +172,18 @@ export const commentRouter = createTRPCRouter({
     })
   }),
 
-  // Obter comentário do usuário atual em um post
+  // Obter comentário do usuário atual em um post (mais recente)
   getUserComment: protectedProcedure.input(z.object({ postId: z.string() })).query(async ({ ctx, input }) => {
     const { postId } = input
     const userId = ctx.auth.userId
 
-    return ctx.db.coment.findUnique({
+    return ctx.db.coment.findFirst({
       where: {
-        userId_postId: {
-          userId,
-          postId,
-        },
+        userId,
+        postId,
+      },
+      orderBy: {
+        id: "desc",
       },
     })
   }),

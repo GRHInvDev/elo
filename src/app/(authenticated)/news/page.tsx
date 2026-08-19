@@ -3,10 +3,10 @@ import { DashboardShell } from "@/components/ui/dashboard-shell";
 
 export default function NewsPage() {
   return (
-    <DashboardShell className="p-0 md:p-8">
+    <DashboardShell className="p-2 sm:p-4 md:p-6 lg:p-8">
       <div className="flex justify-center w-full">
         <ContentFeed
-          className="w-full max-w-4xl"
+          className="w-full max-w-xl"
           postsPerPage={5}
           enablePagination={true}
         />

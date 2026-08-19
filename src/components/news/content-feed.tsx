@@ -148,18 +148,18 @@ export function ContentFeed({
 
   return (
     <div className={className}>
-      <div>
+      <div className="w-full">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Feed de Conteúdo</CardTitle>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
-                  <MessageSquarePlus className="h-4 w-4 mr-2" />
-                  Novo Post
+                  <Button size="sm">
+                    <MessageSquarePlus className="h-4 w-4 mr-2" />
+                    Novo Post
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <form onSubmit={onSubmit}>
                   <DialogHeader>
                     <DialogTitle>Novo Post</DialogTitle>
@@ -174,7 +174,7 @@ export function ContentFeed({
                     </div>
                     <div className="grid gap-2">
                       <Label>Imagens</Label>
-                      <h3 className="text-sm text-muted-foreground">Tamanho recomendado: 515px x 300px</h3>
+                        <h3 className="text-sm text-muted-foreground">Tamanho recomendado: 515px x 300px</h3>
                       <MultipleImageUpload
                         onImagesChange={setImages}
                         maxImages={10}
@@ -186,11 +186,11 @@ export function ContentFeed({
                       <MonacoEditor
                         value={postContent}
                         onChange={(value) => setPostContent(value ?? "")}
-                        height="500px"
+                        height="320px"
                         language="markdown"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
+                          Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
                       </p>
                     </div>
                   </div>
@@ -205,67 +205,68 @@ export function ContentFeed({
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent className="p-0 md:p-6">
+        <CardContent className="p-0 md:p-6 -mt-2">
           <Tabs defaultValue="posts">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="posts">Posts</TabsTrigger>
-              <TabsTrigger value="events">Eventos</TabsTrigger>
+              {/* <TabsTrigger value="events">Eventos</TabsTrigger> */}
               <TabsTrigger value="birthdays">Aniversários</TabsTrigger>
             </TabsList>
-            <TabsContent value="posts" className="mt-4">
-              {isLoadingPosts ? (
-                <div className="space-y-4">
-                  {Array.from({ length: enablePagination ? postsPerPage : 3 }).map((_, i) => (
+            <TabsContent value="posts" className="mt-6">
+            {isLoadingPosts ? (
+              <div className="space-y-4">
+                {Array.from({ length: enablePagination ? postsPerPage : 3 }).map((_, i) => (
                     <div key={i} className="space-y-2">
                       <Skeleton className="h-4 w-1/3" />
                       <Skeleton className="h-4 w-full" />
-                    </div>
-                  ))}
-                </div>
-              ) : !postsWithRoleConfig?.length ? (
+                        </div>
+                ))}
+              </div>
+            ) : !postsWithRoleConfig?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum post publicado ainda.</p>
-              ) : (
+            ) : (
                 <div className="space-y-4">
-                  {postsWithRoleConfig
-                    ?.slice(0, enablePagination ? visiblePostsCount : postsWithRoleConfig.length)
-                    .map((post) => (
-                      <PostItem key={post.id} post={post} />
-                    ))}
-                  {/* Elemento de referência para carregar mais posts */}
-                  {enablePagination && visiblePostsCount < (postsWithRoleConfig?.length || 0) && (
-                    <div ref={loadMoreRef} className="flex justify-center py-4">
+                {postsWithRoleConfig
+                  ?.slice(0, enablePagination ? visiblePostsCount : postsWithRoleConfig.length)
+                  .map((post) => (
+                    <PostItem key={post.id} post={post} />
+                  ))}
+                {/* Elemento de referência para carregar mais posts */}
+                {enablePagination && visiblePostsCount < (postsWithRoleConfig?.length || 0) && (
+                  <div ref={loadMoreRef} className="flex justify-center py-4">
                       <div className="text-sm text-muted-foreground">Carregando mais posts...</div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent value="events" className="mt-4">
-              {!eventsWithRoleConfig?.length ? (
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
+          {/* Aba de Eventos ocultada temporariamente
+          <TabsContent value="events" className="mt-4">
+            {!eventsWithRoleConfig?.length ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum evento agendado.</p>
-              ) : (
-                <div className="space-y-4">
-                  {eventsWithRoleConfig?.map((event) => (
+            ) : (
+              <div className="space-y-4">
+                {eventsWithRoleConfig?.map((event) => (
                     <Card key={event.id}>
                       <CardHeader>
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 border">
-                            <AvatarImage src={event.author.imageUrl ?? undefined} />
+                          <AvatarImage src={event.author.imageUrl ?? undefined} />
                             <AvatarFallback>{event.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground flex items-center">
-                              {event.author.firstName}
-                              {event.author.role_config?.sudo ? (
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground flex items-center">
+                            {event.author.firstName}
+                            {event.author.role_config?.sudo ? (
                                 <LucideVerified className={"ml-2 text-blue-500 size-4"} />
-                              ) : (
+                            ) : (
                                 <LucideLink className={"-rotate-45 ml-2 size-3 text-muted-foreground"} />
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">agendou um evento</p>
-                          </div>
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">agendou um evento</p>
                         </div>
-                      </CardHeader>
+                      </div>
+                    </CardHeader>
                       <CardContent>
                         <h3 className="font-semibold">{event.title}</h3>
                         <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
@@ -273,21 +274,22 @@ export function ContentFeed({
                       <CardFooter>
                         <div className="flex items-center text-sm text-muted-foreground font-medium">
                           <Calendar className="mr-2 h-4 w-4" />
-                          {format(event.startDate, "PPPp", { locale: ptBR })}
-                        </div>
+                        {format(event.startDate, "PPPp", { locale: ptBR })}
+                      </div>
                       </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent value="birthdays" className="mt-4">
-              <BirthdaysTab />
-            </TabsContent>
-          </Tabs>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          */}
+          <TabsContent value="birthdays" className="mt-4">
+            <BirthdaysTab />
+          </TabsContent>
+        </Tabs>
         </CardContent>
       </div>
-    </div>
+    </div> 
   )
 }
 
@@ -365,11 +367,14 @@ function PostItem({ post }: PostItemProps) {
   const utils = api.useUtils()
   const { toast } = useToast()
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [showCommentDialog, setShowCommentDialog] = useState(false)
+  const [showAllComments, setShowAllComments] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const [newComment, setNewComment] = useState("")
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingCommentText, setEditingCommentText] = useState("")
   const [carouselIndex, setCarouselIndex] = useState(0)
-
+  const commentInputRef = useRef<HTMLInputElement>(null)
+  
   const galleryImageUrls = useMemo(() => {
     if ((post.images?.length ?? 0) > 0) {
       return post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
@@ -483,6 +488,25 @@ function PostItem({ post }: PostItemProps) {
     },
   })
 
+  const updateComment = api.comment.updateComment.useMutation({
+    onSuccess: async () => {
+      setEditingCommentId(null)
+      setEditingCommentText("")
+      await utils.comment.listByPost.invalidate({ postId: post.id })
+      toast({
+        title: "Comentário atualizado",
+        description: "Seu comentário foi atualizado com sucesso.",
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
+
   const deletePost = api.post.delete.useMutation({
     onSuccess: async () => {
       toast({
@@ -544,9 +568,9 @@ function PostItem({ post }: PostItemProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border">
-              <AvatarImage src={post.author.imageUrl ?? undefined} />
+            <AvatarImage src={post.author.imageUrl ?? undefined} />
               <AvatarFallback>{post.author.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
+          </Avatar>
             <div>
               <p className="text-sm font-semibold text-foreground flex items-center">
                 {post.author.firstName} {post.author.lastName}
@@ -554,42 +578,42 @@ function PostItem({ post }: PostItemProps) {
               </p>
               <p className="text-xs text-muted-foreground">
                 {format(post.createdAt, "d 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-              </p>
-            </div>
+            </p>
           </div>
+        </div>
           {auth.userId === post.authorId && (
             <div>
-              <Popover>
-                <PopoverTrigger asChild>
+        <Popover>
+          <PopoverTrigger asChild>
                   <Button size="icon" variant="ghost">
-                    <LucideEllipsis className="size-4" />
-                  </Button>
-                </PopoverTrigger>
+              <LucideEllipsis className="size-4" />
+            </Button>
+          </PopoverTrigger>
                 <PopoverContent className="w-36 flex flex-col p-1">
-                  <UpdatePostDialog post={post} />
-                  <Button
-                    size="sm"
-                    disabled={deletePost.isPending}
+                <UpdatePostDialog post={post} />
+                <Button
+                  size="sm"
+                  disabled={deletePost.isPending}
                     className="text-red-500 hover:text-red-800"
-                    variant="ghost"
-                    onClick={() => deletePost.mutate({ id: post.id })}
-                  >
-                    {deletePost.isPending ? (
+                  variant="ghost"
+                  onClick={() => deletePost.mutate({ id: post.id })}
+                >
+                  {deletePost.isPending ? (
                       <Loader2 className="size-4 animate-spin" />
-                    ) : (
+                  ) : (
                       <LucideTrash2 className="size-4 mr-2" />
-                    )}
+                  )}
                     Excluir
-                  </Button>
-                </PopoverContent>
-              </Popover>
-            </div>
+                </Button>
+          </PopoverContent>
+        </Popover>
+      </div>
           )}
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4 pb-2 p-0 md:px-6">
-        <h3 className="font-semibold px-6">{post.title}</h3>
+        <h3 className="font-semibold px-6 md:px-0">{post.title}</h3>
         {showMore ? (
           <div className="text-sm prose prose-sm dark:prose-invert max-w-none px-6 md:px-0">
             <MarkdownRenderer content={post.content} />
@@ -611,23 +635,23 @@ function PostItem({ post }: PostItemProps) {
         )}
         {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
           <div className="mt-2">
-            <ImageViewer
+          <ImageViewer
+            images={galleryImageUrls}
+            initialIndex={carouselIndex}
+            alt={post.title}
+          >
+            <ImageCarousel
               images={galleryImageUrls}
-              initialIndex={carouselIndex}
+              onSlideIndexChange={setCarouselIndex}
               alt={post.title}
-            >
-              <ImageCarousel
-                images={galleryImageUrls}
-                onSlideIndexChange={setCarouselIndex}
-                alt={post.title}
                 aspectRatio="auto"
-                imageFit="contain"
+              imageFit="contain"
                 showArrows={true}
                 showDots={true}
-              />
-            </ImageViewer>
-          </div>
-        )}
+            />
+          </ImageViewer>
+        </div>
+      )}
       </CardContent>
 
       {(totalReactions > 0 || (comments && comments.length > 0)) && (
@@ -643,7 +667,7 @@ function PostItem({ post }: PostItemProps) {
                 >
                   {topEmojis.slice(0, 3).map((emoji) => (
                     <span key={emoji}>{emoji}</span>
-                  ))}
+                    ))}
                   {totalReactions > 0 && <span className="ml-1">{totalReactions}</span>}
                 </button>
               </TooltipTrigger>
@@ -662,7 +686,7 @@ function PostItem({ post }: PostItemProps) {
                               </div>
                               <span className="text-sm font-medium">
                                 {count} {count === 1 ? "pessoa" : "pessoas"}
-                              </span>
+                            </span>
                             </div>
                             <div className="space-y-1">
                               {reactionsForEmoji.map((reaction) => (
@@ -686,25 +710,29 @@ function PostItem({ post }: PostItemProps) {
           </TooltipProvider>
 
           {comments && comments.length > 0 && (
-            <button onClick={() => setShowCommentDialog(true)} className="hover:underline">
+            <button
+              type="button"
+              onClick={() => setShowAllComments((prev) => !prev)}
+              className="hover:underline hover:text-foreground transition-colors cursor-pointer"
+            >
               {comments.length} comentário{comments.length > 1 ? "s" : ""}
             </button>
           )}
         </div>
       )}
 
-      <div className="border-t border-b mx-6 my-2">
+      <div className="border-t border-b mx-4 md:mx-6 my-2">
         <div className="flex justify-around items-center">
           <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground">
+              <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-foreground">
                 {!userReaction ? (
                   <>
-                    <Smile className="h-5 w-5 mr-1" /> Reagir
+                    <Smile className="h-4 w-4 md:h-5 md:w-5 mr-1.5" /> Reagir
                   </>
                 ) : (
                   <>
-                    <span className="text-xl mr-2">{userReaction?.emoji}</span> Reagir
+                    <span className="text-lg md:text-xl mr-1.5">{userReaction?.emoji}</span> Reagir
                   </>
                 )}
               </Button>
@@ -724,135 +752,212 @@ function PostItem({ post }: PostItemProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 text-muted-foreground"
-            onClick={() => setShowCommentDialog(true)}
+            className="flex-1 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setShowAllComments(true)
+              setTimeout(() => {
+                commentInputRef.current?.focus()
+              }, 50)
+            }}
           >
-            <MessageSquare className="h-5 w-5 mr-1" />
+            <MessageSquare className="h-4 w-4 md:h-5 md:w-5 mr-1.5" />
             Comentar
           </Button>
         </div>
       </div>
 
-      <CardFooter className="flex flex-col items-start gap-3 pt-2">
+      <CardFooter className="flex flex-col items-start gap-3 pt-1 px-4 md:px-6 pb-4">
+        {/* Lista de comentários inline */}
         {comments && comments.length > 0 && (
-          <div
-            className="w-full space-y-2 mt-2 cursor-pointer"
-            onClick={() => setShowCommentDialog(true)}
-          >
-            <div className="flex items-start gap-2">
-              <Avatar className="size-6 border">
-                <AvatarImage src={comments?.at(0)?.user.imageUrl ?? undefined} />
-                <AvatarFallback>{comments?.at(0)?.user.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="text-sm bg-muted/50 rounded-lg px-3 py-1.5 w-full">
-                <span className="font-semibold">{comments?.at(0)?.user.firstName}</span>
-                <p className="text-muted-foreground line-clamp-2">{comments?.at(0)?.comment}</p>
-              </div>
-            </div>
-            {comments.length > 1 && (
-              <p className="text-xs text-muted-foreground ml-8">Ver todos os {comments.length} comentários</p>
+          <div className="w-full space-y-2.5">
+            {comments.length > 2 && (
+              <button
+                type="button"
+                onClick={() => setShowAllComments((prev) => !prev)}
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                {showAllComments
+                  ? "Ocultar comentários anteriores"
+                  : `Ver todos os ${comments.length} comentários`}
+              </button>
             )}
+
+            <div className="space-y-2.5 w-full">
+              {(showAllComments ? comments : comments.slice(-2)).map((comment) => {
+                const isEditing = editingCommentId === comment.id
+                const canManage = comment.userId === auth.userId || userMe?.role_config?.sudo
+
+                return (
+                  <div key={comment.id} className="flex gap-2.5 group items-start">
+                    <Avatar className="size-7 mt-0.5 border shrink-0">
+                      <AvatarImage src={comment.user.imageUrl ?? undefined} />
+                      <AvatarFallback className="text-xs">
+                        {comment.user.firstName?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 bg-muted/60 hover:bg-muted/80 transition-colors px-3.5 py-2 rounded-2xl relative">
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="font-semibold text-xs text-foreground truncate">
+                          {comment.user.firstName} {comment.user.lastName}
+                        </span>
+                        {canManage && (
+                          <div className="flex items-center gap-0.5 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            {!isEditing && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors"
+                                onClick={() => {
+                                  setEditingCommentId(comment.id)
+                                  setEditingCommentText(comment.comment)
+                                }}
+                                disabled={updateComment.isPending || deleteComment.isPending}
+                                title="Editar comentário"
+                              >
+                                <LucidePencil className="h-3 w-3" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 text-muted-foreground hover:text-red-500 transition-colors"
+                              onClick={() => deleteComment.mutate({ id: comment.id })}
+                              disabled={deleteComment.isPending || updateComment.isPending}
+                              title="Excluir comentário"
+                            >
+                              <LucideTrash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      {isEditing ? (
+                        <div className="mt-1.5 space-y-1.5">
+                          <Input
+                            value={editingCommentText}
+                            onChange={(e) => setEditingCommentText(e.target.value)}
+                            className="h-8 text-xs bg-background/90"
+                            autoFocus
+                            disabled={updateComment.isPending}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault()
+                                if (editingCommentText.trim()) {
+                                  updateComment.mutate({
+                                    id: comment.id,
+                                    comment: editingCommentText.trim(),
+                                  })
+                                }
+                              } else if (e.key === "Escape") {
+                                setEditingCommentId(null)
+                              }
+                            }}
+                          />
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-[11px]"
+                              onClick={() => setEditingCommentId(null)}
+                              disabled={updateComment.isPending}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-6 px-2.5 text-[11px]"
+                              disabled={!editingCommentText.trim() || updateComment.isPending}
+                              onClick={() => {
+                                if (editingCommentText.trim()) {
+                                  updateComment.mutate({
+                                    id: comment.id,
+                                    comment: editingCommentText.trim(),
+                                  })
+                                }
+                              }}
+                            >
+                              {updateComment.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : null}
+                              Salvar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-foreground/90 mt-0.5 whitespace-pre-wrap break-words leading-relaxed">
+                          {comment.comment}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleCommentSubmit} className="w-full flex gap-2 mt-2 items-center">
-          <Avatar className="size-8">
+        {/* Input de comentário estilizado e moderno */}
+        <form onSubmit={handleCommentSubmit} className="w-full flex gap-2.5 items-center mt-1">
+          <Avatar className="size-8 shrink-0 border">
             <AvatarImage src={userMe?.imageUrl ?? undefined} />
-            <AvatarFallback>{userMe?.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarFallback className="text-xs">
+              {userMe?.firstName?.charAt(0).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
-          <div className="flex-1 relative">
+          <div className="flex-1 relative flex items-center">
             <Input
+              ref={commentInputRef}
               placeholder="Escreva um comentário..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              className="pr-10"
+              className="pr-16 pl-3.5 h-9 text-xs rounded-full bg-muted/40 border-muted-foreground/20 focus-visible:ring-1"
+              disabled={addComment.isPending}
             />
-            <Button
-              type="submit"
-              size="icon"
-              variant="ghost"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-              disabled={!newComment.trim() || addComment.isPending}
-            >
-              {addComment.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+            <div className="absolute right-1 flex items-center gap-0.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-full"
+                    title="Inserir emoji"
+                  >
+                    <Smile className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 border-none shadow-lg" align="end" side="top">
+                  <EmojiPicker
+                    onEmojiClick={(emoji) => {
+                      setNewComment((prev) => prev + emoji.emoji)
+                      commentInputRef.current?.focus()
+                    }}
+                    theme={theme as Theme}
+                    open
+                    width={280}
+                    height={350}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Button
+                type="submit"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-primary hover:text-primary/80 rounded-full disabled:opacity-30"
+                disabled={!newComment.trim() || addComment.isPending}
+                title="Publicar comentário"
+              >
+                {addComment.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
           </div>
         </form>
-
-        <Dialog open={showCommentDialog} onOpenChange={setShowCommentDialog}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Comentários no post de {post.author.firstName}</DialogTitle>
-            </DialogHeader>
-
-            <div className="max-h-[50vh] overflow-y-auto py-4 space-y-4">
-              {comments && comments.length > 0 ? (
-                comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-2 group items-start">
-                    <Avatar className="size-8 mt-0.5 border">
-                      <AvatarImage src={comment.user.imageUrl ?? undefined} />
-                      <AvatarFallback>{comment.user.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 bg-muted p-3 rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <p className="font-medium text-sm">
-                          {comment.user.firstName} {comment.user.lastName}
-                        </p>
-                        {(comment.userId === auth.userId || userMe?.role_config?.sudo) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => deleteComment.mutate({ id: comment.id })}
-                          >
-                            <LucideTrash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-sm mt-1">{comment.comment}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground">
-                  Nenhum comentário ainda. Seja o primeiro a comentar!
-                </p>
-              )}
-            </div>
-
-            <form onSubmit={handleCommentSubmit} className="flex gap-2 mt-2 pt-4 border-t">
-              <Avatar className="size-8">
-                <AvatarImage src={userMe?.imageUrl ?? undefined} />
-                <AvatarFallback>{userMe?.firstName?.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 relative">
-                <Input
-                  placeholder="Escreva um comentário..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="pr-10"
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  variant="ghost"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                  disabled={!newComment.trim() || addComment.isPending}
-                >
-                  {addComment.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </CardFooter>
     </Card>
   )
@@ -918,12 +1023,12 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <LucidePencil className="h-4 w-4 mr-2" />
+        <Button variant="ghost" size="sm" className="justify-start text-xs font-normal h-8 w-full">
+          <LucidePencil className="h-3.5 w-3.5 mr-2" />
           Editar Post
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={onSubmit}>
           <DialogHeader>
             <DialogTitle>Editar Post</DialogTitle>
@@ -941,7 +1046,7 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
               <MonacoEditor
                 value={editContent}
                 onChange={(value) => setEditContent(value ?? "")}
-                height="500px"
+                height="320px"
                 language="markdown"
               />
               <p className="text-xs text-muted-foreground">

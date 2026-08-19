@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   description: "Eventos da empresa",
 }
 
+//Aguardar no momento, pagina desabilitada
 export default async function EventsPage() {
   let user;
 
@@ -28,6 +29,10 @@ export default async function EventsPage() {
     redirect("/sign-in?redirect_url=/events")
   }
 
+  // Redireciona enquanto o módulo de eventos estiver temporariamente desabilitado
+  redirect("/news")
+
+  /*
   // Buscar dados do usuário para verificar permissões de criação
   const userData = await api.user.me()
 
@@ -54,5 +59,6 @@ export default async function EventsPage() {
       <EventsList />
     </DashboardShell>
   )
+  */
 }
 

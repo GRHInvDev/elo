@@ -142,53 +142,9 @@ export function ImageCarousel({
   const shouldUseFullHeight = className?.includes('h-full') ?? false
   const shouldUseFullWidth = className?.includes('w-full') ?? false
 
-  const renderImage = (image: string, index: number) => {
-    const hasExplicitAspect = aspectRatio === "square" || aspectRatio === "video"
-    const dims = intrinsicByIndex[index]
-    const useIntrinsicAuto =
-      aspectRatio === "auto" && !shouldUseFullHeight
-
-    const aspectClass = hasExplicitAspect
-      ? resolveAspectClass()
-      : shouldUseFullHeight
-        ? ""
-        : aspectRatio === "auto"
-          ? ""
-          : resolveAspectClass()
-
-    const intrinsicStyle: CSSProperties | undefined =
-      useIntrinsicAuto && dims
-        ? { aspectRatio: `${dims.w} / ${dims.h}` }
-        : undefined
-
-    return (
-      <div
-        className={cn(
-          "relative w-full overflow-hidden bg-muted",
-          aspectClass,
-          useIntrinsicAuto && AUTO_MAX_HEIGHT_CLASS,
-          useIntrinsicAuto && !dims && "min-h-[200px]",
-          !hasExplicitAspect && shouldUseFullHeight && "h-full"
-        )}
-        style={intrinsicStyle}
-      >
-        <OptimizedImage
-          src={image}
-          alt={`${alt} ${index + 1}`}
-          fill
-          className={cn(
-            imageFit === "contain"
-              ? "object-contain"
-              : "object-cover",
-            "height-1/2"
-          )}
-          priority={index === 0}
-          onLoadingComplete={(img) => handleImageLoad(index, img.target as HTMLImageElement)}
-          imageFit={imageFit}
-        />
-      </div>
-    )
-  }
+  const hasExplicitAspect = aspectRatio === "square" || aspectRatio === "video"
+  const aspectClass = hasExplicitAspect ? resolveAspectClass() : ""
+  const useIntrinsicAuto = aspectRatio === "auto" && !shouldUseFullHeight
 
   if (!images || images.length === 0) {
     console.warn('ImageCarousel: No images provided')
@@ -201,31 +157,58 @@ export function ImageCarousel({
   }
 
   if (validImages.length === 1) {
+    const singleDims = intrinsicByIndex[0]
+    const singleAspectStyle: CSSProperties | undefined = useIntrinsicAuto && singleDims ? { aspectRatio: `${singleDims.w} / ${singleDims.h}` } : undefined
+
     return (
       <div
         className={cn(
-          "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none",
+          "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none bg-muted",
+          aspectClass,
+          useIntrinsicAuto && AUTO_MAX_HEIGHT_CLASS,
+          useIntrinsicAuto && !singleDims && "min-h-[200px]",
           shouldUseFullHeight && "h-full",
           className
         )}
+        style={singleAspectStyle}
       >
-        {renderImage(validImages[0]!, 0)}
+        <OptimizedImage
+          src={validImages[0]!}
+          alt={alt}
+          fill
+          className={cn(
+            imageFit === "contain"
+              ? "object-contain"
+              : "object-cover"
+          )}
+          priority
+          onLoadingComplete={(img) => handleImageLoad(0, img.target as HTMLImageElement)}
+          imageFit={imageFit}
+        />
       </div>
     )
   }
 
+  const activeDims = intrinsicByIndex[current] ?? intrinsicByIndex[0]
+  const activeAspectStyle: CSSProperties | undefined = useIntrinsicAuto && activeDims ? { aspectRatio: `${activeDims.w} / ${activeDims.h}` } : undefined
+
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none",
+        "relative w-full overflow-hidden rounded-lg border max-w-[100vw] md:max-w-none bg-muted",
+        aspectClass,
+        useIntrinsicAuto && AUTO_MAX_HEIGHT_CLASS,
+        useIntrinsicAuto && !activeDims && "min-h-[200px]",
         shouldUseFullHeight && "h-full",
         shouldUseFullWidth && "w-full",
+        className
       )}
+      style={activeAspectStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Carousel
-        className={cn("w-full", shouldUseFullHeight && "h-full")}
+        className="w-full h-full"
         setApi={setCarouselApi}
         opts={{
           loop: true,
@@ -234,19 +217,27 @@ export function ImageCarousel({
         }}
       >
         <CarouselContent
-          className={cn(shouldUseFullHeight && "h-full", "-ml-0")}
-          viewportClassName={shouldUseFullHeight ? "h-full" : undefined}
+          className="h-full -ml-0"
+          viewportClassName="h-full"
         >
           {validImages.map((image, index) => (
             <CarouselItem 
               key={`${image}-${index}`} 
-              className={cn(
-                "w-full pl-0 basis-full min-h-0",
-                shouldUseFullHeight && "h-full",
-                aspectRatio === "auto" && !shouldUseFullHeight && "flex flex-col justify-end"
-              )}
+              className="w-full h-full pl-0 basis-full min-h-0"
             >
-              {renderImage(image, index)}
+              <div className="relative w-full h-full overflow-hidden">
+                <OptimizedImage
+                  src={image}
+                  alt={`${alt} ${index + 1}`}
+                  fill
+                  className={cn(
+                    imageFit === "contain" ? "object-contain" : "object-cover"
+                  )}
+                  priority={index === 0}
+                  onLoadingComplete={(img) => handleImageLoad(index, img.target as HTMLImageElement)}
+                  imageFit={imageFit}
+                />
+              </div>
             </CarouselItem>
           ))}
         </CarouselContent>
@@ -258,7 +249,12 @@ export function ImageCarousel({
             variant="ghost"
             size="sm"
             className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex z-10"
-            onClick={(e) => { e.stopPropagation(); carouselApi?.scrollPrev() }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              carouselApi?.scrollPrev()
+            }}
             disabled={validImages.length <= 1}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -267,7 +263,12 @@ export function ImageCarousel({
             variant="ghost"
             size="sm"
             className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white hidden md:flex z-10"
-            onClick={(e) => { e.stopPropagation(); carouselApi?.scrollNext() }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              carouselApi?.scrollNext()
+            }}
             disabled={validImages.length <= 1}
           >
             <ChevronRight className="h-4 w-4" />
@@ -276,7 +277,12 @@ export function ImageCarousel({
       )}
 
       {showDots && validImages.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1 z-10">
+        <div
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1 z-10"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
           {validImages.map((_, index) => (
             <button
               key={index}
@@ -286,7 +292,12 @@ export function ImageCarousel({
                   ? "bg-white scale-125"
                   : "bg-white/50 hover:bg-white/75"
               )}
-              onClick={(e) => { e.stopPropagation(); carouselApi?.scrollTo(index) }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                carouselApi?.scrollTo(index)
+              }}
               aria-label={`Ir para imagem ${index + 1}`}
             />
           ))}
@@ -294,7 +305,12 @@ export function ImageCarousel({
       )}
 
       {validImages.length > 1 && (
-        <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full z-10">
+        <div
+          className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full z-10"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
           {current + 1} / {validImages.length}
         </div>
       )}
