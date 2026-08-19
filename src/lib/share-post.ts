@@ -120,15 +120,11 @@ async function copyToClipboard(text: string): Promise<boolean> {
  */
 export async function sharePost(post: SharePostData): Promise<SharePostResult> {
   const shareUrl = getPostShareUrl(post.id)
-  const summary = extractPostSummary(post.content, 180)
- 
-  const shareText = summary ? `${post.title}\n\n${summary}` : post.title
 
   if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
     try {
       const shareData: ShareData = {
         title: post.title,
-        text: shareText,
         url: shareUrl,
       }
 
