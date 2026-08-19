@@ -3,27 +3,13 @@
 import { cn } from "@/lib/utils"
 
 import { useState, useMemo } from "react"
+import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Search, X, Building2, Check, ChevronDown } from "lucide-react"
-
-const AVAILABLE_SETORES = [
-  { value: "ADMINISTRATIVO", label: "Administrativo" },
-  { value: "COMERCIAL", label: "Comercial" },
-  { value: "FINANCEIRO", label: "Financeiro" },
-  { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
-  { value: "TI", label: "Tecnologia da Informação" },
-  { value: "MARKETING", label: "Marketing" },
-  { value: "VENDAS", label: "Vendas" },
-  { value: "PRODUCAO", label: "Produção" },
-  { value: "COMPRAS", label: "Compras" },
-  { value: "QUALIDADE", label: "Qualidade" },
-  { value: "LOGISTICA", label: "Logística" },
-  { value: "JURIDICO", label: "Jurídico" },
-]
 
 interface SetorSearchProps {
   selectedSetores: string[]
@@ -43,21 +29,39 @@ export function SetorSearch({
   const [searchTerm, setSearchTerm] = useState("")
   const [isOpen, setIsOpen] = useState(false)
 
+  const { data: distinctSetores = [] } = api.user.listDistinctSetores.useQuery()
+  const { data: setoresTable = [] } = api.setores.list.useQuery()
+
+  const availableSetores = useMemo(() => {
+    return distinctSetores.map((setorValue) => {
+      const matched = setoresTable.find((s) => s.value === setorValue)
+      return {
+        value: setorValue,
+        label: matched?.name ?? setorValue,
+      }
+    })
+  }, [distinctSetores, setoresTable])
+
   // Filtrar setores baseado no termo de busca
   const filteredSetores = useMemo(() => {
-    if (!searchTerm.trim()) return AVAILABLE_SETORES
+    if (!searchTerm.trim()) return availableSetores
 
     const term = searchTerm.toLowerCase()
-    return AVAILABLE_SETORES.filter(setor =>
-      setor.label.toLowerCase().includes(term) ||
-      setor.value.toLowerCase().includes(term)
+    return availableSetores.filter(
+      (setor) =>
+        setor.label.toLowerCase().includes(term) ||
+        setor.value.toLowerCase().includes(term)
     )
-  }, [searchTerm])
+  }, [searchTerm, availableSetores])
 
   // Setores selecionados para exibição
   const selectedSetoresData = useMemo(() => {
-    return AVAILABLE_SETORES.filter(setor => selectedSetores.includes(setor.value))
-  }, [selectedSetores])
+    return selectedSetores.map((val) => {
+      const found = availableSetores.find((s) => s.value === val)
+      return found ?? { value: val, label: val }
+    })
+  }, [selectedSetores, availableSetores])
+
 
   const handleSetorToggle = (setorValue: string) => {
     if (selectedSetores.includes(setorValue)) {
