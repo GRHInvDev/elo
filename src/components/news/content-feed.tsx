@@ -49,6 +49,7 @@ import { ImageViewer } from "@/components/ui/image-viewer"
 import { MonacoEditor } from "@/components/ui/monaco-editor"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import type { PostWithAuthor, EventWithAuthor, ContentFeedProps } from "@/types/content-feed"
+import { PostShareButton } from "@/components/ui/post-share-button"
 
 // Dynamically import EmojiPicker to avoid SSR issues
 const EmojiPicker = dynamic(() => import("emoji-picker-react").then((mod) => mod.default), { ssr: false })
@@ -109,6 +110,35 @@ export function ContentFeed({
       }
     }
   }, [enablePagination, postsWithRoleConfig, visiblePostsCount, postsPerPage])
+
+  // Lógica para detectar hash de post na URL e rolar até ele automaticamente
+  useEffect(() => {
+    if (typeof window === "undefined" || !postsWithRoleConfig || postsWithRoleConfig.length === 0) return
+
+    const hash = window.location.hash.replace("#", "")
+    if (!hash) return
+
+    const targetIndex = postsWithRoleConfig.findIndex((p) => p.id === hash)
+    if (targetIndex !== -1) {
+      // Garante que o post alvo esteja dentro dos posts renderizados
+      if (enablePagination && visiblePostsCount <= targetIndex) {
+        setVisiblePostsCount(targetIndex + 1)
+      }
+
+      const timer = setTimeout(() => {
+        const element = document.getElementById(hash)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" })
+          element.classList.add("ring-2", "ring-primary", "transition-all", "duration-500")
+          setTimeout(() => {
+            element.classList.remove("ring-2", "ring-primary")
+          }, 3000)
+        }
+      }, 300)
+
+      return () => clearTimeout(timer)
+    }
+  }, [postsWithRoleConfig, enablePagination, visiblePostsCount])
 
   const createPost = api.post.create.useMutation({
     onSuccess: async () => {
@@ -763,6 +793,13 @@ function PostItem({ post }: PostItemProps) {
             <MessageSquare className="h-4 w-4 md:h-5 md:w-5 mr-1.5" />
             Comentar
           </Button>
+          <div className="w-px bg-border h-6" />
+          <PostShareButton
+            post={post}
+            variant="ghost"
+            size="sm"
+            className="flex-1 text-muted-foreground hover:text-foreground"
+          />
         </div>
       </div>
 
