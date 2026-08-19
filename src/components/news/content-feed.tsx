@@ -785,7 +785,8 @@ function PostItem({ post }: PostItemProps) {
             <div className="space-y-2.5 w-full">
               {(showAllComments ? comments : comments.slice(-2)).map((comment) => {
                 const isEditing = editingCommentId === comment.id
-                const canManage = comment.userId === auth.userId || userMe?.role_config?.sudo
+                const isAuthor = comment.userId === auth.userId
+                const canDelete = isAuthor || userMe?.role_config?.sudo
 
                 return (
                   <div key={comment.id} className="flex gap-2.5 group items-start">
@@ -800,9 +801,9 @@ function PostItem({ post }: PostItemProps) {
                         <span className="font-semibold text-xs text-foreground truncate">
                           {comment.user.firstName} {comment.user.lastName}
                         </span>
-                        {canManage && (
+                        {(isAuthor || canDelete) && (
                           <div className="flex items-center gap-0.5 opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            {!isEditing && (
+                            {isAuthor && !isEditing && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -817,16 +818,18 @@ function PostItem({ post }: PostItemProps) {
                                 <LucidePencil className="h-3 w-3" />
                               </Button>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 text-muted-foreground hover:text-red-500 transition-colors"
-                              onClick={() => deleteComment.mutate({ id: comment.id })}
-                              disabled={deleteComment.isPending || updateComment.isPending}
-                              title="Excluir comentário"
-                            >
-                              <LucideTrash2 className="h-3 w-3" />
-                            </Button>
+                            {canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-muted-foreground hover:text-red-500 transition-colors"
+                                onClick={() => deleteComment.mutate({ id: comment.id })}
+                                disabled={deleteComment.isPending || updateComment.isPending}
+                                title="Excluir comentário"
+                              >
+                                <LucideTrash2 className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>
