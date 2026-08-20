@@ -78,6 +78,7 @@ export function ContentFeed({
   const { toast } = useToast()
   const utils = api.useUtils()
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const hasScrolledToHashRef = useRef<string | null>(null)
 
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
   const { data: events } = api.event.list.useQuery()
@@ -118,12 +119,18 @@ export function ContentFeed({
     const hash = window.location.hash.replace("#", "")
     if (!hash) return
 
+    if (hasScrolledToHashRef.current === hash) return
+
     const targetIndex = postsWithRoleConfig.findIndex((p) => p.id === hash)
     if (targetIndex !== -1) {
-      // Garante que o post alvo esteja dentro dos posts renderizados
-      if (enablePagination && visiblePostsCount <= targetIndex) {
-        setVisiblePostsCount(targetIndex + 1)
-      }
+      hasScrolledToHashRef.current = hash
+
+      setVisiblePostsCount((currentCount) => {
+        if (enablePagination && currentCount <= targetIndex) {
+          return targetIndex + 1
+        }
+        return currentCount
+      })
 
       const timer = setTimeout(() => {
         const element = document.getElementById(hash)
@@ -138,7 +145,7 @@ export function ContentFeed({
 
       return () => clearTimeout(timer)
     }
-  }, [postsWithRoleConfig, enablePagination, visiblePostsCount])
+  }, [postsWithRoleConfig, enablePagination])
 
   const createPost = api.post.create.useMutation({
     onSuccess: async () => {
