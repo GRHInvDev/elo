@@ -596,12 +596,15 @@ export const formsRouter = createTRPCRouter({
             // Check authorization
             const caller = await ctx.db.user.findUnique({
                 where: { id: userId },
-                select: { role_config: true }
+                select: { role_config: true, is_active: true }
             });
-            const roleConfig = caller?.role_config as RolesConfig | null;
+            const roleConfig = caller ? getEffectiveRoleConfig(caller) : null;
             const isAuthorized = (roleConfig?.sudo ?? false) || (roleConfig?.can_create_form ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false);
 
             const users = await ctx.db.user.findMany({
+                where: {
+                    is_active: true,
+                },
                 select: {
                     id: true,
                     firstName: true,

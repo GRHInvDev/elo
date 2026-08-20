@@ -615,7 +615,8 @@ export const suggestionRouter = createTRPCRouter({
             select: {
               firstName: true,
               lastName: true,
-              email: true
+              email: true,
+              is_active: true,
             }
           },
           analyst: {
@@ -656,7 +657,8 @@ export const suggestionRouter = createTRPCRouter({
             select: {
               firstName: true,
               lastName: true,
-              email: true
+              email: true,
+              is_active: true,
             }
           },
           analyst: {
@@ -771,17 +773,19 @@ export const suggestionRouter = createTRPCRouter({
             const statusPortugues = statusMapping[input.status] || input.status
 
             // Enviar email apenas para o usuário que criou a ideia
-            await sendEmail(
-              suggestionData.user.email,
-              `Atualização da Ideia #${suggestionData.ideaNumber}`,
-              mockEmailNotificacaoSugestao(
-                nomeUsuario,
-                nomeResponsavel,
-                suggestionData.ideaNumber,
-                statusPortugues,
-                input.rejectionReason
+            if (suggestionData.user?.email && suggestionData.user.is_active) {
+              await sendEmail(
+                suggestionData.user.email,
+                `Atualização da Ideia #${suggestionData.ideaNumber}`,
+                mockEmailNotificacaoSugestao(
+                  nomeUsuario,
+                  nomeResponsavel,
+                  suggestionData.ideaNumber,
+                  statusPortugues,
+                  input.rejectionReason
+                )
               )
-            )
+            }
 
           } catch (emailError) {
             console.error("Erro ao enviar email de notificação:", emailError)
@@ -935,7 +939,8 @@ export const suggestionRouter = createTRPCRouter({
             select: {
               firstName: true,
               lastName: true,
-              email: true
+              email: true,
+              is_active: true,
             }
           },
           analyst: {
@@ -967,18 +972,20 @@ export const suggestionRouter = createTRPCRouter({
         const nomeResponsavel = `${suggestionData.analyst?.firstName ?? ''} ${suggestionData.analyst?.lastName ?? ''}`.trim() ?? 'Admin'
 
         // Enviar email apenas para o usuário que criou a ideia
-        await sendEmail(
-          suggestionData.user.email,
-          `Atualização da Ideia #${suggestionData.ideaNumber}`,
-          mockEmailNotificacaoSugestao(
-            nomeUsuario,
-            nomeResponsavel,
-            suggestionData.ideaNumber,
-            "Não implementada",
-            input.rejectionReason
+        if (suggestionData.user.email && suggestionData.user.is_active) {
+          await sendEmail(
+            suggestionData.user.email,
+            `Atualização da Ideia #${suggestionData.ideaNumber}`,
+            mockEmailNotificacaoSugestao(
+              nomeUsuario,
+              nomeResponsavel,
+              suggestionData.ideaNumber,
+              "Não implementada",
+              input.rejectionReason
+            )
+            // Removido CC para o admin - apenas notificação para o usuário
           )
-          // Removido CC para o admin - apenas notificação para o usuário
-        )
+        }
 
         return { success: true, message: "Notificação enviada com sucesso" }
       } catch (emailError) {
