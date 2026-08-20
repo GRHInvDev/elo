@@ -123,18 +123,24 @@ export async function sharePost(post: SharePostData): Promise<SharePostResult> {
 
   if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
     try {
-      const shareData: ShareData = {
-        title: post.title,
-        url: shareUrl,
-      }
+      const canShareSuported = typeof navigator.canShare === "function"
 
-      // Se canShare estiver disponível, valida antes de compartilhar
-      if (typeof navigator.canShare === "function") {
+      if (canShareSuported) {
+        const shareData: ShareData = {
+          url: shareUrl,
+        }
+
         if (navigator.canShare(shareData)) {
           await navigator.share(shareData)
           return { success: true, method: "native" }
         }
       } else {
+        const shareData: ShareData = {
+          title: post.title,
+          text: extractPostSummary(post.content),
+          url: shareUrl,
+        }
+
         await navigator.share(shareData)
         return { success: true, method: "native" }
       }
