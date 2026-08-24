@@ -118,7 +118,7 @@ export function MultipleImageUpload({
   const removeImage = useCallback(
     async (index: number) => {
       const imageToRemove = images[index]
-      if (imageToRemove && imageToRemove.startsWith("https://")) {
+      if (imageToRemove?.startsWith("https://")) {
         try {
           const fileId = imageToRemove.replace("https://162synql7v.ufs.sh/f/", "")
           await deleteFiles(fileId)
@@ -198,7 +198,7 @@ export function MultipleImageUpload({
           onChange={handleFileSelect}
           className="hidden"
         />
-        
+
         <div className="flex flex-col items-center space-y-2">
           {isUploading ? (
             <>
@@ -235,7 +235,7 @@ export function MultipleImageUpload({
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                     unoptimized={imageUrl.startsWith("data:")}
                   />
-                  
+
                   {/* Botões de ação */}
                   <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {/* Botão de remover */}
