@@ -207,7 +207,7 @@ export function FormBuilderWithSave({
     <div className="space-y-8">
       {/* Seção de Responsáveis */}
       <FormSectionCard
-        icon={Users}
+        icon={<Users />}
         title="Responsáveis do Formulário"
         description="Adicione um ou mais responsáveis que poderão ver e interagir com todas as respostas deste formulário."
       >
@@ -232,7 +232,7 @@ export function FormBuilderWithSave({
         </div>
       </FormSectionCard>
 
-      <FormSectionCard icon={FileText} title="Informações da solicitação">
+      <FormSectionCard icon={<FileText />} title="Informações da solicitação">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Título do Formulário</Label>
