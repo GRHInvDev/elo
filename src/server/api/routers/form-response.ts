@@ -29,6 +29,16 @@ const PUBLIC_USER_SELECT = {
 } satisfies Prisma.UserSelect
 
 /**
+ * Mesmo recorte do PUBLIC_USER_SELECT + o flag is_active, usado apenas nos
+ * procedures que precisam decidir no servidor se o autor recebe email.
+ * is_active é um booleano de status, sem dado sensível.
+ */
+const NOTIFY_USER_SELECT = {
+  ...PUBLIC_USER_SELECT,
+  is_active: true,
+} satisfies Prisma.UserSelect
+
+/**
  * Gera o próximo número sequencial para um novo chamado
  * Começa a partir do número 210
  */
@@ -1256,7 +1266,7 @@ export const formResponseRouter = createTRPCRouter({
         },
         include: {
           form: true,
-          user: { select: PUBLIC_USER_SELECT }, // Incluir autor para notificação
+          user: { select: NOTIFY_USER_SELECT }, // Incluir autor para notificação
         },
       })
 
@@ -1660,7 +1670,7 @@ export const formResponseRouter = createTRPCRouter({
             tags: updatedTags,
           },
           include: {
-            user: { select: PUBLIC_USER_SELECT },
+            user: { select: NOTIFY_USER_SELECT },
             form: true,
           }
         }),
