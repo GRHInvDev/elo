@@ -16,3 +16,4 @@ await symlink(path.relative(nestedNodeModulesDir, generatedPrismaDir), linkPath,
 
 console.log("[prisma-link-client] Link criado:", linkPath, "->", generatedPrismaDir)
 
+ 

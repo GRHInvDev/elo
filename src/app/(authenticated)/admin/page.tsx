@@ -41,7 +41,12 @@ const ADMIN_HOME_SECTIONS: {
   {
     title: "Operações e infraestrutura",
     subtitle: "Alimentação, salas, frota e recursos físicos",
-    routeIds: ["/admin/food", "/admin/rooms", "/admin/vehicles", "/admin/filiais"],
+    routeIds: [
+      "/admin/food",
+      "/admin/rooms",
+      "/admin/vehicles",
+      "/admin/filiais",
+    ],
   },
   {
     title: "Ideias, loja e qualidade",

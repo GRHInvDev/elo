@@ -1310,5 +1310,29 @@ export const userRouter = createTRPCRouter({
 
       return logs
     }),
+
+  /** Lista os setores distintos dos usuários, de acordo com o resultado do busca */
+  listDistinctSetores: protectedProcedure.query(async ({ ctx }) => {
+    const users = await ctx.db.user.findMany({
+      where: {
+        setor: {
+          not: null,
+        },
+      },
+      select: {
+        setor: true,
+      },
+      distinct: ["setor"],
+      orderBy: {
+        setor: "asc",
+      },
+    })
+
+    const setores = users
+      .map((u) => u.setor?.trim())
+      .filter((s): s is string => Boolean(s && s.length > 0))
+
+    return Array.from(new Set(setores)).sort((a, b) => a.localeCompare(b))
+  }),
 })
 

@@ -111,6 +111,7 @@ export default function UsersManagementPage() {
   const { data: allForms } = api.form.list.useQuery()
   const { data: empresas = [] } = api.empresas.list.useQuery()
   const { data: setores = [] } = api.setores.list.useQuery()
+  const { data: distinctSetores = [] } = api.user.listDistinctSetores.useQuery()
   const { data: filiaisRaw = [] } = api.filiais.list.useQuery()
   const filiais = useMemo(
     () =>
@@ -230,9 +231,9 @@ export default function UsersManagementPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os setores</SelectItem>
-                    {setores.map((setor) => (
-                      <SelectItem key={setor.id} value={setor.value}>
-                        {setor.name}
+                    {distinctSetores.map((setorName) => (
+                      <SelectItem key={setorName} value={setorName}>
+                        {setorLabelFrom(setores, setorName)}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -78,6 +78,7 @@ export const formResponseRouter = createTRPCRouter({
                 firstName: true,
                 lastName: true,
                 email: true,
+                is_active: true,
               }
             }
           }
@@ -116,12 +117,13 @@ export const formResponseRouter = createTRPCRouter({
                 firstName: true,
                 lastName: true,
                 email: true,
+                is_active: true,
               }
             })
 
             // Enviar email para cada dono do formulário
             for (const owner of ownerUsers) {
-              if (owner.email) {
+              if (owner.email && owner.is_active) {
                 const ownerName = owner.firstName
                   ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                   : (owner.email ?? 'Usuário')
@@ -262,12 +264,13 @@ export const formResponseRouter = createTRPCRouter({
               firstName: true,
               lastName: true,
               email: true,
+              is_active: true,
             }
           })
 
           // Enviar email para cada dono do formulário
           for (const owner of ownerUsers) {
-            if (owner.email) {
+            if (owner.email && owner.is_active) {
               const ownerName = owner.firstName
                 ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
                 : (owner.email ?? 'Usuário')
@@ -1082,7 +1085,10 @@ export const formResponseRouter = createTRPCRouter({
           if (responseWithDetails) {
             const recipientUserIds = Array.from(recipients)
             const recipientUsers = await ctx.db.user.findMany({
-              where: { id: { in: recipientUserIds } },
+              where: { 
+                id: { in: recipientUserIds },
+                is_active: true,
+              },
               select: {
                 id: true,
                 firstName: true,
@@ -1301,11 +1307,13 @@ export const formResponseRouter = createTRPCRouter({
           })
 
           // Enviar email
-          await sendEmail(
-            author.email,
-            `Atualização na sua solicitação: ${!statusMap[responseStatus] || responseStatus}`,
-            mockEmailSituacaoFormulario(author.firstName ?? "", responseStatus, responseId, formId, formTitle),
-          ).catch(e => console.error("Erro ao enviar email de status:", e))
+          if (author.email && author.is_active) {
+            await sendEmail(
+              author.email,
+              `Atualização na sua solicitação: ${!statusMap[responseStatus] || responseStatus}`,
+              mockEmailSituacaoFormulario(author.firstName ?? "", responseStatus, responseId, formId, formTitle),
+            ).catch(e => console.error("Erro ao enviar email de status:", e))
+          }
         } catch (e) {
           console.error("Erro ao processar notificações de status:", e)
         }
@@ -1689,7 +1697,7 @@ export const formResponseRouter = createTRPCRouter({
           }
         })
 
-        if (updatedResponse.user.email) {
+        if (updatedResponse.user.email && updatedResponse.user.is_active) {
           await sendEmail(
             updatedResponse.user.email,
             `Tag adicionada: ${tag.nome}`,

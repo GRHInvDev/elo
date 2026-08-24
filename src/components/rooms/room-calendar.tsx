@@ -69,10 +69,10 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
   )
 
   return (
-    <Card className={className}>
+    <Card className={`rounded-2xl border border-border/50 bg-card/60 backdrop-blur-xl shadow-sm ${className}`}>
       <CardHeader>
         <div className="flex items-center flex-col md:flex-row gap-y-4 justify-between">
-          <CardTitle>Calendário de Reservas</CardTitle>
+          <CardTitle className="text-base font-semibold">Calendário de Reservas</CardTitle>
           <Popover>
             <PopoverTrigger asChild>
               <Button

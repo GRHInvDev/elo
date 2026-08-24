@@ -116,24 +116,19 @@ export const createCallerFactory = t.createCallerFactory;
 export const createTRPCRouter = t.router;
 
 /**
- * Middleware for timing procedure execution and adding an artificial delay in development.
+ * Cronometra cada procedure e registra a duração no log da função.
  *
- * You can remove this if you don't like it, but it can help catch unwanted waterfalls by simulating
- * network latency that would occur in production but not in local development.
+ * Aplicado também nas procedures autenticadas: antes só o `publicProcedure`
+ * passava por aqui, o que deixava praticamente todo o sistema sem medição de
+ * tempo. Com isso, `[TRPC] <path> took <n>ms` aparece nos logs da plataforma
+ * para qualquer chamada.
  */
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
 
-  // if (t._config.isDev) {
-  //   // artificial delay in dev
-  //   const waitMs = Math.floor(Math.random() * 400) + 100;
-  //   await new Promise((resolve) => setTimeout(resolve, waitMs));
-  // }
-
   const result = await next();
 
-  const end = Date.now();
-  console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
+  console.log(`[TRPC] ${path} took ${Date.now() - start}ms to execute`);
 
   return result;
 });
@@ -147,7 +142,7 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
 
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(timingMiddleware).use(async ({ ctx, next }) => {
   if (!ctx.auth.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" })
   }

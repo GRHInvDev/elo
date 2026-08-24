@@ -103,6 +103,9 @@ model User {
   auditLogs    UserAuditLog[] @relation("UserAuditTarget")
   auditActions UserAuditLog[] @relation("UserAuditActor")
 
+  // Trilha de acesso (navegação e chamadas lentas de API)
+  accessLogs AccessLog[] @relation("AccessLogUser")
+
   @@map("users")
 }
 
@@ -131,7 +134,9 @@ model Room {
   description String?
   capacity    Int
   floor       Int
-  coordinates Json
+  coordinates Json?
+  photos      String[]  @default([])
+  visualModel Json?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   filial      String    @default("SCS")
@@ -1193,4 +1198,52 @@ model EmotionRulerDailyAccess {
   @@index([rulerId, date])
   @@index([date])
   @@map("emotion_ruler_daily_accesses")
+}
+
+/// Trilha de acesso da intranet — **MÓDULO DESATIVADO**.
+///
+/// Nenhum código lê ou escreve nesta tabela hoje. O modelo e a migration
+/// permanecem de propósito: a tabela existe no banco, e remover o modelo faria
+/// o schema divergir dele. Dropar a tabela, se for a decisão, pede uma
+/// migration própria e deliberada.
+///
+/// Quando estava ativo, guardava dois tipos de evento na mesma linha do tempo:
+/// PAGE_VIEW para cada navegação e API_CALL para chamadas tRPC lentas ou com
+/// erro, com retenção de 30 dias.
+model AccessLog {
+  id String @id @default(cuid())
+
+  kind AccessLogKind
+
+  /// Rota da página (/dashboard) ou caminho do procedure tRPC (user.me).
+  path String
+
+  /// Autor do acesso. Nulo quando o usuário é removido — o registro sobrevive.
+  userId String?
+  user   User?   @relation("AccessLogUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  /// Duração em ms. Em PAGE_VIEW só existe no carregamento inicial (Navigation
+  /// Timing); navegações client-side não têm marco de início confiável.
+  durationMs Int?
+
+  /// Falso quando a chamada terminou em erro.
+  ok Boolean @default(true)
+
+  /// Código do erro tRPC (ex.: FORBIDDEN, INTERNAL_SERVER_ERROR) quando ok=false.
+  errorCode String?
+
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+  @@index([path, createdAt])
+  @@index([userId, createdAt])
+  @@map("access_logs")
+}
+
+enum AccessLogKind {
+  PAGE_VIEW
+  API_CALL
 }

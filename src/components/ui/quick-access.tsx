@@ -11,12 +11,14 @@ const items = [
     icon: MapPin,
     href: "/rooms",
   },
+  /*
   {
     title: "Eventos",
     description: "Confira os próximos eventos",
     icon: Calendar,
     href: "/events",
   },
+  */
 ]
 
 type QuickAccessProps = React.HTMLAttributes<HTMLDivElement>

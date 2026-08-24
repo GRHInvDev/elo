@@ -1,5 +1,12 @@
 import type React from "react"
 
+// As telas de autenticação não podem ser prerenderizadas: o HTML estático fica
+// preso aos hashes de chunk do build que o gerou e, depois de um deploy novo,
+// aponta para arquivos que já saíram do ar — o <SignIn> do Clerk não hidrata e
+// o form simplesmente não aparece. Renderizando por request, o HTML sempre
+// referencia o deploy corrente e sai com no-store.
+export const dynamic = "force-dynamic"
+
 export default function AuthLayout({
   children,
 }: {

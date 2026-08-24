@@ -114,6 +114,7 @@ export const productOrderRouter = createTRPCRouter({
                                 firstName: true,
                                 lastName: true,
                                 email: true,
+                                is_active: true,
                                 imageUrl: true,
                                 enterprise: true,
                                 lojinha_full_name: true,
@@ -178,7 +179,7 @@ export const productOrderRouter = createTRPCRouter({
                     const precoTotal = order.product.price * order.quantity
 
                     // Email para o usuário
-                    if (userEmail) {
+                    if (userEmail && order.user.is_active) {
                         const emailContentUsuario = mockEmailPedidoProduto(
                             userName,
                             order.product.name,
@@ -219,7 +220,8 @@ export const productOrderRouter = createTRPCRouter({
                             externalName: true,
                             user: {
                                 select: {
-                                    email: true
+                                    email: true,
+                                    is_active: true,
                                 }
                             }
                         }
@@ -227,7 +229,7 @@ export const productOrderRouter = createTRPCRouter({
 
                     enterpriseManagers.forEach(manager => {
                         // Adicionar email de usuário interno se existir
-                        if (manager.user?.email) {
+                        if (manager.user?.email && manager.user.is_active) {
                             const userEmail = manager.user.email
                             if (!notificationEmails.includes(userEmail)) {
                                 notificationEmails.push(userEmail)
@@ -413,6 +415,7 @@ export const productOrderRouter = createTRPCRouter({
                                     firstName: true,
                                     lastName: true,
                                     email: true,
+                                    is_active: true,
                                     imageUrl: true,
                                     enterprise: true,
                                     lojinha_full_name: true,
@@ -475,23 +478,25 @@ export const productOrderRouter = createTRPCRouter({
                         }, 0)
 
                         // Enviar email para o usuário
-                        const emailContent = mockEmailPedidoProduto(
-                            userName,
-                            orders.map(order => `${order.product.name} (${order.quantity}x)`).join(', '),
-                            orders.reduce((total, order) => total + order.quantity, 0), // quantidade total
-                            0, // precoUnitario não usado para múltiplos produtos
-                            totalGeral,
-                            enterprise,
-                            dataPedido,
-                        )
+                        if (userEmail && firstOrder?.user.is_active) {
+                            const emailContent = mockEmailPedidoProduto(
+                                userName,
+                                orders.map(order => `${order.product.name} (${order.quantity}x)`).join(', '),
+                                orders.reduce((total, order) => total + order.quantity, 0), // quantidade total
+                                0, // precoUnitario não usado para múltiplos produtos
+                                totalGeral,
+                                enterprise,
+                                dataPedido,
+                            )
 
-                        await sendEmail(
-                            userEmail ?? "",
-                            `Pedido Recebido - ${orders.length} ${orders.length === 1 ? 'produto' : 'produtos'} (${enterprise})`,
-                            emailContent
-                        ).catch((error) => {
-                            console.error(`[ProductOrder] Erro ao enviar email para usuário:`, error)
-                        })
+                            await sendEmail(
+                                userEmail,
+                                `Pedido Recebido - ${orders.length} ${orders.length === 1 ? 'produto' : 'produtos'} (${enterprise})`,
+                                emailContent
+                            ).catch((error) => {
+                                console.error(`[ProductOrder] Erro ao enviar email para usuário:`, error)
+                            })
+                        }
 
                         // Enviar notificações para gestores
                         const notificationEmails: string[] = []
@@ -507,7 +512,8 @@ export const productOrderRouter = createTRPCRouter({
                                 externalName: true,
                                 user: {
                                     select: {
-                                        email: true
+                                        email: true,
+                                        is_active: true,
                                     }
                                 }
                             }
@@ -515,7 +521,7 @@ export const productOrderRouter = createTRPCRouter({
 
                         enterpriseManagers.forEach((manager) => {
                             // Adicionar email do usuário interno se existir
-                            if (manager.user?.email) {
+                            if (manager.user?.email && manager.user.is_active) {
                                 const userEmail = manager.user.email
                                 if (!notificationEmails.includes(userEmail)) {
                                     notificationEmails.push(userEmail)
@@ -755,6 +761,7 @@ export const productOrderRouter = createTRPCRouter({
                             firstName: true,
                             lastName: true,
                             email: true,
+                            is_active: true,
                             imageUrl: true,
                         }
                     },
@@ -781,7 +788,7 @@ export const productOrderRouter = createTRPCRouter({
                         : (firstName || lastName || updatedOrder.user.email) ?? "Usuário"
 
                     const userEmail = updatedOrder.user.email
-                    if (userEmail) {
+                    if (userEmail && updatedOrder.user.is_active) {
                         // Buscar todos os pedidos do grupo se existir
                         let orderItems: Array<{ nome: string; codigo?: string | null; quantidade: number; precoUnitario: number; subtotal: number }> = []
                         let totalGeral = 0
@@ -1179,6 +1186,7 @@ export const productOrderRouter = createTRPCRouter({
                             firstName: true,
                             lastName: true,
                             email: true,
+                            is_active: true,
                         }
                     }
                 },
@@ -1302,13 +1310,14 @@ export const productOrderRouter = createTRPCRouter({
                         firstName: true,
                         lastName: true,
                         email: true,
+                        is_active: true,
                       }
                     }
                   }
                 })
                 
                 // Separar gestores internos (com userId) e externos (com externalEmail)
-                const internalManagers = managers.filter(m => m.userId !== null && m.user !== null)
+                const internalManagers = managers.filter(m => m.userId !== null && m.user?.is_active)
                 const externalManagers = managers.filter(m => m.externalEmail !== null && m.externalEmail.trim() !== "")
 
                 // Criar notificações apenas para gestores internos (que têm userId)
@@ -1395,7 +1404,7 @@ export const productOrderRouter = createTRPCRouter({
                 })
 
                 // Enviar email para o comprador
-                if (order.user.email) {
+                if (order.user.email && order.user.is_active) {
                   const destinatarioNome = order.user.firstName && order.user.lastName
                     ? `${order.user.firstName} ${order.user.lastName}`
                     : (order.user.firstName ?? order.user.email ?? "Cliente")

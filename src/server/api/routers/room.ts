@@ -1,17 +1,30 @@
 import { z } from "zod"
+import { Prisma } from "@prisma/client"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import {
+  buildIsometricRoomFromPhotos,
+} from "@/server/ai/room-vision-builder"
+import {
+  type IsometricRoomModel,
+  isometricRoomModelSchema,
+} from "@/types/isometric-room"
 
 const createRoomSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
+  description: z.string().optional().nullable(),
   capacity: z.number().min(1, "Capacidade deve ser maior que 0"),
-  floor: z.number().min(1, "Andar deve ser maior que 0"),
+  floor: z.number(),
   filial: z.string().optional(),
-  coordinates: z.object({
-    x: z.number(),
-    y: z.number(),
-    width: z.number(),
-    height: z.number(),
-  }),
+  photos: z.array(z.string()).optional().default([]),
+  visualModel: isometricRoomModelSchema.optional().nullable(),
+  coordinates: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+    })
+    .optional(),
 })
 
 const updateRoomSchema = createRoomSchema.partial().extend({
@@ -19,29 +32,73 @@ const updateRoomSchema = createRoomSchema.partial().extend({
 })
 
 export const roomRouter = createTRPCRouter({
-  // Criar uma nova sala
-  create: protectedProcedure.input(createRoomSchema).mutation(async ({ ctx, input }) => {
-    return ctx.db.room.create({
-      data: {
-        name: input.name,
+  generateVisualModel: protectedProcedure
+    .input(
+      z.object({
+        imageUrls: z.array(z.string()),
+        roomName: z.string().optional(),
+        capacity: z.number().optional(),
+        floor: z.number().optional(),
+        filial: z.string().optional(),
+        additionalContext: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const model = await buildIsometricRoomFromPhotos({
+        imageUrls: input.imageUrls,
+        roomName: input.roomName,
         capacity: input.capacity,
         floor: input.floor,
         filial: input.filial,
-        coordinates: input.coordinates,
+        additionalContext: input.additionalContext,
+      })
+      return model
+    }),
+
+  create: protectedProcedure.input(createRoomSchema).mutation(async ({ ctx, input }) => {
+    const visualModelToSave = input.visualModel ?? Prisma.DbNull
+
+    const coordinatesToSave = input.coordinates ?? {
+      x: 50,
+      y: 50,
+      width: 120,
+      height: 90,
+    }
+
+    return ctx.db.room.create({
+      data: {
+        name: input.name,
+        description: input.description ?? null,
+        capacity: input.capacity,
+        floor: input.floor,
+        filial: input.filial ?? "SCS",
+        photos: input.photos ?? [],
+        visualModel: visualModelToSave,
+        coordinates: coordinatesToSave,
       },
     })
   }),
 
-  // Atualizar uma sala existente
   update: protectedProcedure.input(updateRoomSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input
     return ctx.db.room.update({
       where: { id },
-      data,
+      data: {
+        name: data.name ?? undefined,
+        description: data.description !== undefined ? data.description : undefined,
+        capacity: data.capacity ?? undefined,
+        floor: data.floor ?? undefined,
+        filial: data.filial ?? undefined,
+        photos: data.photos ?? undefined,
+        visualModel:
+          data.visualModel === null
+            ? Prisma.DbNull
+            : (data.visualModel ?? undefined),
+        coordinates: data.coordinates ?? undefined,
+      },
     })
   }),
 
-  // Deletar uma sala
   delete: protectedProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
     return ctx.db.room.delete({
       where: { id: input.id },
@@ -50,7 +107,7 @@ export const roomRouter = createTRPCRouter({
 
   // Buscar uma sala específica
   byId: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
-    return ctx.db.room.findUnique({
+    const room = await ctx.db.room.findUnique({
       where: { id: input.id },
       include: {
         bookings: {
@@ -65,39 +122,55 @@ export const roomRouter = createTRPCRouter({
         },
       },
     })
+
+    if (!room) return null
+
+    const visualModel = (room.visualModel as unknown as IsometricRoomModel) ?? null
+
+    return {
+      ...room,
+      photos: room.photos ?? [],
+      visualModel,
+    }
   }),
 
   // Listar todas as salas
   list: protectedProcedure
-  .input(
-    z
-      .object({
-        floor: z.number().optional(),
-        filial: z.string().optional(),
-      })
-      .optional(),
-  )
-  .query(async ({ ctx, input }) => {
-    return ctx.db.room.findMany({
-      where:
-        input?.floor || input?.filial
-          ? {
-              ...(input?.floor ? { floor: input.floor } : {}),
-              ...(input?.filial ? { filial: input.filial } : {}),
-            }
-          : undefined,
-      include: {
-        bookings: {
-          where: {
-            end: {
-              gte: new Date(),
+    .input(
+      z
+        .object({
+          floor: z.number().optional(),
+          filial: z.string().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const rooms = await ctx.db.room.findMany({
+        where:
+          input?.floor || input?.filial
+            ? {
+                ...(input?.floor ? { floor: input.floor } : {}),
+                ...(input?.filial ? { filial: input.filial } : {}),
+              }
+            : undefined,
+        include: {
+          bookings: {
+            where: {
+              end: {
+                gte: new Date(),
+              },
             },
           },
         },
-      },
-      orderBy: [{ floor: "asc" }, { name: "asc" }],
-    })
-  }),
+        orderBy: [{ floor: "asc" }, { name: "asc" }],
+      })
+
+      return rooms.map((room) => ({
+        ...room,
+        photos: room.photos ?? [],
+        visualModel: (room.visualModel as unknown as IsometricRoomModel) ?? null,
+      }))
+    }),
 
   // Verificar disponibilidade da sala
   checkAvailability: protectedProcedure
@@ -160,7 +233,7 @@ export const roomRouter = createTRPCRouter({
       })
     }),
 
-    listAvailable: protectedProcedure
+  listAvailable: protectedProcedure
     .input(
       z.object({
         date: z.date(),
@@ -182,10 +255,10 @@ export const roomRouter = createTRPCRouter({
           roomId: true,
         },
       })
-  
+
       const bookedRoomIds = bookings.map((b) => b.roomId)
-  
-      return ctx.db.room.findMany({
+
+      const rooms = await ctx.db.room.findMany({
         where: {
           id: {
             notIn: bookedRoomIds,
@@ -201,5 +274,11 @@ export const roomRouter = createTRPCRouter({
           },
         ],
       })
+
+      return rooms.map((room) => ({
+        ...room,
+        photos: room.photos ?? [],
+        visualModel: (room.visualModel as unknown as IsometricRoomModel) ?? null,
+      }))
     }),
 })
