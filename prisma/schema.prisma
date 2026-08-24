@@ -134,7 +134,9 @@ model Room {
   description String?
   capacity    Int
   floor       Int
-  coordinates Json
+  coordinates Json?
+  photos      String[]  @default([])
+  visualModel Json?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   filial      String    @default("SCS")
