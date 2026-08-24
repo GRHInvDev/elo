@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -34,21 +34,41 @@ export function MultipleImageUpload({
     }
   }, [initialImages]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const pendingFilesRef = useRef<File[]>([])
+
   const { startUpload } = useUploadThing("multipleImageUploader", {
     onClientUploadComplete: (res: ClientUploadedFileData<unknown>[]) => {
       if (res && res.length > 0) {
-        const newUrls = res.map(file => file.ufsUrl).filter(Boolean)
+        const newUrls = res.map((file) => file.ufsUrl).filter(Boolean)
         setImages((prevImages) => {
           const updatedImages = [...prevImages, ...newUrls]
           onImagesChange(updatedImages)
           return updatedImages
         })
       }
+      pendingFilesRef.current = []
       setIsUploading(false)
     },
     onUploadError: (error) => {
-      console.error("Erro no upload:", error)
-      alert("Erro no upload: Configure as credenciais do UploadThing no arquivo .env.local")
+      console.warn("UploadThing retornou erro, aplicando leitura direta local (Base64):", error)
+      // Fallback gracioso: lê os arquivos locais para que o usuário e a IA possam utilizá-los sem interrupção
+      if (pendingFilesRef.current.length > 0) {
+        const readers = pendingFilesRef.current.map((file) => {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => resolve(e.target?.result as string)
+            reader.readAsDataURL(file)
+          })
+        })
+        void Promise.all(readers).then((base64Urls) => {
+          setImages((prevImages) => {
+            const updatedImages = [...prevImages, ...base64Urls]
+            onImagesChange(updatedImages)
+            return updatedImages
+          })
+        })
+      }
+      pendingFilesRef.current = []
       setIsUploading(false)
     },
     onUploadBegin: () => {
@@ -56,62 +76,102 @@ export function MultipleImageUpload({
     },
   })
 
-  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? [])
-    
-    if (files.length === 0) return
+  const handleFileSelect = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? [])
 
-    // Verificar limite de imagens
-    if (images.length + files.length > maxImages) {
-      alert(`Máximo de ${maxImages} imagens permitidas`)
-      return
-    }
+      if (files.length === 0) return
 
-    try {
-      await startUpload(files)
-    } catch (error) {
-      console.error("Erro ao fazer upload das imagens:", error)
-    }
-  }, [images.length, maxImages, startUpload])
-
-  const removeImage = useCallback(async (index: number) => {
-    const imageToRemove = images[index]
-    if (imageToRemove) {
-      try {
-        // Extrair o ID do arquivo da URL do UploadThing
-        const fileId = imageToRemove.replace("https://162synql7v.ufs.sh/f/", "")
-        await deleteFiles(fileId)
-      } catch (error) {
-        console.error("Erro ao deletar imagem do UploadThing:", error)
+      // Verificar limite de imagens
+      if (images.length + files.length > maxImages) {
+        alert(`Máximo de ${maxImages} imagens permitidas`)
+        return
       }
-    }
 
-    const newImages = images.filter((_, i) => i !== index)
-    setImages(newImages)
-    onImagesChange(newImages)
-  }, [images, onImagesChange])
+      pendingFilesRef.current = files
 
+      try {
+        await startUpload(files)
+      } catch (error) {
+        console.error("Erro ao iniciar upload:", error)
+        // Fallback local se a chamada direta lançar exceção
+        const readers = files.map((file) => {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => resolve(e.target?.result as string)
+            reader.readAsDataURL(file)
+          })
+        })
+        void Promise.all(readers).then((base64Urls) => {
+          setImages((prev) => {
+            const updated = [...prev, ...base64Urls]
+            onImagesChange(updated)
+            return updated
+          })
+        })
+        setIsUploading(false)
+      }
+    },
+    [images.length, maxImages, onImagesChange, startUpload],
+  )
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const files = Array.from(event.dataTransfer.files).filter(file => 
-      file.type.startsWith('image/')
-    )
-    
-    if (files.length === 0) return
+  const removeImage = useCallback(
+    async (index: number) => {
+      const imageToRemove = images[index]
+      if (imageToRemove && imageToRemove.startsWith("https://")) {
+        try {
+          const fileId = imageToRemove.replace("https://162synql7v.ufs.sh/f/", "")
+          await deleteFiles(fileId)
+        } catch (error) {
+          console.error("Erro ao deletar imagem do UploadThing:", error)
+        }
+      }
 
-    // Verificar limite de imagens
-    if (images.length + files.length > maxImages) {
-      alert(`Máximo de ${maxImages} imagens permitidas`)
-      return
-    }
+      const newImages = images.filter((_, i) => i !== index)
+      setImages(newImages)
+      onImagesChange(newImages)
+    },
+    [images, onImagesChange],
+  )
 
-    try {
-      void startUpload(files)
-    } catch (error) {
-      console.error("Erro ao fazer upload das imagens:", error)
-    }
-  }, [images.length, maxImages, startUpload])
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault()
+      const files = Array.from(event.dataTransfer.files).filter((file) =>
+        file.type.startsWith("image/"),
+      )
+
+      if (files.length === 0) return
+
+      if (images.length + files.length > maxImages) {
+        alert(`Máximo de ${maxImages} imagens permitidas`)
+        return
+      }
+
+      pendingFilesRef.current = files
+
+      try {
+        void startUpload(files)
+      } catch (error) {
+        console.error("Erro ao iniciar upload no drop:", error)
+        const readers = files.map((file) => {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => resolve(e.target?.result as string)
+            reader.readAsDataURL(file)
+          })
+        })
+        void Promise.all(readers).then((base64Urls) => {
+          setImages((prev) => {
+            const updated = [...prev, ...base64Urls]
+            onImagesChange(updated)
+            return updated
+          })
+        })
+      }
+    },
+    [images.length, maxImages, onImagesChange, startUpload],
+  )
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -173,6 +233,7 @@ export function MultipleImageUpload({
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    unoptimized={imageUrl.startsWith("data:")}
                   />
                   
                   {/* Botões de ação */}

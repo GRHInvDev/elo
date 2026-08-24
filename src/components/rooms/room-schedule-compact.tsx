@@ -218,8 +218,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
           </div>
         </div>
 
-        {/* FAIXA HORIZONTAL DE DIAS */}
-        <div className="flex items-center gap-1 pt-3">
+        <div className="flex items-center gap-1 pt-3 max-w-full">
           <Button
             variant="ghost"
             size="icon"
@@ -229,7 +228,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1 flex-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1 flex-1 min-w-0">
             {stripDays.map((day) => {
               const isSelected = isSameDay(day, selectedDate)
               const today = isToday(day)
@@ -242,7 +241,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
                   type="button"
                   onClick={() => setSelectedDate(day)}
                   className={cn(
-                    "flex flex-col items-center justify-center min-w-[60px] py-1.5 px-2 rounded-lg border text-xs transition-all duration-200 shrink-0",
+                    "flex flex-col items-center justify-center min-w-[56px] sm:min-w-[60px] py-1.5 px-2 rounded-lg border text-xs transition-all duration-200 shrink-0 cursor-pointer",
                     isSelected
                       ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold scale-105"
                       : "bg-background hover:bg-muted text-foreground border-border",
@@ -279,7 +278,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
         </div>
       </CardHeader>
 
-      <CardContent className="p-4">
+      <CardContent className="p-3 sm:p-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin mb-2" />
@@ -319,24 +318,24 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
                   key={booking.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors gap-3"
                 >
-                  <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
                     <div className="p-2 rounded-md bg-muted text-foreground shrink-0 mt-0.5">
                       <Clock className="h-4 w-4 text-primary" />
                     </div>
 
-                    <div className="min-w-0 space-y-1">
+                    <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-sm text-foreground truncate">
                           {booking.title}
                         </p>
-                        <Badge variant="outline" className="text-[10px] py-0 font-medium">
+                        <Badge variant="outline" className="text-[10px] py-0 font-medium shrink-0">
                           {booking.room.name} ({booking.room.floor}º Andar)
                         </Badge>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <Avatar className="h-4 w-4">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Avatar className="h-4 w-4 shrink-0">
                             <AvatarImage src={booking.user.imageUrl ?? undefined} />
                             <AvatarFallback className="text-[9px]">
                               {booking.user.firstName?.at(0)?.toUpperCase() ?? "U"}
@@ -350,7 +349,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/40">
                     <span className="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                       {format(booking.start, "HH:mm")} - {format(booking.end, "HH:mm")}
                     </span>
@@ -396,7 +395,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
       {/* Modal de Edição de Agendamento */}
       {editingBooking && (
         <Dialog open={!!editingBooking} onOpenChange={(open) => !open && setEditingBooking(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
             <DialogHeader>
               <DialogTitle>Editar Reserva</DialogTitle>
             </DialogHeader>
@@ -407,11 +406,12 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
                   id="edit-title"
                   name="title"
                   defaultValue={editingBooking.title}
+                  className="text-base sm:text-sm"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-date">Data</Label>
                   <Input
@@ -419,6 +419,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
                     name="date"
                     type="date"
                     defaultValue={formatDateForInput(editingBooking.start)}
+                    className="text-base sm:text-sm"
                     required
                   />
                 </div>
@@ -429,6 +430,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
                     name="time"
                     type="time"
                     defaultValue={format(editingBooking.start, "HH:mm")}
+                    className="text-base sm:text-sm"
                     required
                   />
                 </div>
@@ -445,20 +447,22 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
                     1,
                     differenceInHours(editingBooking.end, editingBooking.start),
                   )}
+                  className="text-base sm:text-sm"
                   required
                 />
               </div>
 
-              <DialogFooter className="pt-2">
+              <DialogFooter className="pt-2 gap-2 sm:gap-0">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setEditingBooking(null)}
                   disabled={updateBooking.isPending}
+                  className="rounded-xl"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={updateBooking.isPending}>
+                <Button type="submit" disabled={updateBooking.isPending} className="rounded-xl">
                   {updateBooking.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
               </DialogFooter>

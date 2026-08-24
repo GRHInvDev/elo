@@ -7,14 +7,13 @@ import type { LanguageModelV1 } from "ai"
  * Converte host ou URL parcial no prefixo esperado pelo `@ai-sdk/azure` v1:
  * `{baseURL}/{deploymentId}/chat/completions?...` → baseURL = `.../openai/deployments`
  */
-function toAzureDeploymentsBaseURL(raw: string): string {
-  const u = raw.replace(/\/$/, "")
-  if (u.endsWith("/openai/deployments")) {
-    return u
-  }
-  if (u.endsWith("/openai")) {
-    return `${u}/deployments`
-  }
+export function toAzureDeploymentsBaseURL(raw: string): string {
+  let u = raw.trim().replace(/\/$/, "")
+  // Remove sufixos como /openai/deployments, /openai/v1, /v1, /openai etc.
+  u = u.replace(/\/openai\/deployments\/?$/, "")
+  u = u.replace(/\/openai\/v\d+(\.\d+)?.*$/, "")
+  u = u.replace(/\/v\d+(\.\d+)?.*$/, "")
+  u = u.replace(/\/openai\/?$/, "")
   return `${u}/openai/deployments`
 }
 

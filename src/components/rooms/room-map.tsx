@@ -35,6 +35,8 @@ export function RoomMap({ className = "", filial = "SCS", ...props }: RoomMapPro
         capacity: r.capacity,
         floor: r.floor,
         filial: (r as { filial?: string }).filial ?? filial,
+        photos: r.photos ?? [],
+        visualModel: r.visualModel,
         coordinates: {
           x: Number(coords?.x) || 50,
           y: Number(coords?.y) || 50,
@@ -84,8 +86,8 @@ export function RoomMap({ className = "", filial = "SCS", ...props }: RoomMapPro
       <Card className="border shadow-sm overflow-hidden">
         <CardHeader className="p-4 pb-3 border-b bg-muted/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center p-1 rounded-xl bg-background/80 backdrop-blur border shadow-xs gap-1 overflow-x-auto">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase px-2 flex items-center gap-1">
+            <div className="flex items-center p-1 rounded-xl bg-background/80 backdrop-blur border shadow-xs gap-1 overflow-x-auto max-w-full scrollbar-hide">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase px-2 flex items-center gap-1 shrink-0">
                 <Layers className="h-3 w-3" />
                 Piso:
               </span>
@@ -98,7 +100,7 @@ export function RoomMap({ className = "", filial = "SCS", ...props }: RoomMapPro
                     type="button"
                     onClick={() => setSelectedFloor(floor)}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap",
                       isCurrent
                         ? "bg-primary text-primary-foreground shadow-sm scale-102"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60",

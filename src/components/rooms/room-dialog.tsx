@@ -1,9 +1,14 @@
 "use client"
 
-import type React from "react"
-import { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
+import Image from "next/image"
 import { addMinutes, format, parse } from "date-fns"
-import { Calendar, Clock, Loader2, Users } from "lucide-react"
+import {
+  Clock,
+  Loader2,
+  Image as ImageIcon,
+  Box,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -20,12 +25,22 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import { cn } from "@/lib/utils"
-import type { Room } from "@/types/room"
+import { IsometricRoomCanvas } from "./isometric-room-canvas"
+import type { IsometricRoomModel } from "@/types/isometric-room"
 
-export type { Room } from "@/types/room"
+export interface RoomForDialog {
+  id: string
+  name: string
+  capacity: number
+  floor: number
+  filial?: string
+  description?: string | null
+  photos?: string[]
+  visualModel?: IsometricRoomModel | null
+}
 
 interface RoomDialogProps {
-  room: Room | undefined | null
+  room: RoomForDialog | undefined | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -56,6 +71,20 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
   const [time, setTime] = useState<string>("09:00")
   const [title, setTitle] = useState<string>("")
 
+  const has3DModel = Boolean(room?.visualModel?.imageUrl)
+  const hasPhotos = Boolean(room?.photos && room.photos.length > 0)
+  const hasMedia = has3DModel || hasPhotos
+
+  const [activeMediaTab, setActiveMediaTab] = useState<"3d" | "photos">("3d")
+
+  useEffect(() => {
+    if (has3DModel) {
+      setActiveMediaTab("3d")
+    } else if (hasPhotos) {
+      setActiveMediaTab("photos")
+    }
+  }, [has3DModel, hasPhotos, room?.id])
+
   const endTimeString = useMemo(() => {
     try {
       if (!time || !durationMinutes || durationMinutes <= 0) return null
@@ -85,7 +114,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
     },
     onError: (error) => {
       toast({
-        title: "Erro ao reservar sala",
+        title: "Erro ao reservar",
         description: error.message,
         variant: "destructive",
       })
@@ -97,7 +126,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
   if (!canCreateBooking()) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Acesso Restrito</DialogTitle>
             <DialogDescription>
@@ -105,7 +134,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+            <Button onClick={() => onOpenChange(false)} className="rounded-xl">Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -156,29 +185,76 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader className="space-y-1 pb-1">
-          <DialogTitle className="text-base font-semibold">
-            Reservar {room.name}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
-            <span>Filial {room.filial ?? "SCS"}</span>
-            <span>•</span>
-            <span>{room.floor}º Andar</span>
-            <span>•</span>
-            <span className="inline-flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              Até {room.capacity} pessoas
-            </span>
-          </DialogDescription>
-          {room.description && (
-            <p className="text-xs text-muted-foreground/80 bg-muted/40 p-2 rounded-md border text-left mt-1">
-              {room.description}
-            </p>
-          )}
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl border border-border/50 bg-card/95 backdrop-blur-xl shadow-xl flex flex-col gap-4">
+        <DialogHeader className="space-y-2 text-left shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                {room.name}
+              </DialogTitle>
+              {room.description && (
+                <DialogDescription className="text-xs text-muted-foreground mt-1">
+                  {room.description}
+                </DialogDescription>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-3.5 pt-1">
+        {hasMedia && (
+          <div className="relative w-full h-44 sm:h-48 rounded-xl overflow-hidden border border-border/50 bg-black/40 shrink-0 flex items-center justify-center">
+            {activeMediaTab === "3d" && has3DModel && room.visualModel ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <IsometricRoomCanvas model={room.visualModel} interactive={true} />
+              </div>
+            ) : hasPhotos && room.photos && room.photos.length > 0 ? (
+              <div className="w-full h-full flex items-center gap-2 overflow-x-auto p-2 bg-muted/15 scrollbar-thin">
+                {room.photos.map((photo, i) => (
+                  <div key={i} className="relative h-full aspect-video shrink-0 rounded-lg overflow-hidden border border-border/40 shadow-xs">
+                    <Image
+                      src={photo}
+                      alt={`Foto ${i + 1} de ${room.name}`}
+                      fill
+                      sizes="(max-width: 768px) 150px, 200px"
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : has3DModel && room.visualModel ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <IsometricRoomCanvas model={room.visualModel} interactive={true} />
+              </div>
+            ) : null}
+
+            {hasPhotos && has3DModel && (
+              <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 bg-background/85 backdrop-blur-md border border-border/50 rounded-lg p-1 shadow-md z-20">
+                <Button
+                  type="button"
+                  variant={activeMediaTab === "3d" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-6 text-[11px] px-2 rounded-md gap-1 cursor-pointer"
+                  onClick={() => setActiveMediaTab("3d")}
+                >
+                  <Box className="size-3" />
+                  3D
+                </Button>
+                <Button
+                  type="button"
+                  variant={activeMediaTab === "photos" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-6 text-[11px] px-2 rounded-md gap-1 cursor-pointer"
+                  onClick={() => setActiveMediaTab("photos")}
+                >
+                  <ImageIcon className="size-3" />
+                  Fotos ({room.photos?.length})
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="title" className="text-xs font-medium">
               Título da Reunião *
@@ -186,19 +262,19 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
             <Input
               id="title"
               name="title"
-              placeholder="Ex: Alinhamento de Projeto, Reunião de Equipe"
+              placeholder="Ex: Alinhamento de Projeto, Reunião de Diretoria"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
               autoFocus
-              className="h-9 text-sm"
+              className="h-9 text-base sm:text-sm rounded-xl border-border/60"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="date" className="text-xs font-medium">
-                Data
+                Data da Reserva
               </Label>
               <Input
                 id="date"
@@ -208,9 +284,10 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
                 onChange={(e) => setDate(e.target.value)}
                 required
                 min={format(new Date(), "yyyy-MM-dd")}
-                className="h-9 text-sm"
+                className="h-9 text-base sm:text-sm rounded-xl border-border/60"
               />
             </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="time" className="text-xs font-medium">
                 Horário de Início
@@ -222,24 +299,22 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 required
-                className="h-9 text-sm"
+                className="h-9 text-base sm:text-sm rounded-xl border-border/60"
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <Label htmlFor="duration" className="text-xs font-medium">
-                Duração
-              </Label>
+              <Label className="text-xs font-medium">Duração</Label>
               {endTimeString && (
-                <span className="text-muted-foreground">
-                  Término: <strong className="text-foreground">{endTimeString}</strong>
+                <span className="text-muted-foreground text-[11px]">
+                  Término previsto: <strong className="text-foreground">{endTimeString}</strong>
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
               {PRESET_DURATIONS.map((preset) => {
                 const isSelected = !isCustomDuration && durationMinutes === preset.value
                 return (
@@ -249,8 +324,8 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
                     size="sm"
                     variant={isSelected ? "default" : "outline"}
                     className={cn(
-                      "h-8 text-xs font-medium transition-all",
-                      isSelected ? "shadow-xs" : "text-muted-foreground hover:text-foreground",
+                      "h-8 text-xs font-medium transition-all rounded-lg cursor-pointer truncate",
+                      isSelected ? "shadow-2xs" : "text-muted-foreground hover:text-foreground",
                     )}
                     onClick={() => {
                       setIsCustomDuration(false)
@@ -266,8 +341,8 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
                 size="sm"
                 variant={isCustomDuration ? "default" : "outline"}
                 className={cn(
-                  "h-8 text-xs font-medium transition-all",
-                  isCustomDuration ? "shadow-xs" : "text-muted-foreground hover:text-foreground",
+                  "h-8 text-xs font-medium transition-all rounded-lg cursor-pointer truncate",
+                  isCustomDuration ? "shadow-2xs" : "text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => {
                   setIsCustomDuration(true)
@@ -295,7 +370,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
                       setDurationMinutes(isNaN(val) ? 0 : Math.max(1, Math.min(val, 1440)))
                     }}
                     placeholder="Ex: 45"
-                    className="h-8 text-xs pr-14"
+                    className="h-8 text-base sm:text-xs pr-14 rounded-xl"
                     autoFocus
                   />
                   <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none font-medium">
@@ -310,10 +385,10 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
           </div>
 
           {endTimeString && (
-            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/40 border text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-primary" />
-                <span>Horário:</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3.5 py-2.5 rounded-xl bg-primary/5 border border-primary/15 text-xs text-muted-foreground gap-1">
+              <div className="flex items-center gap-2">
+                <Clock className="size-3.5 text-primary shrink-0" />
+                <span>Horário Reservado:</span>
               </div>
               <span className="font-semibold text-foreground">
                 {time} às {endTimeString} ({formatMinutes(durationMinutes)})
@@ -321,26 +396,31 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
             </div>
           )}
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-2 gap-2 sm:space-x-0">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
               disabled={createBooking.isPending}
+              className="rounded-xl"
             >
               Cancelar
             </Button>
-            <Button type="submit" size="sm" disabled={createBooking.isPending} className="gap-2">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={createBooking.isPending}
+              className="rounded-xl gap-2 font-medium shadow-xs"
+            >
               {createBooking.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="size-3.5 animate-spin" />
                   Confirmando...
                 </>
               ) : (
                 <>
-                  <Calendar className="h-4 w-4" />
-                  Confirmar Reserva
+                  Confirmar
                 </>
               )}
             </Button>

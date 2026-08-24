@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useCallback } from "react"
 import {
-  Building2,
   DoorClosed,
   Eye,
   Loader2,
@@ -12,6 +11,7 @@ import {
   SlidersHorizontal,
   Trash2,
   Users,
+  Layers,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,8 @@ export function RoomAdmin() {
         capacity: r.capacity,
         floor: r.floor,
         filial: (r as { filial?: string }).filial ?? "SCS",
+        photos: r.photos ?? [],
+        visualModel: r.visualModel ?? undefined,
         coordinates: {
           x: Number(coords?.x) || 50,
           y: Number(coords?.y) || 50,
@@ -93,7 +95,6 @@ export function RoomAdmin() {
     })
   }, [rooms, searchTerm, selectedFilialFilter, selectedFloorFilter])
 
-
   const deleteRoom = api.room.delete.useMutation({
     onSuccess: async () => {
       toast({
@@ -130,80 +131,92 @@ export function RoomAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gerenciamento de Salas</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
+            Gerenciamento de Salas
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Cadastre salas, posicione-as na planta baixa e gere maquetes.
+          </p>
         </div>
-        <Button onClick={handleOpenCreate} className="gap-2 shrink-0">
-          <Plus className="h-4 w-4" />
-          Nova Sala
+        <Button
+          onClick={handleOpenCreate}
+          size="sm"
+          className="shrink-0 size-9 sm:size-auto sm:h-9 sm:px-4 rounded-xl shadow-sm gap-2 p-0 cursor-pointer"
+          title="Nova Sala"
+        >
+          <Plus className="size-4" />
+          <span className="hidden sm:inline text-xs font-semibold">Nova Sala</span>
         </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <TabsList>
-            <TabsTrigger value="list" className="gap-2">
-              <SlidersHorizontal className="h-4 w-4" />
-              Lista de Salas
+          <TabsList className="bg-muted/60 p-1 rounded-xl">
+            <TabsTrigger value="list" className="gap-2 rounded-lg text-xs">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Lista de Salas ({rooms.length})
             </TabsTrigger>
-            <TabsTrigger value="floorplan" className="gap-2">
-              <Building2 className="h-4 w-4" />
+            <TabsTrigger value="floorplan" className="gap-2 rounded-lg text-xs">
+              <Layers className="h-3.5 w-3.5" />
               Planta Baixa Interativa
             </TabsTrigger>
           </TabsList>
 
           {activeTab === "list" && (
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <div className="relative flex-1 min-w-[200px] sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Buscar por nome ou recurso..."
-                  className="pl-8 h-9"
+                  className="pl-8 h-9 text-base sm:text-xs rounded-xl"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
-              <Select value={selectedFilialFilter} onValueChange={setSelectedFilialFilter}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue placeholder="Filial" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todas as Filiais</SelectItem>
-                  {FILIAIS.map((f) => (
-                    <SelectItem key={f} value={f}>
-                      Filial {f}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Select value={selectedFilialFilter} onValueChange={setSelectedFilialFilter}>
+                  <SelectTrigger className="flex-1 sm:w-[140px] h-9 text-xs rounded-xl">
+                    <SelectValue placeholder="Filial" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL" className="text-xs">Todas as Filiais</SelectItem>
+                    {FILIAIS.map((f) => (
+                      <SelectItem key={f} value={f} className="text-xs">
+                        Filial {f}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={selectedFloorFilter} onValueChange={setSelectedFloorFilter}>
-                <SelectTrigger className="w-[130px] h-9">
-                  <SelectValue placeholder="Andar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos Andares</SelectItem>
-                  {availableFloors.map((floor) => (
-                    <SelectItem key={floor} value={floor.toString()}>
-                      {floor}º Andar
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select value={selectedFloorFilter} onValueChange={setSelectedFloorFilter}>
+                  <SelectTrigger className="flex-1 sm:w-[130px] h-9 text-xs rounded-xl">
+                    <SelectValue placeholder="Andar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL" className="text-xs">Todos Andares</SelectItem>
+                    {availableFloors.map((fl) => (
+                      <SelectItem key={fl} value={fl.toString()} className="text-xs">
+                        {fl}º Andar
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
         </div>
 
-        <TabsContent value="list" className="space-y-4">
-          <Card>
-            <CardHeader className="p-4 pb-0">
+        <TabsContent value="list" className="space-y-4 min-w-0">
+          <Card className="rounded-2xl border-border/60 overflow-hidden">
+            <CardHeader className="p-4 pb-3 border-b bg-muted/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">Salas Cadastradas</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-sm font-semibold">Salas Cadastradas</CardTitle>
+                  <CardDescription className="text-xs">
                     {filteredRooms.length} {filteredRooms.length === 1 ? "sala encontrada" : "salas encontradas"}
                   </CardDescription>
                 </div>
@@ -211,136 +224,240 @@ export function RoomAdmin() {
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingRooms ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                  <span>Carregando salas...</span>
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-xs">Carregando salas...</span>
                 </div>
               ) : filteredRooms.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                  <DoorClosed className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                  <h3 className="text-lg font-medium">Nenhuma sala encontrada</h3>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                  <DoorClosed className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                  <h3 className="text-base font-semibold">Nenhuma sala encontrada</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-md">
                     {searchTerm || selectedFilialFilter !== "ALL" || selectedFloorFilter !== "ALL"
                       ? "Nenhum resultado corresponde aos filtros aplicados."
                       : "Ainda não há salas cadastradas. Clique em 'Nova Sala' para adicionar."}
                   </p>
-                  <Button onClick={handleOpenCreate} variant="outline" className="mt-4 gap-2">
-                    <Plus className="h-4 w-4" />
+                  <Button onClick={handleOpenCreate} variant="outline" size="sm" className="mt-4 gap-2 rounded-xl text-xs">
+                    <Plus className="h-3.5 w-3.5" />
                     Cadastrar Primeira Sala
                   </Button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Sala</TableHead>
-                        <TableHead>Filial</TableHead>
-                        <TableHead>Andar</TableHead>
-                        <TableHead>Capacidade</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredRooms.map((room) => (
-                        <TableRow key={room.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-semibold text-foreground">{room.name}</p>
+                <>
+                  {/* tabela para mobile */}
+                  <div className="block sm:hidden divide-y divide-border/40">
+                    {filteredRooms.map((room) => {
+                      const has3DModel = Boolean(room.visualModel?.imageUrl)
+                      return (
+                        <div key={room.id} className="p-3.5 space-y-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-sm text-foreground truncate">{room.name}</p>
                               {room.description ? (
-                                <p className="text-xs text-muted-foreground line-clamp-1 max-w-xs">
+                                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                                   {room.description}
                                 </p>
                               ) : (
-                                <span className="text-xs text-muted-foreground italic">
-                                  Sem descrição
-                                </span>
+                                <span className="text-xs text-muted-foreground italic">Sem descrição</span>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="font-mono">
-                              {room.filial ?? "SCS"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{room.floor}º Andar</span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>{room.capacity} pessoas</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        setMapViewerFilial(room.filial ?? "SCS")
-                                        setMapViewerFloor(room.floor)
-                                        setActiveTab("floorplan")
-                                      }}
-                                    >
-                                      <Eye className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Ver na planta baixa</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+                                onClick={() => {
+                                  setMapViewerFilial(room.filial ?? "SCS")
+                                  setMapViewerFloor(room.floor)
+                                  setActiveTab("floorplan")
+                                }}
+                                title="Ver na planta"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
 
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => handleOpenEdit(room)}
-                                className="gap-1"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                Editar
+                                className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-blue-600 hover:bg-blue-600/10"
+                                title="Editar"
+                              >   
+                                <Pencil className="h-3 w-3" />
                               </Button>
 
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setRoomToDelete(room)}
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                title="Excluir"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
-                          </TableCell>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs pt-0.5">
+                            <Badge variant="secondary" className="font-mono text-[10px] px-2 py-0.5">
+                              {room.filial ?? "SCS"}
+                            </Badge>
+                            <span className="text-[11px] font-medium text-muted-foreground">
+                              {room.floor}º Andar
+                            </span>
+                            <span className="text-muted-foreground/40">•</span>
+                            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <Users className="h-3.5 w-3.5 text-primary" />
+                              <span>{room.capacity} pessoas</span>
+                            </div>
+                            <span className="text-muted-foreground/40">•</span>
+                            {has3DModel ? (
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-semibold">
+                                Maquete 3D
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                                Pendente
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* tabela para desktop */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="text-xs font-semibold">Sala</TableHead>
+                          <TableHead className="text-xs font-semibold">Filial</TableHead>
+                          <TableHead className="text-xs font-semibold">Andar</TableHead>
+                          <TableHead className="text-xs font-semibold">Capacidade</TableHead>
+                          <TableHead className="text-xs font-semibold text-center">Maquete</TableHead>
+                          <TableHead className="text-xs font-semibold text-right">Ações</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredRooms.map((room) => {
+                          const has3DModel = Boolean(room.visualModel?.imageUrl)
+                          return (
+                            <TableRow key={room.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell>
+                                <div>
+                                  <p className="font-semibold text-xs text-foreground">{room.name}</p>
+                                  {room.description ? (
+                                    <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-xs">
+                                      {room.description}
+                                    </p>
+                                  ) : (
+                                    <span className="text-[11px] text-muted-foreground italic">
+                                      Sem descrição
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="font-mono text-[11px] px-2 py-0.5">
+                                  {room.filial ?? "SCS"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs font-medium">{room.floor}º Andar</span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Users className="h-3.5 w-3.5 text-primary" />
+                                  <span>{room.capacity} pessoas</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="flex items-center justify-center">
+                                {has3DModel ? (
+                                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[11px] font-semibold gap-1">
+                                    Ativa
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-muted-foreground text-[11px]">
+                                    Pendente
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+                                          onClick={() => {
+                                            setMapViewerFilial(room.filial ?? "SCS")
+                                            setMapViewerFloor(room.floor)
+                                            setActiveTab("floorplan")
+                                          }}
+                                        >
+                                          <Eye className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="text-xs">Ver na planta baixa</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenEdit(room)}
+                                    className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-blue-600 hover:bg-blue-600/10"
+                                  >   
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setRoomToDelete(room)}
+                                    className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="floorplan" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
+        <TabsContent value="floorplan" className="space-y-4 min-w-0">
+          <Card className="rounded-2xl border-border/60 overflow-hidden">
+            <CardHeader className="p-4 pb-3 border-b bg-muted/20">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg">Visualização da Planta Baixa</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Visualização da Planta Baixa</CardTitle>
+                  <CardDescription className="text-xs">
+                    Clique em qualquer sala para abrir o editor e ajustar suas dimensões e maquete 3D.
+                  </CardDescription>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">Filial:</span>
+                    <span className="text-xs text-muted-foreground font-medium">Filial:</span>
                     <Select value={mapViewerFilial} onValueChange={setMapViewerFilial}>
-                      <SelectTrigger className="w-[120px] h-8 text-xs">
+                      <SelectTrigger className="w-[110px] h-8 text-xs rounded-lg">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {FILIAIS.map((f) => (
-                          <SelectItem key={f} value={f}>
+                          <SelectItem key={f} value={f} className="text-xs">
                             Filial {f}
                           </SelectItem>
                         ))}
@@ -349,17 +466,17 @@ export function RoomAdmin() {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">Andar:</span>
+                    <span className="text-xs text-muted-foreground font-medium">Andar:</span>
                     <Select
                       value={mapViewerFloor.toString()}
                       onValueChange={(val) => setMapViewerFloor(Number(val))}
                     >
-                      <SelectTrigger className="w-[120px] h-8 text-xs">
+                      <SelectTrigger className="w-[110px] h-8 text-xs rounded-lg">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {availableFloors.map((fl) => (
-                          <SelectItem key={fl} value={fl.toString()}>
+                          <SelectItem key={fl} value={fl.toString()} className="text-xs">
                             {fl}º Andar
                           </SelectItem>
                         ))}
@@ -369,7 +486,7 @@ export function RoomAdmin() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               <RoomFloorPlan
                 rooms={rooms}
                 filial={mapViewerFilial}
@@ -381,6 +498,7 @@ export function RoomAdmin() {
         </TabsContent>
       </Tabs>
 
+      {/* Dialog de Criação / Edição */}
       <RoomFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
@@ -390,6 +508,7 @@ export function RoomAdmin() {
         defaultFloor={selectedFloorFilter !== "ALL" ? Number(selectedFloorFilter) : 1}
       />
 
+      {/* Dialog de Confirmação de Exclusão */}
       <RoomDeleteDialog
         room={roomToDelete}
         open={!!roomToDelete}
