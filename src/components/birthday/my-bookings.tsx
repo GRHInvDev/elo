@@ -22,7 +22,7 @@ import { Label } from "../ui/label"
 import { Input } from "../ui/input"
 import { type z } from "zod"
 
-export function MyBookings({ className, filial }: { className?: string; filial?: string }) {
+export function MyBookings({ filial }: { className?: string; filial?: string }) {
   const { toast } = useToast()
   const utils = api.useUtils()
   const auth = useAuth();
@@ -51,11 +51,11 @@ export function MyBookings({ className, filial }: { className?: string; filial?:
   })
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle>Minhas Reservas</CardTitle>
+    <Card className="h-full flex flex-col">
+      <CardHeader className="p-4 pb-2 shrink-0">
+        <CardTitle className="text-sm font-semibold">Minhas Reservas</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-1 flex-1 flex flex-col min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />

@@ -3,8 +3,9 @@ import { createTRPCRouter, protectedProcedure } from "../trpc"
 
 const createRoomSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
+  description: z.string().optional().nullable(),
   capacity: z.number().min(1, "Capacidade deve ser maior que 0"),
-  floor: z.number().min(1, "Andar deve ser maior que 0"),
+  floor: z.number(),
   filial: z.string().optional(),
   coordinates: z.object({
     x: z.number(),
@@ -24,9 +25,10 @@ export const roomRouter = createTRPCRouter({
     return ctx.db.room.create({
       data: {
         name: input.name,
+        description: input.description ?? null,
         capacity: input.capacity,
         floor: input.floor,
-        filial: input.filial,
+        filial: input.filial ?? "SCS",
         coordinates: input.coordinates,
       },
     })

@@ -1,3 +1,6 @@
+export const FILIAIS = ["SCS", "CAC", "VA"] as const
+export type FilialType = (typeof FILIAIS)[number]
+
 export interface Coordinates {
     x: number
     y: number
@@ -8,12 +11,14 @@ export interface Coordinates {
   export interface Room {
     id: string
     name: string
+    description?: string | null
     capacity: number
     floor: number
+    filial?: string
     coordinates: Coordinates
-    bookings: Booking[]
-    createdAt: Date
-    updatedAt: Date
+    bookings?: Booking[]
+    createdAt?: Date
+    updatedAt?: Date
   }
   
   export interface Booking {
@@ -23,8 +28,8 @@ export interface Coordinates {
     title: string
     start: Date
     end: Date
-    createdAt: Date
-    updatedAt: Date
+    createdAt?: Date
+    updatedAt?: Date
   }
   
   
