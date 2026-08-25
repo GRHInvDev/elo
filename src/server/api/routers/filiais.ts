@@ -15,6 +15,7 @@ const createFilialSchema = z.object({
     .max(50, "Código não pode exceder 50 caracteres")
     .transform((val) => val.toUpperCase()),
   empresaId: z.string().min(1, "Selecione a empresa à qual esta filial pertence"),
+  hasRoom: z.boolean().default(false).optional(),
 })
 
 const updateFilialSchema = createFilialSchema.partial().extend({
@@ -166,6 +167,7 @@ export const filiaisRouter = createTRPCRouter({
           name: input.name,
           code: input.code.toUpperCase(),
           empresaId: input.empresaId,
+          hasRoom: input.hasRoom ?? false,
         },
         include: { empresa: { select: empresaSelect } },
       })

@@ -33,8 +33,8 @@ export function RoomDeleteDialog({
           <AlertDialogDescription className="space-y-2">
             <p>
               Tem certeza que deseja excluir permanentemente a sala{" "}
-              <strong className="text-foreground">{room.name}</strong> (Filial{" "}
-              {room.filial ?? "SCS"}, {room.floor}º Andar)?
+              <strong className="text-foreground">{room.name}</strong>
+              {room.filial ? ` (Filial ${room.filial}, ${room.floor}º Andar)` : ` (${room.floor}º Andar)`}?
             </p>
             <p className="text-xs text-red-500 bg-red-100 p-2.5 rounded border border-red-200">
               <strong>Atenção:</strong> Todas as reservas agendadas nesta sala também serão

@@ -48,7 +48,6 @@ export async function generateMetadata({ params }: PostSharePageProps): Promise<
     }
   }
 
-  const authorName = [post.author?.firstName, post.author?.lastName].filter(Boolean).join(" ")
   const enterprise = post.author?.enterprise
   const siteName = enterprise ? `${enterprise} • Elo Intranet` : "Elo Intranet"
 
