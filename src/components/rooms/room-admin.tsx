@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useCallback } from "react"
+import React, { useState, useMemo, useCallback, useEffect } from "react"
 import {
   DoorClosed,
   Eye,
@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
-import { FILIAIS, type Coordinates, type Room } from "@/types/room"
+import { type Coordinates, type Room } from "@/types/room"
 import { RoomFloorPlan } from "./room-floor-plan"
 import { RoomFormDialog } from "./room-form-dialog"
 import { RoomDeleteDialog } from "./room-delete-dialog"
@@ -35,6 +35,11 @@ export function RoomAdmin() {
 
   // Queries
   const { data: rawRooms, isLoading: isLoadingRooms } = api.room.list.useQuery()
+  const { data: filiaisData = [] } = api.filiais.list.useQuery()
+
+  const filiaisWithRooms = useMemo(() => {
+    return filiaisData.filter((f) => f.hasRoom)
+  }, [filiaisData])
 
   // Normalização das salas
   const rooms: Room[] = useMemo(() => {
@@ -47,7 +52,7 @@ export function RoomAdmin() {
         description: r.description ?? null,
         capacity: r.capacity,
         floor: r.floor,
-        filial: (r as { filial?: string }).filial ?? "SCS",
+        filial: (r as { filial?: string }).filial ?? "",
         photos: r.photos ?? [],
         visualModel: r.visualModel ?? undefined,
         coordinates: {
@@ -66,8 +71,14 @@ export function RoomAdmin() {
   const [selectedFloorFilter, setSelectedFloorFilter] = useState<string>("ALL")
   const [activeTab, setActiveTab] = useState<string>("list")
 
-  const [mapViewerFilial, setMapViewerFilial] = useState<string>("SCS")
+  const [mapViewerFilial, setMapViewerFilial] = useState<string>("")
   const [mapViewerFloor, setMapViewerFloor] = useState<number>(1)
+
+  useEffect(() => {
+    if (filiaisWithRooms.length > 0 && (!mapViewerFilial || !filiaisWithRooms.some((f) => f.code === mapViewerFilial))) {
+      setMapViewerFilial(filiaisWithRooms[0]?.code ?? "")
+    }
+  }, [filiaisWithRooms, mapViewerFilial])
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [roomToEdit, setRoomToEdit] = useState<Room | null>(null)
@@ -86,7 +97,7 @@ export function RoomAdmin() {
         Boolean(room.description?.toLowerCase().includes(searchTerm.toLowerCase()))
 
       const matchFilial =
-        selectedFilialFilter === "ALL" || (room.filial ?? "SCS") === selectedFilialFilter
+        selectedFilialFilter === "ALL" || (room.filial ?? "") === selectedFilialFilter
 
       const matchFloor =
         selectedFloorFilter === "ALL" || room.floor.toString() === selectedFloorFilter
@@ -184,9 +195,9 @@ export function RoomAdmin() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL" className="text-xs">Todas as Filiais</SelectItem>
-                    {FILIAIS.map((f) => (
-                      <SelectItem key={f} value={f} className="text-xs">
-                        Filial {f}
+                    {filiaisData.map((f) => (
+                      <SelectItem key={f.id} value={f.code} className="text-xs">
+                        Filial {f.name} ({f.code})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -268,7 +279,7 @@ export function RoomAdmin() {
                                 size="sm"
                                 className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground"
                                 onClick={() => {
-                                  setMapViewerFilial(room.filial ?? "SCS")
+                                  setMapViewerFilial(room.filial ?? "")
                                   setMapViewerFloor(room.floor)
                                   setActiveTab("floorplan")
                                 }}
@@ -301,7 +312,7 @@ export function RoomAdmin() {
 
                           <div className="flex flex-wrap items-center gap-2 text-xs pt-0.5">
                             <Badge variant="secondary" className="font-mono text-[10px] px-2 py-0.5">
-                              {room.filial ?? "SCS"}
+                              {room.filial ?? "-"}
                             </Badge>
                             <span className="text-[11px] font-medium text-muted-foreground">
                               {room.floor}º Andar
@@ -361,7 +372,7 @@ export function RoomAdmin() {
                               </TableCell>
                               <TableCell>
                                 <Badge variant="secondary" className="font-mono text-[11px] px-2 py-0.5">
-                                  {room.filial ?? "SCS"}
+                                  {room.filial ?? "-"}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -394,7 +405,7 @@ export function RoomAdmin() {
                                           size="sm"
                                           className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground"
                                           onClick={() => {
-                                            setMapViewerFilial(room.filial ?? "SCS")
+                                            setMapViewerFilial(room.filial ?? "")
                                             setMapViewerFloor(room.floor)
                                             setActiveTab("floorplan")
                                           }}
@@ -456,9 +467,9 @@ export function RoomAdmin() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {FILIAIS.map((f) => (
-                          <SelectItem key={f} value={f} className="text-xs">
-                            Filial {f}
+                        {filiaisWithRooms.map((f) => (
+                          <SelectItem key={f.id} value={f.code} className="text-xs">
+                            Filial {f.name} ({f.code})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -504,7 +515,7 @@ export function RoomAdmin() {
         onOpenChange={setIsFormOpen}
         roomToEdit={roomToEdit}
         allRooms={rooms}
-        defaultFilial={selectedFilialFilter !== "ALL" ? selectedFilialFilter : "SCS"}
+        defaultFilial={selectedFilialFilter !== "ALL" ? selectedFilialFilter : (filiaisWithRooms[0]?.code ?? "")}
         defaultFloor={selectedFloorFilter !== "ALL" ? Number(selectedFloorFilter) : 1}
       />
 

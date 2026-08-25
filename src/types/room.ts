@@ -1,8 +1,5 @@
 import type { IsometricRoomModel } from "./isometric-room"
 
-export const FILIAIS = ["SCS", "CAC", "VA"] as const
-export type FilialType = (typeof FILIAIS)[number]
-
 export interface Coordinates {
   x: number
   y: number

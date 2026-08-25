@@ -2,10 +2,6 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { currentUser } from "@clerk/nextjs/server"
 
-import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { EventsList } from "@/components/events/events-list"
-import { CreateEventButton } from "@/components/events/create-event-button"
-import { api } from "@/trpc/server"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { canViewEvents, canCreateEvent } from "@/lib/access-control"
 

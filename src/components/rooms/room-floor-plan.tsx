@@ -28,7 +28,7 @@ export function RoomFloorPlan({
   const { theme } = useTheme()
 
   const floorRooms = rooms.filter(
-    (r) => (r.filial ?? "SCS") === filial && r.floor === floor,
+    (r) => (!filial || r.filial === filial) && r.floor === floor,
   )
 
   return (

@@ -26,7 +26,7 @@ import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
-import { FILIAIS, type Coordinates, type Room } from "@/types/room"
+import { type Coordinates, type Room } from "@/types/room"
 import { MultipleImageUpload } from "@/components/ui/multiple-image-upload"
 import { IsometricRoomCanvas } from "./isometric-room-canvas"
 import type { IsometricRoomModel } from "@/types/isometric-room"
@@ -59,12 +59,23 @@ export function RoomFormDialog({
   onOpenChange,
   roomToEdit,
   allRooms,
-  defaultFilial = "SCS",
+  defaultFilial = "",
   defaultFloor = 1,
 }: RoomFormDialogProps) {
   const { toast } = useToast()
   const utils = api.useUtils()
   const svgRef = useRef<SVGSVGElement>(null)
+
+  const { data: filiaisData = [] } = api.filiais.list.useQuery()
+
+  const roomFiliais = useMemo(() => {
+    const allowed = filiaisData.filter((f) => f.hasRoom)
+    if (roomToEdit?.filial && !allowed.some((f) => f.code === roomToEdit.filial)) {
+      const current = filiaisData.find((f) => f.code === roomToEdit.filial)
+      if (current) return [...allowed, current]
+    }
+    return allowed
+  }, [filiaisData, roomToEdit?.filial])
 
   const [activeTab, setActiveTab] = useState<"general" | "visual3d">("general")
 
@@ -96,7 +107,7 @@ export function RoomFormDialog({
           description: roomToEdit.description ?? "",
           capacity: roomToEdit.capacity,
           floor: roomToEdit.floor,
-          filial: roomToEdit.filial ?? "SCS",
+          filial: roomToEdit.filial ?? "",
           coordinates: {
             x: roomToEdit.coordinates?.x ?? 80,
             y: roomToEdit.coordinates?.y ?? 80,
@@ -107,12 +118,17 @@ export function RoomFormDialog({
         setUploadedPhotos(roomToEdit.photos ?? [])
         setVisualModel(roomToEdit.visualModel ?? null)
       } else {
+        const initialFilial =
+          roomFiliais.some((f) => f.code === defaultFilial)
+            ? defaultFilial
+            : roomFiliais[0]?.code ?? ""
+
         setFormData({
           name: "",
           description: "",
           capacity: 8,
           floor: defaultFloor,
-          filial: defaultFilial,
+          filial: initialFilial,
           coordinates: {
             x: 80 + (allRooms.length % 4) * 40,
             y: 80 + (allRooms.length % 3) * 30,
@@ -124,7 +140,7 @@ export function RoomFormDialog({
         setVisualModel(null)
       }
     }
-  }, [open, roomToEdit, defaultFilial, defaultFloor, allRooms.length])
+  }, [open, roomToEdit, defaultFilial, defaultFloor, allRooms.length, roomFiliais])
 
   const generateModelMutation = api.room.generateVisualModel.useMutation()
 
@@ -312,6 +328,15 @@ export function RoomFormDialog({
       return
     }
 
+    if (!formData.filial) {
+      toast({
+        title: "Filial obrigatória",
+        description: "Por favor selecione uma filial para a sala.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const payload = {
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
@@ -341,7 +366,7 @@ export function RoomFormDialog({
   const siblingRooms = useMemo(() => {
     return allRooms.filter(
       (r) =>
-        (r.filial ?? "SCS") === formData.filial &&
+        (r.filial ?? "") === formData.filial &&
         r.floor === formData.floor &&
         r.id !== roomToEdit?.id,
     )
@@ -408,11 +433,17 @@ export function RoomFormDialog({
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {FILIAIS.map((f) => (
-                            <SelectItem key={f} value={f} className="text-xs">
-                              Filial {f}
+                          {roomFiliais.length === 0 ? (
+                            <SelectItem value="none" disabled className="text-xs text-muted-foreground">
+                              Nenhuma filial com salas habilitadas
                             </SelectItem>
-                          ))}
+                          ) : (
+                            roomFiliais.map((f) => (
+                              <SelectItem key={f.id} value={f.code} className="text-xs">
+                                Filial {f.name} ({f.code})
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

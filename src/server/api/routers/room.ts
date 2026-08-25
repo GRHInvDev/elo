@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
+import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import {
   buildIsometricRoomFromPhotos,
@@ -14,7 +15,7 @@ const createRoomSchema = z.object({
   description: z.string().optional().nullable(),
   capacity: z.number().min(1, "Capacidade deve ser maior que 0"),
   floor: z.number(),
-  filial: z.string().optional(),
+  filial: z.string().min(1, "Filial é obrigatória"),
   photos: z.array(z.string()).optional().default([]),
   visualModel: isometricRoomModelSchema.optional().nullable(),
   coordinates: z
@@ -65,13 +66,32 @@ export const roomRouter = createTRPCRouter({
       height: 90,
     }
 
+    const filialCode = input.filial.trim().toUpperCase()
+    const filialRecord = await ctx.db.filial.findUnique({
+      where: { code: filialCode },
+    })
+
+    if (!filialRecord) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Filial com código "${filialCode}" não encontrada.`,
+      })
+    }
+
+    if (!filialRecord.hasRoom) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `A filial "${filialRecord.name}" (${filialRecord.code}) não permite o cadastro de salas.`,
+      })
+    }
+
     return ctx.db.room.create({
       data: {
         name: input.name,
         description: input.description ?? null,
         capacity: input.capacity,
         floor: input.floor,
-        filial: input.filial ?? "SCS",
+        filial: filialCode,
         photos: input.photos ?? [],
         visualModel: visualModelToSave,
         coordinates: coordinatesToSave,
@@ -81,6 +101,28 @@ export const roomRouter = createTRPCRouter({
 
   update: protectedProcedure.input(updateRoomSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input
+
+    if (data.filial) {
+      const filialCode = data.filial.trim().toUpperCase()
+      const filialRecord = await ctx.db.filial.findUnique({
+        where: { code: filialCode },
+      })
+
+      if (!filialRecord) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Filial com código "${filialCode}" não encontrada.`,
+        })
+      }
+
+      if (!filialRecord.hasRoom) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `A filial "${filialRecord.name}" (${filialRecord.code}) não permite o cadastro de salas.`,
+        })
+      }
+    }
+
     return ctx.db.room.update({
       where: { id },
       data: {
@@ -88,7 +130,7 @@ export const roomRouter = createTRPCRouter({
         description: data.description !== undefined ? data.description : undefined,
         capacity: data.capacity ?? undefined,
         floor: data.floor ?? undefined,
-        filial: data.filial ?? undefined,
+        filial: data.filial ? data.filial.toUpperCase() : undefined,
         photos: data.photos ?? undefined,
         visualModel:
           data.visualModel === null

@@ -16,13 +16,16 @@ import { RoomDialog } from "./room-dialog"
 
 type RoomMapProps = React.HTMLAttributes<HTMLDivElement> & { filial?: string }
 
-export function RoomMap({ className = "", filial = "SCS", ...props }: RoomMapProps) {
+export function RoomMap({ className = "", filial = "", ...props }: RoomMapProps) {
   const [selectedFloor, setSelectedFloor] = useState<number>(1)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { theme } = useTheme()
 
-  const { data: rawRooms, isLoading } = api.room.list.useQuery({ filial })
+  const { data: rawRooms, isLoading } = api.room.list.useQuery(
+    { filial: filial || undefined },
+    { enabled: Boolean(filial) },
+  )
 
   const rooms: Room[] = useMemo(() => {
     if (!rawRooms) return []

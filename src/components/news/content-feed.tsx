@@ -6,10 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
-  Calendar,
   Loader2,
   LucideEllipsis,
-  LucideLink,
   LucidePencil,
   LucideTrash2,
   LucideVerified,
@@ -48,7 +46,7 @@ import { ImageCarousel } from "@/components/ui/image-carousel"
 import { ImageViewer } from "@/components/ui/image-viewer"
 import { MonacoEditor } from "@/components/ui/monaco-editor"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
-import type { PostWithAuthor, EventWithAuthor, ContentFeedProps } from "@/types/content-feed"
+import type { PostWithAuthor, ContentFeedProps } from "@/types/content-feed"
 import { PostShareButton } from "@/components/ui/post-share-button"
 
 // Dynamically import EmojiPicker to avoid SSR issues
@@ -81,11 +79,9 @@ export function ContentFeed({
   const hasScrolledToHashRef = useRef<string | null>(null)
 
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
-  const { data: events } = api.event.list.useQuery()
 
   // Type cast dos dados para incluir role_config
   const postsWithRoleConfig = posts as PostWithAuthor[] | undefined
-  const eventsWithRoleConfig = events as EventWithAuthor[] | undefined
 
   // Intersection Observer para carregar mais posts
   useEffect(() => {

@@ -42,6 +42,7 @@ import {
   ChevronRight,
   Users,
   Loader2,
+  DoorClosed,
 } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
 import { ENTERPRISE_VALUES, type Enterprise } from "@/types/enterprise"
@@ -60,6 +61,7 @@ type FilialItem = {
   name: string
   code: string
   empresaId: string
+  hasRoom?: boolean
   empresa: {
     id: string
     name: string
@@ -85,7 +87,7 @@ export default function FiliaisManagementPage() {
   const [isEditFilialOpen, setIsEditFilialOpen] = useState(false)
   const [isDeleteFilialOpen, setIsDeleteFilialOpen] = useState(false)
   const [selectedFilial, setSelectedFilial] = useState<FilialItem | null>(null)
-  const [filialForm, setFilialForm] = useState({ name: "", code: "", empresaId: "" })
+  const [filialForm, setFilialForm] = useState({ name: "", code: "", empresaId: "", hasRoom: false })
 
   // ── empresa state ───────────────────────────────────────────────────────────
   const [isCreateEmpresaOpen, setIsCreateEmpresaOpen] = useState(false)
@@ -168,7 +170,7 @@ export default function FiliaisManagementPage() {
   const createFilial = api.filiais.create.useMutation({
     onSuccess: async () => {
       toast({ title: "Filial criada", description: "Filial criada com sucesso." })
-      setFilialForm({ name: "", code: "", empresaId: "" })
+      setFilialForm({ name: "", code: "", empresaId: "", hasRoom: false })
       setIsCreateFilialOpen(false)
       await refetchFiliais()
     },
@@ -178,7 +180,7 @@ export default function FiliaisManagementPage() {
   const updateFilial = api.filiais.update.useMutation({
     onSuccess: async () => {
       toast({ title: "Filial atualizada", description: "Filial atualizada com sucesso." })
-      setFilialForm({ name: "", code: "", empresaId: "" })
+      setFilialForm({ name: "", code: "", empresaId: "", hasRoom: false })
       setIsEditFilialOpen(false)
       setSelectedFilial(null)
       await refetchFiliais()
@@ -234,7 +236,12 @@ export default function FiliaisManagementPage() {
       toast({ title: "Campos obrigatórios", description: "Nome, código e empresa são obrigatórios.", variant: "destructive" })
       return
     }
-    createFilial.mutate({ name: filialForm.name.trim(), code: filialForm.code.trim(), empresaId: filialForm.empresaId })
+    createFilial.mutate({
+      name: filialForm.name.trim(),
+      code: filialForm.code.trim(),
+      empresaId: filialForm.empresaId,
+      hasRoom: filialForm.hasRoom,
+    })
   }
 
   const handleSaveEditFilial = () => {
@@ -243,7 +250,13 @@ export default function FiliaisManagementPage() {
       toast({ title: "Campos obrigatórios", description: "Nome, código e empresa são obrigatórios.", variant: "destructive" })
       return
     }
-    updateFilial.mutate({ id: selectedFilial.id, name: filialForm.name.trim(), code: filialForm.code.trim(), empresaId: filialForm.empresaId })
+    updateFilial.mutate({
+      id: selectedFilial.id,
+      name: filialForm.name.trim(),
+      code: filialForm.code.trim(),
+      empresaId: filialForm.empresaId,
+      hasRoom: filialForm.hasRoom,
+    })
   }
 
   const handleSaveUserFilial = () => {
@@ -335,7 +348,7 @@ export default function FiliaisManagementPage() {
               <Plus className="h-4 w-4 mr-2" />
               Nova Empresa
             </Button>
-            <Button onClick={() => { setSelectedFilial(null); setFilialForm({ name: "", code: "", empresaId: "" }); setIsCreateFilialOpen(true) }}>
+            <Button onClick={() => { setSelectedFilial(null); setFilialForm({ name: "", code: "", empresaId: "", hasRoom: false }); setIsCreateFilialOpen(true) }}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Filial
             </Button>
@@ -472,10 +485,26 @@ export default function FiliaisManagementPage() {
                           <div className="flex-1">
                             <div className="font-medium">{filial.name}</div>
                             <div className="flex flex-wrap items-center gap-2 mt-1">
-                              <span className="text-sm text-muted-foreground">{filial.code}</span>
+                              <span className="text-sm font-mono text-muted-foreground">{filial.code}</span>
                               <Badge variant="secondary" className="text-xs font-normal">
                                 {filial.empresa.name}
                               </Badge>
+                              {filial.hasRoom ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 gap-1"
+                                >
+                                  <DoorClosed className="h-3 w-3" />
+                                  Permite Salas
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[11px] font-medium text-muted-foreground/70 border-border/60"
+                                >
+                                  Sem Salas
+                                </Badge>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -484,7 +513,7 @@ export default function FiliaisManagementPage() {
                               size="sm"
                               onClick={() => {
                                 setSelectedFilial(filial)
-                                setFilialForm({ name: filial.name, code: filial.code, empresaId: filial.empresaId })
+                                setFilialForm({ name: filial.name, code: filial.code, empresaId: filial.empresaId, hasRoom: filial.hasRoom ?? false })
                                 setIsEditFilialOpen(true)
                               }}
                             >
@@ -721,7 +750,7 @@ export default function FiliaisManagementPage() {
           if (!open) {
             setIsCreateFilialOpen(false)
             setIsEditFilialOpen(false)
-            setFilialForm({ name: "", code: "", empresaId: "" })
+            setFilialForm({ name: "", code: "", empresaId: "", hasRoom: false })
           }
         }}
       >
@@ -766,6 +795,21 @@ export default function FiliaisManagementPage() {
                       {emp.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="filial-has-room">Permite cadastro de salas?</Label>
+              <Select
+                value={filialForm.hasRoom ? "true" : "false"}
+                onValueChange={(v) => setFilialForm({ ...filialForm, hasRoom: v === "true" })}
+              >
+                <SelectTrigger id="filial-has-room">
+                  <SelectValue placeholder="Selecione se permite cadastro de salas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Sim (Permite cadastrar e agendar salas)</SelectItem>
+                  <SelectItem value="false">Não (Sem suporte a salas)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
