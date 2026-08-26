@@ -1,31 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { addHours, differenceInHours, format, parse } from "date-fns"
+import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon, Loader2, LucidePencil, Trash2 } from "lucide-react"
+import { Loader2, LucidePencil, Trash2 } from "lucide-react"
 import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatDateForInput } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@clerk/nextjs"
-import { type createBookingSchema } from "@/server/api/routers/booking"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "../ui/label"
-import { Input } from "../ui/input"
-import { type z } from "zod"
+import { RoomDialog, type BookingForDialog } from "@/components/rooms/room-dialog"
 
 export function MyBookings({ className = "", filial }: { className?: string; filial?: string }) {
   const { toast } = useToast()
   const utils = api.useUtils()
   const auth = useAuth()
+  const [editingBooking, setEditingBooking] = useState<BookingForDialog | null>(null)
 
   const { data: bookings, isLoading } = api.booking.listMine.useQuery()
   const filtered = (bookings ?? []).filter((b) => !filial || b.room.filial === filial)
@@ -39,6 +29,7 @@ export function MyBookings({ className = "", filial }: { className?: string; fil
       await utils.booking.list.invalidate()
       await utils.booking.listMine.invalidate()
       await utils.room.list.invalidate()
+      await utils.room.listAvailable.invalidate()
     },
     onError: (error) => {
       toast({
@@ -74,20 +65,37 @@ export function MyBookings({ className = "", filial }: { className?: string; fil
                       </div>
                       <div className="mt-1 flex items-center gap-2 justify-between">
                         <p className="text-xs text-muted-foreground truncate">{booking.title}</p>
-                        <div className="ml-auto shrink-0 flex items-center">
+                        <div className="ml-auto shrink-0 flex items-center gap-1">
                           {auth.userId === booking.userId && (
                             <>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                onClick={() =>
+                                  setEditingBooking({
+                                    id: booking.id,
+                                    roomId: booking.roomId,
+                                    title: booking.title,
+                                    start: booking.start,
+                                    end: booking.end,
+                                    roomName: booking.room.name,
+                                  })
+                                }
+                              >
+                                <LucidePencil className="h-3.5 w-3.5" />
+                                <span className="sr-only">Editar reserva</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => deleteBooking.mutate({ id: booking.id })}
                                 disabled={deleteBooking.isPending}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                                 <span className="sr-only">Cancelar reserva</span>
                               </Button>
-                              <UpdateBookingDialog {...{ booking }} />
                             </>
                           )}
                         </div>
@@ -102,105 +110,14 @@ export function MyBookings({ className = "", filial }: { className?: string; fil
           </div>
         )}
       </CardContent>
+
+      <RoomDialog
+        booking={editingBooking}
+        open={Boolean(editingBooking)}
+        onOpenChange={(open) => {
+          if (!open) setEditingBooking(null)
+        }}
+      />
     </Card>
-  )
-}
-
-interface UpdateBookingDialogProps {
-  booking: z.TypeOf<typeof createBookingSchema>
-}
-
-function UpdateBookingDialog({
-  booking
-}: UpdateBookingDialogProps) {
-  const utils = api.useUtils()
-  const [open, setOpen] = useState(false)
-  const { toast } = useToast()
-
-  const updateBooking = api.booking.update.useMutation({
-    onSuccess: async () => {
-      toast({
-        title: "Reserva alterada",
-        description: "Sua reserva foi alterada com sucesso.",
-      })
-      setOpen(false)
-      await utils.booking.list.invalidate()
-      await utils.booking.listMine.invalidate()
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
-    },
-  })
-
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-
-    const date = parse(formData.get("date") as string, "yyyy-MM-dd", new Date())
-    const time = parse(formData.get("time") as string, "HH:mm", new Date())
-    const duration = Number(formData.get("duration"))
-
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.getHours(), time.getMinutes())
-    const end = addHours(start, duration)
-
-    updateBooking.mutate({
-      id: booking.id,
-      roomId: booking.roomId,
-      title: formData.get("title") as string,
-      start,
-      end,
-    })
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-          <LucidePencil className="h-3.5 w-3.5" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
-        <DialogTitle>
-          Editar reserva
-        </DialogTitle>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">Título da Reunião</Label>
-            <Input id="title" name="title" placeholder="Digite o título da reunião" required defaultValue={booking.title} className="text-base sm:text-sm" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="date">Data</Label>
-              <Input id="date" name="date" type="date" defaultValue={formatDateForInput(booking.start)} required min={format(new Date(), "yyyy-MM-dd")} className="text-base sm:text-sm" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="time">Horário</Label>
-              <Input
-                id="time"
-                name="time"
-                type="time"
-                required
-                defaultValue={format(booking.start, "HH:mm")}
-                className="text-base sm:text-sm"
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="duration">Duração (horas)</Label>
-            <Input id="duration" name="duration" type="number" step="0.5" defaultValue={differenceInHours(booking.end, booking.start)} required className="text-base sm:text-sm" />
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="submit" disabled={updateBooking.isPending} className="rounded-xl">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {updateBooking.isPending ? "Reservando..." : "Alterar Reserva"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }

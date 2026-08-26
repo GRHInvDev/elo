@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { addDays, addHours, differenceInHours, format, parse, startOfToday } from "date-fns"
+import { addDays, format, startOfToday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarIcon, Loader2, LucidePencil, Trash2 } from "lucide-react"
 import { api } from "@/trpc/react"
@@ -9,27 +9,18 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn, formatDateForInput } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { AvatarFallback, AvatarImage, Avatar } from "../ui/avatar"
 import { useAuth } from "@clerk/nextjs"
-import { type createBookingSchema } from "@/server/api/routers/booking"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "../ui/label"
-import { Input } from "../ui/input"
-import { type z } from "zod"
+import { RoomDialog, type BookingForDialog } from "./room-dialog"
 
 export function RoomCalendar({ className, filial }: { className?: string; filial?: string }) {
   const [date, setDate] = useState<Date>(startOfToday())
+  const [editingBooking, setEditingBooking] = useState<BookingForDialog | null>(null)
   const { toast } = useToast()
   const utils = api.useUtils()
-  const auth = useAuth();
+  const auth = useAuth()
 
   const { data: bookings, isLoading } = api.booking.list.useQuery({
     startDate: startOfToday(),
@@ -47,6 +38,7 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
       await utils.booking.list.invalidate()
       await utils.booking.listMine.invalidate()
       await utils.room.list.invalidate()
+      await utils.room.listAvailable.invalidate()
     },
     onError: (error) => {
       toast({
@@ -62,7 +54,7 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
     (acc, booking) => {
       const dateKey = format(booking.start, "yyyy-MM-dd")
       acc[dateKey] ??= []
-      acc[dateKey].push(booking) // chegeui e tava assim, se possível, deixar
+      acc[dateKey].push(booking)
       return acc
     },
     {} as Record<string, typeof visible>,
@@ -121,22 +113,38 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
                         <span className="text-sm text-muted-foreground">•</span>
                         <p className="text-sm text-muted-foreground overflow-hidden overflow-ellipsis text-nowrap">{booking.title}</p>
                         <div className="ml-auto">
-                          {
-                            auth.userId === booking.userId &&
-                            <>
+                          {auth.userId === booking.userId && (
+                            <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="text-destructive hover:text-destructive"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                onClick={() =>
+                                  setEditingBooking({
+                                    id: booking.id,
+                                    roomId: booking.roomId,
+                                    title: booking.title,
+                                    start: booking.start,
+                                    end: booking.end,
+                                    roomName: booking.room.name,
+                                  })
+                                }
+                              >
+                                <LucidePencil className="h-3.5 w-3.5" />
+                                <span className="sr-only">Editar reserva</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => deleteBooking.mutate({ id: booking.id })}
                                 disabled={deleteBooking.isPending}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                                 <span className="sr-only">Cancelar reserva</span>
                               </Button>
-                              <UpdateBookingDialog {...{ booking }} />
-                            </>
-                          }
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -149,106 +157,14 @@ export function RoomCalendar({ className, filial }: { className?: string; filial
           </div>
         ) : null}
       </CardContent>
+
+      <RoomDialog
+        booking={editingBooking}
+        open={Boolean(editingBooking)}
+        onOpenChange={(open) => {
+          if (!open) setEditingBooking(null)
+        }}
+      />
     </Card>
-  )
-}
-
-interface UpdateBookingDialogProps {
-  booking: z.TypeOf<typeof createBookingSchema>
-}
-
-
-function UpdateBookingDialog({
-  booking
-}: UpdateBookingDialogProps) {
-  const utils = api.useUtils();
-  const [open, setOpen] = useState(false)
-  const { toast } = useToast()
-
-  const updateBooking = api.booking.update.useMutation({
-    onSuccess: async () => {
-      toast({
-        title: "Reserva alterada",
-        description: "Sua reserva foi alterada com sucesso.",
-      })
-      setOpen(false)
-      await utils.booking.list.invalidate()
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
-    },
-  })
-
-
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-
-    const date = parse(formData.get("date") as string, "yyyy-MM-dd", new Date())
-    const time = parse(formData.get("time") as string, "HH:mm", new Date())
-    const duration = Number(formData.get("duration"))
-
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.getHours(), time.getMinutes())
-
-    const end = addHours(start, duration)
-
-    updateBooking.mutate({
-      id: booking.id,
-      roomId: booking.roomId,
-      title: formData.get("title") as string,
-      start,
-      end,
-    })
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <LucidePencil className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogTitle>
-          Editar reserva
-        </DialogTitle>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">Título da Reunião</Label>
-            <Input id="title" name="title" placeholder="Digite o título da reunião" required defaultValue={booking.title} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="date">Data</Label>
-              <Input id="date" name="date" type="date" defaultValue={formatDateForInput(booking.start)} required min={format(new Date(), "yyyy-MM-dd")} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="time">Horário</Label>
-              <Input
-                id="time"
-                name="time"
-                type="time"
-                required
-                defaultValue={format(booking.start, "HH:mm")}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="duration">Duração (horas)</Label>
-            <Input id="duration" name="duration" type="number" defaultValue={differenceInHours(booking.end, booking.start)} required />
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={updateBooking.isPending}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {updateBooking.isPending ? "Reservando..." : "Alterar Reserva"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }
