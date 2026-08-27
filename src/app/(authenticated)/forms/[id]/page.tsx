@@ -12,7 +12,7 @@ import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { FormDescription } from "@/components/forms/form-description"
 import { FormsSubPageShell, FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
 import { CreateManualResponseButtonWrapper } from "@/components/forms/create-manual-response-button-wrapper"
-import { canEditForm } from "@/lib/access-control"
+import { canAccessForm, canEditForm } from "@/lib/access-control"
 
 export const metadata = {
   title: "Visualizar Formulário",
@@ -28,40 +28,26 @@ interface FormPageProps {
 export default async function FormPage({ params }: FormPageProps) {
   const { id } = await params;
   const form = await api.form.getById(id)
-  // const user = await auth();
   const userData = await api.user.me()
 
-  // Verificar se o usuário tem permissão para acessar este formulário
-  // A verificação completa é feita no checkFormAccess que verifica privacidade
   if (!form) {
     notFound()
   }
 
-  // Verificar acesso considerando privacidade
-  const roleConfig = userData.role_config;
-
-  // Se é TOTEM, não pode ver
-  if (roleConfig?.isTotem) {
+  // Verificar se o usuário tem permissão para acessar este formulário
+  if (!canAccessForm(
+    userData.role_config,
+    id,
+    userData.id,
+    {
+      userId: form.userId,
+      isPrivate: form.isPrivate,
+      allowedUsers: form.allowedUsers,
+      allowedSectors: form.allowedSectors,
+    },
+    userData.setor
+  )) {
     redirect("/forms")
-  }
-
-  // Se não tem ID de usuário, redirecionar
-  if (!userData.id) {
-    redirect("/forms")
-  }
-
-  // Se é o criador, sempre tem acesso
-  if (form.userId === userData.id) {
-    // Continua normalmente
-  } else if (form.isPrivate) {
-    // Se é privado, verificar se tem acesso
-    const isHidden = roleConfig?.hidden_forms?.includes(form.id) ?? false;
-    const isAllowedUser = form.allowedUsers?.includes(userData.id) ?? false;
-    const isAllowedSector = form.allowedSectors?.includes(userData.setor ?? "") ?? false;
-
-    if (isHidden || (!isAllowedUser && !isAllowedSector)) {
-      redirect("/forms")
-    }
   }
 
   const canEdit = canEditForm(
@@ -96,14 +82,14 @@ export default async function FormPage({ params }: FormPageProps) {
             {canEdit && (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Link href={`/forms/${form.id}/responses`}>
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    <MessageSquare className="mr-2 h-4 w-4" />
+                  <Button variant="outline" className="w-full sm:w-auto rounded-xl border-border/80 text-xs font-semibold gap-1.5 shadow-2xs">
+                    <MessageSquare className="h-4 w-4 text-primary" />
                     Respostas
                   </Button>
                 </Link>
                 <Link href={`/forms/${form.id}/edit`}>
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    <Pencil className="mr-2 h-4 w-4" />
+                  <Button variant="outline" className="w-full sm:w-auto rounded-xl border-border/80 text-xs font-semibold gap-1.5 shadow-2xs">
+                    <Pencil className="h-4 w-4" />
                     Editar
                   </Button>
                 </Link>
@@ -113,14 +99,14 @@ export default async function FormPage({ params }: FormPageProps) {
             {/* Ações do solicitante — à direita */}
             <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
               <Link href="/forms/my-responses">
-                <Button variant="ghost" className="w-full sm:w-auto">
-                  <FileText className="mr-2 h-4 w-4" />
+                <Button variant="ghost" className="w-full sm:w-auto rounded-xl text-xs font-semibold gap-1.5">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   Minhas solicitações
                 </Button>
               </Link>
               <Link href={`/forms/${form.id}/respond`}>
-                <Button className="w-full bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)] sm:w-auto">
-                  <FileText className="mr-2 h-4 w-4" />
+                <Button className="w-full rounded-xl text-xs font-semibold gap-1.5 shadow-sm sm:w-auto">
+                  <FileText className="h-4 w-4" />
                   Abrir nova solicitação
                 </Button>
               </Link>
@@ -132,49 +118,49 @@ export default async function FormPage({ params }: FormPageProps) {
             <CreateManualResponseButtonWrapper
               formId={form.id}
               formFields={form.fields as unknown as Field[]}
-              className="w-full sm:w-auto sm:self-start"
+              className="w-full sm:w-auto sm:self-start rounded-xl"
             />
           )}
         </div>
 
         {/* Faixa de info */}
-        <div className="mt-6 grid grid-cols-1 overflow-hidden rounded-[var(--v2-radius-card)] border border-[hsl(var(--v2-border-soft))] sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs sm:grid-cols-3 p-2">
           <InfoCell
             label="Criado"
-            icon={<Calendar className="h-3.5 w-3.5" />}
+            icon={<Calendar className="h-4 w-4 text-primary" />}
             value={formatDistanceToNow(new Date(form.createdAt), { addSuffix: true, locale: ptBR })}
           />
           <InfoCell
             label="Campos"
-            icon={<FileText className="h-3.5 w-3.5" />}
+            icon={<FileText className="h-4 w-4 text-primary" />}
             value={`${(form.fields as unknown[]).length} ao todo`}
-            className="border-t border-[hsl(var(--v2-border-soft))] sm:border-l sm:border-t-0"
+            className="border-t border-border/60 sm:border-l sm:border-t-0"
           />
           <InfoCell
             label="Acesso"
-            icon={form.isPrivate ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+            icon={form.isPrivate ? <Lock className="h-4 w-4 text-amber-500" /> : <Globe className="h-4 w-4 text-emerald-500" />}
             value={form.isPrivate ? "Restrito" : "Público"}
-            className="border-t border-[hsl(var(--v2-border-soft))] sm:border-l sm:border-t-0"
+            className="border-t border-border/60 sm:border-l sm:border-t-0"
           />
         </div>
 
-        <FormsPanel className="mt-5">
+        <FormsPanel className="mt-5 bg-neutral-50 dark:bg-neutral-900">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">
-              Estes são os campos que você vai preencher. Clique em{" "}
-              <strong className="font-medium text-foreground">Abrir nova solicitação</strong> para começar.
+              Estes são os campos configurados no formulário. Clique em{" "}
+              <strong className="font-semibold text-foreground">Abrir nova solicitação</strong> para preencher.
             </p>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2))] px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              <Eye className="h-3.5 w-3.5" /> Pré-visualização
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              <Eye className="h-3.5 w-3.5 text-primary" /> Pré-visualização
             </span>
           </div>
 
           <FormPreview title={form.title} fields={form.fields as unknown as Field[]} readOnly />
 
-          <div className="mt-6 flex justify-end border-t border-[hsl(var(--v2-border-soft))] pt-5">
+          <div className="mt-6 flex justify-end border-t border-border/60 pt-5">
             <Link href={`/forms/${form.id}/respond`}>
-              <Button className="bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]">
-                <FileText className="mr-2 h-4 w-4" />
+              <Button className="rounded-xl font-semibold gap-2 shadow-sm text-xs">
+                <FileText className="h-4 w-4" />
                 Abrir nova solicitação
               </Button>
             </Link>
@@ -194,14 +180,16 @@ interface InfoCellProps {
 
 function InfoCell({ label, icon, value, className }: InfoCellProps) {
   return (
-    <div className={`flex flex-col gap-1.5 bg-[hsl(var(--card)/.9)] px-4 py-3.5 ${className ?? ""}`}>
-      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className={`flex flex-col gap-1.5 px-6 py-4.5 ${className ?? ""}`}>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <strong className="inline-flex items-center gap-2 text-sm font-semibold">
-        <span className="text-[hsl(var(--v2-faint))]">{icon}</span>
-        {value}
-      </strong>
+      <div className="inline-flex items-center gap-2.5 text-sm font-bold text-foreground">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          {icon}
+        </div>
+        <span>{value}</span>
+      </div>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Loader2, Send } from "lucide-react"
+import { Loader2, MessageSquare, Send } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import ReactMarkdown from "react-markdown"
@@ -60,7 +60,6 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
     }
   }
 
-  // Process message markdown (similar to response-dialog)
   const processMessageMarkdown = (text: string): string => {
     let processed = text
     processed = processed.replace(/\*\*\s*\{\s*([^}]+?)\s*\}\s*\*\*/g, "**$1**")
@@ -70,8 +69,7 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
 
   return (
     <div className={cn("space-y-3", className)}>
-      <h3 className="text-sm font-medium">Chat</h3>
-      <div className="max-h-[300px] overflow-y-auto rounded-md border p-3 sm:p-4">
+      <div className="max-h-[300px] min-h-[120px] overflow-y-auto rounded-2xl border border-border/50 bg-background/50 p-3 sm:p-4">
         {isLoadingChat ? (
           <div className="flex h-20 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -79,25 +77,25 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
         ) : chatMessages && chatMessages.length > 0 ? (
           <div className="flex flex-col gap-3">
             {chatMessages.map((msg) => (
-              <div key={msg.id} className="flex gap-2 sm:gap-3">
-                <Avatar className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0">
+              <div key={msg.id} className="flex gap-2.5 sm:gap-3 items-start">
+                <Avatar className="h-7 w-7 shrink-0 rounded-full border border-border/40 mt-0.5">
                   <AvatarImage src={msg.user.imageUrl ?? ""} />
-                  <AvatarFallback>
+                  <AvatarFallback className="text-[10px]">
                     {msg.user.firstName?.[0] ?? msg.user.email[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <p className="font-medium text-xs sm:text-sm truncate">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-xs text-foreground truncate">
                       {msg.user.firstName
                         ? `${msg.user.firstName} ${msg.user.lastName ?? ""}`
                         : msg.user.email}
                     </p>
-                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                    <span className="text-[10px] text-muted-foreground">
                       {format(new Date(msg.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                     </span>
                   </div>
-                  <div className="mt-1 text-sm sm:text-base break-words prose prose-sm max-w-none dark:prose-invert">
+                  <div className="mt-1 rounded-xl bg-card/80 border border-border/40 p-2.5 text-xs sm:text-sm text-foreground break-words prose prose-sm max-w-none dark:prose-invert">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
@@ -105,7 +103,7 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
                           <p className="mb-0 whitespace-pre-wrap">{children}</p>
                         ),
                         strong: ({ children }) => (
-                          <strong className="font-semibold">{children}</strong>
+                          <strong className="font-semibold text-foreground">{children}</strong>
                         ),
                         em: ({ children }) => (
                           <em className="italic">{children}</em>
@@ -122,7 +120,11 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
             <div ref={chatEndRef} />
           </div>
         ) : (
-          <p className="text-center text-sm text-gray-500">Nenhuma mensagem ainda.</p>
+          <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground gap-1.5">
+            <MessageSquare className="h-5 w-5 opacity-40 text-primary" />
+            <p className="text-xs">Nenhuma mensagem ainda.</p>
+            <p className="text-[10px] opacity-70">Envie uma mensagem abaixo para tirar dúvidas ou passar informações.</p>
+          </div>
         )}
       </div>
 
@@ -132,13 +134,13 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Digite sua mensagem..."
-          className="flex-1 min-h-[60px] text-sm"
+          placeholder="Digite uma mensagem..."
+          className="flex-1 min-h-[56px] h-14 text-xs rounded-xl border-border/60 bg-background/50 focus:bg-background resize-none"
         />
         <Button
           onClick={handleSendMessage}
           disabled={!message.trim() || sendMessageMutation.isPending}
-          className="flex-shrink-0 h-auto px-3 sm:px-4"
+          className="flex-shrink-0 rounded-xl px-3.5 shadow-sm"
           size="default"
         >
           {sendMessageMutation.isPending ? (
@@ -151,3 +153,4 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
     </div>
   )
 }
+

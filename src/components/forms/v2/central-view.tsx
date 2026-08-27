@@ -14,9 +14,9 @@ import {
   KanbanSquare,
   List as ListIcon,
   MoreHorizontal,
+  Plus,
   Search,
   Tags,
-  User as UserIcon,
   X,
   Zap,
 } from "lucide-react"
@@ -202,41 +202,44 @@ export function CentralView() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col space-y-6">
       {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-start">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <Link
-            href="/forms"
-            className="mb-2 inline-flex items-center gap-1.5 rounded-md border border-[hsl(var(--v2-border-soft))] bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Voltar
-          </Link>
-          <h1 className="text-[28px] font-bold leading-tight tracking-[-0.025em]">
-            Central de chamados
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-            Atenda, acompanhe e resolva as solicitações recebidas nos formulários.
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/forms"
+              className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Voltar
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
+              Central de Chamados
+            </h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Atenda, acompanhe e resolva as solicitações recebidas nos formulários
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
+            className="rounded-xl border-border/60 text-xs font-medium gap-1.5"
             onClick={() => setTagsModalOpen(true)}
           >
-            <Tags className="mr-2 h-4 w-4" />
+            <Tags className="h-3.5 w-3.5 text-primary" />
             Gerenciar Tags
           </Button>
-          <div className="inline-flex items-center gap-0 rounded-md border border-[hsl(var(--v2-border-soft))] bg-background p-0.5">
+          <div className="flex items-center p-1 rounded-xl bg-muted/60 border border-border/60 gap-0.5">
             <button
               type="button"
               onClick={() => setView("fila")}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-[5px] px-2.5 py-1.5 text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                 view === "fila"
-                  ? "bg-[hsl(var(--v2-card-2))] text-foreground"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -246,9 +249,9 @@ export function CentralView() {
               type="button"
               onClick={() => setView("quadro")}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-[5px] px-2.5 py-1.5 text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                 view === "quadro"
-                  ? "bg-[hsl(var(--v2-card-2))] text-foreground"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -259,8 +262,8 @@ export function CentralView() {
       </div>
 
       {/* KPIs */}
-      <div className="my-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi label="Não iniciados" value={counts.notStarted} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Kpi label="Novos" value={counts.notStarted} />
         <Kpi label="Em progresso" value={counts.inProgress} tone="warn" />
         <Kpi label="Aguardando +24h" value={counts.aging} tone={counts.aging > 0 ? "danger" : undefined} />
         <Kpi label="Resolvidos hoje" value={counts.recentDone} tone="accent" />
@@ -446,6 +449,7 @@ export function CentralView() {
               response={currentResponse}
               onStatusChange={handleStatusChange}
               onAssume={handleAssume}
+              onOpenTagsModal={() => setTagsModalOpen(true)}
             />
           ) : (
             <Card className="flex flex-col items-center justify-center gap-3 border-[hsl(var(--v2-border-soft))] p-10 text-center text-muted-foreground">
@@ -494,18 +498,18 @@ interface KpiProps {
 
 function Kpi({ label, value, tone }: KpiProps) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] px-4 py-3">
+    <div className="flex flex-col gap-1 rounded-2xl border border-border/80 bg-card px-4 py-3.5 shadow-xs">
       <span
         className={cn(
           "text-2xl font-bold leading-none tabular-nums",
-          tone === "warn" && "text-[hsl(38_92%_45%)] dark:text-[hsl(38_92%_60%)]",
-          tone === "danger" && "text-[hsl(0_72%_50%)]",
-          tone === "accent" && "text-[hsl(var(--brand-accent))]",
+          tone === "warn" && "text-amber-500",
+          tone === "danger" && "text-rose-500",
+          tone === "accent" && "text-emerald-500",
         )}
       >
         {value}
       </span>
-      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
     </div>
@@ -535,13 +539,38 @@ interface RequestDetailProps {
   response: FormResponse
   onStatusChange: (id: string, status: ResponseStatus) => void
   onAssume: (id: string, currentStatus: ResponseStatus) => void
+  onOpenTagsModal: () => void
 }
 
-function RequestDetail({ response: r, onStatusChange, onAssume }: RequestDetailProps) {
+function RequestDetail({ response: r, onStatusChange, onAssume, onOpenTagsModal }: RequestDetailProps) {
   const { data: form } = api.form.getById.useQuery({ id: r.formId })
+  const { data: allTags = [] } = api.formResponse.getAllTags.useQuery()
+  const utils = api.useUtils()
+
+  const applyTagMutation = api.formResponse.applyTag.useMutation({
+    onSuccess: () => {
+      toast.success("Tag aplicada ao chamado")
+      void utils.formResponse.listKanBan.invalidate()
+      void utils.formResponse.getTags.invalidate()
+    },
+    onError: (err) => toast.error(err.message || "Erro ao aplicar tag"),
+  })
+
+  const removeTagMutation = api.formResponse.removeTag.useMutation({
+    onSuccess: () => {
+      toast.success("Tag removida do chamado")
+      void utils.formResponse.listKanBan.invalidate()
+      void utils.formResponse.getTags.invalidate()
+    },
+    onError: (err) => toast.error(err.message || "Erro ao remover tag"),
+  })
+
   const fields = ((form?.fields as unknown as Field[]) ?? []).filter(Boolean)
   const responseObjects = Array.isArray(r.responses) ? r.responses : []
   const meta = STATUS_META[r.status]
+
+  const responseTagIds = r.tags ?? []
+  const assignedTags = allTags.filter((t) => responseTagIds.includes(t.id))
 
   return (
     <Card className="flex min-h-0 flex-col overflow-hidden border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.75)] backdrop-blur-sm">
@@ -601,7 +630,7 @@ function RequestDetail({ response: r, onStatusChange, onAssume }: RequestDetailP
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--v2-faint))]">
               Solicitante
@@ -635,10 +664,103 @@ function RequestDetail({ response: r, onStatusChange, onAssume }: RequestDetailP
           </div>
         </div>
 
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <UserIcon className="h-3.5 w-3.5" /> Dados da solicitação
+        <div className="mb-4 rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+              Tags do Chamado
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+              onClick={onOpenTagsModal}
+            >
+              Gerenciar Tags
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {assignedTags.map((tag) => (
+              <span
+                key={tag.id}
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white shadow-2xs"
+                style={{ backgroundColor: tag.cor || "#3B82F6" }}
+              >
+                <span>{tag.nome}</span>
+                <button
+                  type="button"
+                  onClick={() => removeTagMutation.mutate({ responseId: r.id, tagId: tag.id })}
+                  className="hover:opacity-75 rounded-full p-0.5 transition-opacity cursor-pointer"
+                  title={`Remover tag ${tag.nome}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 rounded-full px-2.5 text-[11px] font-semibold gap-1 border-dashed border-border/80 bg-background/50 hover:bg-background"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Atribuir Tag</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="start">
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {allTags.length === 0 ? (
+                    <p className="p-2 text-xs text-muted-foreground text-center">Nenhuma tag cadastrada no sistema</p>
+                  ) : (
+                    allTags.map((tag) => {
+                      const isAssigned = responseTagIds.includes(tag.id)
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => {
+                            if (isAssigned) {
+                              removeTagMutation.mutate({ responseId: r.id, tagId: tag.id })
+                            } else {
+                              applyTagMutation.mutate({ responseId: r.id, tagId: tag.id })
+                            }
+                          }}
+                          className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-muted transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.cor }} />
+                            <span className="font-medium text-foreground">{tag.nome}</span>
+                          </div>
+                          {isAssigned && <Check className="h-3.5 w-3.5 text-primary" />}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+                <div className="border-t mt-1.5 pt-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="w-full justify-start text-[11px] h-7 px-2"
+                    onClick={onOpenTagsModal}
+                  >
+                    <Tags className="mr-1.5 h-3 w-3 text-primary" />
+                    Criar / editar tags…
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
-        <div className="mb-5 rounded-xl border border-[hsl(var(--v2-border-soft))] p-3">
+
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Dados da solicitação
+        </div>
+        <div className="mb-5 rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3">
           {fields.length === 0 ? (
             <p className="text-xs text-muted-foreground">Sem campos configurados para exibição.</p>
           ) : (
@@ -646,7 +768,10 @@ function RequestDetail({ response: r, onStatusChange, onAssume }: RequestDetailP
           )}
         </div>
 
-        <ResponseChat responseId={r.id} className="rounded-xl border border-[hsl(var(--v2-border-soft))] p-3" />
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Chat
+        </div>
+        <ResponseChat responseId={r.id} className="rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3" />
       </div>
     </Card>
   )

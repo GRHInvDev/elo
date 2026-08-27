@@ -447,13 +447,19 @@ export const formsRouter = createTRPCRouter({
     }),
 
     getById: protectedProcedure
-        .input(z.object({
-            id: z.string()
-        }))
+        .input(
+            z.union([
+                z.string(),
+                z.object({
+                    id: z.string(),
+                }),
+            ]),
+        )
         .query(async ({ ctx, input }) => {
+            const formId = typeof input === "string" ? input : input.id;
             const form = await ctx.db.form.findUnique({
                 where: {
-                    id: input.id
+                    id: formId,
                 },
                 include: {
                     user: {
@@ -642,17 +648,17 @@ export const formsRouter = createTRPCRouter({
         .query(async ({ ctx }) => {
             const userId = ctx.auth.userId;
 
-            // Buscar formulários onde o usuário é owner (criador ou está em ownerIds)
-            const form = await ctx.db.form.findFirst({
-                where: {
-                    OR: [
-                        { userId: userId },
-                        { ownerIds: { has: userId } }
-                    ]
-                },
-                select: { id: true }
-            });
+                // Buscar formulários onde o usuário é owner (criador ou está em ownerIds)
+                const form = await ctx.db.form.findFirst({
+                    where: {
+                        OR: [
+                            { userId: userId },
+                            { ownerIds: { has: userId } }
+                        ]
+                    },
+                    select: { id: true }
+                });
 
-            return !!form;
+                return !!form;
         }),
 });

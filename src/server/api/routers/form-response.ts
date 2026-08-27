@@ -1456,7 +1456,7 @@ export const formResponseRouter = createTRPCRouter({
       ativa: boolean
     }>
 
-    return tags.filter(tag => tag.ativa)
+    return tags.filter((tag) => tag?.ativa)
   }),
 
   // Criar nova tag

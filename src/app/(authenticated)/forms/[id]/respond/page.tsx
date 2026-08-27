@@ -58,13 +58,13 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
         title={form.title}
         description={<FormDescription description={form.description} />}
       >
-        <FormsPanel>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--v2-border-soft))] pb-4">
-            <h2 className="text-lg font-semibold tracking-tight">Preencha sua solicitação</h2>
+        <FormsPanel className="bg-neutral-50 dark:bg-neutral-900 border border-border/70 shadow-xs">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-4">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">Preencha sua solicitação</h2>
             {requiredCount > 0 && (
               <span className="text-xs text-muted-foreground">
                 {requiredCount} {requiredCount === 1 ? "campo obrigatório" : "campos obrigatórios"} · marcados com{" "}
-                <span className="text-[hsl(0_72%_58%)]">*</span>
+                <span className="text-rose-500 font-bold">*</span>
               </span>
             )}
           </div>

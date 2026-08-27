@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { api } from "@/trpc/react"
 import { DragDropContext, type OnDragEndResponder } from "@hello-pangea/dnd"
 import type { ResponseStatus } from "@/types/form-responses"
@@ -12,7 +13,7 @@ import { TagsManagerModal } from "./_components/tags-manager-modal"
 import type { FormResponse } from "@/types/form-responses"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { Button } from "@/components/ui/button"
-import { Tags } from "lucide-react"
+import { ArrowLeft, Tags } from "lucide-react"
 import { EditResponseModal } from "@/components/forms/edit-response-modal"
 
 export default function KanbanPage() {
@@ -178,28 +179,62 @@ export default function KanbanPage() {
 
     return (
         <DashboardShell>
-            <div className="mb-8">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Kanban de Solicitações</h1>
-                        <p className="text-muted-foreground mt-2">
-                            Visualize e organize as respostas recebidas nos seus formulários.
-                        </p>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2.5 mb-1">
+                        <Link
+                            href="/forms"
+                            className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/70"
+                        >
+                            <ArrowLeft className="h-3.5 w-3.5" />
+                            Voltar
+                        </Link>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                            Kanban de Solicitações
+                        </h1>
                     </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                        Visualize, organize e mova as solicitações entre as etapas de atendimento
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <Button
                         variant="outline"
+                        size="sm"
+                        className="rounded-xl border-border/70 text-xs font-semibold gap-1.5 shadow-2xs"
                         onClick={() => setIsTagsModalOpen(true)}
                     >
-                        <Tags className="h-4 w-4 mr-2" />
+                        <Tags className="h-3.5 w-3.5 text-primary" />
                         Gerenciar Tags
                     </Button>
+                </div>
+            </div>
+
+            {/* KPIs Rápidos */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <div className="flex flex-col gap-0.5 rounded-2xl border border-border/70 bg-card/60 backdrop-blur-xs px-4 py-3 shadow-xs">
+                    <span className="text-xl font-extrabold tabular-nums text-foreground">{localResponses.length}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total</span>
+                </div>
+                <div className="flex flex-col gap-0.5 rounded-2xl border border-border/70 bg-card/60 backdrop-blur-xs px-4 py-3 shadow-xs">
+                    <span className="text-xl font-extrabold tabular-nums text-slate-600 dark:text-slate-300">{columns.NOT_STARTED.length}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Não Iniciadas</span>
+                </div>
+                <div className="flex flex-col gap-0.5 rounded-2xl border border-amber-500/20 bg-amber-500/5 backdrop-blur-xs px-4 py-3 shadow-xs">
+                    <span className="text-xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400">{columns.IN_PROGRESS.length}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Em Andamento</span>
+                </div>
+                <div className="flex flex-col gap-0.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xs px-4 py-3 shadow-xs">
+                    <span className="text-xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">{columns.COMPLETED.length}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Concluídas</span>
                 </div>
             </div>
 
             <KanbanFilters filters={filters} onFiltersChange={setFilters} />
 
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mt-4">
                     <KanbanColumn
                         title="Não Iniciado"
                         status="NOT_STARTED"

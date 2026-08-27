@@ -181,8 +181,14 @@ export function canAccessForm(
   // TOTEMs não podem acessar
   if (roleConfig.isTotem) return false;
 
+  // Se é sudo ou admin de formulários, sempre tem acesso
+  if (roleConfig.sudo || roleConfig.can_create_form) return true;
+
   // Se é o criador do formulário, sempre tem acesso
   if (form.userId === userId) return true;
+
+  // Se o formulário está explicitamente visível nas configs
+  if (roleConfig.visible_forms?.includes(formId)) return true;
 
   // Se o formulário é privado, verificar permissões específicas
   if (form.isPrivate) {
@@ -198,6 +204,9 @@ export function canAccessForm(
     // Se não tem acesso nem por usuário nem por setor, não pode acessar
     if (!isAllowedUser && !isAllowedSector) return false;
   }
+
+  // Se o formulário não é privado (público), verificar se está oculto
+  if (roleConfig.hidden_forms?.includes(formId)) return false;
 
   // Se passou por todas as verificações, pode acessar
   return true;

@@ -451,7 +451,7 @@ function MyResponsesPage({ nav }) {
 
       <div className="mr-toolbar">
         <div className="search" style={{ maxWidth: 340 }}>
-          <I.search size={16} />
+          <I.list size={16} />
           <input placeholder="Buscar por nº, formulário…" value={q} onChange={e => setQ(e.target.value)} />
         </div>
         <div style={{ flex: 1 }} />

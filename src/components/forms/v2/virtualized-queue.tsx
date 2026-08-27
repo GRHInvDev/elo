@@ -97,15 +97,18 @@ function QueueRow({
           <p className="my-1 line-clamp-2 text-[13px] font-medium leading-tight">
             {r.form?.title ?? "Sem título"}
           </p>
-          <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--v2-faint))]">
-            <Avatar className="h-4 w-4">
-              <AvatarImage src={r.user?.imageUrl ?? ""} />
-              <AvatarFallback className="text-[8px]">
-                {initials(r.user?.firstName, r.user?.lastName, r.user?.email)}
-              </AvatarFallback>
-            </Avatar>
-            <span className="truncate">{fullName(r.user)}</span>
-            <span className="h-0.5 w-0.5 rounded-full bg-current opacity-60" aria-hidden />
+          <div className="flex items-center just gap-2 mt-4 -ml-2 text-[11px] text-[hsl(var(--v2-faint))]">
+            <div className="flex items-center flex-row max-w-40">
+              <Avatar className="h-4 w-4">
+                <AvatarImage src={r.user?.imageUrl ?? ""} />
+                <AvatarFallback className="text-[8px]">
+                  {initials(r.user?.firstName, r.user?.lastName, r.user?.email)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate">{fullName(r.user)}</span>
+            </div>
+            
+            <span className="h-0.5 w-1 rounded-full bg-current opacity-60" aria-hidden />
             <span
               className={cn(
                 "inline-flex items-center gap-1",

@@ -2,7 +2,6 @@
 
 import React from "react"
 import type { Field } from "@/lib/form-types"
-import { Separator } from "@/components/ui/separator"
 
 interface ResponseDetailsProps {
   responseData: Record<string, unknown>[]
@@ -98,21 +97,24 @@ export function ResponseDetails({ responseData, formFields }: ResponseDetailsPro
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {fieldsToShow.map((field) => {
         const value = responseObj?.[field.name]
 
         return (
-          <div key={field.id} className="space-y-2">
-            <div className="flex flex-col">
-              <h3 className="font-medium">{field.label}</h3>
-              <div className="mt-1 text-sm">{renderValue(field.name, field.type, value as string)}</div>
+          <div
+            key={field.id}
+            className="rounded-xl border border-border/70 bg-neutral-50 dark:bg-neutral-900 p-3.5 space-y-1.5 shadow-2xs transition-colors"
+          >
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+              {field.label}
+            </span>
+            <div className="text-xs sm:text-sm text-foreground font-medium break-words leading-relaxed">
+              {renderValue(field.name, field.type, value as string)}
             </div>
-            <Separator />
           </div>
         )
       })}
     </div>
   )
 }
-
