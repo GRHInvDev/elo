@@ -39,6 +39,7 @@ import { filiaisRouter } from "./routers/filiais";
 import { empresasRouter } from "./routers/empresas";
 import { setoresRouter } from "./routers/setores";
 import { bannerRouter } from "./routers/banner";
+import { campaignRouter } from "./routers/campaign";
 
 /**
  * This is the primary router for your server.
@@ -68,6 +69,7 @@ export const appRouter = createTRPCRouter({
   foodOrder: foodOrderRouter,
   orderLog: orderLogRouter,
   suggestion: suggestionRouter,
+  campaign: campaignRouter,
   classification: classificationRouter,
   kpi: kpiRouter,
   chatMessage: chatMessageRouter,

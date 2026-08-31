@@ -106,6 +106,11 @@ model User {
   // Trilha de acesso (navegação e chamadas lentas de API)
   accessLogs AccessLog[] @relation("AccessLogUser")
 
+  // Campanhas de Ideias
+  createdCampaigns   Campaign[]          @relation("CampaignCreator")
+  suggestionSupports SuggestionSupport[]
+  suggestionComments SuggestionComment[]
+
   @@map("users")
 }
 
@@ -744,9 +749,39 @@ enum SuggestionStatus {
   NOT_IMPLEMENTED
 }
 
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String
+  objective   String         @db.Text
+  startDate   DateTime
+  endDate     DateTime
+  status      CampaignStatus @default(ACTIVE)
+  isPrivate   Boolean        @default(false)
+  createdById String?
+  createdBy   User?          @relation("CampaignCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  suggestions Suggestion[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([status, isPrivate])
+  @@index([startDate, endDate])
+  @@map("campaigns")
+}
+
 model Suggestion {
   id         String @id @default(cuid())
   ideaNumber Int    @unique @default(0)
+
+  // Vínculo opcional com Campanha (null = ideia avulsa / legado)
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   // relação com autor
   userId String
@@ -790,11 +825,45 @@ model Suggestion {
   // Relacionamento many-to-many com KPIs
   kpiLinks SuggestionKpi[]
 
+  // Apoios e Comentários dos Colaboradores
+  supports SuggestionSupport[]
+  comments SuggestionComment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status, createdAt])
   @@index([finalScore])
+  @@index([campaignId])
+}
+
+model SuggestionSupport {
+  id           String     @id @default(cuid())
+  suggestionId String
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([suggestionId, userId])
+  @@index([suggestionId])
+  @@index([userId])
+  @@map("suggestion_supports")
+}
+
+model SuggestionComment {
+  id           String     @id @default(cuid())
+  suggestionId String
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content      String     @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([suggestionId, createdAt])
+  @@index([userId])
+  @@map("suggestion_comments")
 }
 
 // Modelo para KPIs reutilizáveis

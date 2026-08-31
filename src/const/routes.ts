@@ -133,10 +133,10 @@ export const routeItems = (roleConfig?: RolesConfig | null, isOwnerOfAnyForm?: b
       describe: "Minhas ideias e solicitações",
       children: [
         {
-          title: "Minhas Ideias",
+          title: "Ideias",
           icon: LucideLightbulb,
-          describe: "Visualizar e acompanhar o status das suas ideias enviadas",
-          href: "/my-suggestions",
+          describe: "Participe das campanhas de inovação e envie ideias",
+          href: "/suggestions",
         },
         {
           title: "Solicitações",
