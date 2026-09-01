@@ -292,7 +292,7 @@ export const campaignRouter = createTRPCRouter({
           const hideAuthor = !isOwner && isNotImplemented && campaign.status === "ACTIVE";
 
           const authorName = hideAuthor
-            ? "Colaborador anônimo"
+            ? "Colaborador ocultado"
             : s.isNameVisible && s.user
             ? `${s.user.firstName ?? ""} ${s.user.lastName ?? ""}`.trim() || (s.submittedName ?? "Colaborador")
             : (s.submittedName ?? "Colaborador anônimo");
@@ -308,6 +308,7 @@ export const campaignRouter = createTRPCRouter({
             isNameVisible: s.isNameVisible,
             authorName,
             authorSector,
+            isAuthorHidden: hideAuthor,
             isOwner,
             isNotImplemented,
             supportsCount: s._count.supports,

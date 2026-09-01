@@ -2,11 +2,13 @@
 
 import { useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { api } from "@/trpc/react"
 import {
   Lightbulb,
   Check,
-  Lock
+  Lock,
 } from "lucide-react"
 import { format, differenceInDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -25,6 +27,8 @@ export default function MySuggestionsPage() {
   const [isNewIdeaModalOpen, setIsNewIdeaModalOpen] = useState(false)
   const [newIdeaCampaignId, setNewIdeaCampaignId] = useState<string | null>(null)
   const [isNewIdeaCampaignPrivate, setIsNewIdeaCampaignPrivate] = useState(false)
+
+  const { data: myIdeas = [] } = api.suggestion.listMyIdeas.useQuery()
 
   const { data: activeCampaigns = [], isLoading: isLoadingActive } =
     api.campaign.listPublicActive.useQuery()
@@ -46,6 +50,20 @@ export default function MySuggestionsPage() {
           onBack={() => setSelectedCampaignId(null)}
           onNewIdea={(cId, isPriv) => handleOpenNewIdea(cId, isPriv)}
           onOpenIdeaDetail={(ideaId) => setSelectedIdeaDetailId(ideaId)}
+          onOpenMyIdeas={() => setIsMyIdeasOpen(true)}
+        />
+
+        <MyIdeasModal
+          isOpen={isMyIdeasOpen}
+          onClose={() => setIsMyIdeasOpen(false)}
+          onOpenIdeaDetail={(ideaId) => setSelectedIdeaDetailId(ideaId)}
+        />
+
+        <CampaignWinnersModal
+          campaignId={selectedClosedCampaignId}
+          isOpen={Boolean(selectedClosedCampaignId)}
+          onClose={() => setSelectedClosedCampaignId(null)}
+          onOpenIdeaDetail={(ideaId) => setSelectedIdeaDetailId(ideaId)}
         />
 
         <IdeaExpandedModal
@@ -66,6 +84,32 @@ export default function MySuggestionsPage() {
 
   return (
     <div className="max-w-[1440px] mx-auto p-3 sm:p-6 md:p-8 space-y-7 fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+            Ideias & Campanhas
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Explore as campanhas abertas ou acompanhe o status das suas ideias publicadas.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            onClick={() => setIsMyIdeasOpen(true)}
+            variant="outline"
+            className="rounded-xl border-border/80 hover:bg-muted/60 text-xs sm:text-sm font-semibold h-9 sm:h-10 px-3.5 sm:px-4 gap-2 shadow-xs cursor-pointer"
+          >
+            <span>Minhas ideias</span>
+            {myIdeas.length > 0 && (
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-bold rounded-full ml-0.5">
+                {myIdeas.length}
+              </Badge>
+            )}
+          </Button>
+        </div>
+      </div>
+
       <div className="space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <h2 className="text-base sm:text-lg font-bold text-foreground">

@@ -14,6 +14,7 @@
  *                 ,'---\ \              ,---`,;,
  * 
  *           Em homenagem aos míticos dragões do Zada Web
+ *             - Gustavo passou aqui, abençoado seja...
  */
 import { redirect } from "next/navigation"
 import { currentUser } from "@clerk/nextjs/server"

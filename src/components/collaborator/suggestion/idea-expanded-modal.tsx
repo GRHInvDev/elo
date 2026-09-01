@@ -18,7 +18,7 @@ import {
   MessageSquare,
   Trash2,
   Send,
-  Clock,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -210,16 +210,30 @@ export function IdeaExpandedModal({
                   </div>
                 </div>
               ) : (
-                <div className="bg-muted/20 border border-border/60 rounded-xl p-4 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-                    <Clock className="w-4 h-4" />
+                <div className="bg-amber-500/10 dark:bg-amber-950/25 border border-amber-500/30 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h5 className="text-xs sm:text-sm font-bold text-foreground -mb-1">
+                        Ideia não implantada
+                      </h5>
+                      <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                        Devolutiva do comitê de avaliação
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-foreground">Não implantada</h5>
-                    <p className="text-xs text-muted-foreground">
+
+                  {idea.rejectionReason ? (
+                    <div className="p-3.5 rounded-xl bg-background/80 border border-amber-500/20 text-xs sm:text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                      {idea.rejectionReason}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground leading-relaxed pl-1">
                       Esta ideia foi avaliada pelo comitê e não será implementada no escopo atual desta campanha.
                     </p>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -246,23 +260,29 @@ export function IdeaExpandedModal({
               </div>
 
               <div className="p-3.5 sm:p-4 rounded-xl border border-border/80 bg-card dark:bg-[#131518] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
-                <button
-                  onClick={handleToggleSupport}
-                  disabled={toggleSupportMutation.isPending}
-                  className={cn(
-                    "gap-2 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center cursor-pointer w-full sm:w-auto",
-                    idea.hasSupported
-                      ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                      : "bg-[#3e3d3dc5] hover:bg-[#314e31f7] text-white"
-                  )}
-                >
-                  <ThumbsUp
+                {!idea.isOwner ? (
+                  <button
+                    onClick={handleToggleSupport}
+                    disabled={toggleSupportMutation.isPending}
                     className={cn(
-                      "w-4 h-4"
+                      "gap-2 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center cursor-pointer w-full sm:w-auto",
+                      idea.hasSupported
+                        ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                        : "bg-[#3e3d3dc5] hover:bg-[#314e31f7] text-white"
                     )}
-                  />
-                  {idea.hasSupported ? "Você apoiou esta ideia" : "Apoiar esta ideia"}
-                </button>
+                  >
+                    <ThumbsUp
+                      className={cn(
+                        "w-4 h-4"
+                      )}
+                    />
+                    {idea.hasSupported ? "Você apoiou esta ideia" : "Apoiar esta ideia"}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                    <span>Você é o autor desta ideia</span>
+                  </div>
+                )}
 
                 <span className="text-xs text-muted-foreground font-medium text-center sm:text-left">
                   {idea.supportsCount} {idea.supportsCount === 1 ? "pessoa já apoiou esta ideia" : "pessoas já apoiaram esta ideia"}
