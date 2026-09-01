@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,8 +19,17 @@ import { IdeaExpandedModal } from "@/components/collaborator/suggestion/idea-exp
 import { CampaignView } from "@/components/collaborator/suggestion/campaign-view"
 import { SuggestionsModal } from "@/components/admin/suggestion/suggestion-card"
 
-export default function MySuggestionsPage() {
+function MySuggestionsContent() {
+  const searchParams = useSearchParams()
+  const campaignIdParam = searchParams.get("campaignId")
+
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (campaignIdParam) {
+      setSelectedCampaignId(campaignIdParam)
+    }
+  }, [campaignIdParam])
 
   const [isMyIdeasOpen, setIsMyIdeasOpen] = useState(false)
   const [selectedClosedCampaignId, setSelectedClosedCampaignId] = useState<string | null>(null)
@@ -272,5 +282,24 @@ export default function MySuggestionsPage() {
         isCampaignPrivate={isNewIdeaCampaignPrivate}
       />
     </div>
+  )
+}
+
+export default function MySuggestionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-[1440px] mx-auto p-3 sm:p-6 md:p-8 space-y-6">
+          <Skeleton className="h-10 w-48 rounded-xl" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Skeleton className="h-48 w-full rounded-2xl" />
+            <Skeleton className="h-48 w-full rounded-2xl" />
+            <Skeleton className="h-48 w-full rounded-2xl" />
+          </div>
+        </div>
+      }
+    >
+      <MySuggestionsContent />
+    </Suspense>
   )
 }

@@ -365,7 +365,7 @@ export default function DashboardPage() {
 
           {/* Card de Ideias - Não exibir para usuários Totem */}
           {!isTotem && (
-            <div className="rounded-lg bg-muted p-3 md:col-span-2 md:p-4 xl:col-span-1">
+            <div className="rounded-lg bg-muted p-3 md:col-span-2 md:p-4 xl:col-span-1 max-h-[210px] overflow-y-auto scrollbar-hide">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold md:text-base">
                 <span>Ideias</span>
               </h3>

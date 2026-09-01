@@ -183,6 +183,9 @@ export function CentralView() {
   })
 
   function handleStatusChange(id: string, status: ResponseStatus) {
+    if (currentResponse?.id === id && currentResponse.status === status) {
+      return
+    }
     updateStatus.mutate({ responseId: id, status })
   }
 
@@ -758,15 +761,20 @@ function RequestDetail({
               <DropdownMenuContent align="start">
                 {STATUS_ORDER.map((s) => {
                   const m = STATUS_META[s]
+                  const isCurrent = s === r.status
                   return (
                     <DropdownMenuItem
                       key={s}
-                      onClick={() => onStatusChange(r.id, s)}
-                      className="gap-2 cursor-pointer"
+                      onClick={() => {
+                        if (!isCurrent) {
+                          onStatusChange(r.id, s)
+                        }
+                      }}
+                      className={cn("gap-2 cursor-pointer", isCurrent && "bg-muted/40 font-semibold cursor-default")}
                     >
                       <span className={cn("h-1.5 w-1.5 rounded-full", m.dot)} />
-                      <span className={cn(s === r.status && "font-semibold")}>{m.label}</span>
-                      {s === r.status && <Check className="ml-auto h-3.5 w-3.5" />}
+                      <span>{m.label}</span>
+                      {isCurrent && <Check className="ml-auto h-3.5 w-3.5" />}
                     </DropdownMenuItem>
                   )
                 })}

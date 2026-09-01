@@ -44,6 +44,10 @@ export function StatusUpdateButton({ responseId, currentStatus, currentComment }
   })
 
   const handleUpdate = () => {
+    if (status === currentStatus && (comment ?? "") === (currentComment ?? "")) {
+      setOpen(false)
+      return
+    }
     updateStatus.mutate({
       responseId,
       status: status as "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED",

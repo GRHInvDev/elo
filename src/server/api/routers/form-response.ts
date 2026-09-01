@@ -1884,6 +1884,36 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
+      // Se o status não mudou e o comentário não mudou, retorna sem disparar evento de alteração
+      const isStatusChanged = response.status !== input.status
+      const isCommentChanged = input.statusComment !== undefined && input.statusComment !== response.statusComment
+
+      if (!isStatusChanged && !isCommentChanged) {
+        return {
+          ...response,
+          assignedTo: extractAssignedTo(response.responses),
+        }
+      }
+
+      // Se apenas o comentário mudou sem alteração de status, atualiza sem disparar mensagem de STATUS_CHANGED
+      if (!isStatusChanged && isCommentChanged) {
+        const updated = await ctx.db.formResponse.update({
+          where: { id: input.responseId },
+          data: {
+            statusComment: input.statusComment,
+            updatedAt: new Date(),
+          },
+          include: {
+            form: true,
+            user: { select: NOTIFY_USER_SELECT },
+          },
+        })
+        return {
+          ...updated,
+          assignedTo: extractAssignedTo(updated.responses),
+        }
+      }
+
       const executor = await ctx.db.user.findUnique({
         where: { id: currentUserId },
         select: { id: true, firstName: true, lastName: true, email: true, imageUrl: true, setor: true }
