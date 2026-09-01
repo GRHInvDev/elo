@@ -216,7 +216,7 @@ model Coment {
   post    Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, postId])
+  @@index([userId, postId])
 }
 
 model Event {
@@ -670,6 +670,8 @@ model Setor {
   id        String   @id @default(cuid())
   name      String   @unique // Rótulo exibido. Ex.: "Recursos Humanos"
   value     String   @unique // Valor persistido em User.setor. Ex.: "RECURSOS_HUMANOS"
+  icon      String?  // Ícone do setor (ex.: "laptop", "users", "wrench")
+  color     String?  // Cor do setor em hex (ex.: "#3B82F6")
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

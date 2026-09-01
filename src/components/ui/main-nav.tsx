@@ -26,7 +26,11 @@ interface SidebarProps {
 export function Sidebar({ className, collapsed = false, onLinkClick }: SidebarProps) {
   const pathname = usePathname()
   const { db_user } = useAccessControl()
-  const { data: isOwnerOfAnyForm = false } = api.form.isOwnerOfAnyForm.useQuery()
+  const { data: isOwnerOfAnyForm = false } = api.form.isOwnerOfAnyForm.useQuery(undefined, {
+    enabled: !!db_user?.id,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   const toggleGroup = (title: string) => {

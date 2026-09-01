@@ -6,9 +6,10 @@ import { FormResponseComponent } from "./form-response"
 import { api } from "@/trpc/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, ShieldAlert, User } from "lucide-react"
 import type { Field } from "@/lib/form-types"
 import type { FormResponse } from "@/types/form-responses"
+import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
 interface EditResponseModalProps {
   responseId: string
@@ -21,20 +22,23 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
   const [isLoading, setIsLoading] = useState(true)
   const [response, setResponse] = useState<FormResponse | null>(null)
   const [fields, setFields] = useState<Field[]>([])
+  const utils = api.useUtils()
+
+  const { data: currentUser } = api.user.me.useQuery(undefined, { enabled: isOpen })
 
   // Buscar dados da resposta e campos do formulário
   const { data: responseData, isLoading: isResponseLoading } = api.formResponse.getById.useQuery(
     { responseId },
     {
       enabled: isOpen && !!responseId,
-    }
+    },
   )
 
   const { data: formData } = api.form.getById.useQuery(
     { id: formId },
     {
       enabled: isOpen && !!formId,
-    }
+    },
   )
 
   // useEffect para carregar os dados quando o modal abre
@@ -55,12 +59,17 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
   // Mutation para atualizar a resposta
   const updateResponse = api.formResponse.update.useMutation({
     onSuccess: () => {
-      toast.success("Resposta atualizada com sucesso!")
+      toast.success("Solicitação atualizada com sucesso!")
+      void utils.formResponse.getById.invalidate({ responseId })
+      void utils.formResponse.listQueueInfinite.invalidate()
+      void utils.formResponse.listUserResponses.invalidate()
+      void utils.formResponse.getChat.invalidate({ responseId })
+      void utils.formResponse.getQueueKpis.invalidate()
       onClose()
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      toast.error(`Erro ao atualizar resposta: ${errorMessage}`)
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
+      toast.error(`Erro ao atualizar: ${errorMessage}`)
     },
   })
 
@@ -78,34 +87,67 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
     onClose()
   }
 
+  const isEditorStaff = currentUser?.id && response?.userId && currentUser.id !== response.userId
+  const requesterName = response?.user
+    ? `${response.user.firstName ?? ""} ${response.user.lastName ?? ""}`.trim() || response.user.email
+    : "Solicitante"
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Editar Resposta</DialogTitle>
-          <DialogDescription>
-            Faça as alterações necessárias na resposta do formulário.
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-lg font-bold">Editar Solicitação</DialogTitle>
+            {response?.number != null && (
+              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs font-bold text-primary">
+                {formatFormResponseNumber(response.number)}
+              </span>
+            )}
+          </div>
+          <DialogDescription className="text-xs">
+            Altere os dados preenchidos nos campos do formulário.
           </DialogDescription>
         </DialogHeader>
 
+        {isEditorStaff && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+            <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-semibold">Edição Administrativa</p>
+              <p className="text-[11px] opacity-90">
+                Você está editando a solicitação enviada por <strong className="font-bold">{requesterName}</strong>. Esta alteração será registrada com seu usuário no histórico de auditoria e chat do chamado.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isEditorStaff && response && (
+          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            <User className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span>Editando sua solicitação enviada em {new Date(response.createdAt).toLocaleDateString("pt-BR")}.</span>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <span className="ml-2">Carregando dados...</span>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-xs text-muted-foreground">Carregando dados da solicitação...</span>
           </div>
         ) : response && fields.length > 0 ? (
-          <FormResponseComponent
-            formId={formId}
-            fields={fields}
-            existingResponse={response.responses[0]}
-            onSubmit={handleSubmit}
-            isEditing={true}
-            isSubmitting={updateResponse.isPending}
-          />
+          <div className="mt-2">
+            <FormResponseComponent
+              formId={formId}
+              fields={fields}
+              existingResponse={response.responses[0]}
+              onSubmit={handleSubmit}
+              isEditing={true}
+              isSubmitting={updateResponse.isPending}
+            />
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-8">
-            <p className="text-muted-foreground">Erro ao carregar dados da resposta.</p>
-            <Button variant="outline" onClick={handleClose} className="mt-4">
+          <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+            <p className="text-xs text-muted-foreground">Não foi possível carregar os dados desta solicitação.</p>
+            <Button variant="outline" size="sm" onClick={handleClose} className="rounded-xl">
               Fechar
             </Button>
           </div>
@@ -114,4 +156,3 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
     </Dialog>
   )
 }
-

@@ -15,18 +15,22 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { FormSchema } from "@/lib/form-schema"
 
+import { Lock } from "lucide-react"
+
 interface FormPreviewProps {
   title: string
   setTitle?: (title: string) => void
   fields: Field[]
   readOnly?: boolean
+  showTitle?: boolean
 }
 
 // Tipo para representar os valores do formulário
 type FormValues = Record<string, string | number | boolean | string[] | File | FileList | null>
 
-export function FormPreview({ title, fields, readOnly = false }: FormPreviewProps) {
+export function FormPreview({ title, fields, readOnly = false, showTitle }: FormPreviewProps) {
   const [formData, setFormData] = useState<FormValues>({})
+  const shouldShowTitle = showTitle ?? !readOnly
 
   // Criar um schema Zod dinâmico baseado nos campos
   const schemaObj: Record<string, z.ZodTypeAny> = {}
@@ -100,18 +104,18 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
     formState: { errors },
   } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {},
   })
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     setFormData(data)
-    console.log("Form submitted:", data)
   }
 
   // Função para renderizar mensagens de erro
   const renderError = (fieldName: string) => {
     const error = errors[fieldName]
-    return error ? <p className="text-sm font-medium text-destructive mt-1">{JSON.stringify(error.message)}</p> : null
+    if (!error) return null
+
+    return <p className="text-sm font-medium text-destructive mt-1">{error.message as string}</p>
   }
 
   if (fields.length === 0) {
@@ -126,21 +130,33 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">{title}</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <div className="space-y-4">
+      {shouldShowTitle && (
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{title}</h2>
+      )}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {fields.map((field) => (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name} className="font-medium">
-              {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
-            </Label>
+          <div
+            key={field.id}
+            className="rounded-2xl border border-border/70 bg-neutral-50 dark:bg-neutral-900 p-4 sm:p-5 space-y-2.5 shadow-2xs transition-colors"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor={field.name} className="text-xs sm:text-sm font-semibold text-foreground">
+                {field.label}
+              </Label>
+              {field.required && (
+                <span className="text-[11px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md">
+                  Obrigatório *
+                </span>
+              )}
+            </div>
 
             {field.type === "text" && (
               <Input
                 id={field.name}
                 placeholder={field.placeholder}
                 maxLength={field.maxLength}
+                className="h-10 rounded-xl border-border/70 bg-background text-sm"
                 {...register(field.name)}
                 disabled={readOnly}
               />
@@ -154,13 +170,14 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
                 min={field.min}
                 max={field.max}
                 step={field.step}
+                className="h-10 rounded-xl border-border/70 bg-background text-sm"
                 {...register(field.name, { valueAsNumber: true })}
                 disabled={readOnly}
               />
             )}
 
             {field.type === "checkbox" && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2.5 rounded-xl border border-border/60 bg-background/80 p-3">
                 <Checkbox
                   id={field.name}
                   onCheckedChange={(checked) => {
@@ -171,7 +188,7 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
                 />
                 <label
                   htmlFor={field.name}
-                  className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className="text-xs sm:text-sm font-medium leading-none cursor-pointer select-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   {field.placeholder ?? "Sim"}
                 </label>
@@ -184,6 +201,7 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
                 placeholder={field.placeholder}
                 rows={field.rows ?? 3}
                 maxLength={field.maxLength}
+                className="rounded-xl border-border/70 bg-background text-sm"
                 {...register(field.name)}
                 disabled={readOnly}
               />
@@ -206,10 +224,10 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
                 defaultValue={watch(field.name) as string}
                 disabled={readOnly}
               >
-                <SelectTrigger id={field.name}>
+                <SelectTrigger id={field.name} className="h-10 rounded-xl border-border/70 bg-background text-sm">
                   <SelectValue placeholder={field.placeholder ?? "Selecione uma opção"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl">
                   {field.options?.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -235,7 +253,7 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
                 type="file"
                 accept={field.acceptedFileTypes}
                 multiple={field.multipleFiles}
-                className="cursor-pointer"
+                className="cursor-pointer h-10 rounded-xl border-border/70 bg-background text-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                 onChange={(e) => {
                   setValue(field.name, field.multipleFiles ? e.target.files : (e.target.files?.[0] ?? null))
                 }}
@@ -244,21 +262,37 @@ export function FormPreview({ title, fields, readOnly = false }: FormPreviewProp
             )}
 
             {field.type === "dynamic" && (
-              <div className="p-3 bg-muted rounded-md border border-dashed border-muted-foreground/50">
-                <p className="text-sm text-muted-foreground flex items-center gap-2 italic">
-                  <span>[O sistema coletará seu {field.dynamicType === "user_name" ? "nome" : "setor"} automaticamente]</span>
-                </p>
+              <div className="rounded-xl border border-border/60 bg-background/80 px-3.5 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-xs font-semibold text-foreground">
+                    {watch(field.name) ? (
+                      watch(field.name)
+                    ) : (
+                      <span className="text-muted-foreground italic">
+                        Coletando seu {field.dynamicType === "user_name" ? "nome" : "setor"}...
+                      </span>
+                    )}
+                  </p>
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                    <Lock className="h-3 w-3 text-primary" />
+                    Preenchido automaticamente
+                  </span>
+                </div>
               </div>
             )}
 
-            {field.helpText && <p className="text-sm text-muted-foreground">{field.helpText}</p>}
+            {field.helpText && (
+              <div className="text-xs text-muted-foreground pt-1 border-t border-border/40">
+                {field.helpText}
+              </div>
+            )}
 
             {!readOnly && renderError(field.name)}
           </div>
         ))}
 
         {!readOnly && (
-          <Button type="submit" className="mt-6">
+          <Button type="submit" className="h-10 px-6 rounded-xl font-semibold shadow-xs">
             Enviar
           </Button>
         )}

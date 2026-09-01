@@ -10,17 +10,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { AlertCircle, FileText, Loader2, Users } from "lucide-react"
+import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserSearch } from "@/components/forms/user-search"
 import { FormVisibilitySettings } from "@/components/forms/form-visibility-settings"
 import { FormSpreadsheetExportSettings } from "@/components/forms/form-spreadsheet-export-settings"
 import { FormSectionCard } from "@/components/forms/v2/form-section-card"
-import { cn } from "@/lib/utils"
 
 /** Classe do botão primário no visual do módulo Solicitações (teal da marca). */
-const ACCENT_BTN =
-  "bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]"
+const ACCENT_BTN = "bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]"
 
 interface FormBuilderWithSaveProps {
   mode: "create" | "edit"
@@ -46,22 +44,13 @@ function arraysEqual(a: string[], b: string[]): boolean {
 // Função auxiliar para comparar arrays de objetos (campos) usando JSON
 function fieldsEqual(a: Field[], b: Field[]): boolean {
   if (a.length !== b.length) return false
-  try {
-    return JSON.stringify(a) === JSON.stringify(b)
-  } catch {
-    return a.every((fieldA, index) => {
-      const fieldB = b[index]
-      return fieldA?.id === fieldB?.id && 
-             fieldA?.type === fieldB?.type &&
-             fieldA?.label === fieldB?.label
-    })
-  }
+  return JSON.stringify(a) === JSON.stringify(b)
 }
 
 export function FormBuilderWithSave({
   mode,
   formId,
-  initialTitle = "Novo Formulário",
+  initialTitle = "",
   initialDescription = "",
   initialFields = [],
   initialIsPrivate = false,
@@ -70,6 +59,7 @@ export function FormBuilderWithSave({
   initialOwnerIds = [],
   initialSpreadsheetExportEnabled = false,
 }: FormBuilderWithSaveProps) {
+  const router = useRouter()
   const [title, setTitle] = useState(initialTitle)
   const [description, setDescription] = useState(initialDescription)
   const [fields, setFields] = useState<Field[]>(initialFields)
@@ -80,9 +70,7 @@ export function FormBuilderWithSave({
   const [spreadsheetExportEnabled, setSpreadsheetExportEnabled] = useState(initialSpreadsheetExportEnabled)
   const [error, setError] = useState<string | null>(null)
 
-  const router = useRouter()
-
-  // Usar refs para rastrear valores anteriores e evitar loops infinitos
+  // Usar ref para rastrear os valores iniciais anteriores e evitar loops infinitos
   const prevInitialsRef = useRef({
     initialTitle,
     initialDescription,
@@ -137,12 +125,25 @@ export function FormBuilderWithSave({
     }
   }, [initialTitle, initialDescription, initialFields, initialIsPrivate, initialAllowedUsers, initialAllowedSectors, initialOwnerIds, initialSpreadsheetExportEnabled])
 
-  // Buscar usuários e setores para o filtro
-  const { data: usersAndSectors } = api.form.getUsersForFormVisibility.useQuery()
+  // Buscar usuários para o seletor de responsáveis e visibilidade
+  const { data: allUsers = [] } = api.user.listAll.useQuery()
+
+  const formattedUsers = (allUsers ?? []).map((u) => {
+    const fullName = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()
+    return {
+      id: u.id,
+      name: fullName.length > 0 ? fullName : (u.email ?? ""),
+      email: u.email ?? "",
+      setor: u.setor ?? null,
+    }
+  })
+
+  const utils = api.useUtils()
 
   const createForm = api.form.create.useMutation({
     onSuccess: (data) => {
       toast.success("Formulário criado com sucesso!")
+      void utils.form.list.invalidate()
       router.push(`/forms/${data.id}`)
     },
     onError: (error) => {
@@ -152,9 +153,11 @@ export function FormBuilderWithSave({
   })
 
   const updateForm = api.form.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Formulário atualizado com sucesso!")
-      router.push(`/forms/${formId}`)
+      void utils.form.list.invalidate()
+      void utils.form.getById.invalidate({ id: data.id })
+      router.push(`/forms/${data.id}`)
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar formulário: ${error.message}`)
@@ -207,18 +210,12 @@ export function FormBuilderWithSave({
     <div className="space-y-8">
       {/* Seção de Responsáveis */}
       <FormSectionCard
-        icon={<Users />}
         title="Responsáveis do Formulário"
         description="Adicione um ou mais responsáveis que poderão ver e interagir com todas as respostas deste formulário."
       >
         <div className="space-y-4">
           <UserSearch
-            users={usersAndSectors?.map(user => ({
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              setor: user.setor,
-            })) ?? []}
+            users={formattedUsers}
             selectedUsers={ownerIds}
             onSelectionChange={setOwnerIds}
             placeholder="Buscar responsáveis por nome, email ou setor..."
@@ -232,26 +229,31 @@ export function FormBuilderWithSave({
         </div>
       </FormSectionCard>
 
-      <FormSectionCard icon={<FileText />} title="Informações da solicitação">
+      <FormSectionCard title="Informações da solicitação" description="Preencha os campos abaixo com as informações da sua solicitação." >
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Título do Formulário</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="title" className="text-xs sm:text-sm font-semibold text-foreground">
+              Título do Formulário
+            </Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Digite o título do formulário"
-              className="text-lg"
+              className="h-11 rounded-xl border-border/70 bg-background/60 text-sm font-semibold transition-all focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/15"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição (opcional)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="description" className="text-xs sm:text-sm font-semibold text-foreground">
+              Descrição (opcional)
+            </Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Digite uma descrição para o formulário"
               rows={3}
+              className="rounded-xl border-border/70 bg-background/60 text-sm transition-all focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/15"
             />
           </div>
         </div>
@@ -270,20 +272,13 @@ export function FormBuilderWithSave({
         onAllowedUsersChange={setAllowedUsers}
         allowedSectors={allowedSectors}
         onAllowedSectorsChange={setAllowedSectors}
-        usersForVisibility={
-          usersAndSectors?.map((user) => ({
-            id: user.id,
-            name: user.name,
-            email: user.email ?? "",
-            setor: user.setor ?? null,
-          })) ?? []
-        }
+        usersForVisibility={formattedUsers}
       />
 
       <FormSpreadsheetExportSettings enabled={spreadsheetExportEnabled} onEnabledChange={setSpreadsheetExportEnabled} />
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="rounded-xl">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Erro</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
@@ -292,11 +287,20 @@ export function FormBuilderWithSave({
 
       <FormBuilder fields={fields} setFields={setFields} />
 
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => router.push("/forms")} disabled={isLoading}>
+      <div className="flex justify-end gap-3 pt-2">
+        <Button
+          variant="outline"
+          onClick={() => router.push("/forms")}
+          disabled={isLoading}
+          className="h-10 px-5 rounded-xl text-xs font-semibold"
+        >
           Cancelar
         </Button>
-        <Button onClick={handleSave} disabled={isLoading} className={cn(ACCENT_BTN)}>
+        <Button
+          onClick={handleSave}
+          disabled={isLoading}
+          className="h-10 px-6 rounded-xl font-semibold shadow-xs hover:shadow-md transition-all gap-2 text-xs"
+        >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {mode === "create" ? "Criar Formulário" : "Salvar Alterações"}
         </Button>
@@ -304,4 +308,3 @@ export function FormBuilderWithSave({
     </div>
   )
 }
-

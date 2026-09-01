@@ -27,7 +27,18 @@ export const ourFileRouter = {
     },
   })
     .onUploadComplete(async ({ metadata, file }) => {
-      return { file: {...file}, metadata };
+      return { file: { ...file }, metadata };
+    }),
+
+  // Uploader para anexos de formulários / solicitações (PDFs, imagens, documentos, planilhas, zip, etc.)
+  formAttachmentUploader: f({
+    blob: {
+      maxFileSize: "16MB",
+      maxFileCount: 5,
+    },
+  })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { file: { ...file }, metadata };
     }),
 } satisfies FileRouter;
 

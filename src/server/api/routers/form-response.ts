@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { z } from "zod"
-import { Prisma } from "@prisma/client"
+import { Prisma, type PrismaClient } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { sendEmail } from "@/lib/mail/email-utils"
 import { mockEmailSituacaoFormulario, mockEmailRespostaFormulario, mockEmailChatMensagemFormulario, mockEmailTagFormulario } from "@/lib/mail/html-mock"
@@ -8,8 +8,16 @@ import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 import type { Field } from "@/lib/form-types"
 import { formatSpreadsheetCell } from "@/lib/form-csv-export"
 import { buildXlsxBase64FromRows, sanitizeXlsxFilename } from "@/lib/form-xlsx-export"
+import type { FormResponseAttendant } from "@/types/form-responses"
 
 const MAX_SPREADSHEET_EXPORT_ROWS = 8_000
+
+function extractAssignedTo(responses: unknown): FormResponseAttendant | null {
+  if (!Array.isArray(responses) || responses.length === 0) return null
+  const first = responses[0] as Record<string, unknown> | undefined
+  if (!first || typeof first !== "object" || !first._assignedTo) return null
+  return first._assignedTo as unknown as FormResponseAttendant
+}
 
 /**
  * Campos de usuário que podem trafegar para o cliente.
@@ -37,6 +45,130 @@ const NOTIFY_USER_SELECT = {
   ...PUBLIC_USER_SELECT,
   is_active: true,
 } satisfies Prisma.UserSelect
+
+const STATUS_LABELS: Record<string, string> = {
+  NOT_STARTED: "Não Iniciado",
+  IN_PROGRESS: "Em Andamento",
+  COMPLETED: "Finalizado",
+}
+
+interface DispatchTicketEventParams {
+  ctx: { db: PrismaClient | Prisma.TransactionClient; auth: { userId: string } }
+  responseId: string
+  formId: string
+  formTitle: string
+  formCreatorId: string
+  ownerIds: string[]
+  authorId: string
+  responseNumber?: number | null
+  executorId: string
+  executorName: string
+  eventType: "STATUS_CHANGED" | "ATTENDANT_ASSIGNED" | "ATTENDANT_UNASSIGNED" | "TAG_APPLIED" | "TAG_REMOVED" | "TICKET_EDITED" | "TICKET_CREATED" | "CHAT_MESSAGE"
+  systemMessage?: string
+  notificationTitle: string
+  notificationMessage: string
+  emailSubject?: string
+  emailContent?: string
+}
+
+async function dispatchTicketEvent(params: DispatchTicketEventParams) {
+  const {
+    ctx,
+    responseId,
+    formId,
+    formCreatorId,
+    ownerIds,
+    authorId,
+    responseNumber,
+    executorId,
+    systemMessage,
+    notificationTitle,
+    notificationMessage,
+    emailSubject,
+    emailContent,
+  } = params
+
+  const numLabel = formatFormResponseNumber(responseNumber)
+  const fullTitle = numLabel ? `${notificationTitle} (${numLabel})` : notificationTitle
+
+  if (systemMessage) {
+    try {
+      await ctx.db.formResponseChat.create({
+        data: {
+          formResponseId: responseId,
+          userId: executorId,
+          message: systemMessage,
+        },
+      })
+    } catch (chatError) {
+      console.error("[dispatchTicketEvent] Erro ao registrar mensagem de sistema no chat:", chatError)
+    }
+  }
+
+  const responsibles = Array.from(new Set([formCreatorId, ...ownerIds])).filter(Boolean)
+  const now = new Date()
+
+  if (authorId && authorId !== executorId) {
+    try {
+      await ctx.db.notification.create({
+        data: {
+          title: fullTitle,
+          message: notificationMessage,
+          type: "INFO",
+          channel: "IN_APP",
+          userId: authorId,
+          entityId: responseId,
+          entityType: "form_response",
+          actionUrl: `/forms/my-responses`,
+          createdAt: now,
+          updatedAt: now,
+        },
+      })
+    } catch (notifError) {
+      console.error("[dispatchTicketEvent] Erro ao notificar autor:", notifError)
+    }
+  }
+
+  // Notificar responsáveis se não forem o executor
+  const otherResponsibles = responsibles.filter((id) => id !== executorId && id !== authorId)
+  if (otherResponsibles.length > 0) {
+    try {
+      await ctx.db.notification.createMany({
+        data: otherResponsibles.map((userId) => ({
+          title: fullTitle,
+          message: notificationMessage,
+          type: "INFO",
+          channel: "IN_APP",
+          userId,
+          entityId: responseId,
+          entityType: "form_response",
+          actionUrl: `/forms/${formId}/responses`,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      })
+    } catch (notifError) {
+      console.error("[dispatchTicketEvent] Erro ao notificar responsáveis:", notifError)
+    }
+  }
+
+  // 3. Disparo de e-mail (se assunto e template fornecidos)
+  if (emailSubject && emailContent && authorId && authorId !== executorId) {
+    try {
+      const author = await ctx.db.user.findUnique({
+        where: { id: authorId },
+        select: { email: true, is_active: true },
+      })
+      if (author?.email && author.is_active) {
+        await sendEmail(author.email, emailSubject, emailContent).catch((e: unknown) =>
+          console.error("[dispatchTicketEvent] Erro ao enviar email:", e)
+        )
+      }
+    } catch (emailError) {
+      console.error("[dispatchTicketEvent] Erro na rotina de email:", emailError)
+    }
+  }
+}
 
 /**
  * Gera o próximo número sequencial para um novo chamado
@@ -82,86 +214,66 @@ export const formResponseRouter = createTRPCRouter({
         const form = await ctx.db.form.findUnique({
           where: { id: input.formId },
           include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                is_active: true,
-              }
-            }
-          }
+            user: { select: NOTIFY_USER_SELECT },
+          },
         })
 
         if (form) {
-          const recipients = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
+          const authorUser = await ctx.db.user.findUnique({
+            where: { id: ctx.auth.userId },
+            select: { firstName: true, lastName: true, email: true },
+          })
+          const authorName = authorUser?.firstName
+            ? `${authorUser.firstName}${authorUser.lastName ? ` ${authorUser.lastName}` : ""}`.trim()
+            : (authorUser?.email ?? "Solicitante")
 
-          // Criar notificações in-app
-          if (recipients.length > 0) {
-            const now = new Date()
-            await ctx.db.notification.createMany({
-              data: recipients.map(userId => ({
-                title: `Nova resposta no formulário`,
-                message: form.title ?? 'Formulário',
-                type: 'INFO',
-                channel: 'IN_APP',
-                userId,
-                entityId: created.id,
-                entityType: 'form_response',
-                actionUrl: `/forms/${form.userId}`,
-                createdAt: now,
-                updatedAt: now,
-              }))
-            })
-          }
+          const formTitle = form.title ?? "Formulário"
+
+          await dispatchTicketEvent({
+            ctx,
+            responseId: created.id,
+            formId: form.id,
+            formTitle,
+            formCreatorId: form.userId,
+            ownerIds: form.ownerIds ?? [],
+            authorId: ctx.auth.userId,
+            responseNumber: nextNumber,
+            executorId: ctx.auth.userId,
+            executorName: authorName,
+            eventType: "TICKET_CREATED",
+            systemMessage: `[SISTEMA] Chamado aberto por **${authorName}**.`,
+            notificationTitle: "Novo chamado recebido",
+            notificationMessage: `${authorName} enviou uma nova solicitação em "${formTitle}".`,
+          })
 
           // Enviar emails para todos os donos do formulário
-          const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(id => id && id !== ctx.auth.userId)
-
+          const ownerUserIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter((id) => id && id !== ctx.auth.userId)
           if (ownerUserIds.length > 0) {
             const ownerUsers = await ctx.db.user.findMany({
-              where: { id: { in: ownerUserIds } },
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                is_active: true,
-              }
+              where: { id: { in: ownerUserIds }, is_active: true },
+              select: { firstName: true, lastName: true, email: true },
             })
-
-            // Enviar email para cada dono do formulário
             for (const owner of ownerUsers) {
-              if (owner.email && owner.is_active) {
+              if (owner.email) {
                 const ownerName = owner.firstName
-                  ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ''}`
-                  : (owner.email ?? 'Usuário')
-
-                const chamadoLabel = formatFormResponseNumber(created.number)
-                const emailContent = mockEmailRespostaFormulario(
-                  ownerName,
-                  input.formId,
-                  form.title ?? 'Formulário',
-                  created.number,
-                )
-
+                  ? `${owner.firstName}${owner.lastName ? ` ${owner.lastName}` : ""}`.trim()
+                  : (owner.email ?? "Responsável")
+                const chamadoLabel = formatFormResponseNumber(nextNumber)
                 await sendEmail(
                   owner.email,
                   chamadoLabel
-                    ? `Nova solicitação ${chamadoLabel} no formulário "${form.title ?? 'Formulário'}"`
-                    : `Nova solicitação no formulário "${form.title ?? 'Formulário'}"`,
-                  emailContent
-                ).catch((error) => {
-                  console.error(`[FormResponse] Erro ao enviar email de nova solicitação para ${owner.email}:`, error)
-                })
+                    ? `Elo | Intranet - Novo chamado ${chamadoLabel} em "${formTitle}"`
+                    : `Elo | Intranet - Nova solicitação em "${formTitle}"`,
+                  mockEmailRespostaFormulario(ownerName, form.id, formTitle, nextNumber),
+                ).catch((e: unknown) => console.error("[FormResponse.create] Erro ao enviar email:", e))
               }
             }
           }
         }
-      } catch (notificationError) {
-        console.error('Erro ao criar/emitter notificações de resposta de formulário:', notificationError)
+      } catch (notifError) {
+        console.error("Erro ao processar notificações de criação de formulário:", notifError)
       }
+
       return created
     }),
 
@@ -955,8 +1067,307 @@ export const formResponseRouter = createTRPCRouter({
         const hasNewMessages = !!lastChatAt && (!myLastViewedAt || lastChatAt >= myLastViewedAt)
         // Converter tags de JsonValue para string[] | null
         const tags = Array.isArray(r.tags) ? (r.tags as string[]) : null
-        return { ...r, tags, lastChatAt, myLastViewedAt, hasNewMessages }
+        const assignedTo = extractAssignedTo(r.responses)
+        return { ...r, tags, assignedTo, lastChatAt, myLastViewedAt, hasNewMessages }
       })
+    }),
+
+  listQueueInfinite: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).default(25),
+          cursor: z.string().optional(),
+          status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]).optional(),
+          search: z.string().optional(),
+          tagIds: z.array(z.string()).optional(),
+          formIds: z.array(z.string()).optional(),
+          userIds: z.array(z.string()).optional(),
+          setores: z.array(z.string()).optional(),
+          startDate: z.date().optional(),
+          endDate: z.date().optional(),
+          number: z.number().optional(),
+          hasResponse: z.boolean().optional(),
+          priority: z.enum(["ASC", "DESC"]).default("DESC"),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const limit = input?.limit ?? 25
+      const currentUserId = ctx.auth.userId
+
+      const where: Prisma.FormResponseWhereInput = {
+        form: {
+          OR: [
+            { userId: currentUserId },
+            { ownerIds: { has: currentUserId } },
+          ],
+        },
+      }
+
+      if (input?.status) {
+        where.status = input.status
+      }
+
+      if (input?.formIds && input.formIds.length > 0) {
+        where.formId = { in: input.formIds }
+      }
+
+      if (input?.userIds && input.userIds.length > 0) {
+        where.userId = { in: input.userIds }
+      }
+
+      if (input?.setores && input.setores.length > 0) {
+        where.user = {
+          setor: { in: input.setores },
+        }
+      }
+
+      if (input?.startDate || input?.endDate) {
+        where.createdAt = {}
+        if (input.startDate) where.createdAt.gte = input.startDate
+        if (input.endDate) where.createdAt.lte = input.endDate
+      }
+
+      if (input?.number != null) {
+        where.number = input.number
+      }
+
+      if (input?.hasResponse !== undefined) {
+        if (input.hasResponse) {
+          where.FormResponseChat = { some: {} }
+        } else {
+          where.FormResponseChat = { none: {} }
+        }
+      }
+
+      if (input?.tagIds && input.tagIds.length > 0) {
+        where.tags = {
+          array_contains: input.tagIds,
+        }
+      }
+
+      if (input?.search) {
+        const q = input.search.trim()
+        const num = parseInt(q.replace(/\D/g, ""), 10)
+        where.AND = [
+          {
+            OR: [
+              { form: { title: { contains: q, mode: "insensitive" } } },
+              { user: { firstName: { contains: q, mode: "insensitive" } } },
+              { user: { lastName: { contains: q, mode: "insensitive" } } },
+              { user: { email: { contains: q, mode: "insensitive" } } },
+              ...(!isNaN(num) ? [{ number: num }] : []),
+            ],
+          },
+        ]
+      }
+
+      const orderBy: Prisma.FormResponseOrderByWithRelationInput =
+        input?.priority === "ASC" ? { createdAt: "asc" } : { createdAt: "desc" }
+
+      const items = await ctx.db.formResponse.findMany({
+        take: limit + 1,
+        where,
+        cursor: input?.cursor ? { id: input.cursor } : undefined,
+        orderBy,
+        include: {
+          form: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  imageUrl: true,
+                },
+              },
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              imageUrl: true,
+              setor: true,
+            },
+          },
+        },
+      })
+
+      let nextCursor: string | undefined = undefined
+      if (items.length > limit) {
+        const nextItem = items.pop()
+        nextCursor = nextItem?.id
+      }
+
+      const responseIds = items.map((r) => r.id)
+      if (responseIds.length === 0) {
+        return {
+          items: [],
+          nextCursor: undefined,
+        }
+      }
+
+      const chats = await ctx.db.formResponseChat.findMany({
+        where: { formResponseId: { in: responseIds } },
+        orderBy: { createdAt: "desc" },
+        select: { formResponseId: true, createdAt: true },
+      })
+
+      type FormResponseViewFindManyArgs = {
+        where: { formResponseId: { in: string[] }; userId: string }
+        select: { formResponseId: true; lastViewedAt: true }
+      }
+      type FormResponseViewClient = {
+        findMany: (
+          args: FormResponseViewFindManyArgs,
+        ) => Promise<Array<{ formResponseId: string; lastViewedAt: Date }>>
+      }
+      const formResponseViewClient: FormResponseViewClient = (
+        ctx.db as unknown as { formResponseView: FormResponseViewClient }
+      ).formResponseView
+
+      const views = await formResponseViewClient
+        .findMany({
+          where: { formResponseId: { in: responseIds }, userId: currentUserId },
+          select: { formResponseId: true, lastViewedAt: true },
+        })
+        .catch(() => [])
+
+      const lastChatMap = new Map<string, Date | null>()
+      for (const c of chats) {
+        if (!lastChatMap.has(c.formResponseId)) {
+          lastChatMap.set(c.formResponseId, c.createdAt ?? null)
+        }
+      }
+      const viewMap = new Map<string, Date>(views.map((v) => [v.formResponseId, v.lastViewedAt]))
+
+      const enriched = items.map((r) => {
+        const lastChatAt = lastChatMap.get(r.id) ?? null
+        const myLastViewedAt = viewMap.get(r.id) ?? null
+        const hasNewMessages = !!lastChatAt && (!myLastViewedAt || lastChatAt >= myLastViewedAt)
+        const tags = Array.isArray(r.tags) ? (r.tags as string[]) : null
+        const assignedTo = extractAssignedTo(r.responses)
+        return { ...r, tags, assignedTo, lastChatAt, myLastViewedAt, hasNewMessages }
+      })
+
+      return {
+        items: enriched,
+        nextCursor,
+      }
+    }),
+
+  getQueueKpis: protectedProcedure
+    .input(
+      z
+        .object({
+          tagIds: z.array(z.string()).optional(),
+          formIds: z.array(z.string()).optional(),
+          userIds: z.array(z.string()).optional(),
+          setores: z.array(z.string()).optional(),
+          startDate: z.date().optional(),
+          endDate: z.date().optional(),
+          search: z.string().optional(),
+          number: z.number().optional(),
+          hasResponse: z.boolean().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
+      const where: Prisma.FormResponseWhereInput = {
+        form: {
+          OR: [
+            { userId: currentUserId },
+            { ownerIds: { has: currentUserId } },
+          ],
+        },
+      }
+
+      if (input?.formIds && input.formIds.length > 0) {
+        where.formId = { in: input.formIds }
+      }
+
+      if (input?.userIds && input.userIds.length > 0) {
+        where.userId = { in: input.userIds }
+      }
+
+      if (input?.setores && input.setores.length > 0) {
+        where.user = {
+          setor: { in: input.setores },
+        }
+      }
+
+      if (input?.startDate || input?.endDate) {
+        where.createdAt = {}
+        if (input.startDate) where.createdAt.gte = input.startDate
+        if (input.endDate) where.createdAt.lte = input.endDate
+      }
+
+      if (input?.number != null) {
+        where.number = input.number
+      }
+
+      if (input?.hasResponse !== undefined) {
+        if (input.hasResponse) {
+          where.FormResponseChat = { some: {} }
+        } else {
+          where.FormResponseChat = { none: {} }
+        }
+      }
+
+      if (input?.tagIds && input.tagIds.length > 0) {
+        where.tags = {
+          array_contains: input.tagIds,
+        }
+      }
+
+      if (input?.search) {
+        const q = input.search.trim()
+        const num = parseInt(q.replace(/\D/g, ""), 10)
+        where.AND = [
+          {
+            OR: [
+              { form: { title: { contains: q, mode: "insensitive" } } },
+              { user: { firstName: { contains: q, mode: "insensitive" } } },
+              { user: { lastName: { contains: q, mode: "insensitive" } } },
+              { user: { email: { contains: q, mode: "insensitive" } } },
+              ...(!isNaN(num) ? [{ number: num }] : []),
+            ],
+          },
+        ]
+      }
+
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+
+      const yesterday24h = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+      const [notStarted, inProgress, done, recentDone, aging] = await Promise.all([
+        ctx.db.formResponse.count({ where: { ...where, status: "NOT_STARTED" } }),
+        ctx.db.formResponse.count({ where: { ...where, status: "IN_PROGRESS" } }),
+        ctx.db.formResponse.count({ where: { ...where, status: "COMPLETED" } }),
+        ctx.db.formResponse.count({
+          where: {
+            ...where,
+            status: "COMPLETED",
+            updatedAt: { gte: todayStart },
+          },
+        }),
+        ctx.db.formResponse.count({
+          where: {
+            ...where,
+            status: { in: ["NOT_STARTED", "IN_PROGRESS"] },
+            createdAt: { lte: yesterday24h },
+          },
+        }),
+      ])
+
+      return { notStarted, inProgress, done, recentDone, aging }
     }),
 
   getChat: protectedProcedure
@@ -1077,18 +1488,18 @@ export const formResponseRouter = createTRPCRouter({
         if (recipients.size > 0) {
           const now = new Date()
           await ctx.db.notification.createMany({
-            data: Array.from(recipients).map(userId => ({
-              title: 'Nova mensagem no formulário',
+            data: Array.from(recipients).map((userId) => ({
+              title: "Nova mensagem no formulário",
               message: input.message,
-              type: 'COMMENT_ADDED',
-              channel: 'IN_APP',
+              type: "COMMENT_ADDED",
+              channel: "IN_APP",
               userId,
               entityId: input.responseId,
-              entityType: 'form_response',
-              actionUrl: `/forms/${response.form.userId}`,
+              entityType: "form_response",
+              actionUrl: userId === response.userId ? "/forms/my-responses" : `/forms/${response.formId}/responses`,
               createdAt: now,
               updatedAt: now,
-            }))
+            })),
           })
 
           // Enviar emails para os destinatários
@@ -1194,7 +1605,7 @@ export const formResponseRouter = createTRPCRouter({
     }),
 
   listUserResponses: protectedProcedure.query(async ({ ctx }) => {
-    return await ctx.db.formResponse.findMany({
+    const items = await ctx.db.formResponse.findMany({
       where: {
         userId: ctx.auth.userId,
       },
@@ -1221,7 +1632,225 @@ export const formResponseRouter = createTRPCRouter({
         createdAt: "desc",
       },
     })
+    return items.map((r) => ({
+      ...r,
+      assignedTo: extractAssignedTo(r.responses),
+    }))
   }),
+
+  assumeResponse: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+        attendantUserId: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
+      const response = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+        include: {
+          form: { select: { id: true, title: true, userId: true, ownerIds: true } },
+          user: { select: NOTIFY_USER_SELECT },
+        },
+      })
+
+      if (!response) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Chamado não encontrado" })
+      }
+
+      const isOwner = response.form.userId === currentUserId || response.form.ownerIds.includes(currentUserId)
+      if (!isOwner) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas responsáveis pelo formulário podem assumir chamados" })
+      }
+
+      const targetUserId = input.attendantUserId ?? currentUserId
+      const targetUser = await ctx.db.user.findUnique({
+        where: { id: targetUserId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          imageUrl: true,
+          setor: true,
+        },
+      })
+
+      if (!targetUser) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Usuário atendente não encontrado" })
+      }
+
+      const attendantName = targetUser.firstName
+        ? `${targetUser.firstName}${targetUser.lastName ? ` ${targetUser.lastName}` : ""}`.trim()
+        : targetUser.email
+
+      const attendantData: FormResponseAttendant = {
+        userId: targetUser.id,
+        name: attendantName,
+        email: targetUser.email,
+        imageUrl: targetUser.imageUrl,
+        setor: targetUser.setor,
+        assignedAt: new Date().toISOString(),
+      }
+
+      const currentResponses = Array.isArray(response.responses) ? [...response.responses] : [{}]
+      const firstObj = (currentResponses[0] as Record<string, unknown> | undefined) ?? {}
+      currentResponses[0] = {
+        ...firstObj,
+        _assignedTo: attendantData,
+      }
+
+      const nextStatus = response.status === "NOT_STARTED" ? "IN_PROGRESS" : response.status
+
+      const updated = await ctx.db.formResponse.update({
+        where: { id: input.responseId },
+        data: {
+          responses: currentResponses as unknown as Prisma.InputJsonValue[],
+          status: nextStatus,
+          updatedAt: new Date(),
+        },
+        include: {
+          form: true,
+          user: { select: NOTIFY_USER_SELECT },
+        },
+      })
+
+      const executorUser = await ctx.db.user.findUnique({
+        where: { id: currentUserId },
+        select: { firstName: true, lastName: true, email: true },
+      })
+      const executorName = executorUser?.firstName
+        ? `${executorUser.firstName}${executorUser.lastName ? ` ${executorUser.lastName}` : ""}`.trim()
+        : (executorUser?.email ?? "Responsável")
+
+      const attendanceSystemMessage =
+        targetUserId === currentUserId
+          ? `[ATENDIMENTO] **${attendantName}** assumiu o atendimento deste chamado.`
+          : `[ATENDIMENTO] O atendimento do chamado foi atribuído para **${attendantName}** por **${executorName}**.`
+
+      await dispatchTicketEvent({
+        ctx,
+        responseId: input.responseId,
+        formId: response.form.id,
+        formTitle: response.form.title ?? "Formulário",
+        formCreatorId: response.form.userId,
+        ownerIds: response.form.ownerIds ?? [],
+        authorId: response.userId,
+        responseNumber: response.number,
+        executorId: currentUserId,
+        executorName,
+        eventType: "ATTENDANT_ASSIGNED",
+        systemMessage: attendanceSystemMessage,
+        notificationTitle: "Atendente atribuído ao chamado",
+        notificationMessage: `${attendantName} agora é o atendente responsável pela solicitação em "${response.form.title ?? "Formulário"}".`,
+      })
+
+      return {
+        ...updated,
+        assignedTo: attendantData,
+      }
+    }),
+
+  unassignResponse: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId
+      const response = await ctx.db.formResponse.findUnique({
+        where: { id: input.responseId },
+        include: {
+          form: { select: { id: true, title: true, userId: true, ownerIds: true } },
+          user: { select: NOTIFY_USER_SELECT },
+        },
+      })
+
+      if (!response) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Chamado não encontrado" })
+      }
+
+      const isOwner = response.form.userId === currentUserId || response.form.ownerIds.includes(currentUserId)
+      if (!isOwner) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas responsáveis pelo formulário podem liberar chamados" })
+      }
+
+      const currentResponses = Array.isArray(response.responses) ? [...response.responses] : [{}]
+      const firstObj = (currentResponses[0] as Record<string, unknown> | undefined) ?? {}
+      const restObj = { ...firstObj }
+      delete restObj._assignedTo
+      currentResponses[0] = restObj
+
+      const updated = await ctx.db.formResponse.update({
+        where: { id: input.responseId },
+        data: {
+          responses: currentResponses as unknown as Prisma.InputJsonValue[],
+          updatedAt: new Date(),
+        },
+        include: {
+          form: true,
+          user: { select: NOTIFY_USER_SELECT },
+        },
+      })
+
+      const executorUser = await ctx.db.user.findUnique({
+        where: { id: currentUserId },
+        select: { firstName: true, lastName: true, email: true },
+      })
+      const executorName = executorUser?.firstName
+        ? `${executorUser.firstName}${executorUser.lastName ? ` ${executorUser.lastName}` : ""}`.trim()
+        : (executorUser?.email ?? "Responsável")
+
+      await dispatchTicketEvent({
+        ctx,
+        responseId: input.responseId,
+        formId: response.form.id,
+        formTitle: response.form.title ?? "Formulário",
+        formCreatorId: response.form.userId,
+        ownerIds: response.form.ownerIds ?? [],
+        authorId: response.userId,
+        responseNumber: response.number,
+        executorId: currentUserId,
+        executorName,
+        eventType: "ATTENDANT_UNASSIGNED",
+        systemMessage: `[ATENDIMENTO] O atendimento do chamado foi liberado por **${executorName}** e está disponível para a equipe.`,
+        notificationTitle: "Atendimento do chamado liberado",
+        notificationMessage: `O atendimento da solicitação em "${response.form.title ?? "Formulário"}" foi liberado.`,
+      })
+
+      return {
+        ...updated,
+        assignedTo: null,
+      }
+    }),
+
+  getFormResponsibles: protectedProcedure
+    .input(
+      z.object({
+        formId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const form = await ctx.db.form.findUnique({
+        where: { id: input.formId },
+        select: { userId: true, ownerIds: true },
+      })
+      if (!form) return []
+      const userIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(Boolean)
+      return await ctx.db.user.findMany({
+        where: { id: { in: userIds }, is_active: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          imageUrl: true,
+          setor: true,
+        },
+      })
+    }),
 
   updateStatus: protectedProcedure
     .input(
@@ -1236,7 +1865,7 @@ export const formResponseRouter = createTRPCRouter({
       // Verificar se a resposta existe
       const response = await ctx.db.formResponse.findUnique({
         where: { id: input.responseId },
-        include: { form: { select: { userId: true, ownerIds: true } } },
+        include: { form: { select: { id: true, title: true, userId: true, ownerIds: true } } },
       })
 
       if (!response) {
@@ -1255,9 +1884,38 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
+      const executor = await ctx.db.user.findUnique({
+        where: { id: currentUserId },
+        select: { id: true, firstName: true, lastName: true, email: true, imageUrl: true, setor: true }
+      })
+
+      const executorNome = executor?.firstName
+        ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`.trim()
+        : (executor?.email ?? 'Um administrador')
+
+      const currentResponses = Array.isArray(response.responses) ? [...response.responses] : [{}]
+      const firstObj = (currentResponses[0] as Record<string, unknown> | undefined) ?? {}
+      let updatedResponses = currentResponses
+
+      if (!firstObj._assignedTo && (input.status === "IN_PROGRESS" || input.status === "COMPLETED") && executor) {
+        currentResponses[0] = {
+          ...firstObj,
+          _assignedTo: {
+            userId: executor.id,
+            name: executorNome,
+            email: executor.email,
+            imageUrl: executor.imageUrl,
+            setor: executor.setor,
+            assignedAt: new Date().toISOString(),
+          },
+        }
+        updatedResponses = currentResponses
+      }
+
       const ret = await ctx.db.formResponse.update({
         where: { id: input.responseId },
         data: {
+          responses: updatedResponses as unknown as Prisma.InputJsonValue[],
           status: input.status,
           statusComment: input.statusComment,
           updatedAt: new Date(),
@@ -1270,66 +1928,33 @@ export const formResponseRouter = createTRPCRouter({
         },
       })
 
-      const executor = await ctx.db.user.findUnique({
-        where: { id: currentUserId },
-        select: { firstName: true, lastName: true, email: true }
+      const statusLabel = STATUS_LABELS[input.status] ?? input.status
+      const formTitle = response.form.title ?? "Formulário"
+      const author = (ret as unknown as { user?: { firstName?: string | null; email?: string | null } }).user
+
+      await dispatchTicketEvent({
+        ctx,
+        responseId: ret.id,
+        formId: response.form.id,
+        formTitle,
+        formCreatorId: response.form.userId,
+        ownerIds: response.form.ownerIds ?? [],
+        authorId: response.userId,
+        responseNumber: ret.number,
+        executorId: currentUserId,
+        executorName: executorNome,
+        eventType: "STATUS_CHANGED",
+        systemMessage: `[STATUS] O status do chamado foi alterado para **${statusLabel}** por **${executorNome}**${input.statusComment ? `.\n\n> 💬 *Observação:* ${input.statusComment}` : "."}`,
+        notificationTitle: "Status do chamado atualizado",
+        notificationMessage: `${executorNome} alterou o status da sua solicitação em "${formTitle}" para ${statusLabel}.`,
+        emailSubject: `Atualização na sua solicitação: ${statusLabel}`,
+        emailContent: mockEmailSituacaoFormulario(author?.firstName ?? "Solicitante", input.status, ret.id, response.form.id, formTitle),
       })
 
-      const executorNome = executor?.firstName
-        ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`
-        : (executor?.email ?? 'Um administrador')
-
-      const statusMap: Record<string, string> = {
-        'NOT_STARTED': 'Não Iniciado',
-        'IN_PROGRESS': 'Em Andamento',
-        'COMPLETED': 'Finalizado'
+      return {
+        ...ret,
+        assignedTo: extractAssignedTo(ret.responses),
       }
-
-      const statusLabels: Record<string, string> = {
-        'NOT_STARTED': 'como Não Iniciado',
-        'IN_PROGRESS': 'para Em Andamento',
-        'COMPLETED': 'como Finalizado'
-      }
-
-      if (ret?.user != null && ret?.form != null) {
-        const author = ret.user
-        const form = ret.form as { id: string; title: string | null; userId: string }
-        const formTitle = form.title ?? "Formulário"
-        const formId = form.id
-        const responseId = ret.id
-        const responseStatus = ret.status
-
-        const notificationMessage = `${executorNome} alterou o status da sua solicitação no formulário "${formTitle}" ${!statusLabels[responseStatus] || 'para ' + responseStatus}.`
-
-        try {
-          // Criar notificação in-app para o autor
-          await ctx.db.notification.create({
-            data: {
-              title: 'Status da solicitação alterado',
-              message: notificationMessage,
-              type: 'INFO',
-              channel: 'IN_APP',
-              userId: response.userId,
-              entityId: responseId,
-              entityType: 'form_response',
-              actionUrl: `/forms/${form.userId}`,
-            }
-          })
-
-          // Enviar email
-          if (author.email && author.is_active) {
-            await sendEmail(
-              author.email,
-              `Atualização na sua solicitação: ${!statusMap[responseStatus] || responseStatus}`,
-              mockEmailSituacaoFormulario(author.firstName ?? "", responseStatus, responseId, formId, formTitle),
-            ).catch(e => console.error("Erro ao enviar email de status:", e))
-          }
-        } catch (e) {
-          console.error("Erro ao processar notificações de status:", e)
-        }
-      }
-
-      return ret
     }),
 
   getById: protectedProcedure
@@ -1376,10 +2001,12 @@ export const formResponseRouter = createTRPCRouter({
 
       // Converter tags de JsonValue para string[] | null
       const tags = Array.isArray(response.tags) ? (response.tags as string[]) : null
+      const assignedTo = extractAssignedTo(response.responses)
 
       return {
         ...response,
         tags,
+        assignedTo,
       }
     }),
 
@@ -1396,8 +2023,23 @@ export const formResponseRouter = createTRPCRouter({
       const existingResponse = await ctx.db.formResponse.findUnique({
         where: { id: input.responseId },
         include: {
-          form: { select: { userId: true, ownerIds: true } },
-          user: { select: { id: true } },
+          form: {
+            select: {
+              id: true,
+              title: true,
+              userId: true,
+              ownerIds: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              is_active: true,
+            },
+          },
         },
       })
 
@@ -1408,34 +2050,99 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
-      // Verificar se o usuário é o dono do formulário ou o autor da resposta
-      const isOwner = existingResponse.form.userId === currentUserId || existingResponse.form.ownerIds.includes(currentUserId)
-      if (!isOwner && existingResponse.userId !== currentUserId) {
+      const currentUser = await ctx.db.user.findUnique({
+        where: { id: currentUserId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role_config: true,
+        },
+      })
+
+      // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+      const roleConfig = (currentUser?.role_config ?? {}) as import("@/types/role-config").RolesConfig
+      const isAdmin = roleConfig.sudo || (roleConfig.can_create_solicitacoes ?? false)
+      const isOwner =
+        isAdmin ||
+        existingResponse.form.userId === currentUserId ||
+        existingResponse.form.ownerIds.includes(currentUserId)
+      const isAuthor = existingResponse.userId === currentUserId
+
+      if (!isOwner && !isAuthor) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Você não tem permissão para editar esta resposta",
         })
       }
 
-      return await ctx.db.formResponse.update({
+      if (isAuthor && !isOwner && existingResponse.status === "COMPLETED") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Esta solicitação já foi finalizada e não pode mais ser editada pelo solicitante.",
+        })
+      }
+
+      const editorName = currentUser?.firstName
+        ? `${currentUser.firstName}${currentUser.lastName ? ` ${currentUser.lastName}` : ""}`.trim()
+        : (currentUser?.email ?? "Administrador")
+
+      const now = new Date()
+      const isEditedByStaff = currentUserId !== existingResponse.userId
+
+      // Enriquecer o payload de respostas com metadados de auditoria de última edição
+      const updatedResponses = input.responses.map((resp, idx) => {
+        if (idx === 0) {
+          const currentAudit = (resp._lastEdit as Record<string, unknown> | undefined) ?? {}
+          return {
+            ...resp,
+            _lastEdit: {
+              ...currentAudit,
+              editorId: currentUserId,
+              editorName,
+              isStaff: isEditedByStaff,
+              editedAt: now.toISOString(),
+            },
+          }
+        }
+        return resp
+      })
+
+      const updated = await ctx.db.formResponse.update({
         where: { id: input.responseId },
         data: {
-          responses: input.responses,
-          updatedAt: new Date(),
+          responses: updatedResponses,
+          updatedAt: now,
         },
         include: {
           form: true,
           user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              imageUrl: true,
-            },
+            select: PUBLIC_USER_SELECT,
           },
         },
       })
+
+      await dispatchTicketEvent({
+        ctx,
+        responseId: input.responseId,
+        formId: existingResponse.form.id,
+        formTitle: existingResponse.form.title ?? "Formulário",
+        formCreatorId: existingResponse.form.userId,
+        ownerIds: existingResponse.form.ownerIds ?? [],
+        authorId: existingResponse.userId,
+        responseNumber: existingResponse.number,
+        executorId: currentUserId,
+        executorName: editorName,
+        eventType: "TICKET_EDITED",
+        systemMessage: isEditedByStaff
+          ? `[EDICAO] As informações deste chamado foram atualizadas por **${editorName}** (Equipe de Atendimento).`
+          : `[EDICAO] O solicitante **${editorName}** atualizou as respostas deste chamado.`,
+        notificationTitle: "Chamado editado",
+        notificationMessage: `${editorName} editou as informações da solicitação em "${existingResponse.form.title ?? "Formulário"}".`,
+      })
+
+      return updated
     }),
 
   // ========== TAGS MANAGEMENT ==========
@@ -1456,7 +2163,7 @@ export const formResponseRouter = createTRPCRouter({
       ativa: boolean
     }>
 
-    return tags.filter(tag => tag.ativa)
+    return tags.filter((tag) => tag?.ativa)
   }),
 
   // Criar nova tag
@@ -1682,48 +2389,41 @@ export const formResponseRouter = createTRPCRouter({
         }),
       ])
 
-      // Notificar o autor da resposta
-      try {
-        const executor = await ctx.db.user.findUnique({
-          where: { id: ctx.auth.userId },
-          select: { firstName: true, lastName: true, email: true }
-        })
-        const executorNome = executor?.firstName
-          ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`
-          : (executor?.email ?? 'Um administrador')
+      const executor = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { firstName: true, lastName: true, email: true }
+      })
+      const executorNome = executor?.firstName
+        ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`.trim()
+        : (executor?.email ?? 'Um administrador')
 
-        const notificationMessage = `${executorNome} adicionou sua solicitação para tag "${tag.nome}".`
+      const formTitle = updatedResponse.form.title ?? "Formulário"
 
-        await ctx.db.notification.create({
-          data: {
-            title: 'Tag adicionada à sua solicitação',
-            message: notificationMessage,
-            type: 'INFO',
-            channel: 'IN_APP',
-            userId: updatedResponse.userId,
-            entityId: updatedResponse.id,
-            entityType: 'form_response',
-            actionUrl: `/forms/${updatedResponse.form.userId}`,
-          }
-        })
-
-        if (updatedResponse.user.email && updatedResponse.user.is_active) {
-          await sendEmail(
-            updatedResponse.user.email,
-            `Tag adicionada: ${tag.nome}`,
-            mockEmailTagFormulario(
-              updatedResponse.user.firstName ?? "Usuário",
-              executorNome,
-              tag.nome,
-              updatedResponse.id,
-              updatedResponse.formId,
-              updatedResponse.form.title ?? 'Formulário'
-            )
-          ).catch(e => console.error("Erro ao enviar email de tag:", e))
-        }
-      } catch (e) {
-        console.error("Erro ao notificar aplicação de tag:", e)
-      }
+      await dispatchTicketEvent({
+        ctx,
+        responseId: updatedResponse.id,
+        formId: updatedResponse.form.id,
+        formTitle,
+        formCreatorId: updatedResponse.form.userId,
+        ownerIds: updatedResponse.form.ownerIds ?? [],
+        authorId: updatedResponse.userId,
+        responseNumber: updatedResponse.number,
+        executorId: ctx.auth.userId,
+        executorName: executorNome,
+        eventType: "TAG_APPLIED",
+        systemMessage: `[TAG] Tag **${tag.nome}** vinculada ao chamado por **${executorNome}**.`,
+        notificationTitle: "Tag adicionada à solicitação",
+        notificationMessage: `${executorNome} vinculou a tag "${tag.nome}" ao chamado em "${formTitle}".`,
+        emailSubject: `Tag adicionada: ${tag.nome}`,
+        emailContent: mockEmailTagFormulario(
+          updatedResponse.user.firstName ?? "Usuário",
+          executorNome,
+          tag.nome,
+          updatedResponse.id,
+          updatedResponse.formId,
+          formTitle,
+        ),
+      })
 
       return { success: true }
     }),
@@ -1739,6 +2439,7 @@ export const formResponseRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const response = await ctx.db.formResponse.findUnique({
         where: { id: input.responseId },
+        include: { form: true },
       })
 
       if (!response) {
@@ -1764,39 +2465,38 @@ export const formResponseRouter = createTRPCRouter({
         }),
       ])
 
-      // Notificar o autor da resposta
-      try {
-        const executor = await ctx.db.user.findUnique({
-          where: { id: ctx.auth.userId },
-          select: { firstName: true, lastName: true, email: true }
-        })
-        const executorNome = executor?.firstName
-          ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`
-          : (executor?.email ?? 'Um administrador')
+      const executor = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { firstName: true, lastName: true, email: true }
+      })
+      const executorNome = executor?.firstName
+        ? `${executor.firstName}${executor.lastName ? ` ${executor.lastName}` : ''}`.trim()
+        : (executor?.email ?? 'Um administrador')
 
-        // Buscar nome da tag
-        const config = await ctx.db.globalConfig.findFirst()
-        const tags = (config?.formResponseTags as unknown as Array<{ id: string, nome: string }>) || []
-        const tag = tags.find(t => t.id === input.tagId)
-        const tagName = tag?.nome ?? 'Tag'
+      // Buscar nome da tag
+      const config = await ctx.db.globalConfig.findFirst()
+      const tags = (config?.formResponseTags as unknown as Array<{ id: string, nome: string }>) || []
+      const tag = tags.find(t => t.id === input.tagId)
+      const tagName = tag?.nome ?? 'Tag'
 
-        const notificationMessage = `${executorNome} removeu sua solicitação da tag "${tagName}".`
+      const formTitle = updatedResponse.form.title ?? "Formulário"
 
-        await ctx.db.notification.create({
-          data: {
-            title: 'Tag removida da sua solicitação',
-            message: notificationMessage,
-            type: 'INFO',
-            channel: 'IN_APP',
-            userId: updatedResponse.userId,
-            entityId: updatedResponse.id,
-            entityType: 'form_response',
-            actionUrl: `/forms/${updatedResponse.form.userId}`,
-          }
-        })
-      } catch (e) {
-        console.error("Erro ao notificar remoção de tag:", e)
-      }
+      await dispatchTicketEvent({
+        ctx,
+        responseId: updatedResponse.id,
+        formId: updatedResponse.form.id,
+        formTitle,
+        formCreatorId: updatedResponse.form.userId,
+        ownerIds: updatedResponse.form.ownerIds ?? [],
+        authorId: updatedResponse.userId,
+        responseNumber: updatedResponse.number,
+        executorId: ctx.auth.userId,
+        executorName: executorNome,
+        eventType: "TAG_REMOVED",
+        systemMessage: `[TAG] Tag **${tagName}** desvinculada do chamado por **${executorNome}**.`,
+        notificationTitle: "Tag removida da solicitação",
+        notificationMessage: `${executorNome} removeu a tag "${tagName}" da solicitação em "${formTitle}".`,
+      })
 
       return { success: true }
     }),

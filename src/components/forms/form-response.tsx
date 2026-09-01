@@ -16,16 +16,21 @@ import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
-import { CheckCircle2, Send, Lock, RefreshCw, FileText } from "lucide-react"
+import { CheckCircle2, Send, Lock, RefreshCw, FileText, Loader2 } from "lucide-react"
 // Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { Field } from "@/lib/form-types"
-import { cn } from "@/lib/utils"
+import { useUploadThing } from "@/components/uploadthing"
 
-/** Classe do botão primário no visual do módulo Solicitações (teal da marca). */
-const ACCENT_BTN =
-  "bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]"
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
 
 /** Valores iniciais vazios para nova solicitação (após envio ou fluxo equivalente). */
 function buildEmptyFormValues(fields: Field[]): Record<string, unknown> {
@@ -72,66 +77,74 @@ export function FormResponseComponent({
   existingResponse,
   isEditing = false,
   onSubmit: customOnSubmit,
-  isSubmitting: customIsSubmitting
+  isSubmitting: customIsSubmitting,
 }: FormResponseComponentProps) {
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [createdInfo, setCreatedInfo] = useState<{ id: string; number?: number | null } | null>(null)
   /** Incrementado ao limpar o formulário para remontar Select/arquivo (defaultValue não segue reset). */
   const [formResetKey, setFormResetKey] = useState(0)
   const router = useRouter()
   // Criar um schema Zod dinâmico baseado nos campos
   const schemaObj: Record<string, z.ZodTypeAny> = {}
   fields.forEach((field) => {
-    let schema;
+    let schema: z.ZodTypeAny = z.any()
 
     switch (field.type) {
-      case "text":
-        schema = z.string()
-        if (field.required) schema = schema.min(1, "Este campo é obrigatório")
-        if (field.minLength) schema = schema.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
-        if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
-        if (!field.required) schema = schema.optional()
+      case "text": {
+        let s = z.string()
+        if (field.required) s = s.min(1, "Este campo é obrigatório")
+        if (field.minLength) s = s.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
+        if (field.maxLength) s = s.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
+        schema = field.required ? s : s.optional()
         break
-      case "number":
-        schema = z.coerce.number()
-        if (field.min !== undefined) schema = schema.min(field.min, `Deve ser maior ou igual a ${field.min}`)
-        if (field.max !== undefined) schema = schema.max(field.max, `Deve ser menor ou igual a ${field.max}`)
-        if (!field.required) schema = schema.optional()
+      }
+      case "number": {
+        let s = z.coerce.number()
+        if (field.min !== undefined) s = s.min(field.min, `Deve ser maior ou igual a ${field.min}`)
+        if (field.max !== undefined) s = s.max(field.max, `Deve ser menor ou igual a ${field.max}`)
+        schema = field.required ? s : s.optional()
         break
+      }
       case "checkbox":
-        schema = z.boolean().optional()
-        if (field.required) schema = z.boolean().refine((val) => val === true, "Este campo é obrigatório")
+        schema = field.required
+          ? z.boolean().refine((val) => val === true, "Este campo é obrigatório")
+          : z.boolean().optional()
         break
-      case "formatted":
-        schema = z.string()
-        if (field.required) schema = schema.min(1, "Este campo é obrigatório")
-        if (!field.required) schema = schema.optional()
+      case "formatted": {
+        let s = z.string()
+        if (field.required) s = s.min(1, "Este campo é obrigatório")
+        schema = field.required ? s : s.optional()
         break
+      }
       case "combobox":
         if (field.multiple) {
-          schema = z.array(z.string())
-          if (field.required) schema = schema.min(1, "Selecione pelo menos uma opção")
-          if (!field.required) schema = schema.optional()
+          const s = z.array(z.string())
+          schema = field.required ? s.min(1, "Selecione pelo menos uma opção") : s.optional()
         } else {
-          schema = z.string()
-          if (field.required) schema = schema.min(1, "Selecione uma opção")
-          if (!field.required) schema = schema.optional()
+          const s = z.string()
+          schema = field.required ? s.min(1, "Selecione uma opção") : s.optional()
         }
         break
       case "file":
-        if (field.multipleFiles) {
-          schema = z.custom<FileList>((val) => val instanceof FileList, { message: "Arquivo inválido" })
+        if (field.required) {
+          schema = z.any().refine((val) => {
+            if (!val) return false
+            if (typeof FileList !== "undefined" && val instanceof FileList) return val.length > 0
+            if (Array.isArray(val)) return val.length > 0
+            return true
+          }, "Este campo é obrigatório")
         } else {
-          schema = z.custom<File>((val) => val instanceof File, { message: "Arquivo inválido" })
+          schema = z.any().optional().nullable()
         }
-        if (!field.required) schema = schema.optional().nullable()
         break
-      case "textarea":
-        schema = z.string()
-        if (field.required) schema = schema.min(1, "Este campo é obrigatório")
-        if (field.minLength) schema = schema.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
-        if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
-        if (!field.required) schema = schema.optional()
+      case "textarea": {
+        let s = z.string()
+        if (field.required) s = s.min(1, "Este campo é obrigatório")
+        if (field.minLength) s = s.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
+        if (field.maxLength) s = s.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
+        schema = field.required ? s : s.optional()
         break
+      }
       case "dynamic":
         schema = z.string().optional()
         break
@@ -159,102 +172,197 @@ export function FormResponseComponent({
 
   const fillDynamicFields = useCallback(() => {
     if (!userData) return
-    fields.forEach((field) => {
-      if (field.type === "dynamic") {
-        let value = ""
-        if (field.dynamicType === "user_name") {
-          value = userData.firstName ? `${userData.firstName} ${userData.lastName ?? ""}`.trim() : (userData.email ?? "")
-        } else if (field.dynamicType === "user_sector") {
-          value = userData.setor ?? "Nenhum setor informado"
-        }
-        setValue(field.name, value)
+    for (const field of fields) {
+      if (field.type !== "dynamic") continue
+      if (field.dynamicType === "user_name") {
+        const fullName = `${userData.firstName ?? ""} ${userData.lastName ?? ""}`.trim()
+        const name = fullName.length > 0 ? fullName : (userData.email ?? "")
+        setValue(field.name, name)
+      } else if (field.dynamicType === "user_sector" || (field.dynamicType as string) === "user_setor") {
+        setValue(field.name, userData.setor ?? "")
       }
-    })
-  }, [userData, fields, setValue])
+    }
+  }, [fields, userData, setValue])
 
-  // Preencher campos dinâmicos automaticamente
   useEffect(() => {
+    if (existingResponse && Object.keys(existingResponse).length > 0) return
     fillDynamicFields()
-  }, [fillDynamicFields])
+  }, [existingResponse, fillDynamicFields])
 
-  const submitResponse = api.formResponse.create.useMutation({
-    onSuccess: async () => {
-      toast.success("Solicitação enviada com sucesso!", {
-        description: "Os dados foram registrados e os responsáveis serão notificados.",
-      })
-      setIsSubmitted(true)
-      // Email agora é enviado no router (form-response.ts), não precisa mais aqui
-    },
-    onError: (error) => {
-      toast.error(`Erro ao enviar resposta: ${error.message}`)
+  const [uploadingFiles, setUploadingFiles] = useState(false)
+  const { startUpload } = useUploadThing("formAttachmentUploader", {
+    onUploadError: (e) => {
+      console.warn("UploadThing aviso:", e.message)
     },
   })
 
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    // Converter File e FileList para representação legível
-    const processedData = Object.fromEntries(
-      Object.entries(data).map(([key, value]) => {
-        if (value instanceof File) {
-          return [key, { name: value.name, type: value.type, size: value.size }]
-        } else if (value instanceof FileList) {
-          return [key, Array.from(value).map((file) => ({ name: file.name, type: file.type, size: file.size }))]
-        }
-        return [key, value]
-      }),
-    )
+  const submitResponse = api.formResponse.create.useMutation({
+    onSuccess: (data) => {
+      setIsSubmitted(true)
+      if (Array.isArray(data) && data[0]) {
+        const first = data[0] as { id: string; number?: number | null }
+        setCreatedInfo({ id: first.id, number: first.number ?? undefined })
+      } else if (data && typeof data === "object" && "id" in data) {
+        const item = data as { id: string; number?: number | null }
+        setCreatedInfo({ id: item.id, number: item.number ?? undefined })
+      }
+      toast.success("Solicitação enviada com sucesso!")
+    },
+    onError: (error) => {
+      toast.error(error.message)
+    },
+  })
 
-    if (isEditing && customOnSubmit) {
-      customOnSubmit(processedData)
-    } else {
-      submitResponse.mutate({
-        formId,
-        responses: [processedData],
-      })
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      setUploadingFiles(true)
+      const processedData: Record<string, unknown> = {}
+
+      for (const [key, value] of Object.entries(data)) {
+        if (value instanceof File) {
+          let fileUrl: string | undefined
+          let keyStr: string | undefined
+
+          try {
+            const res = await startUpload([value])
+            if (res?.[0]) {
+              fileUrl = (res[0] as { ufsUrl?: string; url?: string }).ufsUrl ?? res[0].url
+              keyStr = res[0].key
+            }
+          } catch {
+            // Se UploadThing falhar ou estiver offline, faz fallback para base64 local
+          }
+
+          fileUrl ??= await readFileAsBase64(value)
+
+          processedData[key] = {
+            name: value.name,
+            url: fileUrl,
+            size: value.size,
+            type: value.type,
+            key: keyStr,
+          }
+        } else if (typeof FileList !== "undefined" && value instanceof FileList) {
+          const filesArray = Array.from(value)
+          if (filesArray.length > 0) {
+            const uploadedItems: Array<{ name: string; url: string; size: number; type: string; key?: string }> = []
+
+            for (const file of filesArray) {
+              let fileUrl: string | undefined
+              let keyStr: string | undefined
+
+              try {
+                const res = await startUpload([file])
+                if (res?.[0]) {
+                  fileUrl = (res[0] as { ufsUrl?: string; url?: string }).ufsUrl ?? res[0].url
+                  keyStr = res[0].key
+                }
+              } catch {
+                // Fallback para base64
+              }
+
+              fileUrl ??= await readFileAsBase64(file)
+
+              uploadedItems.push({
+                name: file.name,
+                url: fileUrl,
+                size: file.size,
+                type: file.type,
+                key: keyStr,
+              })
+            }
+
+            processedData[key] = uploadedItems
+          } else {
+            processedData[key] = []
+          }
+        } else if (typeof value === "string") {
+          let str = value.trim()
+          if (
+            (str.startsWith('"') && str.endsWith('"')) ||
+            (str.startsWith("'") && str.endsWith("'"))
+          ) {
+            try {
+              const parsed: unknown = JSON.parse(str)
+              if (typeof parsed === "string") str = parsed
+            } catch {
+              str = str.slice(1, -1)
+            }
+          }
+          processedData[key] = str
+        } else {
+          processedData[key] = value
+        }
+      }
+
+      if (isEditing && customOnSubmit) {
+        customOnSubmit(processedData)
+      } else {
+        submitResponse.mutate({
+          formId,
+          responses: [processedData],
+        })
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error("Ocorreu um erro ao processar os arquivos.")
+    } finally {
+      setUploadingFiles(false)
     }
   }
 
   // Função para renderizar mensagens de erro
   const renderError = (fieldName: string) => {
     const error = errors[fieldName]
-    return error ? <p className="text-sm font-medium text-destructive mt-1">{JSON.stringify(error.message)}</p> : null
+    if (!error) return null
+    const message = typeof error.message === "string" ? error.message : null
+    return message ? <p className="text-xs font-medium text-destructive mt-1">{message}</p> : null
   }
 
   if (isSubmitted && !isEditing) {
     return (
-      <div>
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[hsl(158_64%_45%/.25)] bg-[hsl(158_64%_45%/.12)] text-[hsl(158_64%_45%)]">
-            <CheckCircle2 className="h-6 w-6" />
-          </div>
-          <div>
-            <h3 className="text-[17px] font-semibold">Solicitação enviada com sucesso!</h3>
-            <p className="mt-1.5 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
-              Os dados foram registrados e os responsáveis serão notificados. Acompanhe o
-              andamento em &ldquo;Minhas solicitações&rdquo;.
-            </p>
-          </div>
+      <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-xl p-6 sm:p-8 shadow-sm space-y-6 text-center flex flex-col items-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-xs">
+          <CheckCircle2 className="h-8 w-8" />
         </div>
 
-        <div className="mt-6 flex flex-col justify-end gap-2 border-t border-[hsl(var(--v2-border-soft))] pt-5 md:flex-row">
-          <Link href="/forms/my-responses">
-            <Button variant="ghost" className="w-full md:w-auto">
-              <FileText className="mr-2 h-4 w-4" />
-              Ver minhas solicitações
+        <div className="space-y-2 max-w-md">
+          <h3 className="text-xl font-bold tracking-tight text-foreground">Solicitação Enviada!</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+            Seu chamado foi registrado e já está na fila de atendimento do setor responsável.
+          </p>
+
+          {createdInfo?.number != null && (
+            <div className="pt-2">
+              <span className="inline-flex items-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1 font-mono text-sm font-bold text-primary shadow-2xs">
+                Chamado #{createdInfo.number}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 w-full max-w-sm">
+          <Link href="/forms/my-responses" className="w-full sm:flex-1">
+            <Button className="w-full rounded-xl text-xs font-semibold gap-2 shadow-sm">
+              <FileText className="h-4 w-4" />
+              Minhas Solicitações
             </Button>
           </Link>
           <Button
-            className={cn("w-full md:w-auto", ACCENT_BTN)}
+            variant="outline"
+            className="w-full sm:flex-1 rounded-xl text-xs font-medium border-border/60"
             onClick={() => {
               const empty = buildEmptyFormValues(fields)
               reset(empty)
               fillDynamicFields()
               setFormResetKey((k) => k + 1)
               setIsSubmitted(false)
+              setCreatedInfo(null)
               router.refresh()
             }}
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Abrir nova solicitação
+            <RefreshCw className="mr-2 h-3.5 w-3.5" />
+            Nova Solicitação
           </Button>
         </div>
       </div>
@@ -275,6 +383,7 @@ export function FormResponseComponent({
               id={field.name}
               placeholder={field.placeholder}
               maxLength={field.maxLength}
+              className="h-10 rounded-xl border-border/70 bg-background text-sm"
               {...register(field.name)}
             />
           )}
@@ -287,22 +396,23 @@ export function FormResponseComponent({
               min={field.min}
               max={field.max}
               step={field.step}
+              className="h-10 rounded-xl border-border/70 bg-background text-sm"
               {...register(field.name, { valueAsNumber: true })}
             />
           )}
 
           {field.type === "checkbox" && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2.5 rounded-xl border border-border/60 bg-background/80 p-3">
               <Checkbox
                 id={field.name}
+                checked={!!watch(field.name)}
                 onCheckedChange={(checked) => {
-                  setValue(field.name, checked as boolean)
+                  setValue(field.name, checked === true)
                 }}
-                {...register(field.name)}
               />
               <label
                 htmlFor={field.name}
-                className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-xs sm:text-sm font-medium leading-none cursor-pointer select-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 {field.placeholder ?? "Sim"}
               </label>
@@ -315,6 +425,7 @@ export function FormResponseComponent({
               placeholder={field.placeholder}
               rows={field.rows ?? 3}
               maxLength={field.maxLength}
+              className="rounded-xl border-border/70 bg-background text-sm"
               {...register(field.name)}
             />
           )}
@@ -331,10 +442,10 @@ export function FormResponseComponent({
 
           {field.type === "combobox" && !field.multiple && (
             <Select onValueChange={(value) => setValue(field.name, value)} defaultValue={watch(field.name) as string}>
-              <SelectTrigger id={field.name}>
+              <SelectTrigger id={field.name} className="h-10 rounded-xl border-border/70 bg-background text-sm">
                 <SelectValue placeholder={field.placeholder ?? "Selecione uma opção"} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl">
                 {field.options?.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -359,7 +470,7 @@ export function FormResponseComponent({
               type="file"
               accept={field.acceptedFileTypes}
               multiple={field.multipleFiles}
-              className="cursor-pointer"
+              className="cursor-pointer h-10 rounded-xl border-border/70 bg-background text-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
               onChange={(e) => {
                 setValue(field.name, field.multipleFiles ? e.target.files : (e.target.files?.[0] ?? null))
               }}
@@ -367,9 +478,9 @@ export function FormResponseComponent({
           )}
 
           {field.type === "dynamic" && (
-            <div className="rounded-[var(--v2-radius-card,0.75rem)] border border-[hsl(var(--v2-border-soft,var(--border)))] bg-muted/40 px-3 py-2.5">
+            <div className="rounded-xl border border-border/60 bg-background/80 px-3.5 py-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="min-w-0 truncate text-sm font-medium">
+                <p className="min-w-0 truncate text-xs font-semibold text-foreground">
                   {watch(field.name) ? (
                     watch(field.name)
                   ) : (
@@ -378,8 +489,8 @@ export function FormResponseComponent({
                     </span>
                   )}
                 </p>
-                <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
-                  <Lock className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                  <Lock className="h-3 w-3 text-primary" />
                   Preenchido automaticamente
                 </span>
               </div>
@@ -387,7 +498,11 @@ export function FormResponseComponent({
             </div>
           )}
 
-          {field.helpText && <ReactMarkdown remarkPlugins={[remarkGfm]}>{field.helpText}</ReactMarkdown>}
+          {field.helpText && (
+            <div className="text-xs text-muted-foreground pt-1 border-t border-border/40">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{field.helpText}</ReactMarkdown>
+            </div>
+          )}
 
           {renderError(field.name)}
         </div>
@@ -395,18 +510,21 @@ export function FormResponseComponent({
 
       <Button
         type="submit"
-        className={cn("mt-6", ACCENT_BTN)}
-        disabled={customIsSubmitting ?? isSubmitting}
+        className="mt-6 w-full sm:w-auto rounded-xl gap-2 font-semibold shadow-xs"
+        disabled={uploadingFiles || (customIsSubmitting ?? isSubmitting)}
       >
-        {!isEditing && customIsSubmitting === undefined && (
-          <Send className="mr-2 h-4 w-4" />
+        {uploadingFiles || customIsSubmitting || isSubmitting ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          !isEditing && <Send className="h-3.5 w-3.5" />
         )}
-        {customIsSubmitting !== undefined
-          ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
-          : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar solicitação"))
+        {uploadingFiles
+          ? "Enviando anexos..."
+          : customIsSubmitting !== undefined
+            ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
+            : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar solicitação"))
         }
       </Button>
     </form>
   )
 }
-

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Users, ChevronDown, Lock, Globe } from "lucide-react"
+import { Users, ChevronDown, Globe } from "lucide-react"
 import { UserSearch } from "@/components/forms/user-search"
 
 export interface FormVisibilityUserOption {
@@ -48,7 +48,6 @@ export function FormVisibilitySettings({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {isPrivate ? <Lock className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
           Quem pode ver este formulário
         </CardTitle>
       </CardHeader>

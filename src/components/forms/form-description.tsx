@@ -17,17 +17,19 @@ export function FormDescription({ description, className }: FormDescriptionProps
     return null
   }
 
-  // Converter \n literal em quebras de linha reais
-  // O ReactMarkdown interpreta quebras de linha, mas precisa de \n\n para parágrafos
-  // Vamos converter \n para \n\n para que o markdown interprete corretamente
-  const processedDescription = description.replace(/\\n/g, "\n\n")
+  // Remove eventuais tags antigas [icon:...] caso existam em registros legados
+  const cleanDescription = description.replace(/\[icon:[a-z0-9-]+\]/gi, "").trim()
+  if (!cleanDescription) {
+    return null
+  }
+
+  const processedDescription = cleanDescription.replace(/\\n/g, "\n\n")
 
   return (
     <div className={cn("prose prose-sm max-w-none dark:prose-invert", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          // Garantir que parágrafos respeitem quebras de linha
           p: ({ children }) => <p className="whitespace-pre-wrap">{children}</p>,
         }}
       >
@@ -36,4 +38,3 @@ export function FormDescription({ description, className }: FormDescriptionProps
     </div>
   )
 }
-

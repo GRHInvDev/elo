@@ -64,14 +64,14 @@ export function FormsSubPageShell({
               {backLabel}
             </Link>
           )}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full">
             {titlePrefix}
-            <h1 className="text-[28px] font-bold leading-tight tracking-[-0.025em]">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
               {title}
             </h1>
           </div>
           {description && (
-            <div className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+            <div className="mt-1 text-sm text-muted-foreground w-full">
               {description}
             </div>
           )}
@@ -97,7 +97,7 @@ export function FormsPanel({ children, className }: FormsPanelProps) {
   return (
     <div
       className={cn(
-        "rounded-[var(--v2-radius-card)] border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.75)] p-6 shadow-[var(--v2-shadow)] backdrop-blur-sm",
+        "rounded-2xl border border-border/50 bg-card/60 backdrop-blur-xl p-5 sm:p-6 shadow-sm",
         className,
       )}
     >
@@ -105,3 +105,4 @@ export function FormsPanel({ children, className }: FormsPanelProps) {
     </div>
   )
 }
+

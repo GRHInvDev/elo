@@ -38,7 +38,7 @@ const nameSchema = z
   .max(100, "Nome não pode exceder 100 caracteres")
 
 export const setoresRouter = createTRPCRouter({
-  // Lista setores. Por padrão retorna todos; use onlyActive para o dropdown.
+  // Lista setores com seus ícones e cores configurados
   list: protectedProcedure
     .input(z.object({ onlyActive: z.boolean().optional() }).optional())
     .query(async ({ ctx, input }) => {
@@ -48,8 +48,35 @@ export const setoresRouter = createTRPCRouter({
       })
     }),
 
+  // Retorna o mapa de configurações de setores (acesso público autenticado)
+  getSectorConfigs: protectedProcedure.query(async ({ ctx }) => {
+    const setores = await ctx.db.setor.findMany({
+      orderBy: { name: "asc" },
+    })
+
+    const result: Record<string, { icon: string; color: string }> = {}
+    for (const s of setores) {
+      if (s.icon || s.color) {
+        const entry: { icon: string; color: string } = {
+          icon: s.icon ?? "help-circle",
+          color: s.color ?? "#3B82F6",
+        }
+        result[s.name] = entry
+        result[s.value] = entry
+        result[s.id] = entry
+      }
+    }
+    return result
+  }),
+
   create: protectedProcedure
-    .input(z.object({ name: nameSchema }))
+    .input(
+      z.object({
+        name: nameSchema,
+        icon: z.string().optional(),
+        color: z.string().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.auth.userId },
@@ -76,17 +103,25 @@ export const setoresRouter = createTRPCRouter({
         })
       }
 
-      return ctx.db.setor.create({ data: { name: input.name, value } })
+      return ctx.db.setor.create({
+        data: {
+          name: input.name,
+          value,
+          icon: input.icon ?? null,
+          color: input.color ?? null,
+        },
+      })
     }),
 
-  // Atualiza apenas o rótulo e/ou o status. O `value` é imutável para não
-  // órfãos os usuários já vinculados a ele.
+  // Atualiza rótulo, status, ícone e cor
   update: protectedProcedure
     .input(
       z.object({
         id: z.string(),
         name: nameSchema.optional(),
         active: z.boolean().optional(),
+        icon: z.string().optional(),
+        color: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -111,7 +146,15 @@ export const setoresRouter = createTRPCRouter({
         }
       }
 
-      return ctx.db.setor.update({ where: { id }, data })
+      return ctx.db.setor.update({
+        where: { id },
+        data: {
+          ...(data.name ? { name: data.name } : {}),
+          ...(data.active !== undefined ? { active: data.active } : {}),
+          ...(data.icon !== undefined ? { icon: data.icon } : {}),
+          ...(data.color !== undefined ? { color: data.color } : {}),
+        },
+      })
     }),
 
   delete: protectedProcedure
