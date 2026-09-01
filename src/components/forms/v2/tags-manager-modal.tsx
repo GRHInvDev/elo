@@ -27,6 +27,7 @@ interface TagsManagerModalProps {
 }
 
 export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) {
+  const utils = api.useUtils()
   const { data: tags = [], refetch } = api.formResponse.getAllTags.useQuery(undefined, {
     enabled: open,
   })
@@ -35,6 +36,8 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
     onSuccess: () => {
       toast.success("Tag criada com sucesso")
       void refetch()
+      void utils.formResponse.getTags.invalidate()
+      void utils.formResponse.listQueueInfinite.invalidate()
       setNewTagName("")
       setNewTagColor("#3B82F6")
     },
@@ -47,6 +50,8 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
     onSuccess: () => {
       toast.success("Tag atualizada com sucesso")
       void refetch()
+      void utils.formResponse.getTags.invalidate()
+      void utils.formResponse.listQueueInfinite.invalidate()
       setEditingTagId(null)
     },
     onError: (error) => {
@@ -117,7 +122,7 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
         <div className="space-y-6">
           {/* Criar nova tag */}
           <div className="space-y-4 p-4 border rounded-lg">
-            <h3 className="font-semibold">Criar Nova Tag</h3>
+            <h3 className="font-semibold text-sm">Criar Nova Tag</h3>
             <div className="flex gap-2">
               <div className="flex-1">
                 <Label htmlFor="new-tag-name">Nome</Label>
@@ -141,7 +146,7 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
                     type="color"
                     value={newTagColor}
                     onChange={(e) => setNewTagColor(e.target.value)}
-                    className="h-10"
+                    className="h-10 cursor-pointer"
                   />
                   <Input
                     type="text"
@@ -166,7 +171,7 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
 
           {/* Lista de tags */}
           <div className="space-y-2">
-            <h3 className="font-semibold">Tags Existentes</h3>
+            <h3 className="font-semibold text-sm">Tags Existentes</h3>
             {tags.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma tag criada ainda</p>
             ) : (
@@ -195,7 +200,7 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
                             type="color"
                             value={editingTagColor}
                             onChange={(e) => setEditingTagColor(e.target.value)}
-                            className="w-16 h-10"
+                            className="w-16 h-10 cursor-pointer"
                           />
                           <Button
                             size="sm"
@@ -265,4 +270,3 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
     </Dialog>
   )
 }
-

@@ -16,11 +16,21 @@ import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
-import { CheckCircle2, Send, Lock, RefreshCw, FileText } from "lucide-react"
+import { CheckCircle2, Send, Lock, RefreshCw, FileText, Loader2 } from "lucide-react"
 // Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { Field } from "@/lib/form-types"
+import { useUploadThing } from "@/components/uploadthing"
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
 
 /** Valores iniciais vazios para nova solicitação (após envio ou fluxo equivalente). */
 function buildEmptyFormValues(fields: Field[]): Record<string, unknown> {
@@ -67,7 +77,7 @@ export function FormResponseComponent({
   existingResponse,
   isEditing = false,
   onSubmit: customOnSubmit,
-  isSubmitting: customIsSubmitting
+  isSubmitting: customIsSubmitting,
 }: FormResponseComponentProps) {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [createdInfo, setCreatedInfo] = useState<{ id: string; number?: number | null } | null>(null)
@@ -77,57 +87,64 @@ export function FormResponseComponent({
   // Criar um schema Zod dinâmico baseado nos campos
   const schemaObj: Record<string, z.ZodTypeAny> = {}
   fields.forEach((field) => {
-    let schema;
+    let schema: z.ZodTypeAny = z.any()
 
     switch (field.type) {
-      case "text":
-        schema = z.string()
-        if (field.required) schema = schema.min(1, "Este campo é obrigatório")
-        if (field.minLength) schema = schema.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
-        if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
-        if (!field.required) schema = schema.optional()
+      case "text": {
+        let s = z.string()
+        if (field.required) s = s.min(1, "Este campo é obrigatório")
+        if (field.minLength) s = s.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
+        if (field.maxLength) s = s.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
+        schema = field.required ? s : s.optional()
         break
-      case "number":
-        schema = z.coerce.number()
-        if (field.min !== undefined) schema = schema.min(field.min, `Deve ser maior ou igual a ${field.min}`)
-        if (field.max !== undefined) schema = schema.max(field.max, `Deve ser menor ou igual a ${field.max}`)
-        if (!field.required) schema = schema.optional()
+      }
+      case "number": {
+        let s = z.coerce.number()
+        if (field.min !== undefined) s = s.min(field.min, `Deve ser maior ou igual a ${field.min}`)
+        if (field.max !== undefined) s = s.max(field.max, `Deve ser menor ou igual a ${field.max}`)
+        schema = field.required ? s : s.optional()
         break
+      }
       case "checkbox":
-        schema = z.boolean().optional()
-        if (field.required) schema = z.boolean().refine((val) => val === true, "Este campo é obrigatório")
+        schema = field.required
+          ? z.boolean().refine((val) => val === true, "Este campo é obrigatório")
+          : z.boolean().optional()
         break
-      case "formatted":
-        schema = z.string()
-        if (field.required) schema = schema.min(1, "Este campo é obrigatório")
-        if (!field.required) schema = schema.optional()
+      case "formatted": {
+        let s = z.string()
+        if (field.required) s = s.min(1, "Este campo é obrigatório")
+        schema = field.required ? s : s.optional()
         break
+      }
       case "combobox":
         if (field.multiple) {
-          schema = z.array(z.string())
-          if (field.required) schema = schema.min(1, "Selecione pelo menos uma opção")
-          if (!field.required) schema = schema.optional()
+          const s = z.array(z.string())
+          schema = field.required ? s.min(1, "Selecione pelo menos uma opção") : s.optional()
         } else {
-          schema = z.string()
-          if (field.required) schema = schema.min(1, "Selecione uma opção")
-          if (!field.required) schema = schema.optional()
+          const s = z.string()
+          schema = field.required ? s.min(1, "Selecione uma opção") : s.optional()
         }
         break
       case "file":
-        if (field.multipleFiles) {
-          schema = z.custom<FileList>((val) => val instanceof FileList, { message: "Arquivo inválido" })
+        if (field.required) {
+          schema = z.any().refine((val) => {
+            if (!val) return false
+            if (typeof FileList !== "undefined" && val instanceof FileList) return val.length > 0
+            if (Array.isArray(val)) return val.length > 0
+            return true
+          }, "Este campo é obrigatório")
         } else {
-          schema = z.custom<File>((val) => val instanceof File, { message: "Arquivo inválido" })
+          schema = z.any().optional().nullable()
         }
-        if (!field.required) schema = schema.optional().nullable()
         break
-      case "textarea":
-        schema = z.string()
-        if (field.required) schema = schema.min(1, "Este campo é obrigatório")
-        if (field.minLength) schema = schema.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
-        if (field.maxLength) schema = schema.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
-        if (!field.required) schema = schema.optional()
+      case "textarea": {
+        let s = z.string()
+        if (field.required) s = s.min(1, "Este campo é obrigatório")
+        if (field.minLength) s = s.min(field.minLength, `Deve ter pelo menos ${field.minLength} caracteres`)
+        if (field.maxLength) s = s.max(field.maxLength, `Deve ter no máximo ${field.maxLength} caracteres`)
+        schema = field.required ? s : s.optional()
         break
+      }
       case "dynamic":
         schema = z.string().optional()
         break
@@ -172,6 +189,13 @@ export function FormResponseComponent({
     fillDynamicFields()
   }, [existingResponse, fillDynamicFields])
 
+  const [uploadingFiles, setUploadingFiles] = useState(false)
+  const { startUpload } = useUploadThing("formAttachmentUploader", {
+    onUploadError: (e) => {
+      console.warn("UploadThing aviso:", e.message)
+    },
+  })
+
   const submitResponse = api.formResponse.create.useMutation({
     onSuccess: (data) => {
       setIsSubmitted(true)
@@ -189,33 +213,110 @@ export function FormResponseComponent({
     },
   })
 
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    // Converter File e FileList para representação legível
-    const processedData = Object.fromEntries(
-      Object.entries(data).map(([key, value]) => {
-        if (value instanceof File) {
-          return [key, { name: value.name, type: value.type, size: value.size }]
-        } else if (value instanceof FileList) {
-          return [key, Array.from(value).map((file) => ({ name: file.name, type: file.type, size: file.size }))]
-        }
-        return [key, value]
-      }),
-    )
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      setUploadingFiles(true)
+      const processedData: Record<string, unknown> = {}
 
-    if (isEditing && customOnSubmit) {
-      customOnSubmit(processedData)
-    } else {
-      submitResponse.mutate({
-        formId,
-        responses: [processedData],
-      })
+      for (const [key, value] of Object.entries(data)) {
+        if (value instanceof File) {
+          let fileUrl: string | undefined
+          let keyStr: string | undefined
+
+          try {
+            const res = await startUpload([value])
+            if (res?.[0]) {
+              fileUrl = (res[0] as { ufsUrl?: string; url?: string }).ufsUrl ?? res[0].url
+              keyStr = res[0].key
+            }
+          } catch {
+            // Se UploadThing falhar ou estiver offline, faz fallback para base64 local
+          }
+
+          fileUrl ??= await readFileAsBase64(value)
+
+          processedData[key] = {
+            name: value.name,
+            url: fileUrl,
+            size: value.size,
+            type: value.type,
+            key: keyStr,
+          }
+        } else if (typeof FileList !== "undefined" && value instanceof FileList) {
+          const filesArray = Array.from(value)
+          if (filesArray.length > 0) {
+            const uploadedItems: Array<{ name: string; url: string; size: number; type: string; key?: string }> = []
+
+            for (const file of filesArray) {
+              let fileUrl: string | undefined
+              let keyStr: string | undefined
+
+              try {
+                const res = await startUpload([file])
+                if (res?.[0]) {
+                  fileUrl = (res[0] as { ufsUrl?: string; url?: string }).ufsUrl ?? res[0].url
+                  keyStr = res[0].key
+                }
+              } catch {
+                // Fallback para base64
+              }
+
+              fileUrl ??= await readFileAsBase64(file)
+
+              uploadedItems.push({
+                name: file.name,
+                url: fileUrl,
+                size: file.size,
+                type: file.type,
+                key: keyStr,
+              })
+            }
+
+            processedData[key] = uploadedItems
+          } else {
+            processedData[key] = []
+          }
+        } else if (typeof value === "string") {
+          let str = value.trim()
+          if (
+            (str.startsWith('"') && str.endsWith('"')) ||
+            (str.startsWith("'") && str.endsWith("'"))
+          ) {
+            try {
+              const parsed: unknown = JSON.parse(str)
+              if (typeof parsed === "string") str = parsed
+            } catch {
+              str = str.slice(1, -1)
+            }
+          }
+          processedData[key] = str
+        } else {
+          processedData[key] = value
+        }
+      }
+
+      if (isEditing && customOnSubmit) {
+        customOnSubmit(processedData)
+      } else {
+        submitResponse.mutate({
+          formId,
+          responses: [processedData],
+        })
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error("Ocorreu um erro ao processar os arquivos.")
+    } finally {
+      setUploadingFiles(false)
     }
   }
 
   // Função para renderizar mensagens de erro
   const renderError = (fieldName: string) => {
     const error = errors[fieldName]
-    return error ? <p className="text-xs font-medium text-destructive mt-1">{JSON.stringify(error.message)}</p> : null
+    if (!error) return null
+    const message = typeof error.message === "string" ? error.message : null
+    return message ? <p className="text-xs font-medium text-destructive mt-1">{message}</p> : null
   }
 
   if (isSubmitted && !isEditing) {
@@ -304,10 +405,10 @@ export function FormResponseComponent({
             <div className="flex items-center space-x-2.5 rounded-xl border border-border/60 bg-background/80 p-3">
               <Checkbox
                 id={field.name}
+                checked={!!watch(field.name)}
                 onCheckedChange={(checked) => {
-                  setValue(field.name, checked as boolean)
+                  setValue(field.name, checked === true)
                 }}
-                {...register(field.name)}
               />
               <label
                 htmlFor={field.name}
@@ -410,17 +511,20 @@ export function FormResponseComponent({
       <Button
         type="submit"
         className="mt-6 w-full sm:w-auto rounded-xl gap-2 font-semibold shadow-xs"
-        disabled={customIsSubmitting ?? isSubmitting}
+        disabled={uploadingFiles || (customIsSubmitting ?? isSubmitting)}
       >
-        {!isEditing && customIsSubmitting === undefined && (
-          <Send className="h-3.5 w-3.5" />
+        {uploadingFiles || customIsSubmitting || isSubmitting ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          !isEditing && <Send className="h-3.5 w-3.5" />
         )}
-        {customIsSubmitting !== undefined
-          ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
-          : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar solicitação"))
+        {uploadingFiles
+          ? "Enviando anexos..."
+          : customIsSubmitting !== undefined
+            ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
+            : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar solicitação"))
         }
       </Button>
     </form>
   )
 }
-

@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { FileSpreadsheet } from "lucide-react"
 
 interface FormSpreadsheetExportSettingsProps {
   enabled: boolean
@@ -18,7 +17,6 @@ export function FormSpreadsheetExportSettings({ enabled, onEnabledChange }: Form
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileSpreadsheet className="h-5 w-5" />
           Exportação em planilha
         </CardTitle>
       </CardHeader>

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LayoutList } from "lucide-react"
 import { FieldTypeSelector } from "@/components/forms/field-type-selector"
 import { FieldEditor } from "@/components/forms/field-editor"
 import { FormPreview } from "@/components/forms/form-preview"
@@ -50,7 +49,7 @@ export function FormBuilder({fields, setFields}:{fields: Field[], setFields: (fi
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-1">
-        <FormSectionCard icon={<LayoutList />} title="Campos do Formulário">
+        <FormSectionCard title="Campos do Formulário">
           <div className="mb-6">
             <FieldList
               fields={fields}
@@ -93,4 +92,3 @@ export function FormBuilder({fields, setFields}:{fields: Field[], setFields: (fi
     </div>
   )
 }
-

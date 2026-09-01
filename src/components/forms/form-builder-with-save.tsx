@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { AlertCircle, FileText, Loader2, Users } from "lucide-react"
+import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserSearch } from "@/components/forms/user-search"
 import { FormVisibilitySettings } from "@/components/forms/form-visibility-settings"
@@ -210,7 +210,6 @@ export function FormBuilderWithSave({
     <div className="space-y-8">
       {/* Seção de Responsáveis */}
       <FormSectionCard
-        icon={<Users />}
         title="Responsáveis do Formulário"
         description="Adicione um ou mais responsáveis que poderão ver e interagir com todas as respostas deste formulário."
       >
@@ -230,7 +229,7 @@ export function FormBuilderWithSave({
         </div>
       </FormSectionCard>
 
-      <FormSectionCard icon={<FileText />} title="Informações da solicitação">
+      <FormSectionCard title="Informações da solicitação" description="Preencha os campos abaixo com as informações da sua solicitação." >
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="title" className="text-xs sm:text-sm font-semibold text-foreground">
@@ -309,4 +308,3 @@ export function FormBuilderWithSave({
     </div>
   )
 }
-

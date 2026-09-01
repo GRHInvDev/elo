@@ -27,6 +27,15 @@ export interface ChatMessage {
     user: UserBasicInfo
 }
 
+export interface FormResponseAttendant {
+    userId: string
+    name: string
+    email: string
+    imageUrl?: string | null
+    setor?: string | null
+    assignedAt: Date | string
+}
+
 export interface FormResponse {
     id: string
     number: number | null
@@ -36,6 +45,7 @@ export interface FormResponse {
     status: ResponseStatus
     statusComment: string | null
     tags?: string[] | null
+    assignedTo?: FormResponseAttendant | null
     createdAt: Date | string
     updatedAt: Date | string
     lastChatAt?: Date | string | null

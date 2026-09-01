@@ -48,30 +48,33 @@ export default async function RespondFormPage({ params }: RespondFormPageProps) 
 
   return (
     <DashboardShell>
-      <FormsSubPageShell
-        breadcrumbs={[
-          { label: "Home", href: "/dashboard" },
-          { label: "Solicitações", href: "/forms" },
-          { label: form.title, href: `/forms/${id}` },
-          { label: "Responder" },
-        ]}
-        title={form.title}
-        description={<FormDescription description={form.description} />}
-      >
-        <FormsPanel className="bg-neutral-50 dark:bg-neutral-900 border border-border/70 shadow-xs">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-4">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">Preencha sua solicitação</h2>
-            {requiredCount > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {requiredCount} {requiredCount === 1 ? "campo obrigatório" : "campos obrigatórios"} · marcados com{" "}
-                <span className="text-rose-500 font-bold">*</span>
-              </span>
-            )}
-          </div>
-          <FormResponseComponent formId={id} fields={fields} />
-        </FormsPanel>
-      </FormsSubPageShell>
+      <div className="mx-auto w-full max-w-3xl px-1 sm:px-0">
+        <FormsSubPageShell
+          breadcrumbs={[
+            { label: "Home", href: "/dashboard" },
+            { label: "Solicitações", href: "/forms" },
+            { label: form.title, href: `/forms/${id}` },
+            { label: "Responder" },
+          ]}
+          title={form.title}
+          description={<FormDescription description={form.description} />}
+        >
+          <FormsPanel className="rounded-2xl border border-border/70 bg-card/80 dark:bg-card/60 backdrop-blur-md p-5 sm:p-7 shadow-sm">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-4">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+                Preencha sua solicitação
+              </h2>
+              {requiredCount > 0 && (
+                <span className="text-xs font-medium text-muted-foreground">
+                  {requiredCount} {requiredCount === 1 ? "campo obrigatório" : "campos obrigatórios"} · marcados com{" "}
+                  <span className="text-rose-500 font-bold">*</span>
+                </span>
+              )}
+            </div>
+            <FormResponseComponent formId={id} fields={fields} />
+          </FormsPanel>
+        </FormsSubPageShell>
+      </div>
     </DashboardShell>
   )
 }
-

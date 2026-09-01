@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale"
 import {
   Check,
   Clock,
+  Edit,
   FileText,
   Filter,
   Inbox,
@@ -15,6 +16,7 @@ import {
   MessageSquare,
   Plus,
   Search,
+  UserCheck,
   X,
 } from "lucide-react"
 
@@ -24,11 +26,13 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { RequestStatusPill, STATUS_META } from "@/components/forms/v2/request-status-pill"
 import { ResponseDetails } from "@/components/forms/response-details"
 import { ResponseChat } from "@/components/forms/response-chat"
+import { EditResponseModal } from "@/components/forms/edit-response-modal"
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 import type { Field } from "@/lib/form-types"
 import type { FormResponse, ResponseStatus } from "@/types/form-responses"
@@ -52,11 +56,23 @@ function age(date: Date | string) {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR })
 }
 
+function initials(name?: string | null, email?: string | null) {
+  if (name) {
+    const parts = name.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase()
+    }
+    return (name[0] ?? "?").toUpperCase()
+  }
+  return (email?.[0] ?? "?").toUpperCase()
+}
+
 export function UserResponsesList() {
   const [view, setView] = React.useState<View>("lista")
   const [query, setQuery] = React.useState("")
   const [filter, setFilter] = React.useState<StatusFilter>("ALL")
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [editTarget, setEditTarget] = React.useState<{ responseId: string; formId: string } | null>(null)
 
   const { data, isLoading } = api.formResponse.listUserResponses.useQuery()
   const responses = React.useMemo<FormResponse[]>(
@@ -142,7 +158,7 @@ export function UserResponsesList() {
   return (
     <div className="space-y-6">
       {/* KPIs Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 ">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KpiCard label="Total" value={counts.total} />
         <KpiCard label="Não iniciadas" value={counts.notStarted} />
         <KpiCard label="Em andamento" value={counts.inProgress} tone="warn" />
@@ -270,11 +286,27 @@ export function UserResponsesList() {
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>
         <SheetContent
           side="right"
-          className="flex w-full flex-col gap-0 p-0 sm:max-w-[500px] border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-xl"
+          className="flex w-full flex-col gap-0 p-0 sm:max-w-[520px] border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-xl"
         >
-          {selected && <RequestDetail response={selected} onClose={() => setSelectedId(null)} />}
+          {selected && (
+            <RequestDetail
+              response={selected}
+              onClose={() => setSelectedId(null)}
+              onEdit={selected.status !== "COMPLETED" ? (responseId, formId) => setEditTarget({ responseId, formId }) : undefined}
+            />
+          )}
         </SheetContent>
       </Sheet>
+
+      {/* Modal de Edição de Resposta */}
+      {editTarget && (
+        <EditResponseModal
+          responseId={editTarget.responseId}
+          formId={editTarget.formId}
+          isOpen={!!editTarget}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
     </div>
   )
 }
@@ -342,10 +374,19 @@ function RequestCard({ response: r, onOpen }: { response: FormResponse; onOpen: 
           </p>
         )}
 
-        <p className="mt-1.5 text-[11px] text-muted-foreground flex items-center gap-1">
-          <Clock className="size-3 text-muted-foreground/70" />
-          Enviada {age(r.createdAt)}
-        </p>
+        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+          <p className="flex items-center gap-1">
+            <Clock className="size-3 text-muted-foreground/70" />
+            Enviada {age(r.createdAt)}
+          </p>
+
+          {r.assignedTo && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+              <UserCheck className="h-3 w-3 shrink-0" />
+              <span>Atendente: {r.assignedTo.name}</span>
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -370,6 +411,12 @@ function BoardCard({ response: r, onOpen }: { response: FormResponse; onOpen: ()
     >
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs font-bold text-primary">{shortId(r)}</span>
+        {r.assignedTo && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded" title={`Atendente: ${r.assignedTo.name}`}>
+            <UserCheck className="h-3 w-3 shrink-0" />
+            <span>{r.assignedTo.name.split(" ")[0]}</span>
+          </span>
+        )}
       </div>
       <p className="line-clamp-2 text-xs font-semibold text-foreground leading-snug">
         {r.form?.title ?? "Sem título"}
@@ -384,7 +431,15 @@ function BoardCard({ response: r, onOpen }: { response: FormResponse; onOpen: ()
   )
 }
 
-function RequestDetail({ response: r, onClose }: { response: FormResponse; onClose: () => void }) {
+function RequestDetail({
+  response: r,
+  onClose,
+  onEdit,
+}: {
+  response: FormResponse
+  onClose: () => void
+  onEdit?: (responseId: string, formId: string) => void
+}) {
   const { data: form } = api.form.getById.useQuery({ id: r.formId })
   const { data: allTags = [] } = api.formResponse.getAllTags.useQuery()
   const utils = api.useUtils()
@@ -393,6 +448,7 @@ function RequestDetail({ response: r, onClose }: { response: FormResponse; onClo
     onSuccess: () => {
       toast.success("Tag aplicada")
       void utils.formResponse.listUserResponses.invalidate()
+      void utils.formResponse.getChat.invalidate({ responseId: r.id })
     },
     onError: (err) => toast.error(err.message || "Erro ao aplicar tag"),
   })
@@ -401,6 +457,7 @@ function RequestDetail({ response: r, onClose }: { response: FormResponse; onClo
     onSuccess: () => {
       toast.success("Tag removida")
       void utils.formResponse.listUserResponses.invalidate()
+      void utils.formResponse.getChat.invalidate({ responseId: r.id })
     },
     onError: (err) => toast.error(err.message || "Erro ao remover tag"),
   })
@@ -429,18 +486,58 @@ function RequestDetail({ response: r, onClose }: { response: FormResponse; onClo
           </p>
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0 -mr-1 rounded-lg text-muted-foreground hover:text-foreground"
-          onClick={onClose}
-          aria-label="Fechar"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {r.status !== "COMPLETED" && onEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 rounded-lg text-xs font-semibold gap-1 border-border/80 bg-background hover:bg-muted cursor-pointer"
+              onClick={() => onEdit(r.id, r.formId)}
+              title="Editar respostas enviadas"
+            >
+              <Edit className="h-3.5 w-3.5 text-primary" />
+              <span>Editar</span>
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={onClose}
+            aria-label="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        {r.assignedTo && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="h-9 w-9 border border-primary/30 shrink-0">
+                <AvatarImage src={r.assignedTo.imageUrl ?? ""} />
+                <AvatarFallback className="text-xs font-bold bg-primary/20 text-primary">
+                  {initials(r.assignedTo.name, r.assignedTo.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 leading-tight">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5 truncate">
+                  <UserCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="truncate">{r.assignedTo.name}</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {r.assignedTo.setor ? `${r.assignedTo.setor} • ` : ""}Responsável pelo seu atendimento
+                </p>
+              </div>
+            </div>
+            <span className="rounded-md bg-primary/10 px-2 py-1 text-[10.5px] font-semibold text-primary shrink-0">
+              Em atendimento
+            </span>
+          </div>
+        )}
+
         {/* Bloco de Tags */}
         <div className="rounded-xl border border-border/50 bg-background/50 p-3.5">
           <div className="flex items-center justify-between mb-2">

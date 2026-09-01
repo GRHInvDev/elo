@@ -12,7 +12,6 @@ import {
   Eye,
   FileText,
   Inbox,
-  KanbanSquare,
   LifeBuoy,
   PlusCircle,
   Search,
@@ -147,16 +146,6 @@ export function FormsListV2({ userCanCreateForm, showCentralLink }: FormsListV2P
               )}
             </Button>
           </Link>
-          <Link href="/forms/kanban">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-xl text-xs font-semibold gap-1.5 border-border/80 bg-card hover:border-primary/50"
-            >
-              <KanbanSquare className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Quadro</span>
-            </Button>
-          </Link>
           {showCentralLink && (
             <Link href="/forms/central">
               <Button
@@ -165,7 +154,7 @@ export function FormsListV2({ userCanCreateForm, showCentralLink }: FormsListV2P
                 className="h-9 rounded-xl text-xs font-semibold gap-1.5 border-border/80 bg-card hover:border-primary/50"
               >
                 <LifeBuoy className="h-4 w-4" />
-                <span>Central</span>
+                <span>Central de Chamados</span>
               </Button>
             </Link>
           )}
