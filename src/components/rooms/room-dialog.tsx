@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react"
 import Image from "next/image"
-import { addMinutes, format, parse } from "date-fns"
+import { addMinutes, differenceInMinutes, format, parse } from "date-fns"
 import {
   Clock,
   Loader2,
@@ -39,8 +39,18 @@ export interface RoomForDialog {
   visualModel?: IsometricRoomModel | null
 }
 
+export interface BookingForDialog {
+  id: string
+  roomId: string
+  title: string
+  start: Date
+  end: Date
+  roomName: string
+}
+
 interface RoomDialogProps {
-  room: RoomForDialog | undefined | null
+  room?: RoomForDialog | undefined | null
+  booking?: BookingForDialog | undefined | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -60,10 +70,12 @@ function formatMinutes(minutes: number): string {
   return `${hrs}h ${mins}m`
 }
 
-export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
+export function RoomDialog({ room, booking, open, onOpenChange }: RoomDialogProps) {
   const { toast } = useToast()
   const utils = api.useUtils()
   const { canCreateBooking } = useAccessControl()
+
+  const isEditMode = Boolean(booking)
 
   const [durationMinutes, setDurationMinutes] = useState<number>(60)
   const [isCustomDuration, setIsCustomDuration] = useState<boolean>(false)
@@ -73,9 +85,28 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
 
   const has3DModel = Boolean(room?.visualModel?.imageUrl)
   const hasPhotos = Boolean(room?.photos && room.photos.length > 0)
-  const hasMedia = has3DModel || hasPhotos
+  const hasMedia = !isEditMode && (has3DModel || hasPhotos)
 
   const [activeMediaTab, setActiveMediaTab] = useState<"3d" | "photos">("3d")
+
+  useEffect(() => {
+    if (open) {
+      if (booking) {
+        setTitle(booking.title ?? "")
+        setDate(format(booking.start, "yyyy-MM-dd"))
+        setTime(format(booking.start, "HH:mm"))
+        const diff = Math.max(1, differenceInMinutes(booking.end, booking.start))
+        setDurationMinutes(diff)
+        setIsCustomDuration(![30, 60, 90, 120].includes(diff))
+      } else {
+        setTitle("")
+        setDate(format(new Date(), "yyyy-MM-dd"))
+        setTime("09:00")
+        setDurationMinutes(60)
+        setIsCustomDuration(false)
+      }
+    }
+  }, [open, booking, room?.id])
 
   useEffect(() => {
     if (has3DModel) {
@@ -121,9 +152,30 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
     },
   })
 
-  if (!room) return null
+  const updateBooking = api.booking.update.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: "Reserva atualizada!",
+        description: "Os novos horários foram salvos.",
+      })
+      onOpenChange(false)
+      await utils.booking.list.invalidate()
+      await utils.booking.listMine.invalidate()
+      await utils.room.list.invalidate()
+      await utils.room.listAvailable.invalidate()
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
 
-  if (!canCreateBooking()) {
+  if (!room && !booking) return null
+
+  if (!isEditMode && !canCreateBooking()) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
@@ -175,13 +227,27 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
 
     const end = addMinutes(start, durationMinutes)
 
-    createBooking.mutate({
-      roomId: room?.id ?? "",
-      title: title.trim(),
-      start,
-      end,
-    })
+    if (isEditMode && booking) {
+      updateBooking.mutate({
+        id: booking.id,
+        roomId: booking.roomId,
+        title: title.trim(),
+        start,
+        end,
+      })
+    } else if (room) {
+      createBooking.mutate({
+        roomId: room.id,
+        title: title.trim(),
+        start,
+        end,
+      })
+    }
   }
+
+  const roomDisplayName = isEditMode ? (booking?.roomName ?? room?.name) : room?.name
+  const roomDescription = !isEditMode ? room?.description : null
+  const isPending = isEditMode ? updateBooking.isPending : createBooking.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,18 +256,22 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                {room.name}
+                {isEditMode ? "Editar Reserva" : roomDisplayName}
               </DialogTitle>
-              {room.description && (
+              {isEditMode && roomDisplayName ? (
                 <DialogDescription className="text-xs text-muted-foreground mt-1">
-                  {room.description}
+                  {roomDisplayName}
                 </DialogDescription>
-              )}
+              ) : roomDescription ? (
+                <DialogDescription className="text-xs text-muted-foreground mt-1">
+                  {roomDescription}
+                </DialogDescription>
+              ) : null}
             </div>
           </div>
         </DialogHeader>
 
-        {hasMedia && (
+        {hasMedia && room && (
           <div className="relative w-full h-44 sm:h-48 rounded-xl overflow-hidden border border-border/50 bg-black/40 shrink-0 flex items-center justify-center">
             {activeMediaTab === "3d" && has3DModel && room.visualModel ? (
               <div className="w-full h-full flex items-center justify-center">
@@ -283,7 +353,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                min={format(new Date(), "yyyy-MM-dd")}
+                min={isEditMode ? undefined : format(new Date(), "yyyy-MM-dd")}
                 className="h-9 text-base sm:text-sm rounded-xl border-border/60"
               />
             </div>
@@ -402,7 +472,7 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
               variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
-              disabled={createBooking.isPending}
+              disabled={isPending}
               className="rounded-xl"
             >
               Cancelar
@@ -410,18 +480,16 @@ export function RoomDialog({ room, open, onOpenChange }: RoomDialogProps) {
             <Button
               type="submit"
               size="sm"
-              disabled={createBooking.isPending}
+              disabled={isPending}
               className="rounded-xl gap-2 font-medium shadow-xs"
             >
-              {createBooking.isPending ? (
+              {isPending ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />
-                  Confirmando...
+                  {isEditMode ? "Salvando..." : "Confirmando..."}
                 </>
               ) : (
-                <>
-                  Confirmar
-                </>
+                isEditMode ? "Salvar Alterações" : "Confirmar"
               )}
             </Button>
           </DialogFooter>

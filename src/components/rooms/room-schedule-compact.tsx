@@ -3,12 +3,9 @@
 import React, { useState, useMemo } from "react"
 import {
   addDays,
-  addHours,
-  differenceInHours,
   format,
   isSameDay,
   isToday,
-  parse,
   startOfToday,
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -30,21 +27,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAuth } from "@clerk/nextjs"
-import { cn, formatDateForInput } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import type { Room } from "@/types/room"
-import { RoomDialog } from "./room-dialog"
+import { RoomDialog, type BookingForDialog } from "./room-dialog"
 
 interface RoomScheduleCompactProps {
   className?: string
@@ -61,14 +49,7 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
   const [stripStartDate, setStripStartDate] = useState<Date>(startOfToday())
   const [selectedRoomToBook, setSelectedRoomToBook] = useState<Room | null>(null)
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false)
-  const [editingBooking, setEditingBooking] = useState<{
-    id: string
-    roomId: string
-    title: string
-    start: Date
-    end: Date
-    roomName: string
-  } | null>(null)
+  const [editingBooking, setEditingBooking] = useState<BookingForDialog | null>(null)
 
   const { data: bookings = [], isLoading } = api.booking.list.useQuery({
     startDate: startOfToday(),
@@ -117,55 +98,8 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
     },
   })
 
-  const updateBooking = api.booking.update.useMutation({
-    onSuccess: async () => {
-      toast({
-        title: "Reserva atualizada!",
-        description: "Os novos horários foram salvos.",
-      })
-      setEditingBooking(null)
-      await utils.booking.list.invalidate()
-      await utils.booking.listMine.invalidate()
-      await utils.room.list.invalidate()
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao atualizar",
-        description: error.message,
-        variant: "destructive",
-      })
-    },
-  })
-
   const handleShiftStrip = (days: number) => {
     setStripStartDate((prev) => addDays(prev, days))
-  }
-
-  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!editingBooking) return
-    const formData = new FormData(e.currentTarget)
-
-    const dateVal = parse(formData.get("date") as string, "yyyy-MM-dd", new Date())
-    const timeVal = parse(formData.get("time") as string, "HH:mm", new Date())
-    const duration = Number(formData.get("duration")) || 1
-
-    const start = new Date(
-      dateVal.getFullYear(),
-      dateVal.getMonth(),
-      dateVal.getDate(),
-      timeVal.getHours(),
-      timeVal.getMinutes(),
-    )
-    const end = addHours(start, duration)
-
-    updateBooking.mutate({
-      id: editingBooking.id,
-      roomId: editingBooking.roomId,
-      title: formData.get("title") as string,
-      start,
-      end,
-    })
   }
 
   return (
@@ -393,83 +327,13 @@ export function RoomScheduleCompact({ className = "", filial, rooms = [] }: Room
       </CardContent>
 
       {/* Modal de Edição de Agendamento */}
-      {editingBooking && (
-        <Dialog open={!!editingBooking} onOpenChange={(open) => !open && setEditingBooking(null)}>
-          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
-            <DialogHeader>
-              <DialogTitle>Editar Reserva</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-title">Título da Reunião</Label>
-                <Input
-                  id="edit-title"
-                  name="title"
-                  defaultValue={editingBooking.title}
-                  className="text-base sm:text-sm"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-date">Data</Label>
-                  <Input
-                    id="edit-date"
-                    name="date"
-                    type="date"
-                    defaultValue={formatDateForInput(editingBooking.start)}
-                    className="text-base sm:text-sm"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-time">Horário</Label>
-                  <Input
-                    id="edit-time"
-                    name="time"
-                    type="time"
-                    defaultValue={format(editingBooking.start, "HH:mm")}
-                    className="text-base sm:text-sm"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-duration">Duração (horas)</Label>
-                <Input
-                  id="edit-duration"
-                  name="duration"
-                  type="number"
-                  step="0.5"
-                  defaultValue={Math.max(
-                    1,
-                    differenceInHours(editingBooking.end, editingBooking.start),
-                  )}
-                  className="text-base sm:text-sm"
-                  required
-                />
-              </div>
-
-              <DialogFooter className="pt-2 gap-2 sm:gap-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditingBooking(null)}
-                  disabled={updateBooking.isPending}
-                  className="rounded-xl"
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={updateBooking.isPending} className="rounded-xl">
-                  {updateBooking.isPending ? "Salvando..." : "Salvar Alterações"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+      <RoomDialog
+        booking={editingBooking}
+        open={Boolean(editingBooking)}
+        onOpenChange={(open) => {
+          if (!open) setEditingBooking(null)
+        }}
+      />
 
       {/* Modal de Nova Reserva */}
       <RoomDialog
