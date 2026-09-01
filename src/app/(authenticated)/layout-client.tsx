@@ -37,7 +37,7 @@ export default function AuthenticatedLayoutClient({
         </aside>
 
         {/* Main content area */}
-        <div className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
+        <div className={`flex flex-1 flex-col min-w-0 max-w-full transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
           }`}>
           {/* Top header - only visible on mobile */}
           <header className="flex h-16 items-center gap-4 border-b bg-background/70 backdrop-blur-xl px-4 md:hidden print:hidden">
@@ -65,8 +65,8 @@ export default function AuthenticatedLayoutClient({
           </header>
 
           {/* Main content */}
-          <main className="flex-1 overflow-auto">
-            <div className="container mx-auto">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 max-w-full">
+            <div className="container mx-auto min-w-0 max-w-full">
               {children}
             </div>
           </main>

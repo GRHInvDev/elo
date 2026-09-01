@@ -78,6 +78,8 @@ export function SuggestionsModal({
     }
   }, [userData])
 
+  const utils = api.useUtils()
+
   // Mutation para criar ideia
   const create = api.suggestion.create.useMutation({
     onSuccess: () => {
@@ -85,6 +87,8 @@ export function SuggestionsModal({
         title: "Ideia enviada!",
         description: "Sua ideia foi registrada e será avaliada em breve."
       })
+      void utils.suggestion.invalidate()
+      void utils.campaign.invalidate()
       // Resetar form e fechar modal
       setProblema("")
       setSolucao("")

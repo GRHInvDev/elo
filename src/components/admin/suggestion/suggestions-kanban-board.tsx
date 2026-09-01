@@ -102,7 +102,7 @@ function SuggestionsKanbanSkeleton({
 }: Pick<SuggestionsKanbanBoardProps, "columnTitles" | "getStatusColor">) {
   return (
     <div
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3"
+      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3 w-full min-w-0"
       aria-busy="true"
       aria-label="Carregando quadro kanban"
     >
@@ -116,7 +116,7 @@ function SuggestionsKanbanSkeleton({
         return (
           <div
             key={st}
-            className={cn("rounded-lg border p-2 md:p-3", getStatusColor(st))}
+            className={cn("rounded-lg border p-2 md:p-3 min-w-0 overflow-hidden", getStatusColor(st))}
           >
             <div
               className={cn(
@@ -175,7 +175,7 @@ export function SuggestionsKanbanBoard<T extends SuggestionsKanbanCard>({
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3 w-full min-w-0">
         {columnTitles.map((st, columnIndex) => {
           const headerStyle = COLUMN_HEADER_CONFIG[st] ?? {
             bg: "bg-muted/40",
@@ -189,7 +189,7 @@ export function SuggestionsKanbanBoard<T extends SuggestionsKanbanCard>({
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`rounded-lg border p-2 md:p-2.5 ${getStatusColor(st)} flex flex-col`}
+                  className={`rounded-lg border p-2 md:p-2.5 ${getStatusColor(st)} flex flex-col min-w-0 overflow-hidden`}
                 >
                   {/* Header Coluna (Pill Arredondada estilizada) */}
                   <div

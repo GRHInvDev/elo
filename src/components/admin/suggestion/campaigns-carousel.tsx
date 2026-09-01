@@ -65,7 +65,7 @@ export function CampaignsCarousel({
   }
 
   return (
-    <div className="mb-6 rounded-2xl border border-border/80 bg-card/60 p-5 shadow-sm">
+    <div className="mb-6 rounded-2xl border border-border/80 bg-card/60 p-5 shadow-sm w-full min-w-0 max-w-full overflow-hidden">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         <div>
           <div className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
@@ -102,7 +102,7 @@ export function CampaignsCarousel({
       </div>
 
       {isLoading ? (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 w-full min-w-0 max-w-full">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-36 w-72 rounded-xl border bg-muted/40 animate-pulse shrink-0" />
           ))}
@@ -113,7 +113,7 @@ export function CampaignsCarousel({
           <p className="text-xs mt-1">Clique em &quot;Nova campanha&quot; para criar o primeiro desafio de ideias.</p>
         </div>
       ) : (
-        <div className="flex gap-3.5 overflow-x-auto pb-2 pt-1 scrollbar-thin">
+        <div className="flex gap-3.5 overflow-x-auto pb-2 pt-1 scrollbar-thin w-full min-w-0 max-w-full">
           {sortedCampaigns.map((camp) => {
             const isFiltered = selectedCampaignId === camp.id
 

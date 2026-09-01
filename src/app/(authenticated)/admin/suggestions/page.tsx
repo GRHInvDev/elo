@@ -2307,13 +2307,13 @@ export default function AdminSuggestionsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="ideas" className="w-full">
+      <Tabs defaultValue="ideas" className="w-full min-w-0 max-w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="ideas">Ideias</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="ideas" className="mt-0 space-y-0">
+        <TabsContent value="ideas" className="mt-0 space-y-0 w-full min-w-0 max-w-full">
           <CampaignsCarousel
             campaigns={adminCampaigns}
             isLoading={isLoadingCampaigns}
@@ -2329,7 +2329,7 @@ export default function AdminSuggestionsPage() {
             }}
           />
 
-      <div className="mb-8">
+      <div className="mb-8 w-full min-w-0 max-w-full">
         {/* Botão para mostrar/ocultar filtros em mobile */}
         <div className="lg:hidden mb-4">
           <Button
@@ -2565,7 +2565,7 @@ export default function AdminSuggestionsPage() {
       </div>
         </TabsContent>
 
-        <TabsContent value="dashboard" className="mt-0">
+        <TabsContent value="dashboard" className="mt-0 w-full min-w-0 max-w-full">
           <EvaluatorDashboardTab />
         </TabsContent>
       </Tabs>
@@ -3953,8 +3953,8 @@ function CreateSuggestionModal({
   const createSuggestion = api.suggestion.createManual.useMutation({
     onSuccess: () => {
       toast({ title: "Ideia criada", description: "Nova ideia criada com sucesso." })
-      void utils.suggestion.list.invalidate()
-      void utils.campaign.list.invalidate()
+      void utils.suggestion.invalidate()
+      void utils.campaign.invalidate()
       onClose()
       resetForm()
     },
