@@ -1538,6 +1538,21 @@ export const suggestionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.auth.userId;
 
+      const suggestion = await ctx.db.suggestion.findUnique({
+        where: { id: input.suggestionId },
+        select: { userId: true },
+      });
+
+      if (!suggestion) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ideia não encontrada." });
+      }
+
+      if (suggestion.userId === userId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Você não pode apoiar sua própria ideia.",
+        });
+      }
 
       const existing = await ctx.db.suggestionSupport.findUnique({
         where: {
@@ -1694,6 +1709,7 @@ export const suggestionRouter = createTRPCRouter({
       description: s.description,
       problem: s.problem,
       status: s.status,
+      rejectionReason: s.rejectionReason,
       campaign: s.campaign,
       supportsCount: s._count.supports,
       commentsCount: s._count.comments,
@@ -1776,6 +1792,7 @@ export const suggestionRouter = createTRPCRouter({
         problem: idea.problem,
         contribution: idea.contribution,
         status: idea.status,
+        rejectionReason: idea.rejectionReason,
         isNameVisible: idea.isNameVisible,
         authorName,
         authorSector,

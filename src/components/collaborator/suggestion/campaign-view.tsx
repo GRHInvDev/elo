@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Lightbulb,
   User,
 } from "lucide-react"
@@ -30,6 +29,7 @@ interface CampaignViewProps {
   onBack: () => void
   onNewIdea: (campaignId: string, isPrivate?: boolean) => void
   onOpenIdeaDetail: (ideaId: string) => void
+  onOpenMyIdeas?: () => void
 }
 
 const STATUS_MAPPING: Record<string, string> = {
@@ -48,6 +48,7 @@ export function CampaignView({
   onBack,
   onNewIdea,
   onOpenIdeaDetail,
+  onOpenMyIdeas,
 }: CampaignViewProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [sortFilter, setSortFilter] = useState<"most_supported" | "recent">("most_supported")
@@ -115,13 +116,24 @@ export function CampaignView({
 
   return (
     <div className="space-y-5 fade-in">
-      <div>
+      <div className="flex items-center justify-between gap-3">
         <button
           onClick={onBack}
           className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar para campanhas
         </button>
+
+        {onOpenMyIdeas && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenMyIdeas}
+            className="text-xs font-semibold gap-1.5 h-8 px-3 rounded-xl border-border/80 hover:bg-muted/60 cursor-pointer shadow-xs"
+          >
+            Minhas ideias
+          </Button>
+        )}
       </div>
 
       <div className="rounded-2xl border border-border/80 bg-card/90 dark:bg-[#131518] p-4 sm:p-6 md:p-7 relative overflow-hidden shadow-sm">
@@ -230,7 +242,6 @@ export function CampaignView({
                   : "bg-card dark:bg-[#1a1d24] text-muted-foreground border-border/80 hover:text-foreground"
               )}
             >
-              <Filter className="w-3.5 h-3.5" />
               Recentes
             </button>
           </div>
@@ -256,34 +267,47 @@ export function CampaignView({
                   <div
                     key={idea.id}
                     className={cn(
-                      "rounded-2xl border p-4 sm:p-5 transition-all flex flex-col justify-between space-y-3.5 shadow-sm",
+                      "rounded-2xl border p-4 sm:p-5 transition-all duration-200 flex flex-col justify-between space-y-3.5 shadow-xs relative group overflow-hidden",
                       isInactive
-                        ? "bg-muted/15 border-border/30 opacity-60 pointer-events-none select-none cursor-default"
-                        : "bg-card/90 dark:bg-[#131518] hover:border-border border-border/80 shadow-sm"
+                        ? "bg-muted/40 border-border/40 opacity-60 pointer-events-none select-none cursor-default"
+                        : "border-border/80 hover:border-primary/40 hover:shadow-md bg-gradient-to-br from-[#ffffff45] to-[#686f6f64] dark:from-[#71757937] dark:to-[#222323] dark:border-border/60 dark:hover:border-primary/40 dark:hover:bg-[#16181d]"
                     )}
                   >
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        {idea.isNameVisible ? (
-                          <div className="w-8 h-8 rounded-full bg-[#3b2e6b] text-[#c4b5fd] font-bold text-xs flex items-center justify-center shrink-0">
+                        {isInactive ? (
+                          <div className="w-8 h-8 rounded-full bg-muted/70 text-muted-foreground font-bold text-xs flex items-center justify-center shrink-0 border border-border/40">
+                            <User className="w-4 h-4 opacity-50" />
+                          </div>
+                        ) : idea.isNameVisible ? (
+                          <div className="w-8 h-8 rounded-full bg-primary/15 text-primary border border-primary/25 font-bold text-xs flex items-center justify-center shrink-0">
                             {idea.authorName.slice(0, 2).toUpperCase()}
                           </div>
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground font-bold text-xs flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground font-bold text-xs flex items-center justify-center shrink-0 border border-border/40">
                             <User className="w-4 h-4" />
                           </div>
                         )}
 
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-foreground truncate">
-                            {idea.authorName}
-                            {idea.authorSector && (
-                              <span className="text-muted-foreground font-normal">
-                                {" "}
-                                · {idea.authorSector}
-                              </span>
-                            )}
-                          </div>
+                          {isInactive ? (
+                            <div className="flex items-center gap-1.5 py-0.5">
+                              <span
+                                className="inline-block h-3.5 w-28 bg-zinc-400/30 dark:bg-zinc-600/50 rounded-sm select-none"
+                                title="Colaborador ocultado"
+                              />
+                            </div>
+                          ) : (
+                            <div className="text-xs font-bold text-foreground truncate">
+                              {idea.authorName}
+                              {idea.authorSector && (
+                                <span className="text-muted-foreground font-normal">
+                                  {" "}
+                                  · {idea.authorSector}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <div className="text-[11px] text-muted-foreground">
                             enviada há{" "}
                             {formatDistanceToNow(new Date(idea.createdAt), {
@@ -295,16 +319,16 @@ export function CampaignView({
 
                       <span className="text-[10.5px] sm:text-[11px] font-semibold px-2.5 py-0.5 rounded-full border bg-muted/40 text-muted-foreground border-border/60 shrink-0">
                         {statusLabel}
-                      </span>
+                        </span>
                     </div>
 
                     <div className="space-y-1.5 flex-1">
                       <h3 className="font-bold text-sm text-foreground line-clamp-2">
                         {idea.problem ?? idea.description}
                       </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-                        {idea.description}
-                      </p>
+                        <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                          {idea.description}
+                        </p>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pt-3 border-t border-border/50 text-xs text-muted-foreground">
@@ -323,7 +347,7 @@ export function CampaignView({
                       {!isInactive && (
                         <button
                           onClick={() => onOpenIdeaDetail(idea.id)}
-                          className="font-bold hover:underline text-xs flex items-center gap-1 sm:ml-auto cursor-pointer"
+                          className="font-bold hover:underline text-xs text-primary flex items-center gap-1 sm:ml-auto cursor-pointer group-hover:translate-x-0.5 transition-transform"
                         >
                           Ver ideia completa →
                         </button>
