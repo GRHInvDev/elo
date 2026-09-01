@@ -30,7 +30,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   flyers: "Encartes",
   // Formulários / Solicitações
   forms: "Solicitações",
-  "my-suggestions": "Minhas Ideias",
+  suggestions: "Ideias",
+  "my-suggestions": "Ideias",
   "my-responses": "Minhas solicitações",
   central: "Central de chamados",
   kanban: "Kanban",
@@ -53,7 +54,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   lgpd: "LGPD",
   // Admin
   admin: "Admin",
-  suggestions: "Ideias",
   users: "Usuários",
   products: "Produtos",
   vehicles: "Veículos",

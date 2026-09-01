@@ -48,7 +48,6 @@ export function IdeaFieldAiEnhance({
 }: IdeaFieldAiEnhanceProps) {
   const [pending, setPending] = useState<{ original: string; proposed: string } | null>(null)
   const [followUp, setFollowUp] = useState("")
-  /** Texto do colaborador antes do primeiro aprimoramento aceito neste campo (auditoria). */
   const auditOriginalRef = useRef<string | null>(null)
 
   const enhance = api.suggestion.enhanceIdeaField.useMutation({

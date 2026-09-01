@@ -361,7 +361,17 @@ export function SuggestionsCard() {
 }
 
 // Componente Modal com formulário completo
-export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) {
+export function SuggestionsModal({
+  isOpen,
+  onOpenChange,
+  campaignId,
+  isCampaignPrivate = false,
+}: {
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  campaignId?: string | null
+  isCampaignPrivate?: boolean
+}) {
   const [formAiSession, setFormAiSession] = useState(0)
   const [aiEnhancementForm, setAiEnhancementForm] = useState<SuggestionAiEnhancement>({})
   const [problema, setProblema] = useState("")
@@ -460,12 +470,13 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
     create.mutate({
       description: solucao.trim(),
       problem: problema.trim() || undefined,
+      campaignId: campaignId ?? undefined,
       contribution: {
         type: contribType,
         other: contribType === "OUTRO" ? contribOther.trim() : undefined,
       },
-      submittedName: hideName ? undefined : submittedName.trim() || undefined,
-      submittedSector: hideSector ? undefined : userData?.setor ?? undefined,
+      submittedName: (isCampaignPrivate && hideName) ? undefined : submittedName.trim() || undefined,
+      submittedSector: (isCampaignPrivate && hideSector) ? undefined : userData?.setor ?? undefined,
       ...(hasAiMeta
         ? {
             aiEnhancement: {
@@ -486,9 +497,6 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex items-center gap-2 md:gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
-              <Lightbulb className="h-4 w-4 md:h-5 md:w-5 text-yellow-600" />
-            </div>
             <span className="text-lg md:text-xl font-semibold">Caixa de Ideias</span>
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -498,9 +506,9 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
 
         {userLoading ? (
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/4"></div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded"></div>
+            <div className="h-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
           </div>
         ) : isTotem ? (
           // Não renderizar nada para usuários Totem, apenas fechar o modal
@@ -511,50 +519,59 @@ export function SuggestionsModal({ isOpen, onOpenChange }: { isOpen: boolean; on
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div className="space-y-2">
                 <Label>Nome do colaborador</Label>
-                {!hideName && (
+                {(!isCampaignPrivate || !hideName) && (
                   <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30">
                     <span className="text-sm font-medium">{submittedName ?? userData?.email ?? "Nome não disponível"}</span>
                   </div>
                 )}
-                {hideName && (
+                {isCampaignPrivate && hideName && (
                   <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
                     <span className="text-sm text-muted-foreground italic">Nome será ocultado na ideia</span>
                   </div>
                 )}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hide-name"
-                    checked={hideName}
-                    onCheckedChange={(checked) => {
-                      setHideName(checked as boolean)
-                    }}
-                  />
-                  <Label htmlFor="hide-name" className="text-sm text-muted-foreground">
-                    Não exibir meu nome
-                  </Label>
-                </div>
+                {isCampaignPrivate && (
+                  <div className="flex items-center space-x-2 pt-1">
+                    <Checkbox
+                      id="hide-name"
+                      checked={hideName}
+                      onCheckedChange={(checked) => {
+                        setHideName(checked as boolean)
+                      }}
+                    />
+                    <Label htmlFor="hide-name" className="text-sm text-muted-foreground cursor-pointer">
+                      Não exibir meu nome (Campanha privada)
+                    </Label>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label>Setor</Label>
-                {!hideSector && (
-                  <div className="flex items-center gap-2 p-2 rounded-md">
-                    <Building2 className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{userSector}</span>
+                {(!isCampaignPrivate || !hideSector) && (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{userSector}</span>
                   </div>
                 )}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="hide-sector"
-                    checked={hideSector}
-                    onCheckedChange={(checked) => {
-                      setHideSector(checked as boolean)
-                    }}
-                  />
-                  <Label htmlFor="hide-sector" className="text-sm text-muted-foreground">
-                    Não exibir meu setor
-                  </Label>
-                </div>
+                {isCampaignPrivate && hideSector && (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
+                    <span className="text-sm text-muted-foreground italic">Setor será ocultado</span>
+                  </div>
+                )}
+                {isCampaignPrivate && (
+                  <div className="flex items-center space-x-2 pt-1">
+                    <Checkbox
+                      id="hide-sector"
+                      checked={hideSector}
+                      onCheckedChange={(checked) => {
+                        setHideSector(checked as boolean)
+                      }}
+                    />
+                    <Label htmlFor="hide-sector" className="text-sm text-muted-foreground cursor-pointer">
+                      Não exibir meu setor (Campanha privada)
+                    </Label>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast"
 import { api } from "@/trpc/react"
 import { useAccessControl } from "@/hooks/use-access-control"
 import type { RouterOutputs } from "@/trpc/react"
-import { Plus, Edit, Trash2, Check, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle, Sparkles, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, Check, Settings, X, Filter, ChevronDown, ChevronUp, HelpCircle, Sparkles, Loader2, Lock } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { KpiManagementModal } from "@/components/admin/suggestion/kpi-management-modal"
@@ -29,6 +29,8 @@ import { EvaluatorDashboardTab } from "@/components/admin/suggestion/evaluator-d
 import { SuggestionsKanbanBoard } from "@/components/admin/suggestion/suggestions-kanban-board"
 import { IdeaActionsDialog } from "@/components/admin/suggestion/idea-actions-dialog"
 import { RejectionReasonClarifyDialog } from "@/components/admin/suggestion/rejection-reason-clarify-dialog"
+import { CampaignModal } from "@/components/admin/suggestion/campaign-modal"
+import { CampaignsCarousel } from "@/components/admin/suggestion/campaigns-carousel"
 import type { SuggestionAiEnhancement } from "@/types/suggestion-ai-enhancement"
 import { parseSuggestionAiEnhancement } from "@/types/suggestion-ai-enhancement"
 
@@ -39,6 +41,7 @@ type SuggestionLocal = {
   id: string
   ideaNumber: number
   userId: string
+  campaignId: string | null
   submittedName: string | null
   submittedSector: string | null
   isNameVisible: boolean
@@ -61,11 +64,22 @@ type SuggestionLocal = {
   editHistory: Record<string, string> | null
   isTextEdited: boolean
   aiEnhancement: SuggestionAiEnhancement | null
+  campaign?: {
+    id: string
+    name: string
+    status: string
+    isPrivate: boolean
+  } | null
   user: {
     firstName: string | null
     lastName: string | null
     email: string
     setor: string | null
+    filial?: {
+      id: string
+      name: string
+      code: string
+    } | null
   }
   analyst: {
     firstName: string | null
@@ -97,19 +111,19 @@ const STATUS = Object.values(STATUS_MAPPING)
 function getStatusColor(status: string): string {
   switch (status) {
     case "Ainda não avaliado":
-      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-100"
+      return "border-sky-200/80 bg-sky-50/60 dark:border-[#223d57]/60 dark:bg-[#101924]/60"
     case "Em avaliação":
-      return "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200"
+      return "border-lime-200/80 bg-lime-50/60 dark:border-[#384c2c]/60 dark:bg-[#162114]/60"
     case "Em orçamento":
-      return "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-800/40 dark:text-yellow-100"
+      return "border-amber-200/80 bg-amber-50/60 dark:border-[#504122]/60 dark:bg-[#231d10]/60"
     case "Em execução":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-300/50 dark:text-yellow-100"
+      return "border-yellow-200/80 bg-yellow-50/60 dark:border-[#574a24]/60 dark:bg-[#252010]/60"
     case "Concluído":
-      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-300/50 dark:text-green-100"
+      return "border-emerald-200/80 bg-emerald-50/60 dark:border-[#20533e]/60 dark:bg-[#0e241b]/60"
     case "Não implantado":
-      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-300/50 dark:text-red-100"
+      return "border-slate-200/80 bg-slate-100/60 dark:border-[#373c47]/60 dark:bg-[#16181d]/60"
     default:
-      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-100"
+      return "border-border/60 bg-muted/20"
   }
 }
 
@@ -158,11 +172,18 @@ function convertDBToLocal(dbSuggestion: DBSuggestion): SuggestionLocal {
     editHistory: (dbSuggestion as any).editHistory ? (dbSuggestion as any).editHistory as Record<string, string> : null,
     isTextEdited: (dbSuggestion as any).isTextEdited ?? false,
     aiEnhancement: parseSuggestionAiEnhancement((dbSuggestion as any).aiEnhancement),
+    campaignId: (dbSuggestion as any).campaignId ?? null,
+    campaign: (dbSuggestion as any).campaign ?? null,
     user: {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       setor: user.setor,
+      filial: user.filial ? {
+        id: user.filial.id,
+        name: user.filial.name,
+        code: user.filial.code,
+      } : null,
     },
     analyst: analyst ? {
       firstName: analyst.firstName,
@@ -1175,38 +1196,37 @@ function SuggestionDetailsModal({
   return (
     <div className="space-y-6">
       {/* Informações da Ideia */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
-        <div>
-          <div className="text-sm font-medium">Autor</div>
-          <div className="text-sm text-muted-foreground">
-            {nomeExibicao}
-            {setorExibido && (
-              <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
-                {setorExibido}
-              </span>
-            )}
+      <div className="rounded-lg border bg-card p-4 md:p-5 space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Autor</div>
+            <div className="text-sm font-medium text-foreground flex items-center gap-2 mt-0.5">
+              <span>{nomeExibicao}</span>
+              {setorExibido && (
+                <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-normal">
+                  {setorExibido}
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {suggestion.createdAt ? (
+                <>
+                  <span>Enviado em:</span>{' '}
+                  {new Date(suggestion.createdAt).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </>
+              ) : (
+                'Data não disponível'
+              )}
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground mt-1 opacity-75">
-            {suggestion.createdAt ? (
-              <>
-                <span className="font-medium">Enviado em:</span>{' '}
-                {new Date(suggestion.createdAt).toLocaleDateString('pt-BR', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </>
-            ) : (
-              'Data não disponível'
-            )}
-          </div>
-        </div>
-        <div className="md:col-span-2">
-          <div className="text-sm font-medium">Tipo de contribuição</div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">
+          <div className="self-start sm:self-center">
+            <Badge variant="outline" className="text-xs font-medium">
               {contribType === "IDEIA_INOVADORA" ? "Ideia inovadora" :
                 contribType === "SUGESTAO_MELHORIA" ? "Ideia de melhoria" :
                   contribType === "SOLUCAO_PROBLEMA" ? "Solução de problema" :
@@ -1214,255 +1234,265 @@ function SuggestionDetailsModal({
             </Badge>
           </div>
         </div>
-        <div className="md:col-span-2">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <div className="text-sm font-medium">Problema</div>
-            {suggestion.aiEnhancement?.problem?.refinedWithAi && (
-              <Badge variant="secondary" className="text-xs gap-1">
-                <Sparkles className="h-3 w-3" aria-hidden />
-                Refinado com IA
-              </Badge>
-            )}
-            {suggestion.isTextEdited && (
-              <Badge variant="outline" className="text-xs">
-                Texto editado
-              </Badge>
-            )}
-          </div>
-          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {suggestion.problem ?? "Não informado"}
-          </div>
-        </div>
-        <div className="md:col-span-2">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <div className="text-sm font-medium">Solução</div>
-            {suggestion.aiEnhancement?.description?.refinedWithAi && (
-              <Badge variant="secondary" className="text-xs gap-1">
-                <Sparkles className="h-3 w-3" aria-hidden />
-                Refinado com IA
-              </Badge>
-            )}
-            {suggestion.isTextEdited && (
-              <Badge variant="outline" className="text-xs">
-                Texto editado
-              </Badge>
-            )}
-          </div>
-          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {suggestion.description}
-          </div>
-          <div className="md:col-span-2 mt-4 space-y-3 rounded-lg border bg-muted/20 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-sm font-medium">Sugestão da ideia (Morrison)</div>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="gap-1.5"
-                disabled={morrisonMutation.isPending}
-                onClick={() => morrisonMutation.mutate({ suggestionId: suggestion.id })}
-              >
-                {morrisonMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : (
-                  <Sparkles className="h-4 w-4" aria-hidden />
-                )}
-                Gerar ou atualizar análise
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Análise auxiliar para gestores (tom exigente, sem substituir a avaliação humana).
-            </p>
-            {suggestion.aiEnhancement?.morrison?.evaluatorNote ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-sm border rounded-md bg-background p-3">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {suggestion.aiEnhancement.morrison.evaluatorNote}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Nenhuma análise gerada ainda.</p>
-            )}
-          </div>
-          {suggestion.editHistory && (
-            <div className="mt-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">Histórico de Edições</div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditHistoryExpanded(!isEditHistoryExpanded)}
-                  className="h-7 px-2 text-xs"
-                >
-                  {isEditHistoryExpanded ? (
-                    <>
-                      <ChevronUp className="h-3 w-3 mr-1" />
-                      Ocultar
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3 w-3 mr-1" />
-                      Mostrar
-                    </>
-                  )}
-                </Button>
-              </div>
-              {isEditHistoryExpanded && (
-                <div className="space-y-4">
-                  {(() => {
-                    const history = suggestion.editHistory as Record<string, unknown>
 
-                    // Verificar se é estrutura nova (com description/problem) ou antiga
-                    const hasDescriptionHistory = history.description && typeof history.description === "object"
-                    const hasProblemHistory = history.problem && typeof history.problem === "object"
-                    const hasLegacyHistory = history._legacy && typeof history._legacy === "object"
-
-                    if (hasDescriptionHistory || hasProblemHistory || hasLegacyHistory) {
-                      // Nova estrutura: { description: {...}, problem: {...} }
-                      return (
-                        <>
-                          {hasDescriptionHistory && (
-                            <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                              <div className="text-xs font-semibold text-muted-foreground mb-2">
-                                Solução Proposta
-                              </div>
-                              {(() => {
-                                const descHistory = history.description as Record<string, string>
-                                const entries = Object.entries(descHistory).sort((a, b) => {
-                                  if (a[0] === "texto-original") return -1
-                                  if (b[0] === "texto-original") return 1
-                                  return a[0].localeCompare(b[0])
-                                })
-
-                                return entries.map(([key, value], index) => (
-                                  <div key={key} className="space-y-1">
-                                    <div className="text-xs font-semibold text-muted-foreground">
-                                      {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
-                                    </div>
-                                    <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
-                                      {value}
-                                    </div>
-                                    {index < entries.length - 1 && (
-                                      <div className="h-px bg-border my-2" />
-                                    )}
-                                  </div>
-                                ))
-                              })()}
-                            </div>
-                          )}
-                          {hasProblemHistory && (
-                            <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                              <div className="text-xs font-semibold text-muted-foreground mb-2">
-                                Problema Identificado
-                              </div>
-                              {(() => {
-                                const probHistory = history.problem as Record<string, string>
-                                const entries = Object.entries(probHistory).sort((a, b) => {
-                                  if (a[0] === "texto-original") return -1
-                                  if (b[0] === "texto-original") return 1
-                                  return a[0].localeCompare(b[0])
-                                })
-
-                                return entries.map(([key, value], index) => (
-                                  <div key={key} className="space-y-1">
-                                    <div className="text-xs font-semibold text-muted-foreground">
-                                      {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
-                                    </div>
-                                    <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
-                                      {value}
-                                    </div>
-                                    {index < entries.length - 1 && (
-                                      <div className="h-px bg-border my-2" />
-                                    )}
-                                  </div>
-                                ))
-                              })()}
-                            </div>
-                          )}
-                          {hasLegacyHistory && (
-                            <div className="space-y-2 border rounded-lg p-3 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
-                              <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 mb-2">
-                                ⚠️ Histórico Legado (Revisão Manual Necessária)
-                              </div>
-                              <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
-                                Este histórico foi preservado de uma versão anterior do sistema.
-                                Não foi possível determinar automaticamente se pertence a &quot;Solução Proposta&quot; ou &quot;Problema Identificado&quot;.
-                              </div>
-                              {(() => {
-                                const legacyHistory = history._legacy as Record<string, string>
-                                const entries = Object.entries(legacyHistory).sort((a, b) => {
-                                  if (a[0] === "texto-original") return -1
-                                  if (b[0] === "texto-original") return 1
-                                  return a[0].localeCompare(b[0])
-                                })
-
-                                return entries.map(([key, value], index) => (
-                                  <div key={key} className="space-y-1">
-                                    <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400">
-                                      {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
-                                    </div>
-                                    <div className="text-sm text-yellow-900 dark:text-yellow-200 whitespace-pre-wrap border-l-2 border-yellow-300 dark:border-yellow-700 pl-2">
-                                      {value}
-                                    </div>
-                                    {index < entries.length - 1 && (
-                                      <div className="h-px bg-yellow-300 dark:bg-yellow-700 my-2" />
-                                    )}
-                                  </div>
-                                ))
-                              })()}
-                            </div>
-                          )}
-                        </>
-                      )
-                    } else {
-                      // Estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
-                      const entries = Object.entries(history as Record<string, string>).sort((a, b) => {
-                        if (a[0] === "texto-original") return -1
-                        if (b[0] === "texto-original") return 1
-                        return a[0].localeCompare(b[0])
-                      })
-
-                      return (
-                        <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                          {entries.map(([key, value], index) => (
-                            <div key={key} className="space-y-1">
-                              <div className="text-xs font-semibold text-muted-foreground">
-                                {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
-                              </div>
-                              <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/20 pl-2">
-                                {value}
-                              </div>
-                              {index < entries.length - 1 && (
-                                <div className="h-px bg-border my-2" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    }
-                  })()}
-                </div>
+        {/* Problema e Solução */}
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Problema Identificado</span>
+              {suggestion.aiEnhancement?.problem?.refinedWithAi && (
+                <Badge variant="secondary" className="text-[10px] h-5 gap-1 px-1.5">
+                  <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                  Refinado com IA
+                </Badge>
+              )}
+              {suggestion.isTextEdited && (
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                  Texto editado
+                </Badge>
               )}
             </div>
+            <div className="text-sm text-foreground/90 whitespace-pre-wrap bg-muted/30 rounded-md p-3 border border-muted/50">
+              {suggestion.problem ?? "Não informado"}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Solução Proposta</span>
+              {suggestion.aiEnhancement?.description?.refinedWithAi && (
+                <Badge variant="secondary" className="text-[10px] h-5 gap-1 px-1.5">
+                  <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                  Refinado com IA
+                </Badge>
+              )}
+              {suggestion.isTextEdited && (
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                  Texto editado
+                </Badge>
+              )}
+            </div>
+            <div className="text-sm text-foreground/90 whitespace-pre-wrap bg-muted/30 rounded-md p-3 border border-muted/50">
+              {suggestion.description}
+            </div>
+          </div>
+        </div>
+
+        {/* Análise Morrison */}
+        <div className="space-y-3 rounded-lg border bg-muted/20 p-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-medium">Sugestão da ideia (Morrison)</div>
+              <p className="text-xs text-muted-foreground">
+                Análise auxiliar para gestores (tom exigente, sem substituir a avaliação humana).
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="gap-1.5 text-xs h-8"
+              disabled={morrisonMutation.isPending}
+              onClick={() => morrisonMutation.mutate({ suggestionId: suggestion.id })}
+            >
+              {morrisonMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              )}
+              Gerar ou atualizar análise
+            </Button>
+          </div>
+          {suggestion.aiEnhancement?.morrison?.evaluatorNote ? (
+            <div className="prose prose-sm dark:prose-invert max-w-none text-sm border rounded-md bg-background p-3">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {suggestion.aiEnhancement.morrison.evaluatorNote}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">Nenhuma análise gerada ainda.</p>
           )}
         </div>
+        {suggestion.editHistory && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Histórico de Edições</div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditHistoryExpanded(!isEditHistoryExpanded)}
+                className="h-7 px-2 text-xs text-muted-foreground"
+              >
+                {isEditHistoryExpanded ? (
+                  <>
+                    <ChevronUp className="h-3 w-3 mr-1" />
+                    Ocultar
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3 w-3 mr-1" />
+                    Mostrar histórico
+                  </>
+                )}
+              </Button>
+            </div>
+            {isEditHistoryExpanded && (
+              <div className="space-y-3">
+                {(() => {
+                  const history = suggestion.editHistory as Record<string, unknown>
+                  const hasDescriptionHistory = history.description && typeof history.description === "object"
+                  const hasProblemHistory = history.problem && typeof history.problem === "object"
+                  const hasLegacyHistory = history._legacy && typeof history._legacy === "object"
+
+                  if (hasDescriptionHistory || hasProblemHistory || hasLegacyHistory) {
+                    return (
+                      <>
+                        {hasDescriptionHistory && (
+                          <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+                            <div className="text-xs font-semibold text-muted-foreground mb-2">
+                              Solução Proposta
+                            </div>
+                            {(() => {
+                              const descHistory = history.description as Record<string, string>
+                              const entries = Object.entries(descHistory).sort((a, b) => {
+                                if (a[0] === "texto-original") return -1
+                                if (b[0] === "texto-original") return 1
+                                return a[0].localeCompare(b[0])
+                              })
+
+                              return entries.map(([key, value], index) => (
+                                <div key={key} className="space-y-1">
+                                  <div className="text-xs font-medium text-muted-foreground">
+                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                  </div>
+                                  <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/30 pl-2">
+                                    {value}
+                                  </div>
+                                  {index < entries.length - 1 && (
+                                    <div className="h-px bg-border my-2" />
+                                  )}
+                                </div>
+                              ))
+                            })()}
+                          </div>
+                        )}
+                        {hasProblemHistory && (
+                          <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+                            <div className="text-xs font-semibold text-muted-foreground mb-2">
+                              Problema Identificado
+                            </div>
+                            {(() => {
+                              const probHistory = history.problem as Record<string, string>
+                              const entries = Object.entries(probHistory).sort((a, b) => {
+                                if (a[0] === "texto-original") return -1
+                                if (b[0] === "texto-original") return 1
+                                return a[0].localeCompare(b[0])
+                              })
+
+                              return entries.map(([key, value], index) => (
+                                <div key={key} className="space-y-1">
+                                  <div className="text-xs font-medium text-muted-foreground">
+                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                  </div>
+                                  <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/30 pl-2">
+                                    {value}
+                                  </div>
+                                  {index < entries.length - 1 && (
+                                    <div className="h-px bg-border my-2" />
+                                  )}
+                                </div>
+                              ))
+                            })()}
+                          </div>
+                        )}
+                        {hasLegacyHistory && (
+                          <div className="space-y-2 border rounded-lg p-3 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+                            <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-400 mb-1">
+                              Histórico Legado
+                            </div>
+                            <div className="text-xs text-yellow-700 dark:text-yellow-300 mb-2">
+                              Histórico preservado de versão anterior do sistema.
+                            </div>
+                            {(() => {
+                              const legacyHistory = history._legacy as Record<string, string>
+                              const entries = Object.entries(legacyHistory).sort((a, b) => {
+                                if (a[0] === "texto-original") return -1
+                                if (b[0] === "texto-original") return 1
+                                return a[0].localeCompare(b[0])
+                              })
+
+                              return entries.map(([key, value], index) => (
+                                <div key={key} className="space-y-1">
+                                  <div className="text-xs font-medium text-yellow-800 dark:text-yellow-400">
+                                    {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                                  </div>
+                                  <div className="text-sm text-yellow-900 dark:text-yellow-200 whitespace-pre-wrap border-l-2 border-yellow-300 dark:border-yellow-700 pl-2">
+                                    {value}
+                                  </div>
+                                  {index < entries.length - 1 && (
+                                    <div className="h-px bg-yellow-300 dark:bg-yellow-700 my-2" />
+                                  )}
+                                </div>
+                              ))
+                            })()}
+                          </div>
+                        )}
+                      </>
+                    )
+                  } else {
+                      // Estrutura antiga: { "texto-original": "...", "edicao-1": "..." }
+                    const entries = Object.entries(history as Record<string, string>).sort((a, b) => {
+                      if (a[0] === "texto-original") return -1
+                      if (b[0] === "texto-original") return 1
+                      return a[0].localeCompare(b[0])
+                    })
+
+                    return (
+                      <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+                        {entries.map(([key, value], index) => (
+                          <div key={key} className="space-y-1">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              {key === "texto-original" ? "Texto Original" : key.replace("edicao-", "Edição ")}
+                            </div>
+                            <div className="text-sm text-foreground whitespace-pre-wrap border-l-2 border-primary/30 pl-2">
+                              {value}
+                            </div>
+                            {index < entries.length - 1 && (
+                              <div className="h-px bg-border my-2" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
+                })()}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Classificações Simplificadas */}
-      <div className="space-y-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <h3 className="text-lg font-semibold">
-            Classificações
-            {suggestion.status === "NEW" && (
-              <span className="ml-2 text-sm font-normal text-green-600 dark:text-green-400">
-                (Editável - Status: Novo)
-              </span>
-            )}
-          </h3>
+      <div className="rounded-lg border bg-card p-4 md:p-5 space-y-5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-3 border-b">
+          <div>
+            <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+              Classificações
+              {suggestion.status === "NEW" && (
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                  Editável
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pontue o impacto, capacidade e esforço (0 a 10) para calcular o resultado.
+            </p>
+          </div>
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            className="shrink-0 gap-1.5"
+            className="shrink-0 gap-1.5 text-xs h-8"
             disabled={suggestClassificationsMutation.isPending}
             onClick={() =>
               suggestClassificationsMutation.mutate({
@@ -1480,184 +1510,197 @@ function SuggestionDetailsModal({
             }
           >
             {suggestClassificationsMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
             ) : (
-              <Sparkles className="h-4 w-4" aria-hidden />
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
             )}
-            Sugerir classificações (IA)
+            Sugerir com IA
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground -mt-2">
-          A IA usa os rótulos cadastrados no sistema, as últimas ideias que você avaliou com pontuação
-          completa e o que já está preenchido aqui como referência. As notas seguem o mesmo intervalo
-          0–10 dos selects abaixo.
-        </p>
 
-        {/* Impacto */}
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Impacto: <h2 className="text-sm font-normal text-muted-foreground">Qual o impacto potencial da ideia no negócio?</h2></Label>
-          <Textarea
-            placeholder="Descreva o impacto desta ideia (máximo 2000 caracteres)"
-            value={impactText}
-            onChange={(e) => setImpactText(e.target.value)}
-            maxLength={2000}
-            className="min-h-[100px]"
-          />
-          <div className="flex items-center gap-4">
-            <Label className="text-sm">Pontuação:</Label>
-            <Select
-              value={impactScore.toString()}
-              onValueChange={(value) => setImpactScore(Number(value))}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="0" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 11 }, (_, i) => i).map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="text-xs text-muted-foreground">
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-lg border bg-muted/15 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium text-foreground">Impacto</span>
+                <span className="text-xs text-muted-foreground ml-2">Qual o impacto potencial no negócio?</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Nota:</span>
+                <Select
+                  value={impactScore.toString()}
+                  onValueChange={(value) => setImpactScore(Number(value))}
+                >
+                  <SelectTrigger className="w-16 h-8 text-xs font-semibold">
+                    <SelectValue placeholder="0" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i).map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Textarea
+              placeholder="Descreva o impacto desta ideia..."
+              value={impactText}
+              onChange={(e) => setImpactText(e.target.value)}
+              maxLength={2000}
+              rows={2}
+              className="text-sm resize-y min-h-[64px]"
+            />
+            <div className="text-right text-[11px] text-muted-foreground">
               {impactText.length}/2000 caracteres
-            </span>
+            </div>
           </div>
-        </div>
 
-        {/* Capacidade */}
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Capacidade: <h2 className="text-sm font-normal text-muted-foreground">A empresa tem recursos, pessoas e know-how para implementar</h2></Label>
-          <Textarea
-            placeholder="Descreva a capacidade de implementação desta ideia (máximo 2000 caracteres)"
-            value={capacityText}
-            onChange={(e) => setCapacityText(e.target.value)}
-            maxLength={2000}
-            className="min-h-[100px]"
-          />
-          <div className="flex items-center gap-4">
-            <Label className="text-sm">Pontuação:</Label>
-            <Select
-              value={capacityScore.toString()}
-              onValueChange={(value) => setCapacityScore(Number(value))}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="0" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 11 }, (_, i) => i).map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="text-xs text-muted-foreground">
+          {/* Capacidade */}
+          <div className="p-3.5 rounded-lg border bg-muted/15 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium text-foreground">Capacidade</span>
+                <span className="text-xs text-muted-foreground ml-2">A empresa tem recursos, pessoas e know-how?</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Nota:</span>
+                <Select
+                  value={capacityScore.toString()}
+                  onValueChange={(value) => setCapacityScore(Number(value))}
+                >
+                  <SelectTrigger className="w-16 h-8 text-xs font-semibold">
+                    <SelectValue placeholder="0" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i).map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Textarea
+              placeholder="Descreva a capacidade de implementação desta ideia..."
+              value={capacityText}
+              onChange={(e) => setCapacityText(e.target.value)}
+              maxLength={2000}
+              rows={2}
+              className="text-sm resize-y min-h-[64px]"
+            />
+            <div className="text-right text-[11px] text-muted-foreground">
               {capacityText.length}/2000 caracteres
-            </span>
+            </div>
           </div>
-        </div>
 
-        {/* Esforço */}
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Esforço: <h2 className="text-sm font-normal text-muted-foreground">Quanto tempo/custo/dificuldade está envolvido?</h2></Label>
-          <Textarea
-            placeholder="Descreva o esforço necessário para implementar esta ideia (máximo 2000 caracteres)"
-            value={effortText}
-            onChange={(e) => setEffortText(e.target.value)}
-            maxLength={2000}
-            className="min-h-[100px]"
-          />
-          <div className="flex items-center gap-4">
-            <Label className="text-sm">Pontuação:</Label>
-            <Select
-              value={effortScore.toString()}
-              onValueChange={(value) => setEffortScore(Number(value))}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue placeholder="0" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 11 }, (_, i) => i).map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="text-xs text-muted-foreground">
+          {/* Esforço */}
+          <div className="p-3.5 rounded-lg border bg-muted/15 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium text-foreground">Esforço</span>
+                <span className="text-xs text-muted-foreground ml-2">Quanto tempo, custo ou dificuldade está envolvido?</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Nota:</span>
+                <Select
+                  value={effortScore.toString()}
+                  onValueChange={(value) => setEffortScore(Number(value))}
+                >
+                  <SelectTrigger className="w-16 h-8 text-xs font-semibold">
+                    <SelectValue placeholder="0" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 11 }, (_, i) => i).map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Textarea
+              placeholder="Descreva o esforço necessário para implementar..."
+              value={effortText}
+              onChange={(e) => setEffortText(e.target.value)}
+              maxLength={2000}
+              rows={2}
+              className="text-sm resize-y min-h-[64px]"
+            />
+            <div className="text-right text-[11px] text-muted-foreground">
               {effortText.length}/2000 caracteres
-            </span>
-          </div>
-        </div>
-
-        {/* Pontuação Total */}
-        <div className="p-4 bg-muted/30 rounded-lg">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Pontuação Total:</span>
-            <span className="text-lg font-bold">{pontuacao}</span>
-          </div>
-          <div className="text-sm text-muted-foreground mt-1">
-            Impacto ({impactScore}) + Capacidade ({capacityScore}) - Esforço ({effortScore})
+            </div>
           </div>
         </div>
 
         {/* Resultado Final */}
-        <div className={`p-4 rounded-lg ${finalResult.color}`}>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Resultado Final:</span>
-            <span className="font-bold">{finalResult.text}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg border bg-muted/30">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pontuação Total:</span>
+              <span className="text-base font-bold text-foreground">{pontuacao}</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Impacto ({impactScore}) + Capacidade ({capacityScore}) - Esforço ({effortScore})
+            </p>
           </div>
-          <div className="text-sm mt-1 opacity-80">
-            Baseado na pontuação: {pontuacao}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium">Recomendação:</span>
+            <span className={`px-2.5 py-1 rounded text-xs font-medium ${finalResult.color}`}>
+              {finalResult.text}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Seção de Gestão */}
-      <div className="space-y-6">
-        <h3 className="text-lg font-semibold">Gestão da Ideia</h3>
+      <div className="rounded-lg border bg-card p-4 md:p-5 space-y-4 shadow-sm">
+        <h3 className="text-base font-semibold text-foreground pb-2 border-b">
+          Gestão e Status
+        </h3>
 
-        {/* Responsável pela Devolutiva */}
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Responsável pela Devolutiva</Label>
-          <UserSelector
-            value={responsibleUser}
-            onValueChange={setResponsibleUser}
-            placeholder="Selecionar responsável..."
-            fallbackSelectedLabel={getPersonDisplayName(suggestion.analyst)}
-          />
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">Responsável pela Devolutiva</Label>
+            <UserSelector
+              value={responsibleUser}
+              onValueChange={setResponsibleUser}
+              placeholder="Selecionar responsável..."
+              fallbackSelectedLabel={getPersonDisplayName(suggestion.analyst)}
+            />
+          </div>
 
-        {/* Mudança de Status */}
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Status da Ideia</Label>
-          <Select value={newStatus} onValueChange={handleStatusChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o status" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(STATUS_MAPPING).map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-muted-foreground">Status da Ideia</Label>
+            <Select value={newStatus} onValueChange={handleStatusChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(STATUS_MAPPING).map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Campo de Motivo (aparece apenas para "Não implantado") */}
         {(showReasonField || newStatus === "Não implantado") && (
-          <div className="space-y-3">
-            <Label className="text-base font-medium text-destructive">
+          <div className="space-y-3 pt-2 border-t">
+            <Label className="text-xs font-medium text-destructive">
               Motivo da Não Implementação *
             </Label>
             <Textarea
               placeholder="Explique o motivo pelo qual esta ideia não será implementada..."
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              className="min-h-[100px]"
+              className="min-h-[90px] text-sm"
               required
             />
             <div className="flex flex-wrap items-center gap-2">
@@ -1665,19 +1708,16 @@ function SuggestionDetailsModal({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="gap-1.5"
+                className="gap-1.5 text-xs h-7"
                 onClick={() => setRejectionClarifyOpen(true)}
               >
-                <Sparkles className="h-4 w-4" aria-hidden />
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
                 Esclarecer motivo (IA)
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Opcional: gere um texto claro para o colaborador com base na ideia e nas classificações; depois revise.
+              <p className="text-[11px] text-muted-foreground">
+                Gera um texto claro para o colaborador com base na ideia e classificações.
               </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Este campo é obrigatório para ideias não implementadas.
-            </p>
             <RejectionReasonClarifyDialog
               open={rejectionClarifyOpen}
               onOpenChange={setRejectionClarifyOpen}
@@ -1695,15 +1735,14 @@ function SuggestionDetailsModal({
 
         {/* Campos de Pagamento (aparece apenas para "Concluído") */}
         {newStatus === "Concluído" && (
-          <div className="space-y-6 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-            <h4 className="text-base font-medium text-green-800 dark:text-green-200">
-              💰 Gestão de Pagamento
+          <div className="space-y-4 p-4 bg-emerald-500/5 rounded-lg border border-emerald-500/20">
+            <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+              Gestão de Pagamento
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Status do Pagamento */}
-              <div className="space-y-3">
-                <Label className="text-base font-medium">Status do Pagamento</Label>
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Status do Pagamento</Label>
                 <Select value={paymentStatus} onValueChange={(value: "paid" | "unpaid") => setPaymentStatus(value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o status" />
@@ -1715,10 +1754,9 @@ function SuggestionDetailsModal({
                 </Select>
               </div>
 
-              {/* Data do Pagamento (só se estiver pago) */}
               {paymentStatus === "paid" && (
-                <div className="space-y-3">
-                  <Label className="text-base font-medium">Data do Pagamento</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Data do Pagamento</Label>
                   <Input
                     type="date"
                     value={paymentDate ? paymentDate.toISOString().split('T')[0] : ""}
@@ -1728,9 +1766,8 @@ function SuggestionDetailsModal({
               )}
             </div>
 
-            {/* Valor do Pagamento */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Valor do Pagamento (Opcional)</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Valor do Pagamento (Opcional)</Label>
               <Input
                 type="number"
                 placeholder="Ex: 500.00"
@@ -1741,14 +1778,13 @@ function SuggestionDetailsModal({
               />
             </div>
 
-            {/* Descrição do Pagamento */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Descrição do Pagamento (Opcional)</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Descrição do Pagamento (Opcional)</Label>
               <Textarea
                 placeholder="Detalhes sobre o pagamento, forma de pagamento, etc..."
                 value={paymentDescription}
                 onChange={(e) => setPaymentDescription(e.target.value)}
-                className="min-h-[80px]"
+                className="min-h-[70px] text-sm"
               />
             </div>
           </div>
@@ -1759,26 +1795,25 @@ function SuggestionDetailsModal({
       <KpiSection suggestionId={suggestion.id} />
 
       {/* Botões de Ação */}
-      <div className="flex justify-between items-center gap-3">
+      <div className="flex justify-between items-center gap-3 pt-3 border-t">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => {
-            // Aqui precisamos acessar o estado do componente pai
-            // Por enquanto, vamos usar uma abordagem simplificada
             const event = new CustomEvent('openDoubtsPopup')
             window.dispatchEvent(event)
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
         >
           <HelpCircle className="w-4 h-4" />
           Dúvidas
         </Button>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={onClose}>
             Cancelar
           </Button>
           <Button
+            size="sm"
             onClick={handleSave}
             disabled={updateMutation.isPending}
           >
@@ -1829,6 +1864,14 @@ export default function AdminSuggestionsPage() {
     suggestionId: null,
     type: null
   })
+
+  // Estados para Campanhas
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false)
+  const [manageCampaignId, setManageCampaignId] = useState<string | null>(null)
+  const [campaignFilter, setCampaignFilter] = useState<string | null>(null)
+
+  // Query para buscar campanhas no Admin
+  const { data: adminCampaigns = [], isLoading: isLoadingCampaigns } = api.campaign.list.useQuery()
 
   // Estado para filtros
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -2020,6 +2063,11 @@ export default function AdminSuggestionsPage() {
       filteredSuggestions = filteredSuggestions.filter(s => s.analystId === currentUser.id)
     }
 
+    // Aplicar filtro de campanha se houver seleção
+    if (campaignFilter) {
+      filteredSuggestions = filteredSuggestions.filter(s => s.campaignId === campaignFilter)
+    }
+
     return [...filteredSuggestions].sort((a, b) => {
       // Primeiro por prioridade de status
       const statusA = STATUS_MAPPING[a.status] ?? a.status
@@ -2038,7 +2086,7 @@ export default function AdminSuggestionsPage() {
         return (b.ideaNumber ?? 0) - (a.ideaNumber ?? 0)
       }
     })
-  }, [suggestions, statusFilter, analystFilter, authorFilter, paymentFilter, showMyTasks, currentUser, sortOrder])
+  }, [suggestions, statusFilter, analystFilter, authorFilter, paymentFilter, showMyTasks, campaignFilter, currentUser, sortOrder])
 
   const kanbanColumns = useMemo(() => {
     const map: Record<string, SuggestionLocal[]> = {}
@@ -2266,6 +2314,21 @@ export default function AdminSuggestionsPage() {
         </TabsList>
 
         <TabsContent value="ideas" className="mt-0 space-y-0">
+          <CampaignsCarousel
+            campaigns={adminCampaigns}
+            isLoading={isLoadingCampaigns}
+            selectedCampaignId={campaignFilter}
+            onSelectCampaignFilter={setCampaignFilter}
+            onOpenCreateCampaign={() => {
+              setManageCampaignId(null)
+              setIsCampaignModalOpen(true)
+            }}
+            onOpenManageCampaign={(id) => {
+              setManageCampaignId(id)
+              setIsCampaignModalOpen(true)
+            }}
+          />
+
       <div className="mb-8">
         {/* Botão para mostrar/ocultar filtros em mobile */}
         <div className="lg:hidden mb-4">
@@ -2280,14 +2343,13 @@ export default function AdminSuggestionsPage() {
           </Button>
         </div>
 
-        {/* Filtros Desktop - Mantém o layout original */}
-        <div className="hidden lg:block">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
+        <div className="hidden md:block mb-5">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 rounded-xl bg-card/40 border border-border/60">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
               <div className="flex items-center gap-2">
-                <Label className="text-sm">Ordenar por numeração:</Label>
+                <Label className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Ordenar:</Label>
                 <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-36 h-8 text-xs bg-muted/30">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2296,50 +2358,57 @@ export default function AdminSuggestionsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="flex items-center gap-2">
-                <Label className="text-sm">Selecionar autor:</Label>
-                <UserSelector
-                  value={authorFilter}
-                  onValueChange={(value) => setAuthorFilter(value)}
-                  disabled={false}
-                  placeholder="Selecionar autor..."
-                />
+                <Label className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Autor:</Label>
+                <div className="min-w-[170px] max-w-[230px]">
+                  <UserSelector
+                    value={authorFilter}
+                    onValueChange={(value) => setAuthorFilter(value)}
+                    disabled={false}
+                    placeholder="Selecionar autor..."
+                  />
+                </div>
                 {authorFilter && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setAuthorFilter(null)}
-                    className="ml-1"
+                    className="h-8 w-8 p-0"
+                    title="Limpar autor"
                   >
-                    <X className="w-4 h-4" />
-                    Limpar
+                    <X className="w-3.5 h-3.5" />
                   </Button>
                 )}
               </div>
+
               <div className="flex items-center gap-2">
-                <Label className="text-sm">Filtrar por responsável:</Label>
-                <UserSelector
-                  value={analystFilter}
-                  onValueChange={(value) => setAnalystFilter(value)}
-                  disabled={false}
-                  placeholder="Selecionar responsável..."
-                />
+                <Label className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Responsável:</Label>
+                <div className="min-w-[170px] max-w-[230px]">
+                  <UserSelector
+                    value={analystFilter}
+                    onValueChange={(value) => setAnalystFilter(value)}
+                    disabled={false}
+                    placeholder="Selecionar responsável..."
+                  />
+                </div>
                 {analystFilter && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setAnalystFilter(null)}
-                    className="ml-1"
+                    className="h-8 w-8 p-0"
+                    title="Limpar responsável"
                   >
-                    <X className="w-4 h-4" />
-                    Limpar
+                    <X className="w-3.5 h-3.5" />
                   </Button>
                 )}
               </div>
+
               <div className="flex items-center gap-2">
-                <Label className="text-sm">Pagamento:</Label>
+                <Label className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Pagamento:</Label>
                 <Select value={paymentFilter} onValueChange={(value: string) => setPaymentFilter(value)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-32 h-8 text-xs bg-muted/30">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2350,33 +2419,33 @@ export default function AdminSuggestionsPage() {
                 </Select>
                 {paymentFilter !== "all" && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPaymentFilter("all")}
-                    className="ml-1"
+                    className="h-8 w-8 p-0"
+                    title="Limpar pagamento"
                   >
-                    <X className="w-4 h-4" />
-                    Limpar
+                    <X className="w-3.5 h-3.5" />
                   </Button>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="show-my-tasks"
-                  checked={showMyTasks}
-                  onCheckedChange={(checked) => {
-                    setShowMyTasks(checked as boolean)
-                    // Se marcar "Minhas pendências", limpar o filtro de responsável
-                    if (checked) {
-                      setAnalystFilter(null)
-                    }
-                  }}
-                  disabled={!currentUser}
-                />
-                <Label htmlFor="show-my-tasks" className="text-sm cursor-pointer">
-                  Minhas pendências
-                </Label>
-              </div>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <Checkbox
+                id="show-my-tasks"
+                checked={showMyTasks}
+                onCheckedChange={(checked) => {
+                  setShowMyTasks(checked as boolean)
+                  if (checked) {
+                    setAnalystFilter(null)
+                  }
+                }}
+                disabled={!currentUser}
+              />
+              <Label htmlFor="show-my-tasks" className="text-xs cursor-pointer font-medium whitespace-nowrap">
+                Minhas pendências
+              </Label>
             </div>
           </div>
         </div>
@@ -2542,7 +2611,6 @@ export default function AdminSuggestionsPage() {
         <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 md:p-6">
           <DialogHeader className="space-y-2">
             <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
-              <Edit className="w-4 h-4 md:w-5 md:h-5" />
               <span className="truncate">
                 Ideia #{selectedSuggestion ? formatIdeaNumber(selectedSuggestion.ideaNumber) : ''}
               </span>
@@ -2618,6 +2686,21 @@ export default function AdminSuggestionsPage() {
         isOpen={isCreateSuggestionModalOpen}
         onClose={() => setIsCreateSuggestionModalOpen(false)}
         setIsDoubtsPopupOpen={setIsDoubtsPopupOpen}
+        initialCampaignId={campaignFilter}
+      />
+
+      {/* Modal Criar e Gerenciar Campanha */}
+      <CampaignModal
+        isOpen={isCampaignModalOpen}
+        onClose={() => {
+          setIsCampaignModalOpen(false)
+          setManageCampaignId(null)
+        }}
+        campaignId={manageCampaignId}
+        onOpenIdeaDetails={(ideaId) => {
+          const idea = suggestions.find((s) => s.id === ideaId)
+          if (idea) openSuggestionModal(idea)
+        }}
       />
 
     </DashboardShell>
@@ -3820,16 +3903,19 @@ function ClassificationManagement({ onClose: _onClose }: { onClose: () => void }
 function CreateSuggestionModal({
   isOpen,
   onClose,
-  setIsDoubtsPopupOpen
+  setIsDoubtsPopupOpen,
+  initialCampaignId,
 }: {
   isOpen: boolean
   onClose: () => void
   setIsDoubtsPopupOpen: (value: boolean) => void
+  initialCampaignId?: string | null
 }) {
   const [formData, setFormData] = useState({
     submittedName: "",
     submittedSector: "",
     isNameVisible: true,
+    campaignId: initialCampaignId ?? null,
     problem: "",
     description: "",
     contributionType: "IDEIA_INOVADORA" as "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO",
@@ -3850,33 +3936,25 @@ function CreateSuggestionModal({
   // Buscar todos os usuários para seleção
   const { data: allUsers = [] } = api.user.listAll.useQuery()
 
-  // Preencher automaticamente os campos quando um usuário é selecionado
+  // Buscar todas as campanhas para seleção
+  const { data: campaigns = [] } = api.campaign.list.useQuery()
+
+  // Atualizar campaignId quando modal abrir com valor inicial
   useEffect(() => {
-    if (formData.userId && allUsers.length > 0) {
-      const selectedUser = allUsers.find(user => user.id === formData.userId)
-      if (selectedUser) {
-        const fullName = `${selectedUser.firstName ?? ''} ${selectedUser.lastName ?? ''}`.trim()
-        setFormData(prev => ({
-          ...prev,
-          submittedName: fullName,
-          submittedSector: selectedUser.setor ?? ""
-        }))
-      }
-    } else if (!formData.userId) {
-      // Limpar campos quando nenhum usuário estiver selecionado
+    if (isOpen) {
       setFormData(prev => ({
         ...prev,
-        submittedName: "",
-        submittedSector: ""
+        campaignId: initialCampaignId ?? null
       }))
     }
-  }, [formData.userId, allUsers])
+  }, [isOpen, initialCampaignId])
 
   // Mutation para criar ideia manualmente
   const createSuggestion = api.suggestion.createManual.useMutation({
     onSuccess: () => {
       toast({ title: "Ideia criada", description: "Nova ideia criada com sucesso." })
       void utils.suggestion.list.invalidate()
+      void utils.campaign.list.invalidate()
       onClose()
       resetForm()
     },
@@ -3894,6 +3972,7 @@ function CreateSuggestionModal({
       submittedName: "",
       submittedSector: "",
       isNameVisible: true,
+      campaignId: initialCampaignId ?? null,
       problem: "",
       description: "",
       contributionType: "IDEIA_INOVADORA",
@@ -3929,6 +4008,7 @@ function CreateSuggestionModal({
       submittedName: formData.submittedName.trim(),
       submittedSector: formData.submittedSector.trim(),
       isNameVisible: formData.isNameVisible,
+      campaignId: formData.campaignId ?? undefined,
       problem: formData.problem.trim(),
       description: formData.description.trim(),
       contribution: {
@@ -3954,9 +4034,8 @@ function CreateSuggestionModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-4 md:p-6">
-        <DialogHeader className="space-y-2">
+        <DialogHeader className="space-y-1 pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
-            <Plus className="w-4 h-4 md:w-5 md:h-5" />
             <span className="truncate">
               Criar Nova Ideia Manualmente
             </span>
@@ -3966,14 +4045,17 @@ function CreateSuggestionModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Informações do Autor */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Informações do Autor</h3>
+          <div className="rounded-lg border bg-card p-4 md:p-5 space-y-4 shadow-sm">
+            <h3 className="text-base font-semibold text-foreground pb-2 border-b">
+              Informações do Autor
+            </h3>
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Selecionar Colaborador</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Selecionar Colaborador</Label>
                   {formData.userId && (
                     <Button
                       variant="ghost"
@@ -3986,7 +4068,7 @@ function CreateSuggestionModal({
                           submittedSector: ""
                         }))
                       }}
-                      className="h-auto p-1 text-xs"
+                      className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
                     >
                       <X className="w-3 h-3 mr-1" />
                       Limpar seleção
@@ -3996,10 +4078,23 @@ function CreateSuggestionModal({
                 <UserSelector
                   value={formData.userId}
                   onValueChange={(value) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      userId: value
-                    }))
+                    if (value && allUsers.length > 0) {
+                      const selectedUser = allUsers.find(user => user.id === value)
+                      const fullName = selectedUser ? `${selectedUser.firstName ?? ''} ${selectedUser.lastName ?? ''}`.trim() : ""
+                      setFormData(prev => ({
+                        ...prev,
+                        userId: value,
+                        submittedName: fullName,
+                        submittedSector: selectedUser?.setor ?? ""
+                      }))
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        userId: value,
+                        submittedName: "",
+                        submittedSector: ""
+                      }))
+                    }
                   }}
                   placeholder="Selecionar colaborador..."
                 />
@@ -4009,9 +4104,9 @@ function CreateSuggestionModal({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="submittedName">
-                    Nome do Colaborador {formData.userId ? "" : ""}
+                <div className="space-y-1.5">
+                  <Label htmlFor="submittedName" className="text-xs font-medium text-muted-foreground">
+                    Nome do Colaborador
                   </Label>
                   <Input
                     id="submittedName"
@@ -4019,11 +4114,12 @@ function CreateSuggestionModal({
                     onChange={(e) => setFormData(prev => ({ ...prev, submittedName: e.target.value }))}
                     placeholder="Digite o nome completo"
                     disabled={!!formData.userId}
+                    className="text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="submittedSector">
-                    Setor {formData.userId ? "" : ""}
+                <div className="space-y-1.5">
+                  <Label htmlFor="submittedSector" className="text-xs font-medium text-muted-foreground">
+                    Setor
                   </Label>
                   <Input
                     id="submittedSector"
@@ -4031,6 +4127,61 @@ function CreateSuggestionModal({
                     onChange={(e) => setFormData(prev => ({ ...prev, submittedSector: e.target.value }))}
                     placeholder="Digite o setor"
                     disabled={!!formData.userId}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Campanha Vinculada</Label>
+                  <Select
+                    value={formData.campaignId ?? "none"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, campaignId: val === "none" ? null : val }))}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Selecione uma campanha (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      {campaigns.map((camp) => (
+                        <SelectItem key={camp.id} value={camp.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{camp.name}</span>
+                            <span
+                              className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                                camp.status === "ACTIVE"
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                  : camp.status === "DRAFT"
+                                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {camp.status === "ACTIVE" ? "Ativa" : camp.status === "DRAFT" ? "Rascunho" : "Encerrada"}
+                            </span>
+                            {camp.isPrivate && (
+                              <span className="text-[10px] text-amber-500 flex items-center gap-0.5">
+                                <Lock className="w-2.5 h-2.5 inline" /> Privada
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="dateRef" className="text-xs font-medium text-muted-foreground">Data da Ideia</Label>
+                  <Input
+                    id="dateRef"
+                    type="date"
+                    value={formData.dateRef ? formData.dateRef.toISOString().split('T')[0] : ""}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      dateRef: e.target.value ? new Date(e.target.value) : null
+                    }))}
+                    className="text-sm"
                   />
                 </div>
               </div>
@@ -4038,103 +4189,91 @@ function CreateSuggestionModal({
           </div>
 
           {/* Tipo de Contribuição */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Tipo de Contribuição</h3>
-            <div className="space-y-3">
-              <Select
-                value={formData.contributionType}
-                onValueChange={(value: "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO") => setFormData(prev => ({ ...prev, contributionType: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo de contribuição" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="IDEIA_INOVADORA">Ideia Inovadora</SelectItem>
-                  <SelectItem value="SUGESTAO_MELHORIA">Sugestão de Melhoria</SelectItem>
-                  <SelectItem value="SOLUCAO_PROBLEMA">Solução de Problema</SelectItem>
-                  <SelectItem value="OUTRO">Outro</SelectItem>
-                </SelectContent>
-              </Select>
-              {formData.contributionType === "OUTRO" && (
-                <Input
-                  value={formData.contributionOther}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contributionOther: e.target.value }))}
-                  placeholder="Especifique o tipo de contribuição"
-                />
-              )}
-            </div>
-          </div>
+          <div className="rounded-lg border bg-card p-4 md:p-5 space-y-4 shadow-sm">
+            <h3 className="text-base font-semibold text-foreground pb-2 border-b">
+              Conteúdo da Ideia
+            </h3>
 
-          {/* Data de Referência */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Data de Referência</h3>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="dateRef">Data da Ideia</Label>
-                <Input
-                  id="dateRef"
-                  type="date"
-                  value={formData.dateRef ? formData.dateRef.toISOString().split('T')[0] : ""}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    dateRef: e.target.value ? new Date(e.target.value) : null
-                  }))}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Define a data de referência da ideia. Se não informada, será usada a data atual.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Problema e Solução */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Problema e Solução</h3>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="problem">Problema Identificado *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Tipo de Contribuição</Label>
+                <Select
+                  value={formData.contributionType}
+                  onValueChange={(value: "IDEIA_INOVADORA" | "SUGESTAO_MELHORIA" | "SOLUCAO_PROBLEMA" | "OUTRO") => setFormData(prev => ({ ...prev, contributionType: value }))}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Selecione o tipo de contribuição" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IDEIA_INOVADORA">Ideia Inovadora</SelectItem>
+                    <SelectItem value="SUGESTAO_MELHORIA">Sugestão de Melhoria</SelectItem>
+                    <SelectItem value="SOLUCAO_PROBLEMA">Solução de Problema</SelectItem>
+                    <SelectItem value="OUTRO">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.contributionType === "OUTRO" && (
+                  <Input
+                    value={formData.contributionOther}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contributionOther: e.target.value }))}
+                    placeholder="Especifique o tipo de contribuição"
+                    className="text-sm mt-2"
+                  />
+                )}
+              </div>
+
+              {/* Problema e Solução */}
+              <div className="space-y-1.5">
+                <Label htmlFor="problem" className="text-xs font-medium text-muted-foreground">
+                  Problema Identificado *
+                </Label>
                 <Textarea
                   id="problem"
                   value={formData.problem}
                   onChange={(e) => setFormData(prev => ({ ...prev, problem: e.target.value }))}
                   placeholder="Descreva o problema identificado..."
                   rows={3}
+                  className="text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Solução Proposta *</Label>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-medium text-muted-foreground">
+                  Solução Proposta *
+                </Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Descreva a solução proposta..."
-                  rows={4}
+                  rows={3}
+                  className="text-sm"
                 />
               </div>
             </div>
           </div>
 
-
-
           {/* Gestão */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Gestão da Ideia</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Responsável pela Devolutiva</Label>
+          <div className="rounded-lg border bg-card p-4 md:p-5 space-y-4 shadow-sm">
+            <h3 className="text-base font-semibold text-foreground pb-2 border-b">
+              Gestão e Status Inicial
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Responsável pela Devolutiva</Label>
                 <UserSelector
                   value={formData.analystId}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, analystId: value }))}
                   placeholder="Selecionar responsável..."
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Status da Ideia</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Status da Ideia</Label>
                 <Select
                   value={formData.status}
                   onValueChange={(value: "NEW" | "IN_REVIEW" | "APPROVED" | "IN_PROGRESS" | "DONE" | "NOT_IMPLEMENTED") => setFormData(prev => ({ ...prev, status: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -4150,30 +4289,35 @@ function CreateSuggestionModal({
 
             {/* Campo de motivo para não implementado */}
             {formData.status === "NOT_IMPLEMENTED" && (
-              <div className="space-y-2">
-                <Label htmlFor="rejectionReason">Motivo da Não Implementação *</Label>
+              <div className="space-y-1.5 pt-2 border-t">
+                <Label htmlFor="rejectionReason" className="text-xs font-medium text-destructive">
+                  Motivo da Não Implementação *
+                </Label>
                 <Textarea
                   id="rejectionReason"
                   value={formData.rejectionReason}
                   onChange={(e) => setFormData(prev => ({ ...prev, rejectionReason: e.target.value }))}
                   placeholder="Explique o motivo pelo qual esta ideia não será implementada..."
                   rows={3}
+                  className="text-sm"
                 />
               </div>
             )}
 
             {/* Campos de pagamento para concluído */}
             {formData.status === "DONE" && (
-              <div className="space-y-4 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                <h4 className="text-base font-medium text-green-800 dark:text-green-200">💰 Gestão de Pagamento</h4>
+              <div className="space-y-4 p-4 bg-emerald-500/5 rounded-lg border border-emerald-500/20">
+                <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  Gestão de Pagamento
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Status do Pagamento</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Status do Pagamento</Label>
                     <Select
                       value={formData.paymentStatus}
                       onValueChange={(value: "paid" | "unpaid") => setFormData(prev => ({ ...prev, paymentStatus: value }))}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm">
                         <SelectValue placeholder="Selecione o status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -4183,18 +4327,19 @@ function CreateSuggestionModal({
                     </Select>
                   </div>
                   {formData.paymentStatus === "paid" && (
-                    <div className="space-y-2">
-                      <Label>Data do Pagamento</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">Data do Pagamento</Label>
                       <Input
                         type="date"
                         value={formData.paymentDate ? formData.paymentDate.toISOString().split('T')[0] : ""}
                         onChange={(e) => setFormData(prev => ({ ...prev, paymentDate: e.target.value ? new Date(e.target.value) : null }))}
+                        className="text-sm"
                       />
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Valor do Pagamento (Opcional)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Valor do Pagamento (Opcional)</Label>
                   <Input
                     type="number"
                     placeholder="Ex: 500.00"
@@ -4202,15 +4347,17 @@ function CreateSuggestionModal({
                     min="0"
                     value={formData.paymentAmount ?? ""}
                     onChange={(e) => setFormData(prev => ({ ...prev, paymentAmount: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                    className="text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Descrição do Pagamento (Opcional)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Descrição do Pagamento (Opcional)</Label>
                   <Textarea
                     value={formData.paymentDescription}
                     onChange={(e) => setFormData(prev => ({ ...prev, paymentDescription: e.target.value }))}
                     placeholder="Detalhes sobre o pagamento..."
                     rows={2}
+                    className="text-sm"
                   />
                 </div>
               </div>
@@ -4218,17 +4365,17 @@ function CreateSuggestionModal({
           </div>
 
           {/* Botões de Ação */}
-          <div className="flex justify-between items-center gap-3 pt-4 border-t">
-            <Button variant="ghost" onClick={() => setIsDoubtsPopupOpen(true)} className="flex items-center gap-2">
+          <div className="flex justify-between items-center gap-3 pt-3 border-t">
+            <Button variant="ghost" size="sm" onClick={() => setIsDoubtsPopupOpen(true)} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
               <HelpCircle className="w-4 h-4" />
               Dúvidas
             </Button>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onClose}>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={onClose}>
                 Cancelar
               </Button>
               <Button
-                variant="default"
+                size="sm"
                 onClick={handleSubmit}
                 disabled={createSuggestion.isPending}
               >

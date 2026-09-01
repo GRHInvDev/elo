@@ -229,6 +229,7 @@ export const suggestionRouter = createTRPCRouter({
         type: z.enum(["IDEIA_INOVADORA", "SUGESTAO_MELHORIA", "SOLUCAO_PROBLEMA", "OUTRO"]),
         other: z.string().trim().optional(),
       }),
+      campaignId: z.string().trim().optional(),
       aiEnhancement: AiEnhancementCreatePayload,
     }))
     .mutation(async ({ ctx, input }) => {
@@ -266,6 +267,7 @@ export const suggestionRouter = createTRPCRouter({
           description: input.description, // Solução proposta
           problem: input.problem ?? null, // Problema identificado
           contribution: input.contribution,
+          campaignId: input.campaignId ?? null,
           dateRef: new Date(),
           status: "NEW",
           ...(aiEnhancementJson ? { aiEnhancement: aiEnhancementJson } : {}),
@@ -308,6 +310,7 @@ export const suggestionRouter = createTRPCRouter({
       }).optional(),
       paymentDate: z.date().optional(),
       userId: z.string().optional(), // Para atribuir a outro usuário
+      campaignId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Gerar próximo número de ideia
@@ -419,6 +422,7 @@ export const suggestionRouter = createTRPCRouter({
           description: input.description,
           problem: input.problem,
           contribution: input.contribution,
+          campaignId: input.campaignId ?? null,
           impact: input.impact as InputJsonValue,
           capacity: input.capacity as InputJsonValue,
           effort: input.effort as InputJsonValue,
@@ -447,35 +451,16 @@ export const suggestionRouter = createTRPCRouter({
               email: true,
             },
           },
+          campaign: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              isPrivate: true,
+            },
+          },
         },
       })
-
-      // Criar notificação para o usuário (se não for o próprio admin e não for o usuário "Não atribuído")
-      const UNASSIGNED_USER_EMAIL = "nao-atribuido@interno.sistema"
-      const assignedUser = await ctx.db.user.findUnique({
-        where: { id: userIdToAssign },
-        select: { email: true }
-      })
-      const isUnassignedUser = assignedUser?.email === UNASSIGNED_USER_EMAIL
-
-      if (input.userId && input.userId !== ctx.user.id && !isUnassignedUser) {
-        try {
-          await ctx.db.notification.create({
-            data: {
-              title: "Nova Ideia Criada",
-              message: `Uma nova ideia #${ideaNumber} foi criada em seu nome.`,
-              type: "SUGGESTION_CREATED",
-              channel: "IN_APP",
-              userId: input.userId,
-              entityId: suggestion.id,
-              entityType: "suggestion",
-              actionUrl: `/my-suggestions`
-            }
-          })
-        } catch (notificationError) {
-          console.error("Erro ao criar notificação:", notificationError)
-        }
-      }
 
       return suggestion
     }),
@@ -485,12 +470,14 @@ export const suggestionRouter = createTRPCRouter({
     .input(z.object({
       status: z.array(StatusEnum).optional(),
       search: z.string().optional(),
+      campaignId: z.string().nullable().optional(),
       take: z.number().min(1).max(1000).default(50),
       skip: z.number().min(0).default(0),
     }).optional())
     .query(async ({ ctx, input }) => {
-      const where = {
+      const where: Prisma.SuggestionWhereInput = {
         status: input?.status ? { in: input.status } : undefined,
+        campaignId: input?.campaignId !== undefined ? input.campaignId : undefined,
         description: input?.search
           ? { contains: input.search, mode: Prisma.QueryMode.insensitive }
           : undefined,
@@ -504,6 +491,7 @@ export const suggestionRouter = createTRPCRouter({
           id: true,
           ideaNumber: true,
           userId: true,
+          campaignId: true,
           submittedName: true,
           submittedSector: true,
           isNameVisible: true,
@@ -525,12 +513,27 @@ export const suggestionRouter = createTRPCRouter({
           isTextEdited: true,
           aiEnhancement: true,
           createdAt: true,
+          campaign: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              isPrivate: true,
+            },
+          },
           user: {
             select: {
               firstName: true,
               lastName: true,
               email: true,
               setor: true,
+              filial: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                },
+              },
             },
           },
           analyst: {
@@ -545,21 +548,46 @@ export const suggestionRouter = createTRPCRouter({
     }),
 
   // Kanban
-  listKanban: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.suggestion.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        ideaNumber: true,
-        description: true, // Solução proposta
-        problem: true, // Problema identificado
-        submittedName: true,
-        status: true,
-        isTextEdited: true,
-        createdAt: true,
-      },
-    })
-  }),
+  listKanban: protectedProcedure
+    .input(z.object({
+      campaignId: z.string().nullable().optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.SuggestionWhereInput = {
+        campaignId: input?.campaignId !== undefined ? input.campaignId : undefined,
+      }
+      return ctx.db.suggestion.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          ideaNumber: true,
+          campaignId: true,
+          description: true, // Solução proposta
+          problem: true, // Problema identificado
+          submittedName: true,
+          status: true,
+          isTextEdited: true,
+          payment: true,
+          createdAt: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              setor: true,
+            },
+          },
+          campaign: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              isPrivate: true,
+            },
+          },
+        },
+      })
+    }),
 
   // Atualizações do admin (impact/capacity/effort/kpis/status/reason/analyst)
   updateAdmin: adminProcedure
@@ -572,6 +600,7 @@ export const suggestionRouter = createTRPCRouter({
       status: StatusEnum.optional(),
       rejectionReason: z.string().optional(),
       analystId: z.string().optional(),
+      campaignId: z.string().nullable().optional(),
       payment: z.object({
         status: z.enum(["paid", "unpaid"]),
         amount: z.number().optional(),
@@ -647,6 +676,7 @@ export const suggestionRouter = createTRPCRouter({
           status: input.status,
           rejectionReason: input.rejectionReason,
           analystId: input.analystId, // Usar apenas o analystId fornecido explicitamente
+          campaignId: input.campaignId !== undefined ? (input.campaignId ?? null) : undefined,
           payment: input.payment ? (input.payment as Prisma.InputJsonValue) : undefined,
           paymentDate: input.paymentDate,
           finalScore,
@@ -713,7 +743,7 @@ export const suggestionRouter = createTRPCRouter({
               userId: suggestionData.userId,
               entityId: input.id,
               entityType: "suggestion",
-              actionUrl: `/my-suggestions`
+              actionUrl: `/suggestions`
             }
           })
         } else if (input.impact || input.capacity || input.effort) {
@@ -727,7 +757,7 @@ export const suggestionRouter = createTRPCRouter({
               userId: suggestionData.userId,
               entityId: input.id,
               entityType: "suggestion",
-              actionUrl: `/my-suggestions`
+              actionUrl: `/suggestions`
             }
           })
         }
@@ -1501,4 +1531,274 @@ export const suggestionRouter = createTRPCRouter({
 
     return computeEvaluatorDashboard({ id: targetId, displayName }, rows, forecastRows)
   }),
+
+
+  toggleSupport: protectedProcedure
+    .input(z.object({ suggestionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.auth.userId;
+
+
+      const existing = await ctx.db.suggestionSupport.findUnique({
+        where: {
+          suggestionId_userId: {
+            suggestionId: input.suggestionId,
+            userId,
+          },
+        },
+      });
+
+      if (existing) {
+        await ctx.db.suggestionSupport.delete({
+          where: { id: existing.id },
+        });
+      } else {
+        await ctx.db.suggestionSupport.create({
+          data: {
+            suggestionId: input.suggestionId,
+            userId,
+          },
+        });
+      }
+
+      const totalSupports = await ctx.db.suggestionSupport.count({
+        where: { suggestionId: input.suggestionId },
+      });
+
+      return {
+        hasSupported: !existing,
+        supportsCount: totalSupports,
+      };
+    }),
+
+  addComment: protectedProcedure
+    .input(
+      z.object({
+        suggestionId: z.string(),
+        content: z.string().trim().min(1, "O comentário não pode ficar vazio.").max(3000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const comment = await ctx.db.suggestionComment.create({
+        data: {
+          suggestionId: input.suggestionId,
+          userId: ctx.auth.userId,
+          content: input.content,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              setor: true,
+              role_config: true,
+            },
+          },
+        },
+      });
+
+      return {
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        user: {
+          id: comment.user.id,
+          name: `${comment.user.firstName ?? ""} ${comment.user.lastName ?? ""}`.trim() || comment.user.email,
+          setor: comment.user.setor,
+          role_config: comment.user.role_config,
+        },
+      };
+    }),
+
+  deleteComment: protectedProcedure
+    .input(z.object({ commentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const comment = await ctx.db.suggestionComment.findUnique({
+        where: { id: input.commentId },
+      });
+
+      if (!comment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Comentário não encontrado." });
+      }
+
+      const me = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      });
+      const roleConfig = getEffectiveRoleConfig(me);
+      const isOwner = comment.userId === ctx.auth.userId;
+      const isAdmin = roleConfig.sudo || (Array.isArray(roleConfig.admin_pages) && roleConfig.admin_pages.includes("/admin"));
+
+      if (!isOwner && !isAdmin) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Você não tem permissão para excluir este comentário." });
+      }
+
+      await ctx.db.suggestionComment.delete({
+        where: { id: input.commentId },
+      });
+
+      return { success: true };
+    }),
+
+  deleteMyIdea: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const suggestion = await ctx.db.suggestion.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!suggestion) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ideia não encontrada." });
+      }
+
+      if (suggestion.userId !== ctx.auth.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode excluir ideias que você mesmo enviou." });
+      }
+
+      await ctx.db.suggestion.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true, id: input.id };
+    }),
+
+  listMyIdeas: protectedProcedure.query(async ({ ctx }) => {
+    const ideas = await ctx.db.suggestion.findMany({
+      where: {
+        userId: ctx.auth.userId,
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            isPrivate: true,
+          },
+        },
+        _count: {
+          select: {
+            supports: true,
+            comments: true,
+          },
+        },
+      },
+    });
+
+    return ideas.map((s) => ({
+      id: s.id,
+      ideaNumber: s.ideaNumber,
+      description: s.description,
+      problem: s.problem,
+      status: s.status,
+      campaign: s.campaign,
+      supportsCount: s._count.supports,
+      commentsCount: s._count.comments,
+      createdAt: s.createdAt,
+    }));
+  }),
+
+  getPublicIdeaById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const currentUserId = ctx.auth.userId;
+
+      const idea = await ctx.db.suggestion.findUnique({
+        where: { id: input.id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              setor: true,
+            },
+          },
+          campaign: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              isPrivate: true,
+            },
+          },
+          supports: {
+            where: {
+              userId: currentUserId,
+            },
+            select: {
+              id: true,
+            },
+          },
+          comments: {
+            orderBy: { createdAt: "asc" },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  setor: true,
+                  role_config: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              supports: true,
+              comments: true,
+            },
+          },
+        },
+      });
+
+      if (!idea) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Ideia não encontrada." });
+      }
+
+      const isOwner = idea.userId === currentUserId;
+      const authorName = idea.isNameVisible && idea.user
+        ? `${idea.user.firstName ?? ""} ${idea.user.lastName ?? ""}`.trim() || (idea.submittedName ?? "Colaborador")
+        : (idea.submittedName ?? "Colaborador anônimo");
+
+      const authorSector = (idea.isNameVisible ? idea.user?.setor : null) ?? idea.submittedSector ?? "Geral";
+
+      return {
+        id: idea.id,
+        ideaNumber: idea.ideaNumber,
+        description: idea.description,
+        problem: idea.problem,
+        contribution: idea.contribution,
+        status: idea.status,
+        isNameVisible: idea.isNameVisible,
+        authorName,
+        authorSector,
+        authorInitials: authorName.slice(0, 2).toUpperCase(),
+        isOwner,
+        campaign: idea.campaign,
+        supportsCount: idea._count.supports,
+        hasSupported: idea.supports.length > 0,
+        createdAt: idea.createdAt,
+        comments: idea.comments.map((c) => ({
+          id: c.id,
+          content: c.content,
+          createdAt: c.createdAt,
+          isOwner: c.userId === currentUserId,
+          authorName: `${c.user.firstName ?? ""} ${c.user.lastName ?? ""}`.trim() || c.user.email,
+          authorInitials: (`${c.user.firstName ?? ""} ${c.user.lastName ?? ""}`.trim() || c.user.email).slice(0, 2).toUpperCase(),
+          authorSector: c.user.setor,
+          isCommittee: Boolean(
+            (c.user.role_config as RolesConfig)?.sudo ||
+            (Array.isArray((c.user.role_config as RolesConfig)?.admin_pages) &&
+              (c.user.role_config as RolesConfig)?.admin_pages.includes("/admin"))
+          ),
+        })),
+      };
+    }),
 })
