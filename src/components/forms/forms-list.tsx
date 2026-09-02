@@ -25,7 +25,7 @@ import { api } from "@/trpc/react"
 import { getSectorVisualInfo } from "@/lib/form-icons"
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
-interface FormsListV2Props {
+interface FormsListProps {
   userCanCreateForm: boolean
   showCentralLink?: boolean
 }
@@ -48,9 +48,7 @@ function getSector(form: FormItem): string {
   return setor && setor.length > 0 ? setor : "Geral"
 }
 
-
-
-export function FormsListV2({ userCanCreateForm, showCentralLink }: FormsListV2Props) {
+export function FormsList({ userCanCreateForm, showCentralLink }: FormsListProps) {
   const [query, setQuery] = React.useState("")
   const [sector, setSector] = React.useState<string>(ALL_CHIP)
   const sectorsScrollRef = React.useRef<HTMLDivElement>(null)
@@ -173,7 +171,6 @@ export function FormsListV2({ userCanCreateForm, showCentralLink }: FormsListV2P
         <div className="rounded-[22px] border border-border/70 bg-card/80 backdrop-blur-xl shadow-sm overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-border/60">
 
-            {/* Bloco: Métricas */}
             <div className="md:col-span-7 grid grid-cols-3 divide-x divide-border/60">
               <Link
                 href="/forms/my-responses"
@@ -210,7 +207,6 @@ export function FormsListV2({ userCanCreateForm, showCentralLink }: FormsListV2P
               </Link>
             </div>
 
-            {/* Bloco: Último Chamado + Ação */}
             <div className="md:col-span-5 flex flex-col justify-center gap-3 p-5">
               {myResponses[0] && (
                 <>
@@ -410,7 +406,6 @@ function FuturisticServiceCard({ form, sectorConfigs }: ServiceCardProps) {
           background: cardBackground,
         }}
       >
-        {/* Emblema / Ícone do Setor Gigante em Marca d'água à Direita com opacidade equilibrada */}
         <div
           className="absolute -right-4 -top-6 w-48 h-48 pointer-events-none select-none transition-transform duration-500 ease-out group-hover:scale-110 group-hover:rotate-3"
           aria-hidden="true"
@@ -421,7 +416,6 @@ function FuturisticServiceCard({ form, sectorConfigs }: ServiceCardProps) {
           />
         </div>
 
-        {/* Informações: Setor, Título, Descrição */}
         <div className="relative z-10 pr-14">
           <div className="flex items-center gap-1.5 mb-2">
             <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-stone-400 dark:text-white/70">
@@ -436,9 +430,7 @@ function FuturisticServiceCard({ form, sectorConfigs }: ServiceCardProps) {
           </p>
         </div>
 
-        {/* Rodapé: Ações com z-index alto para não conflitar com o clique do card */}
         <div className="relative z-20 mt-2 flex items-center justify-between gap-3">
-          {/* Botão Ver Detalhes → /forms/[id] */}
           <Link
             href={`/forms/${form.id}`}
             onClick={(e) => e.stopPropagation()}
@@ -449,16 +441,10 @@ function FuturisticServiceCard({ form, sectorConfigs }: ServiceCardProps) {
             <span className="hidden sm:inline">Ver</span>
           </Link>
 
-          {/* Botão Solicitar → /forms/[id]/respond */}
           <Link
             href={`/forms/${form.id}/respond`}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 h-8 px-3.5 rounded-xl text-xs font-bold dark:text-white"
-              /*//
-              style={{
-                backgroundColor: sectorColor,
-              }}
-              */
           >
             <span>Solicitar</span>
             <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -469,4 +455,4 @@ function FuturisticServiceCard({ form, sectorConfigs }: ServiceCardProps) {
   )
 }
 
-export default FormsListV2
+export default FormsList

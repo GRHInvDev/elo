@@ -6,7 +6,7 @@ import { AlertTriangle, RotateCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
+import { FormsPanel } from "@/components/forms/forms-sub-page-shell"
 
 /**
  * Fronteira de erro do módulo Solicitações.
@@ -32,7 +32,7 @@ export default function FormsError({
 
   return (
     <DashboardShell>
-      <div className="v2-scope">
+      <div className="forms-scope">
         <FormsPanel className="mx-auto max-w-xl text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700">
@@ -48,7 +48,7 @@ export default function FormsError({
               </p>
             </div>
             {error.digest && (
-              <p className="rounded-md border border-[hsl(var(--v2-border-soft))] bg-muted/40 px-2.5 py-1 font-mono text-xs text-muted-foreground">
+              <p className="rounded-md border border-[hsl(var(--forms-border-soft))] bg-muted/40 px-2.5 py-1 font-mono text-xs text-muted-foreground">
                 {error.digest}
               </p>
             )}

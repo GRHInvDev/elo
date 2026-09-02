@@ -2,10 +2,10 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
-  Check,
   Clock,
   Edit,
   FileText,
@@ -17,19 +17,17 @@ import {
   Plus,
   Search,
   UserCheck,
-  X,
 } from "lucide-react"
 
 import { api } from "@/trpc/react"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
+import { getSectorVisualInfo } from "@/lib/form-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { RequestStatusPill, STATUS_META } from "@/components/forms/v2/request-status-pill"
+import { RequestStatusPill, STATUS_META } from "@/components/forms/request-status-pill"
 import { ResponseDetails } from "@/components/forms/response-details"
 import { ResponseChat } from "@/components/forms/response-chat"
 import { EditResponseModal } from "@/components/forms/edit-response-modal"
@@ -68,13 +66,23 @@ function initials(name?: string | null, email?: string | null) {
 }
 
 export function UserResponsesList() {
+  const searchParams = useSearchParams()
+  const responseIdParam = searchParams.get("responseId")
   const [view, setView] = React.useState<View>("lista")
   const [query, setQuery] = React.useState("")
   const [filter, setFilter] = React.useState<StatusFilter>("ALL")
-  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [selectedId, setSelectedId] = React.useState<string | null>(responseIdParam)
   const [editTarget, setEditTarget] = React.useState<{ responseId: string; formId: string } | null>(null)
 
   const { data, isLoading } = api.formResponse.listUserResponses.useQuery()
+  const { data: sectorConfigs } = api.setores.getSectorConfigs.useQuery()
+
+  React.useEffect(() => {
+    if (responseIdParam) {
+      setSelectedId(responseIdParam)
+    }
+  }, [responseIdParam])
+
   const responses = React.useMemo<FormResponse[]>(
     () => (data ?? []) as unknown as FormResponse[],
     [data],
@@ -113,10 +121,14 @@ export function UserResponsesList() {
     return map
   }, [responses])
 
-  const selected = React.useMemo(
-    () => responses.find((r) => r.id === selectedId) ?? null,
-    [responses, selectedId],
-  )
+  const selected = React.useMemo(() => {
+    if (!selectedId) return null
+    const cleanNum = selectedId.replace(/^#/, "")
+    return (
+      responses.find((r) => r.id === selectedId || (r.number != null && String(r.number) === cleanNum)) ??
+      null
+    )
+  }, [responses, selectedId])
 
   if (isLoading) {
     return (
@@ -157,10 +169,9 @@ export function UserResponsesList() {
 
   return (
     <div className="space-y-6">
-      {/* KPIs Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KpiCard label="Total" value={counts.total} />
-        <KpiCard label="Não iniciadas" value={counts.notStarted} />
+        <KpiCard label="Não iniciadas" value={counts.notStarted} tone="danger" />
         <KpiCard label="Em andamento" value={counts.inProgress} tone="warn" />
         <KpiCard label="Concluídas" value={counts.completed} tone="accent" />
       </div>
@@ -244,7 +255,12 @@ export function UserResponsesList() {
         ) : (
           <div className="space-y-3">
             {filtered.map((r) => (
-              <RequestCard key={r.id} response={r} onOpen={() => setSelectedId(r.id)} />
+              <RequestCard
+                key={r.id}
+                response={r}
+                sectorConfigs={sectorConfigs}
+                onOpen={() => setSelectedId(r.id)}
+              />
             ))}
           </div>
         )
@@ -265,14 +281,19 @@ export function UserResponsesList() {
                     {items.length}
                   </span>
                 </div>
-                <div className="flex max-h-[calc(100vh-360px)] min-h-[100px] flex-col gap-2.5 overflow-y-auto scrollbar-thin">
+                <div className="flex max-h-[calc(100vh-360px)] min-h-[100px] flex-col gap-2.5 overflow-y-auto scrollbar-hide">
                   {items.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-border/50 p-4 text-center text-xs text-muted-foreground/70 flex items-center justify-center h-24">
                       Nenhuma solicitação
                     </div>
                   ) : (
                     items.map((r) => (
-                      <BoardCard key={r.id} response={r} onOpen={() => setSelectedId(r.id)} />
+                      <BoardCard
+                        key={r.id}
+                        response={r}
+                        sectorConfigs={sectorConfigs}
+                        onOpen={() => setSelectedId(r.id)}
+                      />
                     ))
                   )}
                 </div>
@@ -291,6 +312,7 @@ export function UserResponsesList() {
           {selected && (
             <RequestDetail
               response={selected}
+              sectorConfigs={sectorConfigs}
               onClose={() => setSelectedId(null)}
               onEdit={selected.status !== "COMPLETED" ? (responseId, formId) => setEditTarget({ responseId, formId }) : undefined}
             />
@@ -314,17 +336,19 @@ export function UserResponsesList() {
 interface KpiCardProps {
   label: string
   value: number
-  tone?: "warn" | "accent"
+  tone?: "warn" | "accent" | "danger"
 }
 
 function KpiCard({ label, value, tone }: KpiCardProps) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-border/80 bg-card px-4 py-3.5 shadow-xs">
+    <div className="flex flex-col gap-1 rounded-2xl border border-border/80 bg-gradient-to-br from-card to-muted/20 px-4 py-3.5 shadow-2xs transition-all hover:border-primary/40 hover:shadow-xs">
       <span
         className={cn(
-          "text-2xl font-bold leading-none tabular-nums",
+          "font-mono text-2xl font-bold tracking-tight",
           tone === "warn" && "text-amber-500",
+          tone === "danger" && "text-rose-500",
           tone === "accent" && "text-emerald-500",
+          !tone && "text-foreground",
         )}
       >
         {value}
@@ -336,7 +360,18 @@ function KpiCard({ label, value, tone }: KpiCardProps) {
   )
 }
 
-function RequestCard({ response: r, onOpen }: { response: FormResponse; onOpen: () => void }) {
+function RequestCard({
+  response: r,
+  sectorConfigs,
+  onOpen,
+}: {
+  response: FormResponse
+  sectorConfigs?: Record<string, { icon: string; color: string }>
+  onOpen: () => void
+}) {
+  const sectorName = r.form?.user?.setor ?? "Geral"
+  const { icon: SectorIcon, color: sectorColor } = getSectorVisualInfo(sectorName, sectorConfigs)
+
   return (
     <div
       role="button"
@@ -349,12 +384,22 @@ function RequestCard({ response: r, onOpen }: { response: FormResponse; onOpen: 
         }
       }}
       className={cn(
-        "group flex w-full items-center gap-4 rounded-2xl border border-border/80 bg-card p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer shadow-xs",
+        "group flex w-full items-center gap-4 rounded-2xl border border-border/80 bg-gradient-to-br from-card to-muted dark:to-transparent/70 p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer shadow-xs",
         "hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5",
       )}
+      style={{
+        backgroundColor: sectorColor
+      }}
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-xs transition-transform group-hover:scale-105">
-        <FileText className="h-5 w-5" />
+      <div
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-xs transition-transform group-hover:scale-105"
+        style={{
+          borderColor: `${sectorColor}40`,
+          backgroundColor: `${sectorColor}18`,
+          color: sectorColor,
+        }}
+      >
+        <SectorIcon className="h-6 w-6" />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -392,7 +437,18 @@ function RequestCard({ response: r, onOpen }: { response: FormResponse; onOpen: 
   )
 }
 
-function BoardCard({ response: r, onOpen }: { response: FormResponse; onOpen: () => void }) {
+function BoardCard({
+  response: r,
+  sectorConfigs,
+  onOpen,
+}: {
+  response: FormResponse
+  sectorConfigs?: Record<string, { icon: string; color: string }>
+  onOpen: () => void
+}) {
+  const sectorName = r.form?.user?.setor ?? "Geral"
+  const { icon: SectorIcon, color: sectorColor } = getSectorVisualInfo(sectorName, sectorConfigs)
+
   return (
     <div
       role="button"
@@ -410,7 +466,10 @@ function BoardCard({ response: r, onOpen }: { response: FormResponse; onOpen: ()
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="font-mono text-xs font-bold text-primary">{shortId(r)}</span>
+        <div className="flex items-center gap-1.5">
+          <SectorIcon className="h-3.5 w-3.5" style={{ color: sectorColor }} />
+          <span className="font-mono text-xs font-bold text-primary">{shortId(r)}</span>
+        </div>
         {r.assignedTo && (
           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded" title={`Atendente: ${r.assignedTo.name}`}>
             <UserCheck className="h-3 w-3 shrink-0" />
@@ -433,45 +492,22 @@ function BoardCard({ response: r, onOpen }: { response: FormResponse; onOpen: ()
 
 function RequestDetail({
   response: r,
-  onClose,
   onEdit,
 }: {
   response: FormResponse
+  sectorConfigs?: Record<string, { icon: string; color: string }>
   onClose: () => void
   onEdit?: (responseId: string, formId: string) => void
 }) {
   const { data: form } = api.form.getById.useQuery({ id: r.formId })
-  const { data: allTags = [] } = api.formResponse.getAllTags.useQuery()
-  const utils = api.useUtils()
-
-  const applyTagMutation = api.formResponse.applyTag.useMutation({
-    onSuccess: () => {
-      toast.success("Tag aplicada")
-      void utils.formResponse.listUserResponses.invalidate()
-      void utils.formResponse.getChat.invalidate({ responseId: r.id })
-    },
-    onError: (err) => toast.error(err.message || "Erro ao aplicar tag"),
-  })
-
-  const removeTagMutation = api.formResponse.removeTag.useMutation({
-    onSuccess: () => {
-      toast.success("Tag removida")
-      void utils.formResponse.listUserResponses.invalidate()
-      void utils.formResponse.getChat.invalidate({ responseId: r.id })
-    },
-    onError: (err) => toast.error(err.message || "Erro ao remover tag"),
-  })
 
   const fields = ((form?.fields as unknown as Field[]) ?? []).filter(Boolean)
   const responseObjects = Array.isArray(r.responses) ? r.responses : []
   const meta = STATUS_META[r.status]
 
-  const responseTagIds = r.tags ?? []
-  const assignedTags = allTags.filter((t) => responseTagIds.includes(t.id))
-
   return (
     <>
-      <div className="flex items-start justify-between gap-3 border-b border-border/50 px-6 pb-5 pt-6 bg-muted/20">
+      <div className="flex items-start justify-between gap-3 border-b border-border/50 px-6 pb-5 pt-6 bg-muted/20 pr-12">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-primary">{shortId(r)}</span>
@@ -486,8 +522,8 @@ function RequestDetail({
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {r.status !== "COMPLETED" && onEdit && (
+        {r.status !== "COMPLETED" && onEdit && (
+          <div className="flex items-center gap-1.5 shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -499,17 +535,8 @@ function RequestDetail({
               <Edit className="h-3.5 w-3.5 text-primary" />
               <span>Editar</span>
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
@@ -538,84 +565,11 @@ function RequestDetail({
           </div>
         )}
 
-        {/* Bloco de Tags */}
-        <div className="rounded-xl border border-border/50 bg-background/50 p-3.5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              Tags do Chamado
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {assignedTags.map((tag) => (
-              <span
-                key={tag.id}
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white shadow-2xs"
-                style={{ backgroundColor: tag.cor || "#3B82F6" }}
-              >
-                <span>{tag.nome}</span>
-                <button
-                  type="button"
-                  onClick={() => removeTagMutation.mutate({ responseId: r.id, tagId: tag.id })}
-                  className="hover:opacity-75 rounded-full p-0.5 transition-opacity cursor-pointer"
-                  title={`Remover tag ${tag.nome}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 rounded-full px-2.5 text-[11px] font-semibold gap-1 border-dashed border-border/80 bg-background/50 hover:bg-background"
-                >
-                  <Plus className="h-3 w-3" />
-                  <span>Adicionar Tag</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="start">
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {allTags.length === 0 ? (
-                    <p className="p-2 text-xs text-muted-foreground text-center">Nenhuma tag cadastrada no sistema</p>
-                  ) : (
-                    allTags.map((tag) => {
-                      const isAssigned = responseTagIds.includes(tag.id)
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => {
-                            if (isAssigned) {
-                              removeTagMutation.mutate({ responseId: r.id, tagId: tag.id })
-                            } else {
-                              applyTagMutation.mutate({ responseId: r.id, tagId: tag.id })
-                            }
-                          }}
-                          className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-muted transition-colors cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.cor }} />
-                            <span className="font-medium text-foreground">{tag.nome}</span>
-                          </div>
-                          {isAssigned && <Check className="h-3.5 w-3.5 text-primary" />}
-                        </button>
-                      )
-                    })
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-
         {r.statusComment && (
           <div className="flex items-start gap-2.5 rounded-xl border border-border/50 bg-background/50 p-3.5 text-xs text-foreground">
             <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", meta.dot)} aria-hidden />
             <div>
-              <span className="font-semibold block text-muted-foreground text-[10px] uppercase">Nota do Atendente:</span>
+              <span className="font-semibold block text-muted-foreground text-[10px] uppercase">Nota do atendimento:</span>
               <span>{r.statusComment}</span>
             </div>
           </div>

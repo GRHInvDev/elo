@@ -1,14 +1,6 @@
+import { redirect } from "next/navigation"
 import { api } from "@/trpc/server"
-import { notFound, redirect } from "next/navigation"
-import { ResponsesList } from "@/components/forms/responses-list"
-import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { FormsSubPageShell } from "@/components/forms/v2/forms-sub-page-shell"
-import { canAccessForm } from "@/lib/access-control"
-
-export const metadata = {
-  title: "Respostas da Solicitação",
-  description: "Visualize as respostas enviadas para esta solicitação",
-}
+import { canAccessForm, canEditForm } from "@/lib/access-control"
 
 interface ResponsesPageProps {
   params: Promise<{
@@ -23,40 +15,44 @@ export default async function ResponsesPage({ params }: ResponsesPageProps) {
   const form = await api.form.getById(id)
 
   if (!form) {
-    notFound()
+    redirect("/forms")
   }
 
   // Verificar se o usuário pode acessar o formulário
-  if (!canAccessForm(
+  if (
+    !canAccessForm(
+      userData?.role_config,
+      id,
+      userData?.id,
+      {
+        userId: form.userId,
+        isPrivate: form.isPrivate,
+        allowedUsers: form.allowedUsers,
+        allowedSectors: form.allowedSectors,
+      },
+      userData?.setor,
+    )
+  ) {
+    redirect("/forms")
+  }
+
+  const canEdit = canEditForm(
     userData?.role_config,
-    id,
     userData?.id,
+    form.id,
     {
       userId: form.userId,
+      ownerIds: form.ownerIds,
       isPrivate: form.isPrivate,
       allowedUsers: form.allowedUsers,
       allowedSectors: form.allowedSectors,
     },
-    userData?.setor
-  )) {
-    redirect("/forms")
+    userData?.setor,
+  )
+
+  if (canEdit) {
+    redirect(`/forms/central?formId=${id}`)
   }
 
-  return (
-    <DashboardShell>
-      <FormsSubPageShell
-        breadcrumbs={[
-          { label: "Home", href: "/dashboard" },
-          { label: "Solicitações", href: "/forms" },
-          { label: form.title, href: `/forms/${id}` },
-          { label: "Respostas" },
-        ]}
-        title={`Respostas: ${form.title}`}
-        description="Visualize e gerencie as respostas enviadas para esta solicitação."
-      >
-        <ResponsesList formId={id} />
-      </FormsSubPageShell>
-    </DashboardShell>
-  )
+  redirect("/forms/my-responses")
 }
-

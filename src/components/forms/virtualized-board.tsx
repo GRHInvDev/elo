@@ -11,16 +11,27 @@ import {
 } from "@hello-pangea/dnd"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Clock, X, Loader2, UserCheck } from "lucide-react"
+import { Clock, X, Loader2, UserCheck, Check } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { api } from "@/trpc/react"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import type { FormResponse, ResponseStatus } from "@/types/form-responses"
-import { STATUS_META } from "./request-status-pill"
-import { ResponseContextMenu } from "./tags-context-menu"
+import { STATUS_META } from "@/components/forms/request-status-pill"
+import { ResponseContextMenu } from "@/components/forms/tags-context-menu"
 
 const STATUS_ORDER: ResponseStatus[] = ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]
 const CARD_HEIGHT = 148
@@ -76,23 +87,29 @@ function BoardCard({
   onMoveToNextStatus,
   onOpenTagsManager,
 }: BoardCardProps) {
+  const { toast } = useToast()
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number } | null>(null)
   const utils = api.useUtils()
 
   const removeTag = api.formResponse.removeTag.useMutation({
     onSuccess: () => {
-      toast.success("Tag removida")
+      toast({
+        title: "Tag removida",
+      })
       void utils.formResponse.listQueueInfinite.invalidate()
       void utils.formResponse.getQueueKpis.invalidate()
       void utils.formResponse.getTags.invalidate()
       void utils.formResponse.getChat.invalidate({ responseId: r.id })
       void utils.formResponse.getById.invalidate({ responseId: r.id })
     },
-    onError: (error) => toast.error(error.message || "Erro ao remover tag"),
+    onError: (error) => toast({
+      title: "Erro ao remover tag",
+      description: error.message,
+      variant: "destructive",
+    }),
   })
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    // Apenas em desktop (não mobile)
     if (window.innerWidth >= 768) {
       e.preventDefault()
       e.stopPropagation()
@@ -119,13 +136,13 @@ function BoardCard({
         onContextMenu={handleContextMenu}
         style={{ height: "100%" }}
         className={cn(
-          "flex h-full w-full cursor-pointer flex-col justify-between rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card))] p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[hsl(var(--brand-accent)/.45)] hover:shadow-[var(--v2-shadow)] select-none",
-          isDragging && "border-[hsl(var(--brand-accent)/.6)] shadow-[var(--v2-shadow)]",
+          "flex h-full w-full cursor-pointer flex-col justify-between rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--card))] p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[hsl(var(--brand-accent)/.45)] hover:shadow-[var(--forms-shadow)] select-none",
+          isDragging && "border-[hsl(var(--brand-accent)/.6)] shadow-[var(--forms-shadow)]",
         )}
       >
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-[hsl(var(--v2-faint))]">{shortId(r)}</span>
+            <span className="font-mono text-[11px] text-[hsl(var(--forms-faint))]">{shortId(r)}</span>
             {r.status === "NOT_STARTED" && (
               <span className="rounded bg-[hsl(0_72%_55%/.14)] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-[hsl(0_72%_55%)]">
                 Novo
@@ -170,7 +187,7 @@ function BoardCard({
         </div>
 
         <div>
-          <div className="flex items-center justify-between gap-1.5 text-[11px] text-[hsl(var(--v2-faint))]">
+          <div className="flex items-center justify-between gap-1.5 text-[11px] text-[hsl(var(--forms-faint))]">
             <div className="flex items-center gap-1.5 min-w-0 max-w-[140px] truncate">
               <Avatar className="h-4 w-4 shrink-0">
                 <AvatarImage src={r.user?.imageUrl ?? ""} />
@@ -189,7 +206,7 @@ function BoardCard({
             )}
           </div>
 
-          <div className="mt-2 flex items-center justify-between border-t border-[hsl(var(--v2-border-soft))] pt-1.5 text-[11px] text-[hsl(var(--v2-faint))]">
+          <div className="mt-2 flex items-center justify-between border-t border-[hsl(var(--forms-border-soft))] pt-1.5 text-[11px] text-[hsl(var(--forms-faint))]">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDistanceToNow(new Date(r.createdAt), { locale: ptBR, addSuffix: true })}
@@ -259,7 +276,7 @@ function VirtualCardRow({
   if (index >= items.length) {
     return (
       <div style={style} className="pr-1 pb-2 flex items-center justify-center">
-        <div className="flex h-full w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.4)] p-3 text-xs text-muted-foreground">
+        <div className="flex h-full w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--card)/.4)] p-3 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
           <span>Carregando mais...</span>
         </div>
@@ -387,12 +404,12 @@ function BoardColumn({
   return (
     <Card
       key={status}
-      className="flex min-h-0 flex-col border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.55)] p-3"
+      className="flex min-h-0 flex-col border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--card)/.55)] p-3"
     >
       <div className="mb-3 flex items-center gap-2 px-1">
         <span className={cn("h-2 w-2 rounded-full", meta.dot)} aria-hidden />
         <span className="text-sm font-semibold">{meta.label}</span>
-        <span className="ml-auto rounded-full bg-[hsl(var(--v2-card-2))] px-2 py-0.5 font-mono text-xs text-muted-foreground">
+        <span className="ml-auto rounded-full bg-[hsl(var(--forms-card-2))] px-2 py-0.5 font-mono text-xs text-muted-foreground">
           {count}
         </span>
       </div>
@@ -445,7 +462,7 @@ function BoardColumn({
                 <div className="h-28 animate-pulse rounded-xl bg-muted/40" />
               </div>
             ) : items.length === 0 && !dropSnapshot.isDraggingOver ? (
-              <p className="rounded-md border border-dashed border-[hsl(var(--v2-border-soft))] p-6 text-center text-xs text-[hsl(var(--v2-faint))]">
+              <p className="rounded-md border border-dashed border-[hsl(var(--forms-border-soft))] p-6 text-center text-xs text-[hsl(var(--forms-faint))]">
                 Sem itens
               </p>
             ) : (
@@ -520,6 +537,7 @@ export function VirtualizedBoard({
   onMoveToNextStatus,
   onOpenTagsManager,
 }: VirtualizedBoardProps) {
+  const { toast } = useToast()
   const { data: kpisData } = api.formResponse.getQueueKpis.useQuery({
     tagIds: tagIds && tagIds.length > 0 ? tagIds : undefined,
     formIds: formIds && formIds.length > 0 ? formIds : undefined,
@@ -540,8 +558,15 @@ export function VirtualizedBoard({
       void utils.formResponse.listQueueInfinite.invalidate()
       void utils.formResponse.getQueueKpis.invalidate()
     },
-    onError: (err) => toast.error(`Não foi possível atualizar: ${err.message}`),
+    onError: (err) => toast({
+      title: "Erro ao atualizar status",
+      description: err.message,
+      variant: "destructive",
+    }),
   })
+
+  const [completionTarget, setCompletionTarget] = React.useState<{ responseId: string } | null>(null)
+  const [completionComment, setCompletionComment] = React.useState("")
 
   const onDragEnd: OnDragEndResponder = (result) => {
     const { destination, source, draggableId } = result
@@ -549,8 +574,17 @@ export function VirtualizedBoard({
     if (destination.droppableId === source.droppableId) return
 
     const newStatus = destination.droppableId as ResponseStatus
+    if (newStatus === "COMPLETED") {
+      setCompletionComment("")
+      setCompletionTarget({ responseId: draggableId })
+      return
+    }
+
     updateStatus.mutate({ responseId: draggableId, status: newStatus })
-    toast.success(`Chamado movido para ${STATUS_META[newStatus].label}`)
+    toast({
+      title: "Status atualizado",
+      description: `Chamado movido para ${STATUS_META[newStatus].label}`,
+    })
   }
 
   const counts: Record<ResponseStatus, number> = {
@@ -560,33 +594,109 @@ export function VirtualizedBoard({
   }
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-3">
-        {STATUS_ORDER.map((status) => (
-          <BoardColumn
-            key={status}
-            status={status}
-            totalCount={counts[status]}
-            tagIds={tagIds}
-            search={search}
-            formIds={formIds}
-            userIds={userIds}
-            setores={setores}
-            startDate={startDate}
-            endDate={endDate}
-            number={number}
-            hasResponse={hasResponse}
-            priority={priority}
-            availableTags={availableTags}
-            onSelect={onSelect}
-            onOpenDetails={onOpenDetails}
-            onEdit={onEdit}
-            onOpenChat={onOpenChat}
-            onMoveToNextStatus={onMoveToNextStatus}
-            onOpenTagsManager={onOpenTagsManager}
-          />
-        ))}
-      </div>
-    </DragDropContext>
+    <>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-3">
+          {STATUS_ORDER.map((status) => (
+            <BoardColumn
+              key={status}
+              status={status}
+              totalCount={counts[status]}
+              tagIds={tagIds}
+              search={search}
+              formIds={formIds}
+              userIds={userIds}
+              setores={setores}
+              startDate={startDate}
+              endDate={endDate}
+              number={number}
+              hasResponse={hasResponse}
+              priority={priority}
+              availableTags={availableTags}
+              onSelect={onSelect}
+              onOpenDetails={onOpenDetails}
+              onEdit={onEdit}
+              onOpenChat={onOpenChat}
+              onMoveToNextStatus={onMoveToNextStatus}
+              onOpenTagsManager={onOpenTagsManager}
+            />
+          ))}
+        </div>
+      </DragDropContext>
+
+      <Dialog
+        open={!!completionTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCompletionTarget(null)
+            setCompletionComment("")
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px] border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Check className="h-4 w-4" />
+              </span>
+              <DialogTitle className="text-base font-bold">Concluir Atendimento</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              Para concluir esta solicitação, informe a resolução ou mensagem final para o solicitante. Esta informação será enviada por e-mail e ficará visível em "Minhas Solicitações".
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="board-conclusion-comment" className="text-xs font-semibold flex items-center justify-between">
+              <span>Mensagem de Conclusão / Resolução <span className="text-destructive">*</span></span>
+              <span className="text-[10px] text-muted-foreground font-normal">Obrigatório</span>
+            </Label>
+            <Textarea
+              id="board-conclusion-comment"
+              value={completionComment}
+              onChange={(e) => setCompletionComment(e.target.value)}
+              placeholder="Ex: Solicitação atendida com sucesso. O material foi entregue ao setor e o chamado finalizado."
+              rows={4}
+              className="resize-none text-xs rounded-xl border-border/80 focus-visible:ring-primary"
+              autoFocus
+            />
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-xl text-xs"
+              onClick={() => {
+                setCompletionTarget(null)
+                setCompletionComment("")
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="rounded-xl text-xs font-bold gap-1.5 bg-primary shadow-sm"
+              disabled={!completionComment.trim() || updateStatus.isPending}
+              onClick={() => {
+                if (!completionTarget || !completionComment.trim()) return
+                updateStatus.mutate({
+                  responseId: completionTarget.responseId,
+                  status: "COMPLETED",
+                  statusComment: completionComment.trim(),
+                })
+                setCompletionTarget(null)
+                setCompletionComment("")
+              }}
+            >
+              <Check className="h-3.5 w-3.5" />
+              <span>{updateStatus.isPending ? "Concluindo..." : "Confirmar Conclusão"}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

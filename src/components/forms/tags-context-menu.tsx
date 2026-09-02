@@ -4,7 +4,7 @@ import { useState } from "react"
 import { createPortal } from "react-dom"
 import { Check, Plus, Tags, ExternalLink, Edit, MessageSquare } from "lucide-react"
 import { api } from "@/trpc/react"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import type { ResponseStatus } from "@/types/form-responses"
 
@@ -35,13 +35,16 @@ export function ResponseContextMenu({
   onOpenChat,
   onOpenTagsManager,
 }: ResponseContextMenuProps) {
+  const { toast } = useToast()
   const [showTagsSection, setShowTagsSection] = useState(false)
   const { data: allTags = [] } = api.formResponse.getAllTags.useQuery()
   const utils = api.useUtils()
   
   const applyTag = api.formResponse.applyTag.useMutation({
     onSuccess: () => {
-      toast.success("Tag aplicada")
+      toast({
+        title: "Tag aplicada",
+      })
       onTagChange?.()
       void utils.formResponse.listQueueInfinite.invalidate()
       void utils.formResponse.getQueueKpis.invalidate()
@@ -49,13 +52,19 @@ export function ResponseContextMenu({
       void utils.formResponse.getById.invalidate({ responseId })
     },
     onError: (error) => {
-      toast.error(error.message || "Erro ao aplicar tag")
+      toast({
+        title: "Erro ao aplicar tag",
+        description: error.message,
+        variant: "destructive",
+      })
     },
   })
 
   const removeTag = api.formResponse.removeTag.useMutation({
     onSuccess: () => {
-      toast.success("Tag removida")
+      toast({
+        title: "Tag removida",
+      })
       onTagChange?.()
       void utils.formResponse.listQueueInfinite.invalidate()
       void utils.formResponse.getQueueKpis.invalidate()
@@ -63,7 +72,11 @@ export function ResponseContextMenu({
       void utils.formResponse.getById.invalidate({ responseId })
     },
     onError: (error) => {
-      toast.error(error.message || "Erro ao remover tag")
+      toast({
+        title: "Erro ao remover tag",
+        description: error.message,
+        variant: "destructive",
+      })
     },
   })
 

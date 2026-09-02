@@ -11,6 +11,7 @@ import { ptBR } from "date-fns/locale"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 
 interface ResponseChatProps {
   responseId: string
@@ -61,6 +62,7 @@ const SYSTEM_CONFIG = {
 }
 
 export function ResponseChat({ responseId, className }: ResponseChatProps) {
+  const { toast } = useToast()
   const [message, setMessage] = useState("")
   const chatListContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -78,6 +80,13 @@ export function ResponseChat({ responseId, className }: ResponseChatProps) {
     onSuccess: () => {
       setMessage("")
       void refetchChat()
+    },
+    onError: (err) => {
+      toast({
+        title: "Erro ao enviar mensagem",
+        description: err.message || "Não foi possível entregar sua mensagem.",
+        variant: "destructive",
+      })
     },
   })
 

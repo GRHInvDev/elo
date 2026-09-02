@@ -4,7 +4,7 @@ import { FormResponseComponent } from "@/components/forms/form-response"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { FormDescription } from "@/components/forms/form-description"
-import { FormsSubPageShell, FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
+import { FormsSubPageShell, FormsPanel } from "@/components/forms/forms-sub-page-shell"
 import { canAccessForm } from "@/lib/access-control"
 
 export const metadata = {

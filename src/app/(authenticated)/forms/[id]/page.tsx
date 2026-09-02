@@ -10,7 +10,7 @@ import { ptBR } from "date-fns/locale"
 import { type Field } from "@/lib/form-types"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { FormDescription } from "@/components/forms/form-description"
-import { FormsSubPageShell, FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
+import { FormsSubPageShell, FormsPanel } from "@/components/forms/forms-sub-page-shell"
 import { CreateManualResponseButtonWrapper } from "@/components/forms/create-manual-response-button-wrapper"
 import { canAccessForm, canEditForm } from "@/lib/access-control"
 
@@ -81,10 +81,10 @@ export default async function FormPage({ params }: FormPageProps) {
             {/* Gestão (somente quem pode editar) — à esquerda */}
             {canEdit && (
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Link href={`/forms/${form.id}/responses`}>
+                <Link href={`/forms/central?formId=${form.id}`}>
                   <Button variant="outline" className="w-full sm:w-auto rounded-xl border-border/80 text-xs font-semibold gap-1.5 shadow-2xs">
                     <MessageSquare className="h-4 w-4 text-primary" />
-                    Respostas
+                    Central de Chamados
                   </Button>
                 </Link>
                 <Link href={`/forms/${form.id}/edit`}>

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Edit2, X } from "lucide-react"
 import { api } from "@/trpc/react"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
@@ -27,6 +27,7 @@ interface TagsManagerModalProps {
 }
 
 export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) {
+  const { toast } = useToast()
   const utils = api.useUtils()
   const { data: tags = [], refetch } = api.formResponse.getAllTags.useQuery(undefined, {
     enabled: open,
@@ -34,7 +35,10 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
 
   const createTag = api.formResponse.createTag.useMutation({
     onSuccess: () => {
-      toast.success("Tag criada com sucesso")
+      toast({
+        title: "Sucesso",
+        description: "Tag criada com sucesso",
+      })
       void refetch()
       void utils.formResponse.getTags.invalidate()
       void utils.formResponse.listQueueInfinite.invalidate()
@@ -42,20 +46,31 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
       setNewTagColor("#3B82F6")
     },
     onError: (error) => {
-      toast.error(error.message || "Erro ao criar tag")
+      toast({
+        title: "Erro ao criar tag",
+        description: error.message,
+        variant: "destructive",
+      })
     },
   })
 
   const updateTag = api.formResponse.updateTag.useMutation({
     onSuccess: () => {
-      toast.success("Tag atualizada com sucesso")
+      toast({
+        title: "Sucesso",
+        description: "Tag atualizada com sucesso",
+      })
       void refetch()
       void utils.formResponse.getTags.invalidate()
       void utils.formResponse.listQueueInfinite.invalidate()
       setEditingTagId(null)
     },
     onError: (error) => {
-      toast.error(error.message || "Erro ao atualizar tag")
+      toast({
+        title: "Erro ao atualizar tag",
+        description: error.message,
+        variant: "destructive",
+      })
     },
   })
 
@@ -67,7 +82,11 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
 
   const handleCreateTag = () => {
     if (!newTagName.trim()) {
-      toast.error("Nome da tag é obrigatório")
+      toast({
+        title: "Atenção",
+        description: "Nome da tag é obrigatório",
+        variant: "destructive",
+      })
       return
     }
 
@@ -85,7 +104,11 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
 
   const handleSaveEdit = (tagId: string) => {
     if (!editingTagName.trim()) {
-      toast.error("Nome da tag é obrigatório")
+      toast({
+        title: "Atenção",
+        description: "Nome da tag é obrigatório",
+        variant: "destructive",
+      })
       return
     }
 
@@ -169,7 +192,6 @@ export function TagsManagerModal({ open, onOpenChange }: TagsManagerModalProps) 
             </div>
           </div>
 
-          {/* Lista de tags */}
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">Tags Existentes</h3>
             {tags.length === 0 ? (

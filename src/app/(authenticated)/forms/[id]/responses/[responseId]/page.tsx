@@ -1,25 +1,6 @@
+import { redirect } from "next/navigation"
 import { api } from "@/trpc/server"
 import { TRPCError } from "@trpc/server"
-import { notFound, redirect } from "next/navigation"
-import { formatDistanceToNow, format } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { StatusUpdateButton } from "@/components/forms/status-update-button"
-import { ResponseDetails } from "@/components/forms/response-details"
-import { EditResponseButton } from "@/components/forms/edit-response-button"
-import { type Field } from "@/lib/form-types"
-import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { FormsSubPageShell, FormsPanel } from "@/components/forms/v2/forms-sub-page-shell"
-import { FormSectionCard } from "@/components/forms/v2/form-section-card"
-import { FileText } from "lucide-react"
-import { canAccessForm } from "@/lib/access-control"
-import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
-
-export const metadata = {
-  title: "Detalhes da Resposta",
-  description: "Visualize os detalhes de uma resposta de formulário",
-}
 
 interface ResponseDetailsPageProps {
   params: Promise<{
@@ -29,190 +10,31 @@ interface ResponseDetailsPageProps {
 }
 
 export default async function ResponseDetailsPage({ params }: ResponseDetailsPageProps) {
-  const { id, responseId } = await params;
+  const { responseId } = await params
 
   const userData = await api.user.me()
-  const form = await api.form.getById(id)
-
-  // `formResponse.getById` lança TRPCError (NOT_FOUND / FORBIDDEN) em vez de
-  // retornar null. Sem este tratamento o erro sobe pelo Server Component e o
-  // Next renderiza "Application error: a server-side exception has occurred"
-  // — inclusive para links antigos de resposta já excluída.
   let response: Awaited<ReturnType<typeof api.formResponse.getById>> | null = null
-  let responseDenied = false
 
   try {
     response = await api.formResponse.getById(responseId)
   } catch (error) {
-    if (!(error instanceof TRPCError)) throw error
-    if (error.code === "FORBIDDEN") {
-      responseDenied = true
-    } else if (error.code !== "NOT_FOUND") {
-      throw error
+    if (error instanceof TRPCError && error.code === "FORBIDDEN") {
+      redirect("/forms/my-responses")
     }
-  }
-
-  // redirect()/notFound() lançam exceções de controle do Next — chamar fora do catch.
-  if (responseDenied) {
-    redirect(`/forms/${id}/responses`)
-  }
-
-  if (!form || !response) {
-    notFound()
-  }
-
-  // Verificar se o usuário pode acessar o formulário
-  if (!canAccessForm(
-    userData?.role_config,
-    id,
-    userData?.id,
-    {
-      userId: form.userId,
-      isPrivate: form.isPrivate ?? null,
-      allowedUsers: Array.isArray(form.allowedUsers) ? form.allowedUsers : null,
-      allowedSectors: Array.isArray(form.allowedSectors) ? form.allowedSectors : null,
-    },
-    userData?.setor ?? null
-  )) {
     redirect("/forms")
   }
 
-  // Verificar se a resposta pertence ao formulário correto
-  if (response.formId !== id) {
-    notFound()
+  if (!response) {
+    redirect("/forms")
   }
 
   const currentUserId = typeof userData?.id === "string" ? userData.id : ""
-  const ownerIds = Array.isArray((response)?.form?.ownerIds) ? (response).form.ownerIds : []
+  const ownerIds = Array.isArray(response.form?.ownerIds) ? response.form.ownerIds : []
   const isOwner = response.form.userId === currentUserId || ownerIds.includes(currentUserId)
-  const isAuthor = response.userId === userData?.id
 
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case "NOT_STARTED":
-        return (
-          <Badge variant="outline" className="bg-muted">
-            Não iniciado
-          </Badge>
-        )
-      case "IN_PROGRESS":
-        return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
-            Em andamento
-          </Badge>
-        )
-      case "COMPLETED":
-        return (
-          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-            Concluído
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">Desconhecido</Badge>
-    }
+  if (isOwner) {
+    redirect(`/forms/central?responseId=${responseId}`)
   }
 
-  return (
-    <DashboardShell>
-      <FormsSubPageShell
-        breadcrumbs={[
-          { label: "Home", href: "/dashboard" },
-          { label: "Solicitações", href: "/forms" },
-          { label: response.form.title, href: `/forms/${id}` },
-          { label: "Respostas", href: `/forms/${id}/responses` },
-          {
-            label: response.number
-              ? formatFormResponseNumber(response.number)
-              : "Detalhes",
-          },
-        ]}
-        title="Detalhes da Resposta"
-        titlePrefix={
-          response.number ? (
-            <span className="text-lg font-mono text-muted-foreground">
-              {formatFormResponseNumber(response.number)}
-            </span>
-          ) : undefined
-        }
-        description={`Formulário: ${response.form.title}`}
-      >
-      <div className="space-y-6">
-        <FormsPanel>
-          <div className="flex flex-col md:flex-row gap-y-4 justify-between items-center md:items-start">
-            <div className="flex flex-col md:flex-row items-center gap-3">
-              <Avatar>
-                <AvatarImage src={response.user.imageUrl ?? ""} alt={response.user.firstName ?? "Usuário"} />
-                <AvatarFallback>
-                  {response.user.firstName?.charAt(0) ?? response.user.email.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <h2 className="overflow-hidden text-xl md:text-2xl font-semibold leading-tight tracking-tight text-center md:text-start overflow-ellipsis">
-                  {response.user.firstName
-                    ? `${response.user.firstName} ${response.user.lastName ?? ""}`
-                    : response.user.email}
-                </h2>
-                <p className="overflow-hidden text-sm text-muted-foreground text-center md:text-start overflow-ellipsis">{response.user.email}</p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              {getStatusBadge(response.status)}
-              {response.statusComment && (
-                <p className="text-sm text-muted-foreground max-w-[300px] text-right">{response.statusComment}</p>
-              )}
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[hsl(var(--v2-border-soft))] pt-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Data de envio:</p>
-              <p className="font-medium">
-                {format(new Date(response.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Última atualização:</p>
-              <p className="font-medium">
-                {formatDistanceToNow(new Date(response.updatedAt), { addSuffix: true, locale: ptBR })}
-              </p>
-            </div>
-          </div>
-        </FormsPanel>
-
-        <div className="flex justify-end gap-2">
-          <EditResponseButton
-            responseId={response.id}
-            formId={id}
-            isOwner={isOwner}
-            isAuthor={isAuthor}
-          />
-          {isOwner && (
-            <StatusUpdateButton
-              responseId={response.id}
-              currentStatus={response.status}
-              currentComment={response.statusComment ?? ""}
-            />
-          )}
-        </div>
-
-        <FormSectionCard
-          icon={<FileText />}
-          title="Respostas"
-          description="Detalhes das respostas enviadas pelo usuário"
-        >
-          {/* `responses` e `fields` são colunas Json: podem vir null/malformadas
-              e quebrariam a renderização no servidor. */}
-          <ResponseDetails
-            responseData={
-              Array.isArray(response.responses)
-                ? (response.responses as Record<string, string | number | string[] | File[] | null | undefined>[])
-                : []
-            }
-            formFields={Array.isArray(response.form.fields) ? (response.form.fields as unknown as Field[]) : []}
-          />
-        </FormSectionCard>
-      </div>
-      </FormsSubPageShell>
-    </DashboardShell>
-  )
+  redirect(`/forms/my-responses?responseId=${responseId}`)
 }
-

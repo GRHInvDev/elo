@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { Loader2, UserPlus } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -42,6 +42,7 @@ export function CreateManualResponseDialog({
     onOpenChange,
     onSuccess,
 }: CreateManualResponseDialogProps) {
+    const { toast } = useToast()
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
     const [userSearchOpen, setUserSearchOpen] = useState(false)
     const [userSearchValue, setUserSearchValue] = useState("")
@@ -127,20 +128,31 @@ export function CreateManualResponseDialog({
 
     const createManualResponse = api.formResponse.createManual.useMutation({
         onSuccess: () => {
-            toast.success("Chamado criado com sucesso!")
+            toast({
+                title: "Sucesso",
+                description: "Chamado criado com sucesso!",
+            })
             reset()
             setSelectedUserId(null)
             onOpenChange(false)
             onSuccess?.()
         },
         onError: (error) => {
-            toast.error(`Erro ao criar chamado: ${error.message}`)
+            toast({
+                title: "Erro ao criar chamado",
+                description: error.message,
+                variant: "destructive",
+            })
         },
     })
 
     const onSubmit = async (data: FormData) => {
         if (!selectedUserId) {
-            toast.error("Selecione um usuário")
+            toast({
+                title: "Atenção",
+                description: "Selecione um usuário",
+                variant: "destructive",
+            })
             return
         }
 

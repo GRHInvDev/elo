@@ -39,11 +39,11 @@ interface RequestStatusPillProps {
 }
 
 export function RequestStatusPill({ status, size = "md", className }: RequestStatusPillProps) {
-  const m = META[status]
+  const m = META[status] ?? META.NOT_STARTED
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5  font-medium",
+        "inline-flex items-center gap-1.5 font-medium",
         size === "sm" ? "px-2 py-0.5 text-[10.5px]" : "px-2.5 py-1 text-xs",
         m.text,
         m.bg,
@@ -51,6 +51,7 @@ export function RequestStatusPill({ status, size = "md", className }: RequestSta
         className,
       )}
     >
+      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", m.dot)} />
       {m.short}
     </span>
   )

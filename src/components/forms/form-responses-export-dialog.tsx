@@ -19,7 +19,7 @@ import { api } from "@/trpc/react"
 import { downloadBase64File, XLSX_MIME } from "@/lib/download-file"
 import type { Field } from "@/lib/form-types"
 import { Download, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 
 interface FormResponsesExportDialogProps {
   formId: string
@@ -28,6 +28,7 @@ interface FormResponsesExportDialogProps {
 }
 
 export function FormResponsesExportDialog({ formId, formTitle, fields }: FormResponsesExportDialogProps) {
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [startDate, setStartDate] = useState<Date | undefined>()
   const [endDate, setEndDate] = useState<Date | undefined>()
@@ -48,16 +49,24 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
     onSuccess: (data) => {
       downloadBase64File(data.xlsxBase64, data.filename, XLSX_MIME)
       if (data.truncated) {
-        toast.warning("Exportação limitada", {
+        toast({
+          title: "Exportação limitada",
           description: `Foram incluídas no máximo ${data.rowCount} linhas. Refine o período se precisar de outro recorte.`,
         })
       } else {
-        toast.success("Planilha gerada", { description: `${data.rowCount} linha(s) exportada(s).` })
+        toast({
+          title: "Planilha gerada",
+          description: `${data.rowCount} linha(s) exportada(s).`,
+        })
       }
       setOpen(false)
     },
     onError: (err) => {
-      toast.error("Não foi possível exportar", { description: err.message })
+      toast({
+        title: "Não foi possível exportar",
+        description: err.message,
+        variant: "destructive",
+      })
     },
   })
 
@@ -75,11 +84,19 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
 
   const handleExport = () => {
     if (selectedIds.size === 0) {
-      toast.error("Selecione ao menos um campo")
+      toast({
+        title: "Atenção",
+        description: "Selecione ao menos um campo",
+        variant: "destructive",
+      })
       return
     }
     if (startDate && endDate && startDate > endDate) {
-      toast.error("A data inicial não pode ser posterior à data final")
+      toast({
+        title: "Atenção",
+        description: "A data inicial não pode ser posterior à data final",
+        variant: "destructive",
+      })
       return
     }
     exportMutation.mutate({
