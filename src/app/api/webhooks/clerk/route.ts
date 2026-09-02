@@ -117,8 +117,12 @@ export async function POST(req: Request) {
         },
         data: {
           email: `DEACTIVATED_${email_addresses[0]?.email_address}.${id}`,
+          is_active: false,
         },
         where: { id },
+      })
+      await db.birthday.deleteMany({
+        where: { userId: id },
       })
       break
   }
