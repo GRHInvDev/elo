@@ -69,7 +69,7 @@ export function canManageNewUsersHall(roleConfig: RolesConfig | null): boolean {
 }
 
 /**
- * Acesso à Central de Chamados (workspace técnico do v2).
+ * Acesso à Central de Chamados (workspace técnico de atendimento).
  *
  * Concede se:
  * - É sudo.

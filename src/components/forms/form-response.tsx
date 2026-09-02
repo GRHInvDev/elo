@@ -15,7 +15,7 @@ import { z } from "zod"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { CheckCircle2, Send, Lock, RefreshCw, FileText, Loader2 } from "lucide-react"
 // Email de criação de solicitação agora é enviado no router (form-response.ts)
 import ReactMarkdown from "react-markdown"
@@ -189,6 +189,7 @@ export function FormResponseComponent({
     fillDynamicFields()
   }, [existingResponse, fillDynamicFields])
 
+  const { toast } = useToast()
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const { startUpload } = useUploadThing("formAttachmentUploader", {
     onUploadError: (e) => {
@@ -206,10 +207,17 @@ export function FormResponseComponent({
         const item = data as { id: string; number?: number | null }
         setCreatedInfo({ id: item.id, number: item.number ?? undefined })
       }
-      toast.success("Solicitação enviada com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Solicitação enviada com sucesso!",
+      })
     },
     onError: (error) => {
-      toast.error(error.message)
+      toast({
+        title: "Erro ao enviar solicitação",
+        description: error.message,
+        variant: "destructive",
+      })
     },
   })
 
@@ -305,7 +313,11 @@ export function FormResponseComponent({
       }
     } catch (err) {
       console.error(err)
-      toast.error("Ocorreu um erro ao processar os arquivos.")
+      toast({
+        title: "Erro no envio",
+        description: "Ocorreu um erro ao processar os arquivos.",
+        variant: "destructive",
+      })
     } finally {
       setUploadingFiles(false)
     }

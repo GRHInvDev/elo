@@ -75,7 +75,6 @@ async function dispatchTicketEvent(params: DispatchTicketEventParams) {
   const {
     ctx,
     responseId,
-    formId,
     formCreatorId,
     ownerIds,
     authorId,
@@ -119,7 +118,7 @@ async function dispatchTicketEvent(params: DispatchTicketEventParams) {
           userId: authorId,
           entityId: responseId,
           entityType: "form_response",
-          actionUrl: `/forms/my-responses`,
+          actionUrl: `/forms/my-responses?responseId=${responseId}`,
           createdAt: now,
           updatedAt: now,
         },
@@ -142,7 +141,7 @@ async function dispatchTicketEvent(params: DispatchTicketEventParams) {
           userId,
           entityId: responseId,
           entityType: "form_response",
-          actionUrl: `/forms/${formId}/responses`,
+          actionUrl: `/forms/central?responseId=${responseId}`,
           createdAt: now,
           updatedAt: now,
         })),
@@ -264,7 +263,7 @@ export const formResponseRouter = createTRPCRouter({
                   chamadoLabel
                     ? `Elo | Intranet - Novo chamado ${chamadoLabel} em "${formTitle}"`
                     : `Elo | Intranet - Nova solicitação em "${formTitle}"`,
-                  mockEmailRespostaFormulario(ownerName, form.id, formTitle, nextNumber),
+                  mockEmailRespostaFormulario(ownerName, form.id, formTitle, nextNumber, authorName, created.id),
                 ).catch((e: unknown) => console.error("[FormResponse.create] Erro ao enviar email:", e))
               }
             }
@@ -368,7 +367,7 @@ export const formResponseRouter = createTRPCRouter({
               userId,
               entityId: created.id,
               entityType: 'form_response',
-              actionUrl: `/forms/${form.id}`,
+              actionUrl: `/forms/central?responseId=${created.id}`,
               createdAt: now,
               updatedAt: now,
             }))
@@ -403,6 +402,8 @@ export const formResponseRouter = createTRPCRouter({
                 input.formId,
                 form.title ?? 'Formulário',
                 created.number,
+                null,
+                created.id,
               )
 
               await sendEmail(
@@ -1181,6 +1182,7 @@ export const formResponseRouter = createTRPCRouter({
                   lastName: true,
                   email: true,
                   imageUrl: true,
+                  setor: true,
                 },
               },
             },
@@ -1496,7 +1498,7 @@ export const formResponseRouter = createTRPCRouter({
               userId,
               entityId: input.responseId,
               entityType: "form_response",
-              actionUrl: userId === response.userId ? "/forms/my-responses" : `/forms/${response.formId}/responses`,
+              actionUrl: userId === response.userId ? `/forms/my-responses?responseId=${input.responseId}` : `/forms/central?responseId=${input.responseId}`,
               createdAt: now,
               updatedAt: now,
             })),
@@ -1616,6 +1618,11 @@ export const formResponseRouter = createTRPCRouter({
             userId: true,
             title: true,
             description: true,
+            user: {
+              select: {
+                setor: true,
+              },
+            },
           },
         },
         user: {
@@ -1884,6 +1891,17 @@ export const formResponseRouter = createTRPCRouter({
         })
       }
 
+      // Validar comentário obrigatório para conclusão do chamado
+      if (input.status === "COMPLETED") {
+        const finalComment = input.statusComment !== undefined ? input.statusComment.trim() : (response.statusComment?.trim() ?? "")
+        if (!finalComment) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "É obrigatório informar uma observação ou mensagem de conclusão para o solicitante.",
+          })
+        }
+      }
+
       // Se o status não mudou e o comentário não mudou, retorna sem disparar evento de alteração
       const isStatusChanged = response.status !== input.status
       const isCommentChanged = input.statusComment !== undefined && input.statusComment !== response.statusComment
@@ -1961,6 +1979,7 @@ export const formResponseRouter = createTRPCRouter({
       const statusLabel = STATUS_LABELS[input.status] ?? input.status
       const formTitle = response.form.title ?? "Formulário"
       const author = (ret as unknown as { user?: { firstName?: string | null; email?: string | null } }).user
+      const chamadoLabel = formatFormResponseNumber(ret.number)
 
       await dispatchTicketEvent({
         ctx,
@@ -1974,11 +1993,21 @@ export const formResponseRouter = createTRPCRouter({
         executorId: currentUserId,
         executorName: executorNome,
         eventType: "STATUS_CHANGED",
-        systemMessage: `[STATUS] O status do chamado foi alterado para **${statusLabel}** por **${executorNome}**${input.statusComment ? `.\n\n> 💬 *Observação:* ${input.statusComment}` : "."}`,
+        systemMessage: `[STATUS] O status do chamado foi alterado para **${statusLabel}** por **${executorNome}**${input.statusComment ? `.\n\n> *Observação:* ${input.statusComment}` : "."}`,
         notificationTitle: "Status do chamado atualizado",
         notificationMessage: `${executorNome} alterou o status da sua solicitação em "${formTitle}" para ${statusLabel}.`,
-        emailSubject: `Atualização na sua solicitação: ${statusLabel}`,
-        emailContent: mockEmailSituacaoFormulario(author?.firstName ?? "Solicitante", input.status, ret.id, response.form.id, formTitle),
+        emailSubject: chamadoLabel
+          ? `Elo | Intranet - Chamado ${chamadoLabel}: ${statusLabel}`
+          : `Elo | Intranet - Solicitação atualizada: ${statusLabel}`,
+        emailContent: mockEmailSituacaoFormulario(
+          author?.firstName ?? "Solicitante",
+          statusLabel,
+          ret.id,
+          response.form.id,
+          formTitle,
+          ret.number,
+          input.statusComment,
+        ),
       })
 
       return {
@@ -1989,14 +2018,24 @@ export const formResponseRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(
-      z.object({
-        responseId: z.string(),
-      }),
+      z.union([
+        z.string(),
+        z.object({
+          responseId: z.string(),
+        }),
+      ]),
     )
     .query(async ({ ctx, input }) => {
       const currentUserId: string = ctx.auth.userId
-      const response = await ctx.db.formResponse.findUnique({
-        where: { id: input.responseId },
+      const rawId = typeof input === "string" ? input : input.responseId
+      const numericId = parseInt(rawId.replace(/^#/, ""), 10)
+      const response = await ctx.db.formResponse.findFirst({
+        where: {
+          OR: [
+            { id: rawId },
+            ...(!isNaN(numericId) && numericId > 0 ? [{ number: numericId }] : []),
+          ],
+        },
         include: {
           form: {
             select: {
@@ -2429,6 +2468,8 @@ export const formResponseRouter = createTRPCRouter({
 
       const formTitle = updatedResponse.form.title ?? "Formulário"
 
+      const chamadoLabel = formatFormResponseNumber(updatedResponse.number)
+
       await dispatchTicketEvent({
         ctx,
         responseId: updatedResponse.id,
@@ -2444,7 +2485,9 @@ export const formResponseRouter = createTRPCRouter({
         systemMessage: `[TAG] Tag **${tag.nome}** vinculada ao chamado por **${executorNome}**.`,
         notificationTitle: "Tag adicionada à solicitação",
         notificationMessage: `${executorNome} vinculou a tag "${tag.nome}" ao chamado em "${formTitle}".`,
-        emailSubject: `Tag adicionada: ${tag.nome}`,
+        emailSubject: chamadoLabel
+          ? `Elo | Intranet - Tag adicionada ao chamado ${chamadoLabel}: ${tag.nome}`
+          : `Elo | Intranet - Tag adicionada: ${tag.nome}`,
         emailContent: mockEmailTagFormulario(
           updatedResponse.user.firstName ?? "Usuário",
           executorNome,
@@ -2452,6 +2495,7 @@ export const formResponseRouter = createTRPCRouter({
           updatedResponse.id,
           updatedResponse.formId,
           formTitle,
+          updatedResponse.number,
         ),
       })
 

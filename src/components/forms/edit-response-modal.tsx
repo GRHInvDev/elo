@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { FormResponseComponent } from "./form-response"
 import { api } from "@/trpc/react"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Loader2, ShieldAlert, User } from "lucide-react"
 import type { Field } from "@/lib/form-types"
@@ -19,6 +19,7 @@ interface EditResponseModalProps {
 }
 
 export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditResponseModalProps) {
+  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [response, setResponse] = useState<FormResponse | null>(null)
   const [fields, setFields] = useState<Field[]>([])
@@ -59,7 +60,10 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
   // Mutation para atualizar a resposta
   const updateResponse = api.formResponse.update.useMutation({
     onSuccess: () => {
-      toast.success("Solicitação atualizada com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Solicitação atualizada com sucesso!",
+      })
       void utils.formResponse.getById.invalidate({ responseId })
       void utils.formResponse.listQueueInfinite.invalidate()
       void utils.formResponse.listUserResponses.invalidate()
@@ -69,7 +73,11 @@ export function EditResponseModal({ responseId, formId, isOpen, onClose }: EditR
     },
     onError: (error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
-      toast.error(`Erro ao atualizar: ${errorMessage}`)
+      toast({
+        title: "Erro ao atualizar",
+        description: errorMessage,
+        variant: "destructive",
+      })
     },
   })
 

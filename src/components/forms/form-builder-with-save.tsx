@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserSearch } from "@/components/forms/user-search"
 import { FormVisibilitySettings } from "@/components/forms/form-visibility-settings"
 import { FormSpreadsheetExportSettings } from "@/components/forms/form-spreadsheet-export-settings"
-import { FormSectionCard } from "@/components/forms/v2/form-section-card"
+import { FormSectionCard } from "@/components/forms/form-section-card"
 
 /** Classe do botão primário no visual do módulo Solicitações (teal da marca). */
 const ACCENT_BTN = "bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]"
@@ -59,7 +59,7 @@ export function FormBuilderWithSave({
   initialOwnerIds = [],
   initialSpreadsheetExportEnabled = false,
 }: FormBuilderWithSaveProps) {
-  const router = useRouter()
+  const { toast } = useToast()
   const [title, setTitle] = useState(initialTitle)
   const [description, setDescription] = useState(initialDescription)
   const [fields, setFields] = useState<Field[]>(initialFields)
@@ -69,6 +69,7 @@ export function FormBuilderWithSave({
   const [ownerIds, setOwnerIds] = useState<string[]>(initialOwnerIds)
   const [spreadsheetExportEnabled, setSpreadsheetExportEnabled] = useState(initialSpreadsheetExportEnabled)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   // Usar ref para rastrear os valores iniciais anteriores e evitar loops infinitos
   const prevInitialsRef = useRef({
@@ -142,25 +143,39 @@ export function FormBuilderWithSave({
 
   const createForm = api.form.create.useMutation({
     onSuccess: (data) => {
-      toast.success("Formulário criado com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Formulário criado com sucesso!",
+      })
       void utils.form.list.invalidate()
       router.push(`/forms/${data.id}`)
     },
     onError: (error) => {
-      toast.error(`Erro ao criar formulário: ${error.message}`)
+      toast({
+        title: "Erro ao criar formulário",
+        description: error.message,
+        variant: "destructive",
+      })
       setError(error.message)
     },
   })
 
   const updateForm = api.form.update.useMutation({
     onSuccess: (data) => {
-      toast.success("Formulário atualizado com sucesso!")
+      toast({
+        title: "Sucesso",
+        description: "Formulário atualizado com sucesso!",
+      })
       void utils.form.list.invalidate()
       void utils.form.getById.invalidate({ id: data.id })
       router.push(`/forms/${data.id}`)
     },
     onError: (error) => {
-      toast.error(`Erro ao atualizar formulário: ${error.message}`)
+      toast({
+        title: "Erro ao atualizar formulário",
+        description: error.message,
+        variant: "destructive",
+      })
       setError(error.message)
     },
   })

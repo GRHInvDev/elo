@@ -3,7 +3,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { api } from "@/trpc/server"
 import { canViewForms, canCreateForm, canManageRequests } from "@/lib/access-control"
-import { FormsListV2 } from "@/components/forms/v2/forms-list-v2"
+import { FormsList } from "@/components/forms/forms-list"
 
 export const metadata = {
   title: "Solicitações",
@@ -41,7 +41,7 @@ export default async function FormsPage() {
 
   return (
     <DashboardShell>
-      <FormsListV2
+      <FormsList
         userCanCreateForm={userCanCreateForm}
         showCentralLink={showCentralLink}
       />

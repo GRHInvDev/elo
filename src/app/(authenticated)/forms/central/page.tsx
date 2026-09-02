@@ -4,7 +4,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { api } from "@/trpc/server"
 import { canManageRequests, canViewForms } from "@/lib/access-control"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { CentralView } from "@/components/forms/v2/central-view"
+import { CentralView } from "@/components/forms/central-view"
 
 export const metadata = {
   title: "Central de Chamados",

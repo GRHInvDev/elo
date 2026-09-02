@@ -30,19 +30,18 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* === Tokens isolados do redesign Solicitações v2 === */
-    /* Não sobrescrevem --accent do shadcn (usado em hover/select global). */
+    /* === Tokens de estilo do módulo Solicitações === */
     --brand-accent: 184 100% 33%;
     --brand-accent-foreground: 0 0% 100%;
-    --v2-border-soft: 0 0% 92%;
-    --v2-card-2: 0 0% 97%;
-    --v2-panel: 0 0% 100%;
-    --v2-faint: 0 0% 45%;
-    --v2-glow-a: 0 72% 60%;
-    --v2-glow-b: 158 54% 50%;
-    --v2-glow-op: 0.10;
-    --v2-radius-card: 0.75rem;
-    --v2-shadow: 0 1px 2px hsl(0 0% 0% / 0.04), 0 8px 24px -12px hsl(0 0% 0% / 0.08)
+    --forms-border-soft: 0 0% 92%;
+    --forms-card-2: 0 0% 97%;
+    --forms-panel: 0 0% 100%;
+    --forms-faint: 0 0% 45%;
+    --forms-glow-a: 0 72% 60%;
+    --forms-glow-b: 158 54% 50%;
+    --forms-glow-op: 0.10;
+    --forms-radius-card: 0.75rem;
+    --forms-shadow: 0 1px 2px hsl(0 0% 0% / 0.04), 0 8px 24px -12px hsl(0 0% 0% / 0.08);
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -70,22 +69,22 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    /* === Tokens isolados do redesign Solicitações v2 (dark) === */
+    /* === Tokens de estilo do módulo Solicitações (dark) === */
     --brand-accent: 184 70% 42%;
     --brand-accent-foreground: 0 0% 100%;
-    --v2-border-soft: 0 0% 18%;
-    --v2-card-2: 0 0% 9%;
-    --v2-panel: 0 0% 6%;
-    --v2-faint: 0 0% 60%;
-    --v2-glow-a: 0 72% 45%;
-    --v2-glow-b: 158 64% 40%;
-    --v2-glow-op: 0.22;
-    --v2-radius-card: 0.75rem;
-    --v2-shadow: 0 1px 2px hsl(0 0% 0% / 0.3), 0 10px 30px -15px hsl(0 0% 0% / 0.5)
+    --forms-border-soft: 0 0% 18%;
+    --forms-card-2: 0 0% 9%;
+    --forms-panel: 0 0% 6%;
+    --forms-faint: 0 0% 60%;
+    --forms-glow-a: 0 72% 45%;
+    --forms-glow-b: 158 64% 40%;
+    --forms-glow-op: 0.22;
+    --forms-radius-card: 0.75rem;
+    --forms-shadow: 0 1px 2px hsl(0 0% 0% / 0.3), 0 10px 30px -15px hsl(0 0% 0% / 0.5);
   }
 }
 
-.v2-scope {
+.forms-scope {
   position: relative;
 }
 

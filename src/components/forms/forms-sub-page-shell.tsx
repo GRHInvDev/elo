@@ -32,7 +32,7 @@ interface FormsSubPageShellProps {
 
 /**
  * Casca padronizada das páginas internas de Solicitações (criação, visualização e
- * gestão). Aplica o vocabulário visual do módulo Solicitações (escopo .v2-scope,
+ * gestão). Aplica o vocabulário visual do módulo Solicitações (escopo .forms-scope,
  * título 28px, bordas suaves) e publica a trilha de navegação no header global.
  */
 export function FormsSubPageShell({
@@ -52,13 +52,13 @@ export function FormsSubPageShell({
   const hasBreadcrumbs = Boolean(breadcrumbs && breadcrumbs.length > 0)
 
   return (
-    <div className={cn("v2-scope", className)}>
+    <div className={cn("forms-scope", className)}>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           {!hasBreadcrumbs && backHref && (
             <Link
               href={backHref}
-              className="mb-2 inline-flex items-center gap-1.5 rounded-md border border-[hsl(var(--v2-border-soft))] bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+              className="mb-2 inline-flex items-center gap-1.5 rounded-md border border-[hsl(var(--forms-border-soft))] bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               {backLabel}
@@ -105,4 +105,3 @@ export function FormsPanel({ children, className }: FormsPanelProps) {
     </div>
   )
 }
-

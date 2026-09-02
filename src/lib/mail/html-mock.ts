@@ -1,124 +1,278 @@
 import { formatFormResponseNumber } from "@/lib/utils/form-response-number"
 
+const getAppBaseUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://intranet.boxdistribuidor.com.br"
+
 export const mockEmailRespostaFormulario = (
   nomeAutor: string,
   idFormulario: string,
   nomeFormulario: string,
-  chamadoNumero: number | null | undefined,
+  chamadoNumero?: number | null,
+  nomeSolicitante?: string | null,
+  idResponse?: string | null,
 ) => {
   const chamadoLabel = formatFormResponseNumber(chamadoNumero ?? null)
-  const chamadoBlock = chamadoLabel
-    ? `<p><strong>Número do chamado:</strong> ${chamadoLabel}</p>`
-    : ""
-  return (`
+  const appUrl = getAppBaseUrl()
+  const linkUrl = idResponse
+    ? `${appUrl}/forms/central?responseId=${idResponse}`
+    : `${appUrl}/forms/central?formId=${idFormulario}`
+
+  return `
     <!DOCTYPE html>
     <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
-                    margin: 0;
-                    padding: 20px;
-                }
-                .container {
-                    background-color: #ffffff;
-                    border-radius: 5px;
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                    padding: 20px;
-                    max-width: 600px;
-                    margin: auto;
-                }
-                h1 {
-                    color: #333;
-                }
-                p {
-                    color: #555;
-                }
-                .footer {
-                    margin-top: 20px;
-                    font-size: 12px;
-                    color: #aaa;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Olá, ${nomeAutor}!</h1>
-                <p>Você acabou de receber uma resposta no seu formulário "${nomeFormulario}".</p>
-                ${chamadoBlock}
-                <p>Por favor, clique no link abaixo para conferir a resposta:</p>
-                <p><a href="https://intranet.boxdistribuidor.com.br/forms/${idFormulario}/responses" style="color: #007BFF;">Ver Resposta</a></p>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 24px;
+            color: #1e293b;
+          }
+          .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+            max-width: 580px;
+            margin: auto;
+          }
+          .header {
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+          }
+          .header h1 {
+            color: #0f172a;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .badge {
+            display: inline-block;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            margin-top: 8px;
+          }
+          .details-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+          }
+          .detail-row {
+            margin: 6px 0;
+            font-size: 14px;
+            color: #475569;
+          }
+          .detail-row strong {
+            color: #1e293b;
+          }
+          p {
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 12px 0;
+          }
+          .btn {
+            display: inline-block;
+            background-color: #0284c7;
+            color: #ffffff !important;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 16px;
+          }
+          .footer {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Nova Solicitação Recebida</h1>
+            ${chamadoLabel ? `<span class="badge">Chamado ${chamadoLabel}</span>` : ""}
+          </div>
+          <p>Olá, <strong>${nomeAutor}</strong>,</p>
+          <p>Uma nova solicitação foi aberta e requer a atenção da equipe responsável.</p>
 
-                <div class="footer">
-                    <p>Atenciosamente,</p>
-                    <p>Equipe de suporte</p>
-                    <p>elo</p>
-                </div>
-            </div>
-        </body>
+          <div class="details-card">
+            <div class="detail-row"><strong>Formulário:</strong> ${nomeFormulario}</div>
+            ${chamadoLabel ? `<div class="detail-row"><strong>Identificador:</strong> ${chamadoLabel}</div>` : ""}
+            ${nomeSolicitante ? `<div class="detail-row"><strong>Solicitante:</strong> ${nomeSolicitante}</div>` : ""}
+          </div>
+
+          <p>Acesse o painel para visualizar as respostas completas e iniciar o atendimento:</p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${linkUrl}" class="btn">Visualizar Solicitação</a>
+          </div>
+
+          <div class="footer">
+            <p>Atenciosamente,</p>
+            <p><strong>Elo | Intranet Grupo RHenz</strong></p>
+          </div>
+        </div>
+      </body>
     </html>
-`)
+  `
 }
 
 export const mockEmailSituacaoFormulario = (
   nomeUsuario: string,
-  status: string,
+  statusLabel: string,
   idResponse: string,
   idFormulario: string,
   nomeFormulario: string,
-) => (`
+  chamadoNumero?: number | null,
+  statusComment?: string | null,
+) => {
+  const chamadoLabel = formatFormResponseNumber(chamadoNumero ?? null)
+  const appUrl = getAppBaseUrl()
+  const linkUrl = `${appUrl}/forms/my-responses?responseId=${idResponse}`
+
+  return `
     <!DOCTYPE html>
     <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
-                    margin: 0;
-                    padding: 20px;
-                }
-                .container {
-                    background-color: #ffffff;
-                    border-radius: 5px;
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                    padding: 20px;
-                    max-width: 600px;
-                    margin: auto;
-                }
-                h1 {
-                    color: #333;
-                }
-                p {
-                    color: #555;
-                }
-                .footer {
-                    margin-top: 20px;
-                    font-size: 12px;
-                    color: #aaa;
-                }
-            </style>
-        </head>
-    <body>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 24px;
+            color: #1e293b;
+          }
+          .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+            max-width: 580px;
+            margin: auto;
+          }
+          .header {
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+          }
+          .header h1 {
+            color: #0f172a;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .badge {
+            display: inline-block;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            margin-top: 8px;
+          }
+          .details-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+          }
+          .detail-row {
+            margin: 6px 0;
+            font-size: 14px;
+            color: #475569;
+          }
+          .detail-row strong {
+            color: #1e293b;
+          }
+          .comment-box {
+            background-color: #f1f5f9;
+            border-left: 4px solid #0284c7;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-top: 12px;
+            font-size: 13.5px;
+            color: #334155;
+            font-style: italic;
+          }
+          p {
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 12px 0;
+          }
+          .btn {
+            display: inline-block;
+            background-color: #0284c7;
+            color: #ffffff !important;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 16px;
+          }
+          .footer {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+        </style>
+      </head>
+      <body>
         <div class="container">
-            <h1>Olá, ${nomeUsuario}!</h1>
-            <p>Sua resposta ao formulário "${nomeFormulario}" teve o status atualizado para "${status}".</p>
-            <p>Por favor, clique no link abaixo para conferir:</p>
-            <p><a href="https://intranet.boxdistribuidor.com.br/forms/${idFormulario}/responses/${idResponse}" style="color: #007BFF;">Ver status</a></p>
+          <div class="header">
+            <h1>Atualização na sua Solicitação</h1>
+            ${chamadoLabel ? `<span class="badge">Chamado ${chamadoLabel}</span>` : ""}
+          </div>
+          <p>Olá, <strong>${nomeUsuario}</strong>,</p>
+          <p>O status da sua solicitação em <strong>"${nomeFormulario}"</strong> foi atualizado.</p>
 
-            <div class="footer">
-                <p>Atenciosamente,</p>
-                <p>Equipe de suporte</p>
-                <p>elo</p>
-            </div>
+          <div class="details-card">
+            <div class="detail-row"><strong>Formulário:</strong> ${nomeFormulario}</div>
+            ${chamadoLabel ? `<div class="detail-row"><strong>Chamado:</strong> ${chamadoLabel}</div>` : ""}
+            <div class="detail-row"><strong>Novo Status:</strong> <span style="font-weight: 700; color: #0284c7;">${statusLabel}</span></div>
+            ${statusComment ? `<div class="comment-box"><strong>Observação:</strong> "${statusComment}"</div>` : ""}
+          </div>
+
+          <p>Clique no botão abaixo para acompanhar os detalhes e o andamento:</p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${linkUrl}" class="btn">Acompanhar Solicitação</a>
+          </div>
+
+          <div class="footer">
+            <p>Atenciosamente,</p>
+            <p><strong>Elo | Intranet Grupo RHenz</strong></p>
+          </div>
         </div>
-    </body>
-</html>
-`)
+      </body>
+    </html>
+  `
+}
 
 export const mockEmailTagFormulario = (
   nomeUsuario: string,
@@ -127,56 +281,130 @@ export const mockEmailTagFormulario = (
   idResponse: string,
   idFormulario: string,
   nomeFormulario: string,
-) => (`
+  chamadoNumero?: number | null,
+) => {
+  const chamadoLabel = formatFormResponseNumber(chamadoNumero ?? null)
+  const appUrl = getAppBaseUrl()
+  const linkUrl = `${appUrl}/forms/my-responses?responseId=${idResponse}`
+
+  return `
     <!DOCTYPE html>
     <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
-                    margin: 0;
-                    padding: 20px;
-                }
-                .container {
-                    background-color: #ffffff;
-                    border-radius: 5px;
-                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                    padding: 20px;
-                    max-width: 600px;
-                    margin: auto;
-                }
-                h1 {
-                    color: #333;
-                }
-                p {
-                    color: #555;
-                }
-                .footer {
-                    margin-top: 20px;
-                    font-size: 12px;
-                    color: #aaa;
-                }
-            </style>
-        </head>
-    <body>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 24px;
+            color: #1e293b;
+          }
+          .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+            max-width: 580px;
+            margin: auto;
+          }
+          .header {
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+          }
+          .header h1 {
+            color: #0f172a;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .badge {
+            display: inline-block;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            margin-top: 8px;
+          }
+          .details-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+          }
+          .detail-row {
+            margin: 6px 0;
+            font-size: 14px;
+            color: #475569;
+          }
+          .detail-row strong {
+            color: #1e293b;
+          }
+          p {
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 12px 0;
+          }
+          .btn {
+            display: inline-block;
+            background-color: #0284c7;
+            color: #ffffff !important;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 16px;
+          }
+          .footer {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+        </style>
+      </head>
+      <body>
         <div class="container">
-            <h1>Olá, ${nomeUsuario}!</h1>
-            <p>${executorNome} adicionou sua solicitação no formulário "${nomeFormulario}" para a tag "${tagName}".</p>
-            <p>Por favor, clique no link abaixo para conferir:</p>
-            <p><a href="https://intranet.boxdistribuidor.com.br/forms/${idFormulario}/responses/${idResponse}" style="color: #007BFF;">Ver solicitação</a></p>
+          <div class="header">
+            <h1>Tag Adicionada à Solicitação</h1>
+            ${chamadoLabel ? `<span class="badge">Chamado ${chamadoLabel}</span>` : ""}
+          </div>
+          <p>Olá, <strong>${nomeUsuario}</strong>,</p>
+          <p>Uma nova etiqueta de acompanhamento foi vinculada ao seu chamado.</p>
 
-            <div class="footer">
-                <p>Atenciosamente,</p>
-                <p>Equipe de suporte</p>
-                <p>elo</p>
-            </div>
+          <div class="details-card">
+            <div class="detail-row"><strong>Formulário:</strong> ${nomeFormulario}</div>
+            ${chamadoLabel ? `<div class="detail-row"><strong>Chamado:</strong> ${chamadoLabel}</div>` : ""}
+            <div class="detail-row"><strong>Tag:</strong> <span style="font-weight: 700; color: #0284c7;">${tagName}</span></div>
+            <div class="detail-row"><strong>Atualizado por:</strong> ${executorNome}</div>
+          </div>
+
+          <p>Clique abaixo para conferir a solicitação:</p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${linkUrl}" class="btn">Ver Solicitação</a>
+          </div>
+
+          <div class="footer">
+            <p>Atenciosamente,</p>
+            <p><strong>Elo | Intranet Grupo RHenz</strong></p>
+          </div>
         </div>
-    </body>
-</html>
-`)
+      </body>
+    </html>
+  `
+}
+
 
 export const mockEmailReservaCarro = (
   nomeUsuario: string,
@@ -1423,154 +1651,145 @@ export const mockEmailChatMensagemFormulario = (
   mensagem: string,
   responseId: string,
   formTitle: string,
-  isAutor: boolean, // Se true, o destinatário é o autor da solicitação (link para /forms/my-responses)
+  isAutor: boolean,
   chamadoNumero?: number | null,
 ) => {
   const chamadoLabel = formatFormResponseNumber(chamadoNumero ?? null)
-  const chamadoLine = chamadoLabel
-    ? `<p><strong>Número do chamado:</strong> ${chamadoLabel}</p>`
-    : ""
-  return (`
-  <!DOCTYPE html>
-  <html lang="pt-BR">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #f7f7f7;
-          margin: 0;
-          padding: 0;
-          color: #333;
-        }
-        .container {
-          background-color: #ffffff;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-          margin: 20px auto;
-          max-width: 600px;
-          overflow: hidden;
-        }
-        .header {
-          background-color: #007bff;
-          color: #fff;
-          padding: 24px 20px;
-          text-align: center;
-          border-top-left-radius: 8px;
-          border-top-right-radius: 8px;
-        }
-        .header h1 {
-          margin: 0;
-          font-size: 1.8rem;
-          line-height: 1.2;
-        }
-        .content-section {
-          padding: 30px;
-        }
-        .info-box {
-          background-color: #e9f7ff;
-          border-left: 5px solid #007bff;
-          padding: 20px;
-          margin-bottom: 25px;
-          border-radius: 4px;
-        }
-        .info-box h2 {
-          margin: 0 0 10px;
-          color: #007bff;
-          font-size: 1.2rem;
-        }
-        .message-box {
-          background-color: #f8f9fa;
-          border: 1px solid #e0e0e0;
-          border-radius: 6px;
-          padding: 20px;
-          margin-bottom: 20px;
-        }
-        .message-box .sender {
-          font-weight: bold;
-          color: #007bff;
-          margin-bottom: 10px;
-        }
-        .message-box .message {
-          color: #333;
-          line-height: 1.6;
-          white-space: pre-wrap;
-        }
-        .form-info {
-          background-color: #fff3cd;
-          border-left: 5px solid #ffc107;
-          padding: 15px;
-          margin-bottom: 20px;
-          border-radius: 4px;
-        }
-        .form-info p {
-          margin: 5px 0;
-          color: #856404;
-        }
-        .button {
-          display: inline-block;
-          background-color: #007bff;
-          color: #fff;
-          padding: 12px 24px;
-          text-decoration: none;
-          border-radius: 6px;
-          margin-top: 20px;
-          font-weight: bold;
-        }
-        .button:hover {
-          background-color: #0056b3;
-        }
-        .footer {
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid #e9ecef;
-          font-size: 0.9rem;
-          color: #666;
-          text-align: center;
-        }
-        .footer p {
-          margin: 5px 0;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>💬 Nova Mensagem em Solicitação</h1>
-        </div>
-        <div class="content-section">
-          <div class="info-box">
-            <h2>Olá, ${nomeDestinatario}!</h2>
-            <p>Você recebeu uma nova mensagem no chat de uma solicitação.</p>
+  const appUrl = getAppBaseUrl()
+  const linkUrl = isAutor
+    ? `${appUrl}/forms/my-responses?responseId=${responseId}`
+    : `${appUrl}/forms/central?responseId=${responseId}`
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 24px;
+            color: #1e293b;
+          }
+          .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+            max-width: 580px;
+            margin: auto;
+          }
+          .header {
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+          }
+          .header h1 {
+            color: #0f172a;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .badge {
+            display: inline-block;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            margin-top: 8px;
+          }
+          .details-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+          }
+          .detail-row {
+            margin: 6px 0;
+            font-size: 14px;
+            color: #475569;
+          }
+          .detail-row strong {
+            color: #1e293b;
+          }
+          .message-bubble {
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #0284c7;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin: 16px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1e293b;
+            white-space: pre-wrap;
+          }
+          p {
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 12px 0;
+          }
+          .btn {
+            display: inline-block;
+            background-color: #0284c7;
+            color: #ffffff !important;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 16px;
+          }
+          .footer {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Nova Mensagem no Atendimento</h1>
+            ${chamadoLabel ? `<span class="badge">Chamado ${chamadoLabel}</span>` : ""}
+          </div>
+          <p>Olá, <strong>${nomeDestinatario}</strong>,</p>
+          <p>Você recebeu uma nova mensagem referente ao formulário <strong>"${formTitle}"</strong>.</p>
+
+          <div class="details-card">
+            <div class="detail-row"><strong>Formulário:</strong> ${formTitle}</div>
+            ${chamadoLabel ? `<div class="detail-row"><strong>Chamado:</strong> ${chamadoLabel}</div>` : ""}
+            <div class="detail-row"><strong>Enviado por:</strong> ${nomeRemetente}</div>
           </div>
 
-          <div class="form-info">
-            <p><strong>Formulário:</strong> ${formTitle}</p>
-            ${chamadoLine}
-          </div>
+          <p><strong>Mensagem recebida:</strong></p>
+          <div class="message-bubble">${mensagem}</div>
 
-          <div class="message-box">
-            <div class="sender">De: ${nomeRemetente}</div>
-            <div class="message">${mensagem}</div>
-          </div>
-
-          <div style="text-align: center;">
-            <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://intranet.boxdistribuidor.com.br'}${isAutor ? '/forms/my-responses' : '/forms'}" class="button" style="color: #fff; text-decoration: none;">
-              Ver Mensagem
-            </a>
+          <p>Para responder e ver o histórico completo da conversa, clique abaixo:</p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${linkUrl}" class="btn">Acessar Atendimento</a>
           </div>
 
           <div class="footer">
             <p>Atenciosamente,</p>
-            <p>Sistema de Notificações</p>
-            <p>elo - Sistema de Intranet</p>
+            <p><strong>Elo | Intranet Grupo RHenz</strong></p>
           </div>
         </div>
-      </div>
-    </body>
-  </html>
-`)
+      </body>
+    </html>
+  `
 }
 
 export const emailPedidosRestauranteAgrupado = (

@@ -1,6 +1,6 @@
 import { FormBuilderWithSave } from "@/components/forms/form-builder-with-save"
 import { DashboardShell } from "@/components/ui/dashboard-shell"
-import { FormsSubPageShell } from "@/components/forms/v2/forms-sub-page-shell"
+import { FormsSubPageShell } from "@/components/forms/forms-sub-page-shell"
 import { checkFormCreationAccess } from "@/lib/access-control-server"
 
 export const metadata = {

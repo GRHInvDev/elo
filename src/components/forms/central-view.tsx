@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { formatDistanceToNow, formatDistanceStrict } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -14,6 +15,7 @@ import {
   Inbox,
   KanbanSquare,
   List as ListIcon,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -25,7 +27,7 @@ import {
   X,
   Zap,
 } from "lucide-react"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,7 +39,7 @@ import { ResponseChat } from "@/components/forms/response-chat"
 import { ResponseDetails } from "@/components/forms/response-details"
 import type { Field } from "@/lib/form-types"
 import type { FormResponse, ResponseStatus } from "@/types/form-responses"
-import { STATUS_META } from "./request-status-pill"
+import { STATUS_META } from "@/components/forms/request-status-pill"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,10 +53,20 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { VirtualizedQueue } from "./virtualized-queue"
-import { VirtualizedBoard } from "./virtualized-board"
-import { TagsManagerModal } from "./tags-manager-modal"
+import { VirtualizedQueue } from "@/components/forms/virtualized-queue"
+import { VirtualizedBoard } from "@/components/forms/virtualized-board"
+import { TagsManagerModal } from "@/components/forms/tags-manager-modal"
 import { EditResponseModal } from "@/components/forms/edit-response-modal"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -88,10 +100,14 @@ function shortId(r: FormResponse) {
 }
 
 export function CentralView() {
+  const searchParams = useSearchParams()
+  const responseIdParam = searchParams.get("responseId")
+  const formIdParam = searchParams.get("formId")
+
   const [view, setView] = React.useState<View>("fila")
   const [tab, setTab] = React.useState<Tab>("ALL")
   const [query, setQuery] = React.useState("")
-  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [selectedId, setSelectedId] = React.useState<string | null>(responseIdParam)
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
   const [hasResponseFilter, setHasResponseFilter] = React.useState<boolean | undefined>(undefined)
   const [tagsModalOpen, setTagsModalOpen] = React.useState(false)
@@ -100,9 +116,17 @@ export function CentralView() {
   const [editModalOpen, setEditModalOpen] = React.useState(false)
   const [sidebarVisible, setSidebarVisible] = React.useState(true)
 
+  React.useEffect(() => {
+    if (responseIdParam) {
+      setSelectedId(responseIdParam)
+    }
+  }, [responseIdParam])
+
+  const { toast } = useToast()
   const utils = api.useUtils()
   const { data: kpisData } = api.formResponse.getQueueKpis.useQuery({
     tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+    formIds: formIdParam ? [formIdParam] : undefined,
     search: query.trim() || undefined,
     hasResponse: hasResponseFilter,
   })
@@ -112,6 +136,7 @@ export function CentralView() {
       limit: 25,
       status: tab !== "ALL" ? tab : undefined,
       tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+      formIds: formIdParam ? [formIdParam] : undefined,
       search: query.trim() || undefined,
       hasResponse: hasResponseFilter,
     },
@@ -136,10 +161,24 @@ export function CentralView() {
 
   const filtered = queueResponses
 
-  const currentResponse = React.useMemo(
-    () => responses.find((r) => r.id === selectedId) ?? null,
-    [responses, selectedId],
+  // Caso o chamado selecionado pela URL não esteja na 1ª página da fila
+  const cleanSelectedNum = selectedId ? selectedId.replace(/^#/, "") : ""
+  const isSelectedInQueue = !!selectedId && queueResponses.some(
+    (r) => r.id === selectedId || (r.number != null && String(r.number) === cleanSelectedNum),
   )
+  const needsFallbackFetch = !!selectedId && !isSelectedInQueue
+  const { data: fallbackResponse } = api.formResponse.getById.useQuery(
+    { responseId: selectedId ?? "" },
+    { enabled: needsFallbackFetch },
+  )
+
+  const currentResponse = React.useMemo(() => {
+    if (!selectedId) return null
+    return (
+      responses.find((r) => r.id === selectedId || (r.number != null && String(r.number) === cleanSelectedNum)) ??
+      (fallbackResponse ? (fallbackResponse as unknown as FormResponse) : null)
+    )
+  }, [responses, selectedId, fallbackResponse, cleanSelectedNum])
 
   const counts = kpisData ?? {
     notStarted: 0,
@@ -157,7 +196,11 @@ export function CentralView() {
       void utils.formResponse.getChat.invalidate()
       void utils.formResponse.getById.invalidate()
     },
-    onError: (err) => toast.error(`Não foi possível atualizar: ${err.message}`),
+    onError: (err) => toast({
+      title: "Erro ao atualizar status",
+      description: err.message,
+      variant: "destructive",
+    }),
   })
 
   const assumeMutation = api.formResponse.assumeResponse.useMutation({
@@ -168,7 +211,11 @@ export function CentralView() {
       void utils.formResponse.getChat.invalidate()
       void utils.formResponse.getById.invalidate()
     },
-    onError: (err) => toast.error(err.message || "Erro ao assumir chamado"),
+    onError: (err) => toast({
+      title: "Erro ao assumir chamado",
+      description: err.message,
+      variant: "destructive",
+    }),
   })
 
   const unassignMutation = api.formResponse.unassignResponse.useMutation({
@@ -179,11 +226,24 @@ export function CentralView() {
       void utils.formResponse.getChat.invalidate()
       void utils.formResponse.getById.invalidate()
     },
-    onError: (err) => toast.error(err.message || "Erro ao liberar chamado"),
+    onError: (err) => toast({
+      title: "Erro ao liberar chamado",
+      description: err.message,
+      variant: "destructive",
+    }),
   })
+
+  const [completionTarget, setCompletionTarget] = React.useState<{ responseId: string } | null>(null)
+  const [completionComment, setCompletionComment] = React.useState("")
 
   function handleStatusChange(id: string, status: ResponseStatus) {
     if (currentResponse?.id === id && currentResponse.status === status) {
+      return
+    }
+    if (status === "COMPLETED") {
+      const existing = currentResponse?.id === id ? (currentResponse.statusComment ?? "") : ""
+      setCompletionComment(existing)
+      setCompletionTarget({ responseId: id })
       return
     }
     updateStatus.mutate({ responseId: id, status })
@@ -197,7 +257,6 @@ export function CentralView() {
     unassignMutation.mutate({ responseId: id })
   }
 
-  // Abrir o chamado no painel de detalhes (visão Fila)
   function handleOpenDetails(id: string) {
     setSelectedId(id)
     setView("fila")
@@ -213,13 +272,18 @@ export function CentralView() {
     const currentIndex = STATUS_ORDER.indexOf(currentStatus)
     if (currentIndex < STATUS_ORDER.length - 1) {
       const nextStatus = STATUS_ORDER[currentIndex + 1]!
+      if (nextStatus === "COMPLETED") {
+        const existing = currentResponse?.id === id ? (currentResponse.statusComment ?? "") : ""
+        setCompletionComment(existing)
+        setCompletionTarget({ responseId: id })
+        return
+      }
       updateStatus.mutate({ responseId: id, status: nextStatus })
     }
   }
 
   return (
     <div className="flex h-full flex-col space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Link
@@ -277,7 +341,6 @@ export function CentralView() {
         </div>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Novos" value={counts.notStarted} />
         <Kpi label="Em progresso" value={counts.inProgress} tone="warn" />
@@ -285,7 +348,7 @@ export function CentralView() {
         <Kpi label="Resolvidos hoje" value={counts.recentDone} tone="accent" />
       </div>
 
-      <div className="flex w-full items-center gap-2 bg-[hsl(var(--card)/.45)] border border-[hsl(var(--v2-border-soft))] p-2 rounded-xl">
+      <div className="flex w-full items-center gap-2 bg-[hsl(var(--card)/.45)] border border-[hsl(var(--forms-border-soft))] p-2 rounded-xl">
         <div className="relative flex-1 min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -447,7 +510,7 @@ export function CentralView() {
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2))] px-2.5 py-1 text-[11px]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--forms-card-2))] px-2.5 py-1 text-[11px]"
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
@@ -524,7 +587,6 @@ export function CentralView() {
             </div>
           )}
 
-          {/* Detalhe */}
           {currentResponse ? (
             <RequestDetail
               response={currentResponse}
@@ -538,7 +600,7 @@ export function CentralView() {
               onEdit={handleEdit}
             />
           ) : (
-            <Card className="flex flex-col items-center justify-center gap-3 border-[hsl(var(--v2-border-soft))] p-10 text-center text-muted-foreground bg-card/60 backdrop-blur-sm">
+            <Card className="flex flex-col items-center justify-center gap-3 border-[hsl(var(--forms-border-soft))] p-10 text-center text-muted-foreground bg-card/60 backdrop-blur-sm">
               <Inbox className="h-10 w-10 opacity-40" />
               <p className="text-sm">Selecione um chamado na fila para começar a atender.</p>
               {!sidebarVisible && (
@@ -569,13 +631,85 @@ export function CentralView() {
         />
       )}
 
-      {/* Modal de Gerenciamento de Tags */}
+      <Dialog
+        open={!!completionTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCompletionTarget(null)
+            setCompletionComment("")
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px] border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Check className="h-4 w-4" />
+              </span>
+              <DialogTitle className="text-base font-bold">Concluir Atendimento</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              Para concluir esta solicitação, informe a resolução ou mensagem final para o solicitante. Esta informação será enviada por e-mail e ficará visível em &quot;Minhas Solicitações&quot;.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="conclusion-comment" className="text-xs font-semibold flex items-center justify-between">
+              <span>Mensagem de Conclusão / Resolução <span className="text-destructive">*</span></span>
+              <span className="text-[10px] text-muted-foreground font-normal">Obrigatório</span>
+            </Label>
+            <Textarea
+              id="conclusion-comment"
+              value={completionComment}
+              onChange={(e) => setCompletionComment(e.target.value)}
+              placeholder="Ex: Solicitação atendida com sucesso. O material foi entregue ao setor e o chamado finalizado."
+              rows={4}
+              className="resize-none text-xs rounded-xl border-border/80 focus-visible:ring-primary"
+              autoFocus
+            />
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-xl text-xs"
+              onClick={() => {
+                setCompletionTarget(null)
+                setCompletionComment("")
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="rounded-xl text-xs font-bold gap-1.5 bg-primary shadow-sm"
+              disabled={!completionComment.trim() || updateStatus.isPending}
+              onClick={() => {
+                if (!completionTarget || !completionComment.trim()) return
+                updateStatus.mutate({
+                  responseId: completionTarget.responseId,
+                  status: "COMPLETED",
+                  statusComment: completionComment.trim(),
+                })
+                setCompletionTarget(null)
+                setCompletionComment("")
+              }}
+            >
+              <Check className="h-3.5 w-3.5" />
+              <span>{updateStatus.isPending ? "Concluindo..." : "Confirmar Conclusão"}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <TagsManagerModal
         open={tagsModalOpen}
         onOpenChange={setTagsModalOpen}
       />
 
-      {/* Modal de Edição de Resposta */}
       {editResponseId && editFormId && (
         <EditResponseModal
           responseId={editResponseId}
@@ -624,7 +758,7 @@ function SkeletonRow({ count }: { count: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex animate-pulse gap-3 rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.8)] p-3"
+          className="flex animate-pulse gap-3 rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--card)/.8)] p-3"
         >
           <div className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/30" />
           <div className="flex-1 space-y-2">
@@ -660,6 +794,7 @@ function RequestDetail({
   onClose,
   onEdit,
 }: RequestDetailProps) {
+  const { toast } = useToast()
   const { data: form } = api.form.getById.useQuery({ id: r.formId })
   const { data: allTags = [] } = api.formResponse.getAllTags.useQuery()
   const { data: responsibles = [] } = api.formResponse.getFormResponsibles.useQuery(
@@ -670,26 +805,62 @@ function RequestDetail({
 
   const applyTagMutation = api.formResponse.applyTag.useMutation({
     onSuccess: () => {
-      toast.success("Tag aplicada ao chamado")
+      toast({
+        title: "Tag aplicada ao chamado",
+      })
       void utils.formResponse.listQueueInfinite.invalidate()
       void utils.formResponse.listKanBan.invalidate()
       void utils.formResponse.getTags.invalidate()
       void utils.formResponse.getChat.invalidate({ responseId: r.id })
       void utils.formResponse.getById.invalidate({ responseId: r.id })
     },
-    onError: (err) => toast.error(err.message || "Erro ao aplicar tag"),
+    onError: (err) => toast({
+      title: "Erro ao aplicar tag",
+      description: err.message,
+      variant: "destructive",
+    }),
   })
 
   const removeTagMutation = api.formResponse.removeTag.useMutation({
     onSuccess: () => {
-      toast.success("Tag removida do chamado")
+      toast({
+        title: "Tag removida do chamado",
+      })
       void utils.formResponse.listQueueInfinite.invalidate()
       void utils.formResponse.listKanBan.invalidate()
       void utils.formResponse.getTags.invalidate()
       void utils.formResponse.getChat.invalidate({ responseId: r.id })
       void utils.formResponse.getById.invalidate({ responseId: r.id })
     },
-    onError: (err) => toast.error(err.message || "Erro ao remover tag"),
+    onError: (err) => toast({
+      title: "Erro ao remover tag",
+      description: err.message,
+      variant: "destructive",
+    }),
+  })
+
+  const [isEditingComment, setIsEditingComment] = React.useState(false)
+  const [commentText, setCommentText] = React.useState(r.statusComment ?? "")
+
+  React.useEffect(() => {
+    setCommentText(r.statusComment ?? "")
+  }, [r.statusComment])
+
+  const updateCommentMutation = api.formResponse.updateStatus.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Nota salva",
+        description: "A nota do chamado foi atualizada.",
+      })
+      setIsEditingComment(false)
+      void utils.formResponse.listQueueInfinite.invalidate()
+      void utils.formResponse.getById.invalidate({ responseId: r.id })
+    },
+    onError: (err) => toast({
+      title: "Erro ao salvar nota",
+      description: err.message,
+      variant: "destructive",
+    }),
   })
 
   const fields = ((form?.fields as unknown as Field[]) ?? []).filter(Boolean)
@@ -700,30 +871,25 @@ function RequestDetail({
   const assignedTags = allTags.filter((t) => responseTagIds.includes(t.id))
 
   return (
-    <Card className="flex min-h-0 flex-col overflow-hidden border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--card)/.75)] backdrop-blur-sm shadow-sm">
-      <div className="border-b border-[hsl(var(--v2-border-soft))] px-4 sm:px-5 pb-3 pt-3.5 flex items-stretch gap-3">
+    <Card className="flex min-h-0 flex-col overflow-hidden border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--card)/.75)] backdrop-blur-sm shadow-sm">
+      <div className="border-b border-[hsl(var(--forms-border-soft))] px-4 sm:px-5 pb-3 pt-3.5 flex items-stretch gap-3">
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="group -my-3.5 -ml-4 sm:-ml-5 flex self-stretch items-center justify-center px-3.5 border-r border-[hsl(var(--v2-border-soft))] bg-muted/20 hover:bg-muted/60 text-muted-foreground hover:text-primary transition-all cursor-pointer"
+          className="group -my-3.5 -ml-4 sm:-ml-5 flex self-stretch items-center justify-center px-3.5 border-r border-[hsl(var(--forms-border-soft))] bg-muted/20 hover:bg-muted/60 text-muted-foreground hover:text-primary transition-all cursor-pointer"
           title="Mostrar lista lateral de chamados"
         >
           {sidebarVisible ? (
-              <>
-                <PanelLeftClose className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
-              </>
-            ) : (
-              <>
-                <PanelLeftOpen className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
-              </>
-            )
-          }
+            <PanelLeftClose className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+          ) : (
+            <PanelLeftOpen className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+          )}
         </button>
           
         <div className="flex-1 flex flex-col gap-2 min-w-0">
           <div className="flex items-start justify-between gap-2 min-w-0">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--v2-faint))]">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--forms-faint))]">
                 <span className="font-mono font-bold text-primary">{shortId(r)}</span>
                 <span className="h-0.5 w-0.5 rounded-full bg-current opacity-60" aria-hidden />
                 <span>{r.form?.title}</span>
@@ -948,8 +1114,8 @@ function RequestDetail({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--v2-faint))]">
+          <div className="rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--forms-card-2)/.6)] p-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--forms-faint))]">
               Solicitante
             </span>
             <div className="mt-2 flex items-center gap-2">
@@ -961,12 +1127,12 @@ function RequestDetail({
               </Avatar>
               <div className="leading-tight">
                 <p className="text-sm font-semibold truncate max-w-[180]">{fullName(r.user)}</p>
-                <p className="text-[11px] text-[hsl(var(--v2-faint))]">{r.user?.setor ?? "—"}</p>
+                <p className="text-[11px] text-[hsl(var(--forms-faint))]">{r.user?.setor ?? "—"}</p>
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--v2-faint))]">
+          <div className="rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--forms-card-2)/.6)] p-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--forms-faint))]">
               Aberto há
             </span>
             <div className="mt-2 flex items-center gap-2">
@@ -975,13 +1141,13 @@ function RequestDetail({
                 {formatDistanceStrict(new Date(r.createdAt), new Date(), { locale: ptBR })}
               </strong>
             </div>
-            <p className="mt-1 text-[11px] text-[hsl(var(--v2-faint))]">
+            <p className="mt-1 text-[11px] text-[hsl(var(--forms-faint))]">
               Última atividade {formatDistanceToNow(new Date(r.lastChatAt ?? r.updatedAt), { addSuffix: true, locale: ptBR })}
             </p>
           </div>
         </div>
 
-        <div className="mb-4 rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3">
+        <div className="mb-4 rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--forms-card-2)/.6)] p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               Tags do Chamado
@@ -1074,10 +1240,82 @@ function RequestDetail({
           </div>
         </div>
 
+        {/* Bloco de Nota do Atendente / Mensagem de Conclusão */}
+        <div className="mb-4 rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--forms-card-2)/.6)] p-3.5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+              {r.status === "COMPLETED" ? "Mensagem de Conclusão / Resolução" : "Nota do Atendente para o Solicitante"}
+            </span>
+            {r.status !== "COMPLETED" && !isEditingComment && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px] px-2 text-primary hover:text-primary hover:bg-primary/10 cursor-pointer"
+                onClick={() => {
+                  setCommentText(r.statusComment ?? "")
+                  setIsEditingComment(true)
+                }}
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                {r.statusComment ? "Editar Nota" : "Adicionar Nota"}
+              </Button>
+            )}
+          </div>
+
+          {isEditingComment ? (
+            <div className="space-y-2 pt-1">
+              <Textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Insira uma observação ou mensagem para o solicitante (visível em Minhas Solicitações e enviada por e-mail)..."
+                rows={3}
+                className="resize-none text-xs rounded-lg border-border/80 bg-background/80"
+                autoFocus
+              />
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs rounded-lg"
+                  onClick={() => setIsEditingComment(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 text-xs font-semibold rounded-lg bg-primary text-primary-foreground"
+                  disabled={updateCommentMutation.isPending}
+                  onClick={() => {
+                    updateCommentMutation.mutate({
+                      responseId: r.id,
+                      status: r.status,
+                      statusComment: commentText.trim(),
+                    })
+                  }}
+                >
+                  {updateCommentMutation.isPending ? "Salvando..." : "Salvar Nota"}
+                </Button>
+              </div>
+            </div>
+          ) : r.statusComment ? (
+            <div className="rounded-lg bg-background/60 border border-border/40 p-2.5 text-xs text-foreground leading-relaxed">
+              {r.statusComment}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Nenhuma nota adicionada ainda. {r.status !== "COMPLETED" && "Ao concluir o chamado, será obrigatório informar uma mensagem de resolução."}
+            </p>
+          )}
+        </div>
+
         <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Dados da solicitação
         </div>
-        <div className="mb-5 rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3">
+        <div className="mb-5 rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--forms-card-2)/.6)] p-3">
           {fields.length === 0 ? (
             <p className="text-xs text-muted-foreground">Sem campos configurados para exibição.</p>
           ) : (
@@ -1088,7 +1326,7 @@ function RequestDetail({
         <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Chat
         </div>
-        <ResponseChat responseId={r.id} className="rounded-xl border border-[hsl(var(--v2-border-soft))] bg-[hsl(var(--v2-card-2)/.6)] p-3" />
+        <ResponseChat responseId={r.id} className="rounded-xl border border-[hsl(var(--forms-border-soft))] bg-[hsl(var(--forms-card-2)/.6)] p-3" />
       </div>
     </Card>
   )

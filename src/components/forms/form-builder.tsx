@@ -6,7 +6,7 @@ import { FieldTypeSelector } from "@/components/forms/field-type-selector"
 import { FieldEditor } from "@/components/forms/field-editor"
 import { FormPreview } from "@/components/forms/form-preview"
 import { FieldList } from "@/components/forms/field-list"
-import { FormSectionCard } from "@/components/forms/v2/form-section-card"
+import { FormSectionCard } from "@/components/forms/form-section-card"
 import { type Field, type FieldType, createDefaultField } from "@/lib/form-types"
 
 export function FormBuilder({fields, setFields}:{fields: Field[], setFields: (fields: Field[])=>void}) {
