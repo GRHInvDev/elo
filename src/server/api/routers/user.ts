@@ -158,6 +158,9 @@ export const userRouter = createTRPCRouter({
 
   listAll: adminProcedure.query(async ({ ctx }) => {
     return await ctx.db.user.findMany({
+      where: {
+        is_active: true,
+      },
       select: {
         id: true,
         email: true,
@@ -167,8 +170,11 @@ export const userRouter = createTRPCRouter({
         enterprise: true,
         setor: true,
         extension: true,
-        emailExtension: true
-      }
+        emailExtension: true,
+      },
+      orderBy: {
+        firstName: "asc",
+      },
     });
   }),
 
@@ -493,7 +499,9 @@ export const userRouter = createTRPCRouter({
         })
       }
 
-      const where: Prisma.UserWhereInput = {}
+      const where: Prisma.UserWhereInput = {
+        is_active: true,
+      }
 
       if (input.query) {
         where.OR = [
@@ -760,6 +768,12 @@ export const userRouter = createTRPCRouter({
             userId,
             changedById: ctx.auth.userId,
             action: updated.is_active ? "REACTIVATED" : "DEACTIVATED",
+          })
+        }
+        
+        if (updated.is_active === false) {
+          await ctx.db.birthday.deleteMany({
+            where: { userId },
           })
         }
       }

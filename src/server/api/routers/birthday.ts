@@ -51,6 +51,25 @@ export const birthdayRouter = createTRPCRouter({
 
     // Verifica se já existe um aniversário para este usuário
     if (input.userId) {
+      const targetUser = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: { is_active: true },
+      })
+
+      if (!targetUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuário não encontrado",
+        })
+      }
+
+      if (targetUser.is_active === false) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Não é possível cadastrar aniversário para um usuário desativado",
+        })
+      }
+
       const existingBirthday = await ctx.db.birthday.findUnique({
         where: { userId: input.userId },
       })
@@ -87,6 +106,27 @@ export const birthdayRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.userId) {
+        const targetUser = await ctx.db.user.findUnique({
+          where: { id: input.userId },
+          select: { is_active: true },
+        })
+
+        if (!targetUser) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Usuário não encontrado",
+          })
+        }
+
+        if (targetUser.is_active === false) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Não é possível vincular aniversário a um usuário desativado",
+          })
+        }
+      }
+
       const normalizedData = input.data ? normalizeBirthdayDate(input.data) : undefined
 
       return ctx.db.birthday.update({
@@ -95,7 +135,7 @@ export const birthdayRouter = createTRPCRouter({
           name: input.name,
           data: normalizedData,
           userId: input.userId,
-          imageUrl: input.imageUrl
+          imageUrl: input.imageUrl,
         },
       })
     }),
@@ -143,6 +183,12 @@ export const birthdayRouter = createTRPCRouter({
   // Listar todos os aniversários
   list: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.birthday.findMany({
+      where: {
+        OR: [
+          { userId: null },
+          { user: { is_active: true } },
+        ],
+      },
       include: { user: true },
       orderBy: [
         {
@@ -167,6 +213,12 @@ export const birthdayRouter = createTRPCRouter({
 
     // Busca todos os aniversários
     const allBirthdays = await ctx.db.birthday.findMany({
+      where: {
+        OR: [
+          { userId: null },
+          { user: { is_active: true } },
+        ],
+      },
       include: { user: true },
     })
 
@@ -202,8 +254,11 @@ export const birthdayRouter = createTRPCRouter({
 
   // Buscar aniversário do usuário atual
   getMine: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.birthday.findUnique({
-      where: { userId: ctx.auth.userId },
+    return ctx.db.birthday.findFirst({
+      where: {
+        userId: ctx.auth.userId,
+        user: { is_active: true },
+      },
     })
   }),
 
@@ -220,8 +275,22 @@ export const birthdayRouter = createTRPCRouter({
       ),
     )
     .mutation(async ({ ctx, input }) => {
+      const userIds = input.map(b => b.userId).filter((id): id is string => Boolean(id))
+      const activeUsers = userIds.length > 0
+        ? await ctx.db.user.findMany({
+            where: { id: { in: userIds }, is_active: true },
+            select: { id: true },
+          })
+        : []
+      const activeUserSet = new Set(activeUsers.map(u => u.id))
+
+      const validInputs = input.map(b => ({
+        ...b,
+        userId: b.userId && activeUserSet.has(b.userId) ? b.userId : undefined,
+      }))
+
       return ctx.db.$transaction(
-        input.map((birthday) =>
+        validInputs.map((birthday) =>
           ctx.db.birthday.create({
             data: {
               name: birthday.name,
@@ -242,6 +311,12 @@ export const birthdayRouter = createTRPCRouter({
 
     // Busca todos os aniversários
     const allBirthdays = await ctx.db.birthday.findMany({
+      where: {
+        OR: [
+          { userId: null },
+          { user: { is_active: true } },
+        ],
+      },
       include: { user: true },
     })
 
