@@ -17,9 +17,6 @@ import { FormVisibilitySettings } from "@/components/forms/form-visibility-setti
 import { FormSpreadsheetExportSettings } from "@/components/forms/form-spreadsheet-export-settings"
 import { FormSectionCard } from "@/components/forms/form-section-card"
 
-/** Classe do botão primário no visual do módulo Solicitações (teal da marca). */
-const ACCENT_BTN = "bg-[hsl(var(--brand-accent))] text-[hsl(var(--brand-accent-foreground))] hover:bg-[hsl(var(--brand-accent)/.9)]"
-
 interface FormBuilderWithSaveProps {
   mode: "create" | "edit"
   formId?: string
