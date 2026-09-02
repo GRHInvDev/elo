@@ -642,7 +642,7 @@ export function VirtualizedBoard({
               <DialogTitle className="text-base font-bold">Concluir Atendimento</DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground pt-1">
-              Para concluir esta solicitação, informe a resolução ou mensagem final para o solicitante. Esta informação será enviada por e-mail e ficará visível em "Minhas Solicitações".
+              Para concluir esta solicitação, informe a resolução ou mensagem final para o solicitante. Esta informação será enviada por e-mail e ficará visível em &quot;Minhas Solicitações&quot;.
             </DialogDescription>
           </DialogHeader>
 
