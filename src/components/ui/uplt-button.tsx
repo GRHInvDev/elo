@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "./button";
 import { LucideImagePlus, LucideLoader2, LucideTrash2, LucideUpload } from "lucide-react";
 import { deleteFiles } from "@/server/upltActions";
 import { useDataUpload, type UploadedFileResult } from "@/hooks/use-data-upload";
+import { cn } from "@/lib/utils";
 
 interface UPLTButtonProps {
   onClientUploadComplete?: (res: UploadedFileResult[]) => void;
@@ -13,6 +14,8 @@ interface UPLTButtonProps {
   sendRef?: React.MutableRefObject<(() => Promise<void>) | undefined>;
   onImageUrlGenerated: (url: string) => void;
   entityType?: string;
+  className?: string;
+  showPreview?: boolean;
 }
 
 export function UPLTButton({
@@ -21,10 +24,13 @@ export function UPLTButton({
   onUploadError,
   onImageUrlGenerated,
   entityType = "IMAGE",
+  className,
+  showPreview = true,
 }: UPLTButtonProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [fileUrl, setFileUrl] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { startUpload, isUploading } = useDataUpload({
     entityType,
@@ -57,6 +63,9 @@ export function UPLTButton({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files ?? []);
       void handleUploadFiles(selectedFiles);
+      if (event.target) {
+        event.target.value = "";
+      }
     },
     [handleUploadFiles]
   );
@@ -89,60 +98,61 @@ export function UPLTButton({
     }
     setFiles([]);
     setFileUrl("");
+    onImageUrlGenerated("");
   };
 
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", className)}>
       {/* Área de drop e input oculto */}
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={() => document.getElementById("neon-file-input")?.click()}
-        className={`w-full h-64 border-dashed flex items-center justify-center border-2 rounded-xl gap-2 cursor-pointer transition-all ${
+        onClick={() => fileInputRef.current?.click()}
+        className={`w-full min-h-[120px] py-4 border-dashed flex items-center justify-center border-2 rounded-xl gap-2 cursor-pointer transition-all ${
           isDragOver
             ? "border-primary bg-primary/5 scale-[1.01]"
             : "border-border/80 hover:bg-muted/50 hover:border-primary/60"
         } ${isUploading ? "opacity-60 pointer-events-none" : ""}`}
       >
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileInputChange}
           className="hidden"
-          id="neon-file-input"
           disabled={isUploading}
         />
-        <div className="flex flex-col items-center justify-center text-center p-4">
+        <div className="flex flex-col items-center justify-center text-center p-3">
           {isUploading ? (
             <>
-              <LucideLoader2 className="animate-spin h-8 w-8 text-primary mb-2" />
-              <span className="text-sm font-semibold">Salvando no banco Neon...</span>
-              <span className="text-xs text-muted-foreground mt-1">Gerando hash e otimizando imagem</span>
+              <LucideLoader2 className="animate-spin h-7 w-7 text-primary mb-1.5" />
+              <span className="text-sm font-semibold">Salvando no banco de dados...</span>
+              <span className="text-xs text-muted-foreground mt-0.5">Processando e armazenando imagem</span>
             </>
           ) : files.length > 0 && fileUrl ? (
             <>
-              <LucideImagePlus className="h-8 w-8 text-emerald-500 mb-2" />
+              <LucideImagePlus className="h-7 w-7 text-emerald-500 mb-1.5" />
               <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                Imagem carregada com sucesso!
+                Imagem enviada com sucesso!
               </span>
-              <span className="text-xs text-muted-foreground mt-1">
+              <span className="text-xs text-muted-foreground mt-0.5">
                 Clique ou arraste outra imagem para substituir
               </span>
             </>
           ) : (
             <>
-              <LucideUpload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
-              <span className="text-sm font-semibold">Arraste ou clique para adicionar imagem</span>
-              <span className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP, GIF até 16MB</span>
+              <LucideUpload className="h-7 w-7 text-muted-foreground mb-1.5 group-hover:text-primary transition-colors" />
+              <span className="text-sm font-semibold">Arraste ou clique para enviar imagem</span>
+              <span className="text-xs text-muted-foreground mt-0.5">PNG, JPG, WEBP, GIF até 16MB</span>
             </>
           )}
         </div>
       </div>
 
       {/* Botões de ação */}
-      <div className="flex gap-2">
-        {files.length > 0 && fileUrl && (
+      {showPreview && files.length > 0 && fileUrl && (
+        <div className="flex gap-2">
           <Button
             type="button"
             variant="destructive"
@@ -155,11 +165,11 @@ export function UPLTButton({
             <LucideTrash2 className="h-4 w-4 mr-2" />
             Remover Imagem
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Preview da imagem */}
-      {fileUrl && (
+      {/* Preview da imagem se ativado */}
+      {showPreview && fileUrl && (
         <div className="mt-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

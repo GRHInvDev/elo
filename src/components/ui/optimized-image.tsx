@@ -16,6 +16,9 @@ interface OptimizedImageProps {
   onLoadingComplete?: ImageProps["onLoad"]
   imageFit?: "cover" | "contain"
   objectPosition?: string
+  sizes?: string
+  unoptimized?: boolean
+  quality?: number
 }
 
 export function OptimizedImage({
@@ -29,7 +32,10 @@ export function OptimizedImage({
   // blurIntensity = 8,
   onLoadingComplete,
   imageFit = "cover",
-  objectPosition = "center center"
+  objectPosition = "center center",
+  sizes = "(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw",
+  unoptimized,
+  quality,
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
@@ -53,6 +59,8 @@ export function OptimizedImage({
       </div>
     )
   }
+
+  const isUnoptimized = unoptimized ?? (src.startsWith("http") || src.startsWith("data:") || src.startsWith("/api/files/"));
 
   return (
     <div
@@ -93,10 +101,10 @@ export function OptimizedImage({
         priority={priority}
         onLoad={handleLoadingComplete}
         onError={handleError}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        sizes={sizes}
+        quality={quality}
         loading={priority ? "eager" : "lazy"}
-        // IMPORTANTE: desabilitar otimização se for URL externa
-        unoptimized={src.startsWith('http')}
+        unoptimized={isUnoptimized}
       />
     </div>
   )

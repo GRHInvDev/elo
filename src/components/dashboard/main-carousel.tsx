@@ -68,14 +68,21 @@ export function MainCarousel({ itens, isTotem = false, className }: MainCarousel
           {itens.map((item, index) => {
             const isExternal = item.href?.startsWith("http") ?? false
             const base = item.imageRef || "/placeholder.svg"
+            const totemSrc = item.imageRefTotem ?? base
+            const mobileSrc = item.imageRefMobile ?? base
+            const deskSrc = base
+
             const image = (
-              <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
+              <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg bg-muted">
                 {isTotem ? (
                   // Perfil Totem: imagem própria do totem (fallback para a base).
                   <OptimizedImage
                     alt={item.title}
-                    src={item.imageRefTotem ?? base}
+                    src={totemSrc}
                     fill
+                    sizes="100vw"
+                    unoptimized
+                    priority={index === 0}
                     className="object-cover"
                   />
                 ) : (
@@ -84,8 +91,11 @@ export function MainCarousel({ itens, isTotem = false, className }: MainCarousel
                     <div className="absolute inset-0 md:hidden">
                       <OptimizedImage
                         alt={item.title}
-                        src={item.imageRefMobile ?? base}
+                        src={mobileSrc}
                         fill
+                        sizes="100vw"
+                        unoptimized
+                        priority={index === 0}
                         className="object-cover"
                       />
                     </div>
@@ -93,8 +103,11 @@ export function MainCarousel({ itens, isTotem = false, className }: MainCarousel
                     <div className="absolute inset-0 hidden md:block">
                       <OptimizedImage
                         alt={item.title}
-                        src={base}
+                        src={deskSrc}
                         fill
+                        sizes="100vw"
+                        unoptimized
+                        priority={index === 0}
                         className="object-cover"
                       />
                     </div>
@@ -104,7 +117,7 @@ export function MainCarousel({ itens, isTotem = false, className }: MainCarousel
             )
 
             return (
-              <CarouselItem key={index} className="w-full h-96">
+              <CarouselItem key={index} className="w-full h-64 sm:h-80 md:h-96">
                 {item.href ? (
                   <Link
                     href={item.href}
