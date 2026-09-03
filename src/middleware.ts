@@ -10,7 +10,9 @@ const isPublicRoute = createRouteMatcher([
   // senão o middleware redireciona e o JSON nunca aparece.
   '/api/auth/status',
   '/api/webhooks/clerk(.*)',
-  '/api/cron(.*)'
+  '/api/cron(.*)',
+  '/api/files(.*)',
+  '/api/image-proxy(.*)',
 ])
 export default clerkMiddleware(async (auth, req) => {
   // OTIMIZAÇÃO: Evitar processamento desnecessário para usuários já autenticados

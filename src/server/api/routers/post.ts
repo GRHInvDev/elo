@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { utapi } from "@/server/uploadthing"
+import { deleteFiles } from "@/server/upltActions"
 import type { RolesConfig } from "@/types/role-config"
 
 const createPostSchema = z.object({
@@ -167,19 +167,19 @@ export const postRouter = createTRPCRouter({
       })
     }
 
-    // Deletar imagens do UploadThing
-    if (post.imageUrl){
-      await utapi.deleteFiles(post.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
+    // Deletar imagens associadas (Neon StoredFile e UploadThing)
+    if (post.imageUrl) {
+      await deleteFiles(post.imageUrl)
     }
 
-    // Deletar imagens múltiplas do UploadThing
+    // Deletar imagens múltiplas associadas
     const postImages = await ctx.db.postImage.findMany({
       where: { postId: input.id }
     })
 
     for (const image of postImages) {
       try {
-        await utapi.deleteFiles(image.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
+        await deleteFiles(image.imageUrl)
       } catch (error) {
         console.error("Erro ao deletar imagem:", error)
       }

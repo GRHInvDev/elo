@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
+import { deleteFiles } from "@/server/upltActions"
 import type { RolesConfig } from "@/types/role-config"
 
 const createBirthdaySchema = z.object({
@@ -165,6 +166,10 @@ export const birthdayRouter = createTRPCRouter({
         code: "FORBIDDEN",
         message: "Você não tem permissão para deletar este aniversário",
       })
+    }
+
+    if (birthday.imageUrl) {
+      await deleteFiles(birthday.imageUrl)
     }
 
     return ctx.db.birthday.delete({

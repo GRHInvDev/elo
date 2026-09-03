@@ -21,7 +21,7 @@ import { CheckCircle2, Send, Lock, RefreshCw, FileText, Loader2 } from "lucide-r
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { Field } from "@/lib/form-types"
-import { useUploadThing } from "@/components/uploadthing"
+import { useDataUpload } from "@/hooks/use-data-upload"
 
 function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -191,9 +191,11 @@ export function FormResponseComponent({
 
   const { toast } = useToast()
   const [uploadingFiles, setUploadingFiles] = useState(false)
-  const { startUpload } = useUploadThing("formAttachmentUploader", {
+  const { startUpload } = useDataUpload({
+    entityType: "FORM_RESPONSE",
+    maxFileSizeMB: 16,
     onUploadError: (e) => {
-      console.warn("UploadThing aviso:", e.message)
+      console.warn("Data Upload aviso:", e.message)
     },
   })
 
@@ -234,11 +236,11 @@ export function FormResponseComponent({
           try {
             const res = await startUpload([value])
             if (res?.[0]) {
-              fileUrl = (res[0] as { ufsUrl?: string; url?: string }).ufsUrl ?? res[0].url
-              keyStr = res[0].key
+              fileUrl = res[0].url
+              keyStr = res[0].id
             }
           } catch {
-            // Se UploadThing falhar ou estiver offline, faz fallback para base64 local
+            // Fallback para base64 local se falhar
           }
 
           fileUrl ??= await readFileAsBase64(value)
@@ -262,8 +264,8 @@ export function FormResponseComponent({
               try {
                 const res = await startUpload([file])
                 if (res?.[0]) {
-                  fileUrl = (res[0] as { ufsUrl?: string; url?: string }).ufsUrl ?? res[0].url
-                  keyStr = res[0].key
+                  fileUrl = res[0].url
+                  keyStr = res[0].id
                 }
               } catch {
                 // Fallback para base64

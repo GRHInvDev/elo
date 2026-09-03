@@ -1,82 +1,77 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { useUploadThing } from "@/components/uploadthing"
-import { type ClientUploadedFileData } from "uploadthing/types"
-import { FileIcon, Loader2, X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { FileIcon, Loader2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useDataUpload } from "@/hooks/use-data-upload";
 
 interface FileUploadProps {
-  onFileUploaded: (fileData: { url: string; name: string; size: number; type: string }) => void
-  onRemove?: () => void
-  className?: string
-  disabled?: boolean
+  onFileUploaded: (fileData: { url: string; name: string; size: number; type: string }) => void;
+  onRemove?: () => void;
+  className?: string;
+  disabled?: boolean;
 }
 
 export function FileUpload({ onFileUploaded, onRemove, className, disabled }: FileUploadProps) {
   const [uploadedFile, setUploadedFile] = useState<{
-    url: string
-    name: string
-    size: number
-    type: string
-  } | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
+    url: string;
+    name: string;
+    size: number;
+    type: string;
+  } | null>(null);
 
-  const { startUpload } = useUploadThing("imageUploader", {
-    onClientUploadComplete: (res: ClientUploadedFileData<unknown>[]) => {
-      if (res && res.length > 0 && res[0]?.ufsUrl) {
+  const { startUpload, isUploading } = useDataUpload({
+    entityType: "CHAT_FILE",
+    maxFileSizeMB: 16,
+    onClientUploadComplete: (res) => {
+      if (res && res.length > 0 && res[0]?.url) {
         const fileData = {
-          url: res[0].ufsUrl,
-          name: res[0].name || 'Arquivo',
-          size: res[0].size || 0,
-          type: res[0].type || 'application/octet-stream',
-        }
-        setUploadedFile(fileData)
-        onFileUploaded(fileData)
+          url: res[0].url,
+          name: res[0].fileName || "Arquivo",
+          size: res[0].fileSize || 0,
+          type: res[0].mimeType || "application/octet-stream",
+        };
+        setUploadedFile(fileData);
+        onFileUploaded(fileData);
       }
-      setIsUploading(false)
     },
     onUploadError: (error) => {
-      console.error('Erro no upload do arquivo:', error)
-      setIsUploading(false)
+      console.error("[FileUpload] Erro no upload do arquivo:", error);
     },
-    onUploadBegin: () => {
-      setIsUploading(true)
-    },
-  })
+  });
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
-      await startUpload([file])
+      await startUpload([file]);
     }
-  }
+  };
 
   const handleRemove = () => {
-    setUploadedFile(null)
-    onRemove?.()
-  }
+    setUploadedFile(null);
+    onRemove?.();
+  };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
 
   const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) return '🖼️'
-    if (type.startsWith('video/')) return '🎥'
-    if (type.startsWith('audio/')) return '🎵'
-    if (type.includes('pdf')) return '📄'
-    if (type.includes('word') || type.includes('document')) return '📝'
-    if (type.includes('spreadsheet') || type.includes('excel')) return '📊'
-    if (type.includes('presentation') || type.includes('powerpoint')) return '📽️'
-    if (type.includes('zip') || type.includes('rar')) return '📦'
-    return '📎'
-  }
+    if (type.startsWith("image/")) return "🖼️";
+    if (type.startsWith("video/")) return "🎥";
+    if (type.startsWith("audio/")) return "🎵";
+    if (type.includes("pdf")) return "📄";
+    if (type.includes("word") || type.includes("document")) return "📝";
+    if (type.includes("spreadsheet") || type.includes("excel")) return "📊";
+    if (type.includes("presentation") || type.includes("powerpoint")) return "📽️";
+    if (type.includes("zip") || type.includes("rar")) return "📦";
+    return "📎";
+  };
 
   if (uploadedFile) {
     return (
@@ -107,7 +102,7 @@ export function FileUpload({ onFileUploaded, onRemove, className, disabled }: Fi
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -135,10 +130,10 @@ export function FileUpload({ onFileUploaded, onRemove, className, disabled }: Fi
             ) : (
               <FileIcon className="h-4 w-4 mr-2" />
             )}
-            {isUploading ? 'Enviando...' : 'Arquivo'}
+            {isUploading ? "Enviando..." : "Arquivo"}
           </span>
         </Button>
       </label>
     </div>
-  )
+  );
 }

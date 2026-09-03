@@ -1,194 +1,138 @@
-"use client"
+"use client";
 
-import { useState, useCallback, useEffect, useRef } from "react"
-import { Upload, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import Image from "next/image"
-import { cn } from "@/lib/utils"
-import { useUploadThing } from "@/components/uploadthing"
-import { deleteFiles } from "@/components/uploadthing"
-import type { ClientUploadedFileData } from "uploadthing/types"
+import { useState, useCallback, useEffect } from "react";
+import { Upload, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { deleteFiles } from "@/server/upltActions";
+import { useDataUpload } from "@/hooks/use-data-upload";
 
 interface MultipleImageUploadProps {
-  onImagesChange: (images: string[]) => void
-  maxImages?: number
-  className?: string
-  initialImages?: string[]
+  onImagesChange: (images: string[]) => void;
+  maxImages?: number;
+  className?: string;
+  initialImages?: string[];
+  entityType?: string;
 }
 
 export function MultipleImageUpload({
   onImagesChange,
   maxImages = 10,
   className,
-  initialImages = []
+  initialImages = [],
+  entityType = "MULTIPLE_IMAGES",
 }: MultipleImageUploadProps) {
-  const [images, setImages] = useState<string[]>(initialImages)
-  const [isUploading, setIsUploading] = useState(false)
+  const [images, setImages] = useState<string[]>(initialImages);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Sincronizar quando initialImages mudar
   useEffect(() => {
-    setImages(initialImages)
+    setImages(initialImages);
     if (initialImages.length > 0) {
-      onImagesChange(initialImages)
+      onImagesChange(initialImages);
     }
-  }, [initialImages]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialImages]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pendingFilesRef = useRef<File[]>([])
-
-  const { startUpload } = useUploadThing("multipleImageUploader", {
-    onClientUploadComplete: (res: ClientUploadedFileData<unknown>[]) => {
-      if (res && res.length > 0) {
-        const newUrls = res.map((file) => file.ufsUrl).filter(Boolean)
-        setImages((prevImages) => {
-          const updatedImages = [...prevImages, ...newUrls]
-          onImagesChange(updatedImages)
-          return updatedImages
-        })
+  const { startUpload, isUploading } = useDataUpload({
+    entityType,
+    onClientUploadComplete: (uploadedResults) => {
+      if (uploadedResults && uploadedResults.length > 0) {
+        const newUrls = uploadedResults.map((f) => f.url).filter(Boolean);
+        setImages((prev) => {
+          const updated = [...prev, ...newUrls];
+          onImagesChange(updated);
+          return updated;
+        });
       }
-      pendingFilesRef.current = []
-      setIsUploading(false)
     },
     onUploadError: (error) => {
-      console.warn("UploadThing retornou erro, aplicando leitura direta local (Base64):", error)
-      // Fallback gracioso: lê os arquivos locais para que o usuário e a IA possam utilizá-los sem interrupção
-      if (pendingFilesRef.current.length > 0) {
-        const readers = pendingFilesRef.current.map((file) => {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsDataURL(file)
-          })
-        })
-        void Promise.all(readers).then((base64Urls) => {
-          setImages((prevImages) => {
-            const updatedImages = [...prevImages, ...base64Urls]
-            onImagesChange(updatedImages)
-            return updatedImages
-          })
-        })
-      }
-      pendingFilesRef.current = []
-      setIsUploading(false)
+      console.error("[MultipleImageUpload] Erro ao enviar imagens:", error);
     },
-    onUploadBegin: () => {
-      setIsUploading(true)
-    },
-  })
+  });
 
-  const handleFileSelect = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files ?? [])
+  const handleProcessFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
 
-      if (files.length === 0) return
-
-      // Verificar limite de imagens
       if (images.length + files.length > maxImages) {
-        alert(`Máximo de ${maxImages} imagens permitidas`)
-        return
+        alert(`Máximo de ${maxImages} imagens permitidas`);
+        return;
       }
-
-      pendingFilesRef.current = files
 
       try {
-        await startUpload(files)
-      } catch (error) {
-        console.error("Erro ao iniciar upload:", error)
-        // Fallback local se a chamada direta lançar exceção
-        const readers = files.map((file) => {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsDataURL(file)
-          })
-        })
-        void Promise.all(readers).then((base64Urls) => {
-          setImages((prev) => {
-            const updated = [...prev, ...base64Urls]
-            onImagesChange(updated)
-            return updated
-          })
-        })
-        setIsUploading(false)
+        await startUpload(files);
+      } catch (err) {
+        console.error("Erro no processamento de imagens:", err);
       }
     },
-    [images.length, maxImages, onImagesChange, startUpload],
-  )
+    [images.length, maxImages, startUpload]
+  );
+
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? []);
+      void handleProcessFiles(files);
+    },
+    [handleProcessFiles]
+  );
 
   const removeImage = useCallback(
     async (index: number) => {
-      const imageToRemove = images[index]
-      if (imageToRemove?.startsWith("https://")) {
+      const imageToRemove = images[index];
+      if (imageToRemove) {
         try {
-          const fileId = imageToRemove.replace("https://162synql7v.ufs.sh/f/", "")
-          await deleteFiles(fileId)
+          await deleteFiles(imageToRemove);
         } catch (error) {
-          console.error("Erro ao deletar imagem do UploadThing:", error)
+          console.error("Erro ao deletar imagem:", error);
         }
       }
 
-      const newImages = images.filter((_, i) => i !== index)
-      setImages(newImages)
-      onImagesChange(newImages)
+      const newImages = images.filter((_, i) => i !== index);
+      setImages(newImages);
+      onImagesChange(newImages);
     },
-    [images, onImagesChange],
-  )
+    [images, onImagesChange]
+  );
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault()
+      event.preventDefault();
+      setIsDragOver(false);
       const files = Array.from(event.dataTransfer.files).filter((file) =>
-        file.type.startsWith("image/"),
-      )
-
-      if (files.length === 0) return
-
-      if (images.length + files.length > maxImages) {
-        alert(`Máximo de ${maxImages} imagens permitidas`)
-        return
-      }
-
-      pendingFilesRef.current = files
-
-      try {
-        void startUpload(files)
-      } catch (error) {
-        console.error("Erro ao iniciar upload no drop:", error)
-        const readers = files.map((file) => {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsDataURL(file)
-          })
-        })
-        void Promise.all(readers).then((base64Urls) => {
-          setImages((prev) => {
-            const updated = [...prev, ...base64Urls]
-            onImagesChange(updated)
-            return updated
-          })
-        })
-      }
+        file.type.startsWith("image/")
+      );
+      void handleProcessFiles(files);
     },
-    [images.length, maxImages, onImagesChange, startUpload],
-  )
+    [handleProcessFiles]
+  );
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-  }, [])
+    event.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+  }, []);
 
   return (
     <div className={cn("space-y-4", className)}>
       {/* Área de upload */}
       <div
         className={cn(
-          "border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center transition-colors",
-          "hover:border-muted-foreground/50 cursor-pointer",
-          isUploading && "opacity-50 pointer-events-none"
+          "border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer",
+          isDragOver
+            ? "border-primary bg-primary/5 scale-[1.01]"
+            : "border-border/80 hover:border-primary/60 hover:bg-muted/50",
+          isUploading && "opacity-60 pointer-events-none"
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        onClick={() => document.getElementById('multiple-image-input')?.click()}
+        onDragLeave={handleDragLeave}
+        onClick={() => document.getElementById("multiple-image-input")?.click()}
       >
         <input
           id="multiple-image-input"
@@ -197,21 +141,23 @@ export function MultipleImageUpload({
           accept="image/*"
           onChange={handleFileSelect}
           className="hidden"
+          disabled={isUploading}
         />
 
         <div className="flex flex-col items-center space-y-2">
           {isUploading ? (
             <>
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="text-sm text-muted-foreground">Fazendo upload...</p>
+              <Loader2 className="animate-spin h-8 w-8 text-primary" />
+              <p className="text-sm font-semibold">Salvando imagens no banco Neon...</p>
+              <p className="text-xs text-muted-foreground">Otimizando e gerando identificadores</p>
             </>
           ) : (
             <>
               <Upload className="h-8 w-8 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">Clique ou arraste imagens aqui</p>
+                <p className="text-sm font-semibold">Clique ou arraste imagens aqui</p>
                 <p className="text-xs text-muted-foreground">
-                  Máximo {maxImages} imagens
+                  Máximo {maxImages} imagens (PNG, JPG, WEBP)
                 </p>
               </div>
             </>
@@ -222,10 +168,12 @@ export function MultipleImageUpload({
       {/* Preview das imagens */}
       {images.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Imagens selecionadas ({images.length}/{maxImages})</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <p className="text-xs font-semibold text-muted-foreground">
+            Imagens selecionadas ({images.length}/{maxImages})
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {images.map((imageUrl, index) => (
-              <Card key={index} className="relative group overflow-hidden">
+              <Card key={index} className="relative group overflow-hidden rounded-xl border border-border/80 shadow-sm">
                 <div className="aspect-square relative">
                   <Image
                     src={imageUrl}
@@ -233,28 +181,27 @@ export function MultipleImageUpload({
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    unoptimized={imageUrl.startsWith("data:")}
+                    unoptimized={imageUrl.startsWith("data:") || imageUrl.startsWith("/api/files/")}
                   />
 
                   {/* Botões de ação */}
-                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Botão de remover */}
+                  <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="h-6 w-6 p-0"
+                      className="h-7 w-7 p-0 rounded-lg shadow-md"
                       onClick={(e) => {
-                        e.stopPropagation()
-                        void removeImage(index)
+                        e.stopPropagation();
+                        void removeImage(index);
                       }}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
 
                   {/* Indicador de ordem */}
-                  <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 py-0.5 rounded">
+                  <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-md">
                     {index + 1}
                   </div>
                 </div>
@@ -264,5 +211,5 @@ export function MultipleImageUpload({
         </div>
       )}
     </div>
-  )
+  );
 }

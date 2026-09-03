@@ -2,7 +2,7 @@ import "server-only"
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { utapi } from "@/server/uploadthing"
+import { deleteFiles } from "@/server/upltActions"
 import type { RolesConfig } from "@/types/role-config"
 
 /**
@@ -18,21 +18,9 @@ function checkPermission(roleConfig: RolesConfig | null | undefined): void {
   })
 }
 
-/**
- * Remove do UploadThing a imagem de um banner, quando aplicável.
- * Imagens seed (servidas de /public/banners) não estão no UploadThing.
- */
 async function deleteUploadedImage(imageUrl: string): Promise<void> {
-  const key = /\.ufs\.sh\/f\/(.+)$/.exec(imageUrl)?.[1]
-  if (!key) return
-  try {
-    await utapi.deleteFiles(key)
-  } catch (error) {
-    console.error(
-      "Erro ao remover imagem de banner do UploadThing:",
-      error instanceof Error ? error.message : error,
-    )
-  }
+  if (!imageUrl) return
+  await deleteFiles(imageUrl)
 }
 
 // Link opcional: aceita URL absoluta (http/https) ou caminho interno ("/...").

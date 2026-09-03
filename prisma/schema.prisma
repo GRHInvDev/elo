@@ -1319,3 +1319,38 @@ enum AccessLogKind {
   PAGE_VIEW
   API_CALL
 }
+
+/// Armazenamento interno de imagens e arquivos no Neon (PostgreSQL) com metadados,
+/// integridade via SHA-256 e rastreabilidade de migração.
+model StoredFile {
+  id              String          @id @default(cuid())
+  entityType      String          // 'POST', 'POST_IMAGE', 'BANNER', 'BIRTHDAY', 'FLYER', 'PRODUCT', 'ROOM_PHOTO', 'FORM_RESPONSE', 'VEHICLE', 'CHAT_MESSAGE', 'HALL_ENTRY'
+  entityId        String?         // ID do registro correspondente
+  entityField     String?         // 'imageUrl', 'imageUrlMobile', 'imageUrlTotem', 'photos', etc.
+  fileName        String?         // Nome original do arquivo
+  mimeType        String          // Ex: 'image/jpeg', 'image/png', 'image/webp'
+  fileSize        Int             // Tamanho em bytes
+  fileHash        String          // Hash SHA-256 para evitar duplicidade e garantir integridade
+  base64Data      String          @db.Text // Dados em base64 (data:image/...)
+  legacyUrl       String?         // URL de origem (UploadThing)
+  migrationStatus MigrationStatus @default(PENDING) // PENDING | MIGRATED | FAILED | SKIPPED
+  failureReason   String?         // Causa de falha para fila de reprocessamento
+  attempts        Int             @default(0)
+  lastAttemptAt   DateTime?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([fileHash])
+  @@index([entityType, entityId])
+  @@index([legacyUrl])
+  @@index([migrationStatus])
+  @@map("stored_files")
+}
+
+enum MigrationStatus {
+  PENDING
+  MIGRATED
+  FAILED
+  SKIPPED
+}
