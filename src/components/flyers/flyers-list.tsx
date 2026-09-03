@@ -234,17 +234,15 @@ function UpdateFlyerDialog({
             <div className="grid gap-2">
               <Label htmlFor="image">imagem</Label>
               <UPLTButton
-                onImageUrlGenerated={(ufsUrl) => {
-                  setFileUrl(ufsUrl)
+                onImageUrlGenerated={(generatedUrl) => {
+                  setFileUrl(generatedUrl)
                 }}
                 sendRef={sendRef}
                 onClientUploadComplete={(res) => {
-                  setFileUrl(res.at(0)?.ufsUrl ?? "")
-                  console.log(fileUrl)
+                  setFileUrl(res.at(0)?.url ?? "")
                   toast({ title: "Imagem carregada!", description: "Sua imagem foi carregada com sucesso!" });
                 }}
                 onUploadError={(error: Error) => {
-                  // Do something with the error.
                   alert(`ERRO! ${error.message}`);
                 }}
               />

@@ -3,6 +3,8 @@ import { createProductSchema, updateProductSchema, deleteProductSchema } from "@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc"
 import { TRPCError } from "@trpc/server"
 
+import { deleteFiles } from "@/server/upltActions"
+
 export const productRouter = createTRPCRouter({
     create: protectedProcedure
         .input(createProductSchema)
@@ -66,6 +68,12 @@ export const productRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Produto não encontrado"
                 })
+            }
+
+            if (Array.isArray(product.imageUrl)) {
+                for (const url of product.imageUrl) {
+                    await deleteFiles(url)
+                }
             }
 
             return await ctx.db.product.delete({

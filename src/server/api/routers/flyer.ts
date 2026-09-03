@@ -1,14 +1,14 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { utapi } from "@/server/uploadthing"
+import { deleteFiles } from "@/server/upltActions"
 import { canCreateFlyer } from "@/lib/access-control";
 import type { RolesConfig } from "@/types/role-config"
 
 const createFlyerSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   description: z.string().min(1, "Descrição é obrigatória"),
-  imageUrl: z.string().url("URL da imagem inválida"),
+  imageUrl: z.string().min(1, "Imagem é obrigatória"),
   iframe: z.string().optional(),
   published: z.boolean().default(false),
 })
@@ -105,7 +105,7 @@ export const flyerRouter = createTRPCRouter({
         })
       }
 
-      await utapi.deleteFiles(flyer.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
+      await deleteFiles(flyer.imageUrl)
 
       return ctx.db.flyer.update({
         where: { id: input.id },
@@ -125,7 +125,7 @@ export const flyerRouter = createTRPCRouter({
       })
     }
 
-    await utapi.deleteFiles(flyer.imageUrl.replace("https://162synql7v.ufs.sh/f/", ""))
+    await deleteFiles(flyer.imageUrl)
 
     return ctx.db.flyer.delete({
       where: { id: input.id },

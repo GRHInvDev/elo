@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { db } from "@/server/db"
 
 function isAllowed(url: URL): boolean {
 	const host = url.hostname.toLowerCase()
@@ -12,6 +13,33 @@ export async function GET(request: Request) {
 
 		if (!urlParam) {
 			return NextResponse.json({ error: "Missing url param" }, { status: 400 })
+		}
+
+		const stored = await db.storedFile.findFirst({
+			where: {
+				OR: [{ legacyUrl: urlParam }, { legacyUrl: decodeURIComponent(urlParam) }],
+				isActive: true,
+			},
+			select: {
+				mimeType: true,
+				base64Data: true,
+				fileHash: true,
+			},
+		})
+
+		if (stored?.base64Data) {
+			let base64Content = stored.base64Data
+			if (base64Content.includes(",")) {
+				base64Content = base64Content.split(",")[1] ?? ""
+			}
+			const buffer = Buffer.from(base64Content, "base64")
+			const headers = new Headers()
+			headers.set("Content-Type", stored.mimeType || "image/jpeg")
+			headers.set("Content-Length", buffer.length.toString())
+			headers.set("ETag", `"${stored.fileHash}"`)
+			headers.set("Cache-Control", "public, max-age=31536000, immutable")
+			headers.set("Access-Control-Allow-Origin", "*")
+			return new NextResponse(buffer, { status: 200, headers })
 		}
 
 		let target: URL

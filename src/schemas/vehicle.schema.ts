@@ -5,7 +5,7 @@ export const EnterpriseEnum = z.enum(["NA", "Box", "RHenz", "Cristallux", "Box_F
 export const createVehicleSchema = z.object({
   model: z.string().min(1, "Modelo é obrigatório"),
   plate: z.string().min(1, "Placa é obrigatória").max(7, "Placa deve ter no máximo 7 caracteres"),
-  imageUrl: z.string().url("URL da imagem inválida"),
+  imageUrl: z.string().min(1, "Imagem inválida"),
   // Vínculo no padrão novo: o veículo pertence a uma Filial e a Empresa (enum
   // legado `enterprise`) é derivada de `filial.empresa` no servidor.
   filialId: z.string().min(1, "Selecione a filial"),
@@ -22,4 +22,3 @@ export const vehicleIdSchema = z.object({
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>
 export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>
 export type VehicleIdInput = z.infer<typeof vehicleIdSchema>
-

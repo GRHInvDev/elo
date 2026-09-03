@@ -40,6 +40,7 @@ import { empresasRouter } from "./routers/empresas";
 import { setoresRouter } from "./routers/setores";
 import { bannerRouter } from "./routers/banner";
 import { campaignRouter } from "./routers/campaign";
+import { fileRouter } from "./routers/file";
 
 /**
  * This is the primary router for your server.
@@ -87,6 +88,7 @@ export const appRouter = createTRPCRouter({
   empresas: empresasRouter,
   setores: setoresRouter,
   banner: bannerRouter,
+  file: fileRouter,
 });
 
 // export type definition of API
