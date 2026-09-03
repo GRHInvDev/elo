@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ interface ImageUploadProps {
 
 export function ImageUpload({ onImageUploaded, onRemove, className, disabled }: ImageUploadProps) {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { startUpload, isUploading } = useDataUpload({
     entityType: "CHAT_IMAGE",
@@ -34,6 +35,9 @@ export function ImageUpload({ onImageUploaded, onRemove, className, disabled }: 
     const file = event.target.files?.[0];
     if (file) {
       await startUpload([file]);
+    }
+    if (event.target) {
+      event.target.value = "";
     }
   };
 
@@ -68,32 +72,28 @@ export function ImageUpload({ onImageUploaded, onRemove, className, disabled }: 
   return (
     <div className={cn("inline-block", className)}>
       <input
+        ref={inputRef}
         type="file"
         accept="image/*"
         onChange={handleFileSelect}
         className="hidden"
-        id="image-upload"
         disabled={disabled ?? isUploading}
       />
-      <label htmlFor="image-upload">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="cursor-pointer"
-          disabled={disabled ?? isUploading}
-          asChild
-        >
-          <span>
-            {isUploading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <ImageIcon className="h-4 w-4 mr-2" />
-            )}
-            {isUploading ? "Enviando..." : "Imagem"}
-          </span>
-        </Button>
-      </label>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="cursor-pointer"
+        disabled={disabled ?? isUploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        {isUploading ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        ) : (
+          <ImageIcon className="h-4 w-4 mr-2" />
+        )}
+        {isUploading ? "Enviando..." : "Imagem"}
+      </Button>
     </div>
   );
 }

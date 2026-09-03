@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,6 +26,7 @@ export function MultipleImageUpload({
 }: MultipleImageUploadProps) {
   const [images, setImages] = useState<string[]>(initialImages);
   const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sincronizar quando initialImages mudar
   useEffect(() => {
@@ -132,10 +133,10 @@ export function MultipleImageUpload({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={() => document.getElementById("multiple-image-input")?.click()}
+        onClick={() => fileInputRef.current?.click()}
       >
         <input
-          id="multiple-image-input"
+          ref={fileInputRef}
           type="file"
           multiple
           accept="image/*"

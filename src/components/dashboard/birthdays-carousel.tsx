@@ -72,12 +72,14 @@ export function BirthdaysCarousel({ itens, className }: BirthdayCarouselProps) {
       >
         <CarouselContent>
           {itens.map((item, index) => (
-            <CarouselItem key={index} className="w-full h-96">
-              <div className="relative w-full h-full rounded-2xl overflow-hidden">
+            <CarouselItem key={index} className="w-full h-64 sm:h-80 md:h-96">
+              <div className="relative w-full h-full rounded-2xl overflow-hidden bg-muted">
                 <OptimizedImage
                   alt={item.title}
                   src={item.imageRef || "/placeholder.svg"}
                   fill
+                  unoptimized
+                  sizes="100vw"
                   className="object-cover"
                 />
               </div>

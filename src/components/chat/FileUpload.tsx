@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileIcon, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ export function FileUpload({ onFileUploaded, onRemove, className, disabled }: Fi
     size: number;
     type: string;
   } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { startUpload, isUploading } = useDataUpload({
     entityType: "CHAT_FILE",
@@ -45,6 +46,9 @@ export function FileUpload({ onFileUploaded, onRemove, className, disabled }: Fi
     const file = event.target.files?.[0];
     if (file) {
       await startUpload([file]);
+    }
+    if (event.target) {
+      event.target.value = "";
     }
   };
 
@@ -108,32 +112,28 @@ export function FileUpload({ onFileUploaded, onRemove, className, disabled }: Fi
   return (
     <div className={cn("inline-block", className)}>
       <input
+        ref={inputRef}
         type="file"
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.mp3,.mp4,.avi,.mov,.jpg,.jpeg,.png,.gif"
         onChange={handleFileSelect}
         className="hidden"
-        id="file-upload"
         disabled={disabled ?? isUploading}
       />
-      <label htmlFor="file-upload">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="cursor-pointer"
-          disabled={disabled ?? isUploading}
-          asChild
-        >
-          <span>
-            {isUploading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <FileIcon className="h-4 w-4 mr-2" />
-            )}
-            {isUploading ? "Enviando..." : "Arquivo"}
-          </span>
-        </Button>
-      </label>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="cursor-pointer"
+        disabled={disabled ?? isUploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        {isUploading ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        ) : (
+          <FileIcon className="h-4 w-4 mr-2" />
+        )}
+        {isUploading ? "Enviando..." : "Arquivo"}
+      </Button>
     </div>
   );
 }

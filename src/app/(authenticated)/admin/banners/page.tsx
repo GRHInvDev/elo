@@ -97,13 +97,13 @@ function BannerImageSlot({
   return (
     <div className="grid gap-2 rounded-md border p-3">
       <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>
+        <Label className="font-semibold">{label}</Label>
         {onClear && value && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground"
+            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
             onClick={onClear}
           >
             <Trash2 className="mr-1 h-3 w-3" />
@@ -112,11 +112,22 @@ function BannerImageSlot({
         )}
       </div>
       {value && (
-        <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted">
-          <OptimizedImage alt={label} src={value} fill className="object-cover" />
+        <div className="relative h-32 w-full overflow-hidden rounded-md border bg-muted/60">
+          <OptimizedImage
+            alt={label}
+            src={value}
+            fill
+            unoptimized
+            sizes="100vw"
+            className="object-contain"
+          />
         </div>
       )}
-      <UPLTButton onImageUrlGenerated={onChange} onUploadError={onError} />
+      <UPLTButton
+        showPreview={false}
+        onImageUrlGenerated={onChange}
+        onUploadError={onError}
+      />
       <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
   )
@@ -304,6 +315,8 @@ export default function BannersManagementPage() {
                     alt={banner.title}
                     src={banner.imageUrl}
                     fill
+                    unoptimized
+                    sizes="(max-width: 768px) 100vw, 50vw"
                     className={cn(
                       "object-cover",
                       !banner.published && "opacity-40 grayscale",
@@ -330,6 +343,21 @@ export default function BannersManagementPage() {
                       ) : (
                         <p className="text-xs text-muted-foreground">Sem link</p>
                       )}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-background">
+                          Desk
+                        </Badge>
+                        {banner.imageUrlMobile && (
+                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            Mobile
+                          </Badge>
+                        )}
+                        {banner.imageUrlTotem && (
+                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                            Totem
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <Badge
