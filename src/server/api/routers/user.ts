@@ -1,6 +1,6 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
-import { Enterprise } from "@prisma/client";
+import { Enterprise, AccountType } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc"
 import { z } from "zod"
 import { type RolesConfig } from "@/types/role-config"
@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server"
 import { getEffectiveRoleConfig } from "@/lib/effective-role-config"
 import { resolveEnterpriseFromFilial } from "@/server/validators/filial-enterprise"
 import { recordUserAudit, diffFields } from "@/server/audit/user-audit"
+import { getDigits, isValidCpf, isValidCnpj, formatCpf, formatCnpj } from "@/lib/document-validators"
 
 
 export const userRouter = createTRPCRouter({
@@ -31,6 +32,9 @@ export const userRouter = createTRPCRouter({
           emailExtension: true,
           novidades: true,
           is_active: true,
+          accountType: true,
+          cpf: true,
+          cnpj: true,
           lojinha_full_name: true,
           lojinha_cpf: true,
           lojinha_address: true,
@@ -98,6 +102,9 @@ export const userRouter = createTRPCRouter({
         filialId: null,
         birthDay: null,
         novidades: false,
+        accountType: AccountType.INDIVIDUAL,
+        cpf: null,
+        cnpj: null,
         lojinha_full_name: null,
         lojinha_cpf: null,
         lojinha_address: null,
@@ -208,11 +215,48 @@ export const userRouter = createTRPCRouter({
       // Modelo novo: o usuário escolhe Empresa + Filial; gravamos filialId e
       // derivamos o enum `enterprise` a partir de filial.empresa.
       filialId: z.string().min(1, "Filial é obrigatória"),
+      accountType: z.enum(["INDIVIDUAL", "CORPORATE"]).default("INDIVIDUAL"),
+      cpf: z.string().optional().nullable(),
+      cnpj: z.string().optional().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.auth.userId;
       if (!userId) {
         throw new Error("Usuário não autenticado");
+      }
+
+      let cleanCpf: string | null = null;
+      let cleanCnpj: string | null = null;
+
+      if (input.accountType === "INDIVIDUAL") {
+        cleanCpf = getDigits(input.cpf);
+        if (!cleanCpf || !isValidCpf(cleanCpf)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Por favor, informe um CPF válido com 11 dígitos.",
+          });
+        }
+        // Verificar duplicidade de CPF
+        const existingWithCpf = await ctx.db.user.findFirst({
+          where: {
+            cpf: cleanCpf,
+            id: { not: userId },
+          },
+        });
+        if (existingWithCpf) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Este CPF já está cadastrado em outra conta.",
+          });
+        }
+      } else {
+        cleanCnpj = getDigits(input.cnpj);
+        if (!cleanCnpj || !isValidCnpj(cleanCnpj)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Por favor, informe um CNPJ corporativo válido com 14 dígitos.",
+          });
+        }
       }
 
       const enterprise = await resolveEnterpriseFromFilial(ctx.db, input.filialId)
@@ -226,6 +270,9 @@ export const userRouter = createTRPCRouter({
             enterprise,
             setor: input.setor,
             filialId: input.filialId,
+            accountType: input.accountType,
+            cpf: cleanCpf,
+            cnpj: cleanCnpj,
           },
           select: {
             id: true,
@@ -233,6 +280,9 @@ export const userRouter = createTRPCRouter({
             enterprise: true,
             setor: true,
             filialId: true,
+            accountType: true,
+            cpf: true,
+            cnpj: true,
           },
         });
       } catch (error) {
@@ -264,6 +314,9 @@ export const userRouter = createTRPCRouter({
             enterprise,
             setor: input.setor,
             filialId: input.filialId,
+            accountType: input.accountType,
+            cpf: cleanCpf,
+            cnpj: cleanCnpj,
             role_config: devDefaultRoleConfig,
           },
           select: {
@@ -272,6 +325,9 @@ export const userRouter = createTRPCRouter({
             enterprise: true,
             setor: true,
             filialId: true,
+            accountType: true,
+            cpf: true,
+            cnpj: true,
           },
         });
       }
@@ -324,6 +380,7 @@ export const userRouter = createTRPCRouter({
       sector: z.string().optional(),
       search: z.string().optional(),
       enterprise: z.nativeEnum(Enterprise).optional(),
+      accountType: z.enum(["INDIVIDUAL", "CORPORATE"]).optional(),
       /** Filtro por empresa cadastrada (model Empresa), via filial vinculada ao usuário. */
       empresaId: z.string().optional(),
       filialId: z.string().optional(),
@@ -350,6 +407,11 @@ export const userRouter = createTRPCRouter({
       }
 
       const where: Prisma.UserWhereInput = {}
+
+      // Filtro por tipo de perfil (Colaborador / Corporativo)
+      if (input.accountType) {
+        where.accountType = input.accountType
+      }
 
       // Filtro por setor: igualdade exata (case-insensitive). Antes usava `contains`,
       // o que casava substrings — ex.: "TI" trazia ADMINISTRATIVO, LOGISTICA, etc.
@@ -415,6 +477,9 @@ export const userRouter = createTRPCRouter({
           role_config: true,
           email_empresarial: true,
           is_active: true,
+          accountType: true,
+          cpf: true,
+          cnpj: true,
           lojinha_full_name: true,
           lojinha_cpf: true,
           lojinha_address: true,
@@ -436,15 +501,36 @@ export const userRouter = createTRPCRouter({
         const normalize = (value: string) =>
           value
             .normalize("NFD")
-            .replace(/[̀-ͯ]/g, "")
+            .replace(/[\u0300-\u036f]/g, "")
             .toLowerCase()
-        const term = normalize(input.search.trim())
+        const rawSearch = input.search.trim()
+        const term = normalize(rawSearch)
+        const termDigits = getDigits(rawSearch)
+
         filteredUsers = filteredUsers.filter(user => {
           const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`
-          return (
+          const matchesNameOrEmail = Boolean(
             normalize(fullName).includes(term) ||
-            normalize(user.email).includes(term)
+            normalize(user.email).includes(term) ||
+            (user.matricula && normalize(user.matricula).includes(term))
           )
+
+          const userCpfDigits = getDigits(user.cpf)
+          const userCnpjDigits = getDigits(user.cnpj)
+          const formattedCpf = user.cpf ? formatCpf(user.cpf) : ""
+          const formattedCnpj = user.cnpj ? formatCnpj(user.cnpj) : ""
+
+          const matchesCpf = Boolean(
+            (termDigits && userCpfDigits?.includes(termDigits)) ||
+            (user.cpf && formattedCpf.includes(rawSearch))
+          )
+
+          const matchesCnpj = Boolean(
+            (termDigits && userCnpjDigits?.includes(termDigits)) ||
+            (user.cnpj && formattedCnpj.includes(rawSearch))
+          )
+
+          return Boolean(matchesNameOrEmail || matchesCpf || matchesCnpj)
         })
       }
 
@@ -661,6 +747,10 @@ export const userRouter = createTRPCRouter({
       email_empresarial: z.string().email().optional().or(z.literal("")),
       // Modelo novo: empresa é definida pela Filial escolhida; enterprise é derivado.
       filialId: z.string().nullable().optional(),
+      /** Tipo de conta e Documento */
+      accountType: z.enum(["INDIVIDUAL", "CORPORATE"]).optional(),
+      cpf: z.string().nullable().optional(),
+      cnpj: z.string().nullable().optional(),
       /** Status na empresa: ativo ou desativado. Apenas sudo ou can_manage_dados_basicos_users podem alterar. */
       is_active: z.boolean().optional(),
     }))
@@ -696,6 +786,51 @@ export const userRouter = createTRPCRouter({
         }
       }
 
+      // Validação e formatação de CPF e CNPJ
+      const docData: { accountType?: AccountType; cpf?: string | null; cnpj?: string | null } = {}
+      if (input.accountType !== undefined) {
+        docData.accountType = input.accountType
+      }
+      if (input.accountType === "INDIVIDUAL" || (input.cpf !== undefined && input.cpf !== null)) {
+        if (input.cpf) {
+          const cleanCpf = getDigits(input.cpf)
+          if (!isValidCpf(cleanCpf)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "CPF inválido.",
+            })
+          }
+          const existingWithCpf = await ctx.db.user.findFirst({
+            where: { cpf: cleanCpf, id: { not: userId } },
+          })
+          if (existingWithCpf) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Este CPF já está cadastrado em outra conta.",
+            })
+          }
+          docData.cpf = cleanCpf
+          docData.cnpj = null
+        } else if (input.cpf === null) {
+          docData.cpf = null
+        }
+      }
+      if (input.accountType === "CORPORATE" || (input.cnpj !== undefined && input.cnpj !== null)) {
+        if (input.cnpj) {
+          const cleanCnpj = getDigits(input.cnpj)
+          if (!isValidCnpj(cleanCnpj)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "CNPJ inválido.",
+            })
+          }
+          docData.cnpj = cleanCnpj
+          docData.cpf = null
+        } else if (input.cnpj === null) {
+          docData.cnpj = null
+        }
+      }
+
       // Estado anterior para auditoria (movimentações no cadastro)
       const auditFields = [
         "firstName",
@@ -708,6 +843,9 @@ export const userRouter = createTRPCRouter({
         "email_empresarial",
         "filialId",
         "enterprise",
+        "accountType",
+        "cpf",
+        "cnpj",
       ] as const
       const before = await ctx.db.user.findUnique({
         where: { id: userId },
@@ -722,6 +860,9 @@ export const userRouter = createTRPCRouter({
           email_empresarial: true,
           filialId: true,
           enterprise: true,
+          accountType: true,
+          cpf: true,
+          cnpj: true,
           is_active: true,
         },
       })
@@ -740,6 +881,7 @@ export const userRouter = createTRPCRouter({
           email_empresarial: input.email_empresarial,
           is_active: input.is_active,
           ...companyData,
+          ...docData,
         }
 
         updated = await ctx.db.user.update({
@@ -749,7 +891,7 @@ export const userRouter = createTRPCRouter({
       } else {
         updated = await ctx.db.user.update({
           where: { id: userId },
-          data: { ...updateData, ...companyData },
+          data: { ...updateData, ...companyData, ...docData },
         })
       }
 

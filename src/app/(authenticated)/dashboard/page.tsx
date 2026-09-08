@@ -51,20 +51,30 @@ export default function DashboardPage() {
   const userSetor = user?.setor ?? null;
   const userMatricula = user?.matricula ?? null;
   const userFilialId = user?.filialId ?? null;
+  const userAccountType = user?.accountType ?? "INDIVIDUAL";
+  const userCpf = user?.cpf ?? null;
+  const userCnpj = user?.cnpj ?? null;
   const isFilialEnterprise =
     userEnterprise === "Box_Filial" || userEnterprise === "Cristallux_Filial";
   const isTotem = user?.role_config?.isTotem === true;
 
-  // Verificar se os campos obrigatórios estão preenchidos (filial apenas para empresas do tipo filial)
+  // Verificar se os campos obrigatórios estão preenchidos (incluindo CPF para colaborador ou CNPJ para corporativo)
   useEffect(() => {
-    if (
-      user &&
-      (!userMatricula?.trim() ||
-        !userEnterprise ||
-        !userSetor ||
-        (isFilialEnterprise && !userFilialId))
-    ) {
+    if (!user) return;
+
+    const hasBasicInfo = Boolean(
+      userMatricula?.trim() &&
+        userEnterprise &&
+        userSetor &&
+        (!isFilialEnterprise || userFilialId)
+    );
+
+    const hasValidDoc = userAccountType === "CORPORATE" ? Boolean(userCnpj?.trim()) : Boolean(userCpf?.trim());
+
+    if (!hasBasicInfo || !hasValidDoc) {
       setShowProfileModal(true);
+    } else {
+      setShowProfileModal(false);
     }
   }, [
     user,
@@ -73,6 +83,9 @@ export default function DashboardPage() {
     userSetor,
     userFilialId,
     isFilialEnterprise,
+    userAccountType,
+    userCpf,
+    userCnpj,
   ]);
 
   const todayBirthdays = useMemo(() => {
@@ -519,6 +532,9 @@ export default function DashboardPage() {
                 enterprise: user.enterprise ?? null,
                 setor: user.setor ?? null,
                 filialId: user.filialId ?? null,
+                accountType: user.accountType ?? "INDIVIDUAL",
+                cpf: user.cpf ?? null,
+                cnpj: user.cnpj ?? null,
               }
             : null
         }

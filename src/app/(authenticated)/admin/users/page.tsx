@@ -45,7 +45,8 @@ import {
   History,
 } from "lucide-react"
 import type { RolesConfig } from "@/types/role-config"
-import type { Enterprise } from "@prisma/client"
+import type { AccountType, Enterprise } from "@prisma/client"
+import { formatCpf, formatCnpj, isValidCpf, isValidCnpj, getDigits } from "@/lib/document-validators"
 
 type ExtendedRolesConfig = RolesConfig & {
   can_view_dre_report: boolean
@@ -87,6 +88,7 @@ export default function UsersManagementPage() {
   const [selectedSector, setSelectedSector] = useState<string>("all")
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string>("all")
   const [selectedFilial, setSelectedFilial] = useState<string>("all")
+  const [accountTypeFilter, setAccountTypeFilter] = useState<"all" | "INDIVIDUAL" | "CORPORATE">("all")
   const [isAdminFilter, setIsAdminFilter] = useState<boolean | "all">("all")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
   const [offset, setOffset] = useState(0)
@@ -99,6 +101,7 @@ export default function UsersManagementPage() {
 
   const { data: usersData, isLoading, refetch } = api.user.listUsers.useQuery({
     search: searchTerm || undefined,
+    accountType: accountTypeFilter !== "all" ? accountTypeFilter : undefined,
     sector: selectedSector !== "all" ? selectedSector : undefined,
     empresaId: selectedEmpresaId !== "all" ? selectedEmpresaId : undefined,
     filialId: selectedFilial !== "all" ? selectedFilial : undefined,
@@ -133,7 +136,7 @@ export default function UsersManagementPage() {
   // Reset offset quando filtros mudarem
   useEffect(() => {
     setOffset(0)
-  }, [searchTerm, selectedSector, selectedEmpresaId, selectedFilial, isAdminFilter, statusFilter])
+  }, [searchTerm, selectedSector, selectedEmpresaId, selectedFilial, isAdminFilter, statusFilter, accountTypeFilter])
 
   // Filiais disponíveis para o filtro (restritas à empresa selecionada, quando houver)
   const filialOptions = useMemo(
@@ -200,7 +203,7 @@ export default function UsersManagementPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="search"
-                placeholder="Buscar por nome ou email..."
+                placeholder="Buscar por nome, email, matrícula, CPF ou CNPJ..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -218,7 +221,25 @@ export default function UsersManagementPage() {
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              {/* Filtro de Perfil / Tipo de Conta */}
+              <div>
+                <Label htmlFor="accountType">Perfil</Label>
+                <Select
+                  value={accountTypeFilter}
+                  onValueChange={(value) => setAccountTypeFilter(value as "all" | "INDIVIDUAL" | "CORPORATE")}
+                >
+                  <SelectTrigger id="accountType">
+                    <SelectValue placeholder="Perfil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os perfis</SelectItem>
+                    <SelectItem value="INDIVIDUAL">Colaborador (CPF)</SelectItem>
+                    <SelectItem value="CORPORATE">Corporativo (CNPJ)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Filtro de Setor */}
               <div>
                 <Label htmlFor="sector">Setor</Label>
@@ -423,6 +444,9 @@ interface UserManagementCardProps {
     filialId?: string | null
     filial?: { id: string; name: string; code: string; empresa: { id: string; name: string } } | null
     is_active?: boolean | null
+    accountType?: AccountType | null
+    cpf?: string | null
+    cnpj?: string | null
     lojinha_full_name?: string | null
     lojinha_cpf?: string | null
     lojinha_address?: string | null
@@ -519,6 +543,25 @@ function UserListRow(props: UserManagementCardProps) {
           </div>
           <p className="truncate text-sm text-muted-foreground">{user.email}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {user.accountType === "CORPORATE" ? (
+              user.cnpj ? (
+                <Badge variant="outline" className="text-xs font-normal border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-800">
+                  CNPJ: {formatCnpj(user.cnpj)}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs font-normal border-red-300 text-red-700 bg-red-50 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800">
+                  Sem CNPJ
+                </Badge>
+              )
+            ) : user.cpf ? (
+              <Badge variant="outline" className="text-xs font-normal border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-800">
+                CPF: {formatCpf(user.cpf)}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs font-normal border-red-300 text-red-700 bg-red-50 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800">
+                Sem CPF
+              </Badge>
+            )}
             {setorLabel && (
               <Badge variant="outline" className="text-xs font-normal">
                 {setorLabel}
@@ -594,6 +637,9 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
     matricula: user.matricula ?? "",
     email_empresarial: user.email_empresarial ?? "",
     is_active: (user as { is_active?: boolean }).is_active ?? true,
+    accountType: (user as { accountType?: AccountType | null }).accountType ?? "INDIVIDUAL",
+    cpf: (user as { cpf?: string | null }).cpf ? formatCpf((user as { cpf?: string | null }).cpf) : "",
+    cnpj: (user as { cnpj?: string | null }).cnpj ? formatCnpj((user as { cnpj?: string | null }).cnpj) : "",
   })
   // Modelo novo: o vínculo é feito por Empresa + Filial (salva-se filialId; o enum
   // enterprise é derivado no servidor a partir de filial.empresa).
@@ -605,7 +651,21 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
     const current = filiais.find((f) => f.id === user.filialId)
     setEmpresaId(current?.empresaId ?? "")
     setBasicFilialId(user.filialId ?? "")
-  }, [user.filialId, filiais])
+    setBasicData({
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
+      email: user.email,
+      setor: user.setor ?? "none",
+      extension: user.extension ?? 0n,
+      emailExtension: user.emailExtension ?? "",
+      matricula: user.matricula ?? "",
+      email_empresarial: user.email_empresarial ?? "",
+      is_active: (user as { is_active?: boolean }).is_active ?? true,
+      accountType: (user as { accountType?: AccountType | null }).accountType ?? "INDIVIDUAL",
+      cpf: (user as { cpf?: string | null }).cpf ? formatCpf((user as { cpf?: string | null }).cpf) : "",
+      cnpj: (user as { cnpj?: string | null }).cnpj ? formatCnpj((user as { cnpj?: string | null }).cnpj) : "",
+    })
+  }, [user, user.filialId, filiais])
 
   const filiaisForEmpresa = useMemo(
     () => filiais.filter((f) => f.empresaId === empresaId),
@@ -842,6 +902,31 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
       })
       return
     }
+
+    if (basicData.accountType === "INDIVIDUAL" && basicData.cpf) {
+      const clean = getDigits(basicData.cpf)
+      if (!isValidCpf(clean)) {
+        toast({
+          title: "CPF inválido",
+          description: "Por favor, informe um CPF válido com 11 dígitos.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    if (basicData.accountType === "CORPORATE" && basicData.cnpj) {
+      const clean = getDigits(basicData.cnpj)
+      if (!isValidCnpj(clean)) {
+        toast({
+          title: "CNPJ inválido",
+          description: "Por favor, informe um CNPJ válido com 14 dígitos.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     updateBasicInfo.mutate({
       userId: user.id,
       ...basicData,
@@ -852,6 +937,9 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
       email_empresarial: basicData.email_empresarial || "",
       is_active: basicData.is_active,
       filialId: basicFilialId || null,
+      accountType: basicData.accountType,
+      cpf: basicData.accountType === "INDIVIDUAL" ? (basicData.cpf ? getDigits(basicData.cpf) : null) : null,
+      cnpj: basicData.accountType === "CORPORATE" ? (basicData.cnpj ? getDigits(basicData.cnpj) : null) : null,
     })
   }
 
@@ -1150,6 +1238,46 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
                     />
                   </div>
                   <div>
+                    <Label htmlFor="accountType">Tipo de Perfil</Label>
+                    <Select
+                      value={basicData.accountType}
+                      onValueChange={(value) => setBasicData({ ...basicData, accountType: value as "INDIVIDUAL" | "CORPORATE" })}
+                    >
+                      <SelectTrigger id="accountType">
+                        <SelectValue placeholder="Selecione o perfil" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INDIVIDUAL">Colaborador (Pessoa Física)</SelectItem>
+                        <SelectItem value="CORPORATE">Corporativo / Empresa (Pessoa Jurídica)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {basicData.accountType === "INDIVIDUAL" ? (
+                    <div>
+                      <Label htmlFor="cpf">CPF do Colaborador</Label>
+                      <Input
+                        id="cpf"
+                        type="text"
+                        value={basicData.cpf}
+                        onChange={(e) => setBasicData({ ...basicData, cpf: formatCpf(e.target.value) })}
+                        placeholder="000.000.000-00"
+                        maxLength={14}
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <Label htmlFor="cnpj">CNPJ da Empresa</Label>
+                      <Input
+                        id="cnpj"
+                        type="text"
+                        value={basicData.cnpj}
+                        onChange={(e) => setBasicData({ ...basicData, cnpj: formatCnpj(e.target.value) })}
+                        placeholder="00.000.000/0000-00"
+                        maxLength={18}
+                      />
+                    </div>
+                  )}
+                  <div>
                     <Label htmlFor="setor">Setor</Label>
                     <Select
                       value={basicData.setor}
@@ -1303,6 +1431,22 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
                 <div>
                   <Label className="text-xs text-muted-foreground">Email</Label>
                   <p className="text-sm font-medium">{user.email}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Tipo de Perfil</Label>
+                  <p className="text-sm font-medium">
+                    {user.accountType === "CORPORATE" ? "Corporativo / Empresa (Pessoa Jurídica)" : "Colaborador (Pessoa Física)"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">
+                    {user.accountType === "CORPORATE" ? "CNPJ da Empresa" : "CPF"}
+                  </Label>
+                  <p className="text-sm font-medium">
+                    {user.accountType === "CORPORATE"
+                      ? (user.cnpj ? formatCnpj(user.cnpj) : "Não informado")
+                      : (user.cpf ? formatCpf(user.cpf) : "Não informado")}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Setor</Label>

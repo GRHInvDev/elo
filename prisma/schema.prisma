@@ -43,6 +43,9 @@ model User {
   setorExtension      String? // setor personalizado para exibição no ramal
   matricula           String? // matrícula do usuário - para exportação de pedidos
   email_empresarial   String? // email empresarial para uso em ações específicas (ex: chat com permissão can_view_answer_without_admin_access)
+  accountType         AccountType        @default(INDIVIDUAL)
+  cpf                 String?            @unique
+  cnpj                String?
 
   // Pré-cadastro Lojinha (exclusivo módulo Lojinha / SIGIN)
   lojinha_full_name    String?
@@ -686,6 +689,11 @@ enum Enterprise {
   Cristallux
   Box_Filial
   Cristallux_Filial
+}
+
+enum AccountType {
+  INDIVIDUAL
+  CORPORATE
 }
 
 // Movimentações no cadastro de usuários (auditoria): registra cada alteração
