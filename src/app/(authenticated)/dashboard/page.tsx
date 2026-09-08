@@ -524,20 +524,7 @@ export default function DashboardPage() {
       {/* Modal para completar perfil */}
       <CompleteProfileModal
         isOpen={showProfileModal}
-        user={
-          user?.id
-            ? {
-                id: user.id,
-                matricula: user.matricula ?? null,
-                enterprise: user.enterprise ?? null,
-                setor: user.setor ?? null,
-                filialId: user.filialId ?? null,
-                accountType: user.accountType ?? "INDIVIDUAL",
-                cpf: user.cpf ?? null,
-                cnpj: user.cnpj ?? null,
-              }
-            : null
-        }
+        user={user ?? null}
         onSuccess={() => {
           void refetchUser();
         }}
