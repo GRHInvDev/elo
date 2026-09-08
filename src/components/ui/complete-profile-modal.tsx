@@ -14,11 +14,11 @@ import { formatCpf, formatCnpj, getDigits, isValidCpf, isValidCnpj } from "@/lib
 interface CompleteProfileModalProps {
   isOpen: boolean
   user: {
-    id: string
-    matricula: string | null
-    enterprise: string | null
-    setor: string | null
-    filialId: string | null
+    id?: string | null
+    matricula?: string | null
+    enterprise?: string | null
+    setor?: string | null
+    filialId?: string | null
     accountType?: "INDIVIDUAL" | "CORPORATE" | null
     cpf?: string | null
     cnpj?: string | null
@@ -52,11 +52,11 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
   const { toast } = useToast()
 
   const { data: empresas = [] } = api.empresas.list.useQuery(undefined, { enabled: isOpen })
-  const { data: filiaisData = [] } = api.filiais.list.useQuery(undefined, { enabled: isOpen })
+  const { data: filiaisData } = api.filiais.list.useQuery(undefined, { enabled: isOpen })
 
   // Verifica se o usuário já completou os dados básicos (matrícula, empresa, filial, setor)
   // e falta unicamente o documento (CPF ou CNPJ)
-  const isFilialEnterprise =  user?.enterprise === "Box_Filial" || user?.enterprise === "Cristallux_Filial"
+  const isFilialEnterprise = user?.enterprise === "Box_Filial" || user?.enterprise === "Cristallux_Filial"
   const hasCompletedBasicInfo = Boolean(
     user?.matricula?.trim() &&
     user?.enterprise &&
@@ -65,10 +65,10 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
   )
 
   // Filiais da empresa selecionada
-  const filiais = useMemo(
-    () => filiaisData.filter((f) => f.empresa.id === empresaId),
-    [filiaisData, empresaId],
-  )
+  const filiais = useMemo(() => {
+    if (!filiaisData || !empresaId) return []
+    return filiaisData.filter((f) => f.empresa.id === empresaId)
+  }, [filiaisData, empresaId])
 
   // Atualizar os valores quando o modal abrir (pré-preenche empresa pela filial atual, se houver)
   useEffect(() => {
@@ -79,21 +79,12 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       setMatricula(user.matricula ?? "")
       setSetor(user.setor ?? "")
       setFilialId(user.filialId ?? "")
-      const currentFilial = user.filialId
+      const currentFilial = user.filialId && filiaisData
         ? filiaisData.find((f) => f.id === user.filialId)
         : undefined
       setEmpresaId(currentFilial?.empresa.id ?? "")
     }
   }, [isOpen, user, filiaisData])
-
-  // Ao trocar de empresa, limpar a filial que não pertence mais à empresa selecionada
-  useEffect(() => {
-    if (!filialId) return
-    const allowed = new Set(filiais.map((f) => f.id))
-    if (!allowed.has(filialId)) {
-      setFilialId("")
-    }
-  }, [filiais, filialId])
 
   const updateProfileMutation = api.user.updateProfile.useMutation({
     onSuccess: () => {
