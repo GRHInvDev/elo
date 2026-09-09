@@ -223,7 +223,11 @@ export function FormResponseComponent({
     },
   })
 
+  const isProcessing = uploadingFiles || submitResponse.isPending || (customIsSubmitting ?? isSubmitting)
+
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    if (isProcessing) return
+    let isUploading = true
     try {
       setUploadingFiles(true)
       const processedData: Record<string, unknown> = {}
@@ -305,21 +309,26 @@ export function FormResponseComponent({
         }
       }
 
+      isUploading = false
+      setUploadingFiles(false)
+
       if (isEditing && customOnSubmit) {
         customOnSubmit(processedData)
       } else {
-        submitResponse.mutate({
+        await submitResponse.mutateAsync({
           formId,
           responses: [processedData],
         })
       }
     } catch (err) {
-      console.error(err)
-      toast({
-        title: "Erro no envio",
-        description: "Ocorreu um erro ao processar os arquivos.",
-        variant: "destructive",
-      })
+      if (isUploading) {
+        console.error(err)
+        toast({
+          title: "Erro no envio",
+          description: "Ocorreu um erro ao processar os arquivos.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setUploadingFiles(false)
     }
@@ -525,18 +534,18 @@ export function FormResponseComponent({
       <Button
         type="submit"
         className="mt-6 w-full sm:w-auto rounded-xl gap-2 font-semibold shadow-xs"
-        disabled={uploadingFiles || (customIsSubmitting ?? isSubmitting)}
+        disabled={isProcessing}
       >
-        {uploadingFiles || customIsSubmitting || isSubmitting ? (
+        {isProcessing ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : (
           !isEditing && <Send className="h-3.5 w-3.5" />
         )}
         {uploadingFiles
           ? "Enviando anexos..."
-          : customIsSubmitting !== undefined
-            ? (customIsSubmitting ? "Salvando..." : "Salvar Alterações")
-            : (isSubmitting ? "Enviando..." : (isEditing ? "Salvar Alterações" : "Enviar solicitação"))
+          : submitResponse.isPending || (customIsSubmitting ?? isSubmitting)
+            ? (isEditing ? "Salvando..." : "Enviando...")
+            : (isEditing ? "Salvar Alterações" : "Enviar solicitação")
         }
       </Button>
     </form>
