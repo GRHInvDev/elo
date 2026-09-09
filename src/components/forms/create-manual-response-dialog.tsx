@@ -146,7 +146,11 @@ export function CreateManualResponseDialog({
         },
     })
 
+    const isBusy = isSubmitting || createManualResponse.isPending
+
     const onSubmit = async (data: FormData) => {
+        if (isBusy) return
+
         if (!selectedUserId) {
             toast({
                 title: "Atenção",
@@ -159,11 +163,15 @@ export function CreateManualResponseDialog({
         // Converter dados do formulário para o formato esperado
         const responses = [data]
 
-        await createManualResponse.mutateAsync({
-            formId,
-            userId: selectedUserId,
-            responses,
-        })
+        try {
+            await createManualResponse.mutateAsync({
+                formId,
+                userId: selectedUserId,
+                responses,
+            })
+        } catch {
+            // Tratado pelo onError da mutation
+        }
     }
 
     // Filtrar usuários baseado na busca
@@ -368,12 +376,12 @@ export function CreateManualResponseDialog({
                                 reset()
                                 setSelectedUserId(null)
                             }}
-                            disabled={isSubmitting}
+                            disabled={isBusy}
                         >
                             Cancelar
                         </Button>
-                        <Button type="submit" disabled={isSubmitting || !selectedUserId}>
-                            {isSubmitting ? (
+                        <Button type="submit" disabled={isBusy || !selectedUserId}>
+                            {isBusy ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Criando...
@@ -388,4 +396,3 @@ export function CreateManualResponseDialog({
         </Dialog>
     )
 }
-
