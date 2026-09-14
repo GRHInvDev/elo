@@ -724,7 +724,7 @@ export const formResponseRouter = createTRPCRouter({
           r.user.email,
           r.user.setor ?? "",
         ]
-        const fieldCells = selectedFields.map((f) => formatSpreadsheetCell(data[f.name]))
+        const fieldCells = selectedFields.map((f) => formatSpreadsheetCell(data[f.name], f))
         return [...staticCells, ...fieldCells]
       })
 
@@ -857,7 +857,7 @@ export const formResponseRouter = createTRPCRouter({
           r.createdAt.toISOString(),
           statusPt[r.status] ?? r.status,
         ]
-        const fieldCells = selectedFields.map((f) => formatSpreadsheetCell(data[f.name]))
+        const fieldCells = selectedFields.map((f) => formatSpreadsheetCell(data[f.name], f))
         return [...staticCells, ...fieldCells]
       })
 
@@ -884,6 +884,7 @@ export const formResponseRouter = createTRPCRouter({
           number: z.number().optional(),
           tagIds: z.array(z.string()).optional(),
           formIds: z.array(z.string()).optional(),
+          attendantId: z.string().optional(),
         })
         .optional(),
     )
@@ -1090,6 +1091,7 @@ export const formResponseRouter = createTRPCRouter({
           number: z.number().optional(),
           hasResponse: z.boolean().optional(),
           priority: z.enum(["ASC", "DESC"]).default("DESC"),
+          attendantId: z.string().optional(),
         })
         .optional(),
     )
@@ -1147,6 +1149,7 @@ export const formResponseRouter = createTRPCRouter({
           array_contains: input.tagIds,
         }
       }
+
 
       if (input?.search) {
         const q = input.search.trim()
@@ -1276,6 +1279,7 @@ export const formResponseRouter = createTRPCRouter({
           search: z.string().optional(),
           number: z.number().optional(),
           hasResponse: z.boolean().optional(),
+          attendantId: z.string().optional(),
         })
         .optional(),
     )
@@ -1327,6 +1331,7 @@ export const formResponseRouter = createTRPCRouter({
           array_contains: input.tagIds,
         }
       }
+
 
       if (input?.search) {
         const q = input.search.trim()
@@ -1835,17 +1840,38 @@ export const formResponseRouter = createTRPCRouter({
 
   getFormResponsibles: protectedProcedure
     .input(
-      z.object({
-        formId: z.string(),
-      }),
+      z
+        .object({
+          formId: z.string().optional(),
+          formIds: z.array(z.string()).optional(),
+        })
+        .optional(),
     )
     .query(async ({ ctx, input }) => {
-      const form = await ctx.db.form.findUnique({
-        where: { id: input.formId },
-        select: { userId: true, ownerIds: true },
-      })
-      if (!form) return []
-      const userIds = Array.from(new Set([form.userId, ...form.ownerIds])).filter(Boolean)
+      const currentUserId = ctx.auth.userId
+      const formIds = input?.formIds?.filter(Boolean) ?? (input?.formId ? [input.formId] : [])
+      let forms: Array<{ userId: string; ownerIds: string[] }> = []
+
+      if (formIds.length > 0) {
+        forms = await ctx.db.form.findMany({
+          where: { id: { in: formIds } },
+          select: { userId: true, ownerIds: true },
+        })
+      } else {
+        forms = await ctx.db.form.findMany({
+          where: {
+            OR: [
+              { userId: currentUserId },
+              { ownerIds: { has: currentUserId } },
+            ],
+          },
+          select: { userId: true, ownerIds: true },
+        })
+      }
+
+      if (forms.length === 0) return []
+      const userIds = Array.from(new Set(forms.flatMap((f) => [f.userId, ...(f.ownerIds ?? [])]))).filter(Boolean)
+
       return await ctx.db.user.findMany({
         where: { id: { in: userIds }, is_active: true },
         select: {
@@ -1856,6 +1882,10 @@ export const formResponseRouter = createTRPCRouter({
           imageUrl: true,
           setor: true,
         },
+        orderBy: [
+          { firstName: "asc" },
+          { lastName: "asc" },
+        ],
       })
     }),
 

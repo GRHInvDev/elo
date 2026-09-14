@@ -34,6 +34,8 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
   const [endDate, setEndDate] = useState<Date | undefined>()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+  const [groupByUser, setGroupByUser] = useState(false)
+
   const exportableFields = useMemo(
     () => fields.filter((f) => f.type !== "file"),
     [fields],
@@ -42,6 +44,7 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
   useEffect(() => {
     if (open) {
       setSelectedIds(new Set(exportableFields.map((f) => f.id)))
+      setGroupByUser(false)
     }
   }, [open, exportableFields])
 
@@ -69,6 +72,33 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
       })
     },
   })
+
+  const exportByUserMutation = api.formResponse.exportByUserXlsx.useMutation({
+    onSuccess: (data) => {
+      downloadBase64File(data.xlsxBase64, data.filename, XLSX_MIME)
+      if (data.truncated) {
+        toast({
+          title: "Exportação limitada",
+          description: `Foram incluídas no máximo ${data.rowCount} linhas. Refine o período para outro recorte.`,
+        })
+      } else {
+        toast({
+          title: "Planilha gerada",
+          description: `${data.rowCount} linha(s) exportada(s), organizada(s) por usuário.`,
+        })
+      }
+      setOpen(false)
+    },
+    onError: (err) => {
+      toast({
+        title: "Não foi possível exportar",
+        description: err.message,
+        variant: "destructive",
+      })
+    },
+  })
+
+  const isPending = exportMutation.isPending || exportByUserMutation.isPending
 
   const toggleField = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -99,7 +129,9 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
       })
       return
     }
-    exportMutation.mutate({
+
+    const mutation = groupByUser ? exportByUserMutation : exportMutation
+    mutation.mutate({
       formId,
       fieldIds: [...selectedIds],
       startDate,
@@ -136,6 +168,23 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
             onEndDateChange={setEndDate}
           />
 
+          <div className="flex items-start space-x-2.5 rounded-xl border border-border/70 bg-muted/30 p-3">
+            <Checkbox
+              id="export-group-by-user"
+              checked={groupByUser}
+              onCheckedChange={(checked) => setGroupByUser(checked === true)}
+              className="mt-0.5"
+            />
+            <div className="grid gap-1 leading-none cursor-pointer" onClick={() => setGroupByUser((v) => !v)}>
+              <Label htmlFor="export-group-by-user" className="text-xs font-semibold cursor-pointer">
+                Organizar planilha por usuário
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Agrupa as respostas por solicitante e inclui a contagem total de envios de cada um no período.
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label>Campos do formulário</Label>
@@ -153,7 +202,7 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
                 Campos de arquivo não entram na planilha; abra o detalhe de cada resposta para ver anexos.
               </p>
             )}
-            <ScrollArea className="h-[220px] rounded-md border p-3">
+            <ScrollArea className="h-[200px] rounded-md border p-3">
               <div className="space-y-3 pr-3">
                 {exportableFields.map((field) => (
                   <div key={field.id} className="flex items-start gap-2">
@@ -177,8 +226,8 @@ export function FormResponsesExportDialog({ formId, formTitle, fields }: FormRes
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button type="button" onClick={handleExport} disabled={exportMutation.isPending || selectedIds.size === 0}>
-            {exportMutation.isPending ? (
+          <Button type="button" onClick={handleExport} disabled={isPending || selectedIds.size === 0}>
+            {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Gerando…

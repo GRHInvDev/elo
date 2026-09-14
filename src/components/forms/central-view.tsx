@@ -28,6 +28,7 @@ import {
   Zap,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { FormResponsesExportDialog } from "@/components/forms/form-responses-export-dialog"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -122,27 +123,49 @@ export function CentralView() {
     }
   }, [responseIdParam])
 
+  const [selectedFormId, setSelectedFormId] = React.useState<string | undefined>(formIdParam ?? undefined)
+  const [selectedAttendantId, setSelectedAttendantId] = React.useState<string | undefined>(undefined)
+
+  const { data: managedForms = [] } = api.form.listForKanbanFilter.useQuery()
+  const { data: activeFormData } = api.form.getById.useQuery(
+    selectedFormId ?? "",
+    { enabled: !!selectedFormId },
+  )
+
+  React.useEffect(() => {
+    if (formIdParam) {
+      setSelectedFormId(formIdParam)
+    } else if (managedForms.length === 1 && managedForms[0]?.id) {
+      setSelectedFormId(managedForms[0].id)
+    }
+  }, [formIdParam, managedForms])
+
+  const selectedForm = React.useMemo(() => {
+    if (!selectedFormId) return null
+    if (activeFormData) return activeFormData
+    return managedForms.find((f) => f.id === selectedFormId) ?? null
+  }, [selectedFormId, activeFormData, managedForms])
+
   const { toast } = useToast()
   const utils = api.useUtils()
   const { data: kpisData } = api.formResponse.getQueueKpis.useQuery({
     tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
-    formIds: formIdParam ? [formIdParam] : undefined,
+    formIds: selectedFormId ? [selectedFormId] : undefined,
     search: query.trim() || undefined,
     hasResponse: hasResponseFilter,
   })
 
   const infiniteQueue = api.formResponse.listQueueInfinite.useInfiniteQuery(
     {
-      limit: 25,
+      limit: 50,
       status: tab !== "ALL" ? tab : undefined,
       tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
-      formIds: formIdParam ? [formIdParam] : undefined,
+      formIds: selectedFormId ? [selectedFormId] : undefined,
       search: query.trim() || undefined,
       hasResponse: hasResponseFilter,
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
-      enabled: view === "fila",
     },
   )
 
@@ -152,14 +175,38 @@ export function CentralView() {
     return (infiniteQueue.data?.pages.flatMap((page) => page.items) ?? []) as unknown as FormResponse[]
   }, [infiniteQueue.data])
 
-  const responses = queueResponses
   const isLoading = infiniteQueue.isLoading
 
   function handleSelect(id: string) {
     setSelectedId((prev) => (prev === id ? null : id))
   }
 
-  const filtered = queueResponses
+  const availableAttendants = React.useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>()
+    for (const r of queueResponses) {
+      if (r.assignedTo?.userId && r.assignedTo?.name) {
+        map.set(r.assignedTo.userId, {
+          id: r.assignedTo.userId,
+          name: r.assignedTo.name,
+        })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [queueResponses])
+
+  const hasUnassigned = React.useMemo(() => {
+    return queueResponses.some((r) => !r.assignedTo?.userId)
+  }, [queueResponses])
+
+  const filtered = React.useMemo(() => {
+    if (!selectedAttendantId || selectedAttendantId === "all") {
+      return queueResponses
+    }
+    if (selectedAttendantId === "unassigned") {
+      return queueResponses.filter((r) => !r.assignedTo?.userId)
+    }
+    return queueResponses.filter((r) => r.assignedTo?.userId === selectedAttendantId)
+  }, [queueResponses, selectedAttendantId])
 
   // Caso o chamado selecionado pela URL não esteja na 1ª página da fila
   const cleanSelectedNum = selectedId ? selectedId.replace(/^#/, "") : ""
@@ -175,18 +222,42 @@ export function CentralView() {
   const currentResponse = React.useMemo(() => {
     if (!selectedId) return null
     return (
-      responses.find((r) => r.id === selectedId || (r.number != null && String(r.number) === cleanSelectedNum)) ??
+      filtered.find((r) => r.id === selectedId || (r.number != null && String(r.number) === cleanSelectedNum)) ??
       (fallbackResponse ? (fallbackResponse as unknown as FormResponse) : null)
     )
-  }, [responses, selectedId, fallbackResponse, cleanSelectedNum])
+  }, [filtered, selectedId, fallbackResponse, cleanSelectedNum])
 
-  const counts = kpisData ?? {
-    notStarted: 0,
-    inProgress: 0,
-    done: 0,
-    recentDone: 0,
-    aging: 0,
-  }
+  const counts = React.useMemo(() => {
+    if (selectedAttendantId && selectedAttendantId !== "all") {
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const yesterday24h = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+      const notStarted = filtered.filter((r) => r.status === "NOT_STARTED").length
+      const inProgress = filtered.filter((r) => r.status === "IN_PROGRESS").length
+      const done = filtered.filter((r) => r.status === "COMPLETED").length
+      const recentDone = filtered.filter(
+        (r) => r.status === "COMPLETED" && new Date(r.updatedAt) >= todayStart,
+      ).length
+      const aging = filtered.filter(
+        (r) =>
+          (r.status === "NOT_STARTED" || r.status === "IN_PROGRESS") &&
+          new Date(r.createdAt) <= yesterday24h,
+      ).length
+
+      return { notStarted, inProgress, done, recentDone, aging }
+    }
+
+    return (
+      kpisData ?? {
+        notStarted: 0,
+        inProgress: 0,
+        done: 0,
+        recentDone: 0,
+        aging: 0,
+      }
+    )
+  }, [selectedAttendantId, filtered, kpisData])
 
   const updateStatus = api.formResponse.updateStatus.useMutation({
     onSuccess: () => {
@@ -303,6 +374,13 @@ export function CentralView() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {selectedForm && selectedForm.spreadsheetExportEnabled && (
+            <FormResponsesExportDialog
+              formId={selectedForm.id}
+              formTitle={selectedForm.title}
+              fields={(selectedForm.fields as unknown as Field[]) ?? []}
+            />
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -348,25 +426,70 @@ export function CentralView() {
         <Kpi label="Resolvidos hoje" value={counts.recentDone} tone="accent" />
       </div>
 
-      <div className="flex w-full items-center gap-2 bg-[hsl(var(--card)/.45)] border border-[hsl(var(--forms-border-soft))] p-2 rounded-xl">
-        <div className="relative flex-1 min-w-0">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex flex-wrap items-center gap-2 bg-[hsl(var(--card)/.45)] border border-[hsl(var(--forms-border-soft))] p-1.5 sm:p-2 rounded-xl">
+        <div className="relative flex-1 min-w-[180px] sm:min-w-[220px]">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nº (#0001), solicitante, formulário..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-9 pr-8 h-9 text-xs bg-background w-full"
+            className="pl-8 pr-7 h-8 text-xs bg-background w-full rounded-lg"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
+
+        {managedForms.length > 1 && (
+          <Select
+            value={selectedFormId ?? "all"}
+            onValueChange={(value) => {
+              setSelectedFormId(value === "all" ? undefined : value)
+            }}
+          >
+            <SelectTrigger className="h-8 w-auto min-w-[120px] max-w-[180px] shrink-0 text-xs bg-background rounded-lg px-2.5">
+              <SelectValue placeholder="Formulário" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">
+                Todos os formulários
+              </SelectItem>
+              {managedForms.map((f) => (
+                <SelectItem key={f.id} value={f.id} className="text-xs">
+                  {f.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        <Select
+          value={selectedAttendantId ?? "all"}
+          onValueChange={(value) => {
+            setSelectedAttendantId(value === "all" ? undefined : value)
+          }}
+        >
+          <SelectTrigger className="h-8 w-auto min-w-[110px] max-w-[160px] shrink-0 text-xs bg-background rounded-lg px-2.5">
+            <SelectValue placeholder="Atendente" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs">Todos os atendentes</SelectItem>
+            {hasUnassigned && (
+              <SelectItem value="unassigned" className="text-xs">Sem atendente</SelectItem>
+            )}
+            {availableAttendants.map((att) => (
+              <SelectItem key={att.id} value={att.id} className="text-xs">
+                {att.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <Select
           value={
@@ -386,7 +509,7 @@ export function CentralView() {
             )
           }}
         >
-          <SelectTrigger className="h-9 w-40 sm:w-48 shrink-0 text-xs bg-background">
+          <SelectTrigger className="h-8 w-auto min-w-[110px] max-w-[150px] shrink-0 text-xs bg-background rounded-lg px-2.5">
             <SelectValue placeholder="Atendimento" />
           </SelectTrigger>
           <SelectContent>
@@ -403,14 +526,14 @@ export function CentralView() {
               variant="outline"
               size="sm"
               className={cn(
-                "relative h-9 shrink-0 text-xs gap-1.5 bg-background",
+                "relative h-8 shrink-0 text-xs gap-1.5 bg-background rounded-lg px-2.5",
                 selectedTagIds.length > 0 && "border-[hsl(var(--brand-accent)/.5)] text-[hsl(var(--brand-accent))]",
               )}
             >
-              <Filter className="h-3.5 w-3.5" />
+              <Filter className="h-3 w-3" />
               <span>Tags</span>
               {selectedTagIds.length > 0 && (
-                <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[hsl(var(--brand-accent))] px-1 text-[10px] font-bold text-[hsl(var(--brand-accent-foreground))]">
+                <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[hsl(var(--brand-accent))] px-1 text-[10px] font-bold text-[hsl(var(--brand-accent-foreground))]">
                   {selectedTagIds.length}
                 </span>
               )}
@@ -483,16 +606,20 @@ export function CentralView() {
           </PopoverContent>
         </Popover>
 
-        {(query || hasResponseFilter !== undefined || selectedTagIds.length > 0) && (
+        {(query || hasResponseFilter !== undefined || selectedTagIds.length > 0 || selectedAttendantId !== undefined || (managedForms.length > 1 && selectedFormId !== undefined)) && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-9 shrink-0 text-xs text-muted-foreground hover:text-foreground gap-1 px-2 cursor-pointer"
+            className="h-8 shrink-0 text-xs text-muted-foreground hover:text-foreground gap-1 px-2 rounded-lg cursor-pointer"
             onClick={() => {
               setQuery("")
               setHasResponseFilter(undefined)
               setSelectedTagIds([])
+              setSelectedAttendantId(undefined)
+              if (managedForms.length > 1) {
+                setSelectedFormId(undefined)
+              }
             }}
             title="Limpar filtros"
           >
@@ -620,6 +747,8 @@ export function CentralView() {
       ) : (
         <VirtualizedBoard
           tagIds={selectedTagIds}
+          formIds={selectedFormId ? [selectedFormId] : undefined}
+          attendantId={selectedAttendantId}
           search={query}
           hasResponse={hasResponseFilter}
           onSelect={handleOpenDetails}
@@ -795,7 +924,10 @@ function RequestDetail({
   onEdit,
 }: RequestDetailProps) {
   const { toast } = useToast()
-  const { data: form } = api.form.getById.useQuery({ id: r.formId })
+  const { data: form } = api.form.getById.useQuery(
+    { id: r.formId },
+    { enabled: !!r.formId },
+  )
   const { data: allTags = [] } = api.formResponse.getAllTags.useQuery()
   const { data: responsibles = [] } = api.formResponse.getFormResponsibles.useQuery(
     { formId: r.formId },
