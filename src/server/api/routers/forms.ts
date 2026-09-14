@@ -441,7 +441,7 @@ export const formsRouter = createTRPCRouter({
                     { ownerIds: { has: currentUserId } },
                 ],
             },
-            select: { id: true, title: true },
+            select: { id: true, title: true, fields: true, spreadsheetExportEnabled: true },
             orderBy: { title: "asc" },
         });
     }),

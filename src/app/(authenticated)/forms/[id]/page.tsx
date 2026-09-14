@@ -12,6 +12,7 @@ import { DashboardShell } from "@/components/ui/dashboard-shell"
 import { FormDescription } from "@/components/forms/form-description"
 import { FormsSubPageShell, FormsPanel } from "@/components/forms/forms-sub-page-shell"
 import { CreateManualResponseButtonWrapper } from "@/components/forms/create-manual-response-button-wrapper"
+import { FormResponsesExportDialog } from "@/components/forms/form-responses-export-dialog"
 import { canAccessForm, canEditForm } from "@/lib/access-control"
 
 export const metadata = {
@@ -80,7 +81,7 @@ export default async function FormPage({ params }: FormPageProps) {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {/* Gestão (somente quem pode editar) — à esquerda */}
             {canEdit && (
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center flex-wrap">
                 <Link href={`/forms/central?formId=${form.id}`}>
                   <Button variant="outline" className="w-full sm:w-auto rounded-xl border-border/80 text-xs font-semibold gap-1.5 shadow-2xs">
                     <MessageSquare className="h-4 w-4 text-primary" />
@@ -93,6 +94,13 @@ export default async function FormPage({ params }: FormPageProps) {
                     Editar
                   </Button>
                 </Link>
+                {form.spreadsheetExportEnabled && (
+                  <FormResponsesExportDialog
+                    formId={form.id}
+                    formTitle={form.title}
+                    fields={(form.fields as unknown as Field[]) ?? []}
+                  />
+                )}
               </div>
             )}
 

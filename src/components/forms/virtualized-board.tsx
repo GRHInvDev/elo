@@ -338,6 +338,7 @@ interface BoardColumnProps {
   number?: number
   hasResponse?: boolean
   priority?: "ASC" | "DESC"
+  attendantId?: string
   availableTags: AvailableTag[]
   onSelect?: (id: string) => void
   onOpenDetails: (id: string) => void
@@ -360,6 +361,7 @@ function BoardColumn({
   number,
   hasResponse,
   priority,
+  attendantId,
   availableTags,
   onSelect,
   onOpenDetails,
@@ -389,11 +391,16 @@ function BoardColumn({
   )
 
   const items = React.useMemo(() => {
-    return (query.data?.pages.flatMap((page) => page.items) ?? []) as unknown as FormResponse[]
-  }, [query.data])
+    const raw = (query.data?.pages.flatMap((page) => page.items) ?? []) as unknown as FormResponse[]
+    if (!attendantId || attendantId === "all") return raw
+    if (attendantId === "unassigned") {
+      return raw.filter((item) => !item.assignedTo?.userId)
+    }
+    return raw.filter((item) => item.assignedTo?.userId === attendantId)
+  }, [query.data, attendantId])
 
   const meta = STATUS_META[status]
-  const count = totalCount ?? items.length
+  const count = attendantId && attendantId !== "all" ? items.length : (totalCount ?? items.length)
   const hasMore = !!query.hasNextPage
   const isFetchingMore = query.isFetchingNextPage
 
@@ -511,6 +518,7 @@ export interface VirtualizedBoardProps {
   number?: number
   hasResponse?: boolean
   priority?: "ASC" | "DESC"
+  attendantId?: string
   onSelect?: (id: string) => void
   onOpenDetails: (id: string) => void
   onEdit?: (id: string, formId: string) => void
@@ -530,6 +538,7 @@ export function VirtualizedBoard({
   number,
   hasResponse,
   priority,
+  attendantId,
   onSelect,
   onOpenDetails,
   onEdit,
@@ -612,6 +621,7 @@ export function VirtualizedBoard({
               number={number}
               hasResponse={hasResponse}
               priority={priority}
+              attendantId={attendantId}
               availableTags={availableTags}
               onSelect={onSelect}
               onOpenDetails={onOpenDetails}
