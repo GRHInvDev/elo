@@ -547,12 +547,23 @@ export const userRouter = createTRPCRouter({
       const total = filteredUsers.length
       let paginatedUsers = filteredUsers.slice(input.offset, input.offset + input.limit)
 
-      // Ocultar dados privados (lojinha_*) se o usuário não tiver can_view_dados_privados
+      // Ocultar dados privados (lojinha_*, cpf, cnpj) se o usuário não tiver can_view_dados_privados
       if (!canViewDadosPrivados) {
-        const lojinhaKeys = ["lojinha_full_name", "lojinha_cpf", "lojinha_address", "lojinha_neighborhood", "lojinha_cep", "lojinha_rg", "lojinha_email", "lojinha_phone"] as const
+        const privateKeys = [
+          "lojinha_full_name",
+          "lojinha_cpf",
+          "lojinha_address",
+          "lojinha_neighborhood",
+          "lojinha_cep",
+          "lojinha_rg",
+          "lojinha_email",
+          "lojinha_phone",
+          "cpf",
+          "cnpj",
+        ] as const
         paginatedUsers = paginatedUsers.map(u => {
           const rest = { ...u } as Record<string, unknown>
-          lojinhaKeys.forEach(k => delete rest[k])
+          privateKeys.forEach(k => delete rest[k])
           return rest
         }) as typeof paginatedUsers
       }
@@ -926,6 +937,8 @@ export const userRouter = createTRPCRouter({
   updateDadosPrivados: protectedProcedure
     .input(z.object({
       userId: z.string(),
+      cpf: z.string().optional().nullable(),
+      cnpj: z.string().optional().nullable(),
       lojinha_full_name: z.string().optional().nullable(),
       lojinha_cpf: z.string().optional().nullable(),
       lojinha_address: z.string().optional().nullable(),
@@ -950,8 +963,53 @@ export const userRouter = createTRPCRouter({
       }
       const { userId, ...data } = input;
       const updateData: Record<string, string | null> = {};
+
+      if (data.cpf !== undefined) {
+        if (data.cpf) {
+          const cleanCpf = getDigits(data.cpf);
+          if (!isValidCpf(cleanCpf)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "CPF inválido.",
+            });
+          }
+          const existingWithCpf = await ctx.db.user.findFirst({
+            where: { cpf: cleanCpf, id: { not: userId } },
+          });
+          if (existingWithCpf) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Este CPF já está cadastrado em outra conta.",
+            });
+          }
+          updateData.cpf = cleanCpf;
+          updateData.cnpj = null;
+          updateData.lojinha_cpf = cleanCpf;
+        } else {
+          updateData.cpf = null;
+          updateData.lojinha_cpf = null;
+        }
+      }
+
+      if (data.cnpj !== undefined) {
+        if (data.cnpj) {
+          const cleanCnpj = getDigits(data.cnpj);
+          if (!isValidCnpj(cleanCnpj)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "CNPJ inválido.",
+            });
+          }
+          updateData.cnpj = cleanCnpj;
+          updateData.cpf = null;
+          updateData.lojinha_cpf = null;
+        } else {
+          updateData.cnpj = null;
+        }
+      }
+
       if (data.lojinha_full_name !== undefined) updateData.lojinha_full_name = data.lojinha_full_name?.trim() ?? null;
-      if (data.lojinha_cpf !== undefined) updateData.lojinha_cpf = data.lojinha_cpf ? data.lojinha_cpf.replace(/\D/g, "") : null;
+      if (data.lojinha_cpf !== undefined && data.cpf === undefined) updateData.lojinha_cpf = data.lojinha_cpf ? data.lojinha_cpf.replace(/\D/g, "") : null;
       if (data.lojinha_address !== undefined) updateData.lojinha_address = data.lojinha_address?.trim() ?? null;
       if (data.lojinha_neighborhood !== undefined) updateData.lojinha_neighborhood = data.lojinha_neighborhood?.trim() ?? null;
       if (data.lojinha_cep !== undefined) updateData.lojinha_cep = data.lojinha_cep ? data.lojinha_cep.replace(/\D/g, "") : null;
@@ -963,6 +1021,8 @@ export const userRouter = createTRPCRouter({
       const before = await ctx.db.user.findUnique({
         where: { id: userId },
         select: {
+          cpf: true,
+          cnpj: true,
           lojinha_full_name: true,
           lojinha_cpf: true,
           lojinha_address: true,
