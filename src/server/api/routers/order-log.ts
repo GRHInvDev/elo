@@ -62,7 +62,7 @@ export const orderLogRouter = createTRPCRouter({
           totalValue: number
         }
         userData.orders.push(order)
-        userData.totalValue += order.menuItem.price
+        userData.totalValue += (order.unitPrice ?? order.menuItem.price)
       })
 
       // Criar ou atualizar logs

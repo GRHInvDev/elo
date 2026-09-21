@@ -227,7 +227,7 @@ export default function OrdersTab({
         const nome = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
         const empresa = user?.enterprise ?? undefined
         const setor = user?.setor ?? null
-        const valor = order.menuItem?.price ?? 0
+        const valor = order.unitPrice ?? order.menuItem?.price ?? 0
         let resumo = resumoPorUsuario[email]
         if (!resumo) {
           resumo = {
@@ -925,7 +925,7 @@ export default function OrdersTab({
                         )}
                       </div>
                       <div className="text-right space-y-2">
-                        <p className="font-medium">R$ {order.menuItem.price.toFixed(2)}</p>
+                        <p className="font-medium">R$ {(order.unitPrice ?? order.menuItem.price).toFixed(2)}</p>
                         <Badge className={getStatusColor(order.status)}>
                           {getStatusText(order.status)}
                         </Badge>

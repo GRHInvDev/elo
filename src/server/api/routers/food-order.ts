@@ -6,6 +6,7 @@ import { Enterprise, type Prisma } from "@prisma/client"
 import type { RolesConfig } from "@/types/role-config"
 import { sendFoodOrdersEmail } from "@/server/services/food-order-email"
 import { checkSelfServiceFoodOrderDate } from "@/lib/food-order-self-service-date"
+import { resolveOrderUnitPrice } from "@/server/services/food-pricing"
 
 /**
  * Resolve o intervalo [startDate, endDate] usado pelas consultas do relatório DRE.
@@ -123,6 +124,13 @@ export const foodOrderRouter = createTRPCRouter({
         })
       }
 
+      // Resolver preço unitário da refeição para a data do pedido
+      const unitPrice = await resolveOrderUnitPrice(ctx.db, {
+        orderDate: orderDateNormalized,
+        restaurantId: input.restaurantId,
+        fallbackPrice: menuItem.price,
+      })
+
       // Criação do pedido
       const createdOrder = await ctx.db.foodOrder.create({
         data: {
@@ -132,6 +140,7 @@ export const foodOrderRouter = createTRPCRouter({
           orderDate: orderDateNormalized,
           orderTime,
           observations: input.observations,
+          unitPrice,
         },
         include: {
           user: {
@@ -244,6 +253,13 @@ export const foodOrderRouter = createTRPCRouter({
 
       const orderTime = new Date()
 
+      // Resolver preço unitário da refeição para a data do pedido
+      const unitPrice = await resolveOrderUnitPrice(ctx.db, {
+        orderDate: orderDateNormalized,
+        restaurantId: input.restaurantId,
+        fallbackPrice: menuItem.price,
+      })
+
       const createdOrder = await ctx.db.foodOrder.create({
         data: {
           userId: input.userId,
@@ -253,6 +269,7 @@ export const foodOrderRouter = createTRPCRouter({
           orderTime,
           observations: input.observations,
           status: input.status ?? "PENDING",
+          unitPrice,
         },
         include: {
           user: {
@@ -908,7 +925,7 @@ export const foodOrderRouter = createTRPCRouter({
 
         const metric = metricsMap.get(key)!
         metric.totalOrders += 1
-        metric.totalRevenue += order.menuItem.price
+        metric.totalRevenue += order.unitPrice ?? order.menuItem.price
       })
 
       return Array.from(metricsMap.values()).sort((a, b) => b.totalOrders - a.totalOrders)
@@ -1162,7 +1179,7 @@ export const foodOrderRouter = createTRPCRouter({
       const dreDataMap = new Map<string, DreAggRow>()
 
       orders.forEach((order) => {
-        const price = order.menuItem.price
+        const price = order.unitPrice ?? order.menuItem.price
         const effectiveRestaurant = order.restaurant ?? order.menuItem.restaurant
         // Empresa (cadastro novo) derivada da filial do colaborador.
         const empresa = order.user.filial?.empresa ?? null
@@ -1384,8 +1401,88 @@ export const foodOrderRouter = createTRPCRouter({
         orderDate: order.orderDate,
         restaurantName: (order.restaurant ?? order.menuItem.restaurant)?.name ?? null,
         menuItemName: order.menuItem.name,
-        price: order.menuItem.price,
+        price: order.unitPrice ?? order.menuItem.price,
         status: order.status,
       }))
+    }),
+
+  // Listar políticas de vigência de preço de refeição
+  listPricingPolicies: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.mealPricingPolicy.findMany({
+      include: { restaurant: { select: { id: true, name: true } } },
+      orderBy: { startDate: "desc" },
+    })
+  }),
+
+  // Criar ou atualizar política de vigência de preço
+  savePricingPolicy: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().optional(),
+        startDate: z.date(),
+        endDate: z.date().optional().nullable(),
+        price: z.number().positive(),
+        description: z.string().optional().nullable(),
+        restaurantId: z.string().optional().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const caller = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+      const roleConfig = caller?.role_config as RolesConfig | null
+      const canManage = roleConfig?.sudo === true || roleConfig?.can_view_dre_report === true
+      if (!canManage) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para configurar políticas de preço",
+        })
+      }
+
+      if (input.id) {
+        return ctx.db.mealPricingPolicy.update({
+          where: { id: input.id },
+          data: {
+            startDate: input.startDate,
+            endDate: input.endDate,
+            price: input.price,
+            description: input.description,
+            restaurantId: input.restaurantId,
+          },
+        })
+      }
+
+      return ctx.db.mealPricingPolicy.create({
+        data: {
+          startDate: input.startDate,
+          endDate: input.endDate,
+          price: input.price,
+          description: input.description,
+          restaurantId: input.restaurantId,
+        },
+      })
+    }),
+
+  // Excluir política de preço
+  deletePricingPolicy: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const caller = await ctx.db.user.findUnique({
+        where: { id: ctx.auth.userId },
+        select: { role_config: true },
+      })
+      const roleConfig = caller?.role_config as RolesConfig | null
+      const canManage = roleConfig?.sudo === true || roleConfig?.can_view_dre_report === true
+      if (!canManage) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Você não tem permissão para excluir políticas de preço",
+        })
+      }
+
+      return ctx.db.mealPricingPolicy.delete({
+        where: { id: input.id },
+      })
     }),
 })
