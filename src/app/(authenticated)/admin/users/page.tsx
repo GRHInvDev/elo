@@ -543,23 +543,9 @@ function UserListRow(props: UserManagementCardProps) {
           </div>
           <p className="truncate text-sm text-muted-foreground">{user.email}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {user.accountType === "CORPORATE" ? (
-              user.cnpj ? (
-                <Badge variant="outline" className="text-xs font-normal border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-800">
-                  CNPJ: {formatCnpj(user.cnpj)}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs font-normal border-red-300 text-red-700 bg-red-50 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800">
-                  Sem CNPJ
-                </Badge>
-              )
-            ) : user.cpf ? (
-              <Badge variant="outline" className="text-xs font-normal border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-800">
-                CPF: {formatCpf(user.cpf)}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-xs font-normal border-red-300 text-red-700 bg-red-50 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800">
-                Sem CPF
+            {user.accountType === "CORPORATE" && (
+              <Badge variant="outline" className="text-xs font-normal border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-800">
+                Corporativo
               </Badge>
             )}
             {setorLabel && (
@@ -684,7 +670,8 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
   const [isEditingDadosPrivados, setIsEditingDadosPrivados] = useState(false)
   const [dadosPrivadosData, setDadosPrivadosData] = useState({
     lojinha_full_name: (user as { lojinha_full_name?: string | null }).lojinha_full_name ?? "",
-    lojinha_cpf: (user as { lojinha_cpf?: string | null }).lojinha_cpf ?? "",
+    cpf: user.cpf ? formatCpf(user.cpf) : "",
+    cnpj: user.cnpj ? formatCnpj(user.cnpj) : "",
     lojinha_address: (user as { lojinha_address?: string | null }).lojinha_address ?? "",
     lojinha_neighborhood: (user as { lojinha_neighborhood?: string | null }).lojinha_neighborhood ?? "",
     lojinha_cep: (user as { lojinha_cep?: string | null }).lojinha_cep ?? "",
@@ -697,7 +684,8 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
   useEffect(() => {
     setDadosPrivadosData({
       lojinha_full_name: (user as { lojinha_full_name?: string | null }).lojinha_full_name ?? "",
-      lojinha_cpf: (user as { lojinha_cpf?: string | null }).lojinha_cpf ?? "",
+      cpf: user.cpf ? formatCpf(user.cpf) : "",
+      cnpj: user.cnpj ? formatCnpj(user.cnpj) : "",
       lojinha_address: (user as { lojinha_address?: string | null }).lojinha_address ?? "",
       lojinha_neighborhood: (user as { lojinha_neighborhood?: string | null }).lojinha_neighborhood ?? "",
       lojinha_cep: (user as { lojinha_cep?: string | null }).lojinha_cep ?? "",
@@ -880,10 +868,33 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
   }
 
   const handleSaveDadosPrivados = () => {
+    if (user.accountType === "CORPORATE" && dadosPrivadosData.cnpj) {
+      const clean = getDigits(dadosPrivadosData.cnpj)
+      if (!isValidCnpj(clean)) {
+        toast({
+          title: "CNPJ inválido",
+          description: "Por favor, informe um CNPJ válido com 14 dígitos.",
+          variant: "destructive",
+        })
+        return
+      }
+    } else if (user.accountType !== "CORPORATE" && dadosPrivadosData.cpf) {
+      const clean = getDigits(dadosPrivadosData.cpf)
+      if (!isValidCpf(clean)) {
+        toast({
+          title: "CPF inválido",
+          description: "Por favor, informe um CPF válido com 11 dígitos.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     updateDadosPrivados.mutate({
       userId: user.id,
+      cpf: user.accountType !== "CORPORATE" ? (dadosPrivadosData.cpf ? getDigits(dadosPrivadosData.cpf) : null) : null,
+      cnpj: user.accountType === "CORPORATE" ? (dadosPrivadosData.cnpj ? getDigits(dadosPrivadosData.cnpj) : null) : null,
       lojinha_full_name: dadosPrivadosData.lojinha_full_name.trim() || null,
-      lojinha_cpf: dadosPrivadosData.lojinha_cpf.replace(/\D/g, "") || null,
       lojinha_address: dadosPrivadosData.lojinha_address.trim() || null,
       lojinha_neighborhood: dadosPrivadosData.lojinha_neighborhood.trim() || null,
       lojinha_cep: dadosPrivadosData.lojinha_cep.replace(/\D/g, "") || null,
@@ -2215,15 +2226,29 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
                         placeholder="Nome completo"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="dp_cpf">CPF</Label>
-                      <Input
-                        id="dp_cpf"
-                        value={dadosPrivadosData.lojinha_cpf}
-                        onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, lojinha_cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
-                        placeholder="11 dígitos"
-                      />
-                    </div>
+                    {user.accountType === "CORPORATE" ? (
+                      <div>
+                        <Label htmlFor="dp_cnpj">CNPJ</Label>
+                        <Input
+                          id="dp_cnpj"
+                          value={dadosPrivadosData.cnpj}
+                          onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, cnpj: formatCnpj(e.target.value) })}
+                          placeholder="00.000.000/0000-00"
+                          maxLength={18}
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <Label htmlFor="dp_cpf">CPF</Label>
+                        <Input
+                          id="dp_cpf"
+                          value={dadosPrivadosData.cpf}
+                          onChange={(e) => setDadosPrivadosData({ ...dadosPrivadosData, cpf: formatCpf(e.target.value) })}
+                          placeholder="000.000.000-00"
+                          maxLength={14}
+                        />
+                      </div>
+                    )}
                     <div>
                       <Label htmlFor="dp_rg">RG</Label>
                       <Input
@@ -2305,10 +2330,21 @@ function UserManagementCard({ user, allForms, filiais = [], empresas = [], setor
                     <Label className="text-xs text-muted-foreground">Nome completo</Label>
                     <p className="text-sm font-medium">{(user as { lojinha_full_name?: string | null }).lojinha_full_name ?? "—"}</p>
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">CPF</Label>
-                    <p className="text-sm font-medium">{(user as { lojinha_cpf?: string | null }).lojinha_cpf ?? "—"}</p>
-                  </div>
+                  {user.accountType === "CORPORATE" ? (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">CNPJ</Label>
+                      <p className="text-sm font-medium">
+                        {user.cnpj ? formatCnpj(user.cnpj) : "—"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">CPF</Label>
+                      <p className="text-sm font-medium">
+                        {user.cpf ? formatCpf(user.cpf) : "—"}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <Label className="text-xs text-muted-foreground">RG</Label>
                     <p className="text-sm font-medium">{(user as { lojinha_rg?: string | null }).lojinha_rg ?? "—"}</p>
@@ -2384,8 +2420,11 @@ const AUDIT_FIELD_LABELS: Record<string, string> = {
   email_empresarial: "E-mail empresarial",
   filialId: "Filial",
   enterprise: "Empresa",
+  accountType: "Tipo de Perfil",
+  cpf: "CPF",
+  cnpj: "CNPJ",
   lojinha_full_name: "Nome completo (privado)",
-  lojinha_cpf: "CPF",
+  lojinha_cpf: "CPF (legado)",
   lojinha_address: "Endereço",
   lojinha_neighborhood: "Bairro",
   lojinha_cep: "CEP",
@@ -2417,6 +2456,15 @@ function formatAuditValue(
     }
     if (field === "setor") {
       return setores.find((s) => s.value === value)?.name ?? value
+    }
+    if (field === "cpf") {
+      return formatCpf(value)
+    }
+    if (field === "cnpj") {
+      return formatCnpj(value)
+    }
+    if (field === "accountType") {
+      return value === "CORPORATE" ? "Corporativo" : "Colaborador"
     }
     return value
   }

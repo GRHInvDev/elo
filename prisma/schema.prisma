@@ -535,8 +535,9 @@ model Restaurant {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   filial      Filial?     @relation(fields: [filialId], references: [id], onDelete: SetNull)
-  orders      FoodOrder[]
-  menuItems   MenuItem[]
+  orders          FoodOrder[]
+  menuItems       MenuItem[]
+  pricingPolicies MealPricingPolicy[]
 
   @@index([filialId])
   @@map("restaurants")
@@ -598,6 +599,7 @@ model FoodOrder {
   orderTime        DateTime
   status           OrderStatus            @default(PENDING)
   observations     String?
+  unitPrice        Float?                 // Snapshot do valor unitário da refeição na data do pedido
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
   menuItem         MenuItem               @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
@@ -607,6 +609,21 @@ model FoodOrder {
 
   @@unique([userId, orderDate])
   @@map("food_orders")
+}
+
+model MealPricingPolicy {
+  id           String      @id @default(cuid())
+  startDate    DateTime    // Início da vigência (inclusivo)
+  endDate      DateTime?   // Fim da vigência (null = em aberto)
+  price        Float       // Valor por refeição
+  description  String?     // Ex: "Vigência Agosto 2026"
+  restaurantId String?     // Opcional para regras específicas de restaurante
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([startDate, endDate])
+  @@map("meal_pricing_policies")
 }
 
 model OrderOptionSelection {
