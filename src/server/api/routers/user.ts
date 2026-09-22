@@ -163,7 +163,32 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  listAll: adminProcedure.query(async ({ ctx }) => {
+  listAll: protectedProcedure.query(async ({ ctx }) => {
+    const currentUser = await ctx.db.user.findUnique({
+      where: { id: ctx.auth.userId },
+      select: { role_config: true, is_active: true },
+    });
+
+    if (!currentUser?.is_active) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Usuário inativo",
+      });
+    }
+
+    const effectiveConfig = getEffectiveRoleConfig(currentUser);
+    const isSudo = !!effectiveConfig.sudo;
+    const hasAdminAccess = Array.isArray(effectiveConfig.admin_pages) && effectiveConfig.admin_pages.includes("/admin");
+    const canCreateSolicitacoes = !!effectiveConfig.can_create_solicitacoes;
+    const canCreateForm = !!effectiveConfig.can_create_form;
+
+    if (!isSudo && !hasAdminAccess && !canCreateSolicitacoes && !canCreateForm) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Você não tem permissão para listar usuários",
+      });
+    }
+
     return await ctx.db.user.findMany({
       where: {
         is_active: true,
@@ -178,10 +203,19 @@ export const userRouter = createTRPCRouter({
         setor: true,
         extension: true,
         emailExtension: true,
+        matricula: true,
+        filial: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
       },
-      orderBy: {
-        firstName: "asc",
-      },
+      orderBy: [
+        { firstName: "asc" },
+        { lastName: "asc" },
+      ],
     });
   }),
 

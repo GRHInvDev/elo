@@ -15,6 +15,7 @@ import { format, startOfMonth, endOfMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Calculator, FileText, Eye, FileSpreadsheet, ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
 import * as XLSX from "xlsx"
+import { formatOrderDate } from "@/lib/date-utils"
 import {
   Dialog,
   DialogContent,
@@ -731,7 +732,7 @@ export default function DREReport({ selectedDate, onOpenOrder }: DREReportProps)
                                           </TableCell>
                                           <TableCell>{order.sector ?? "Não informado"}</TableCell>
                                           <TableCell>
-                                            {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })}
+                                            {formatOrderDate(order.orderDate)}
                                           </TableCell>
                                           <TableCell>{order.menuItemName}</TableCell>
                                           <TableCell className="text-right">R$ {order.price.toFixed(2)}</TableCell>
