@@ -79,6 +79,8 @@ export function RoomDialog({ room, booking, open, onOpenChange }: RoomDialogProp
 
   const [durationMinutes, setDurationMinutes] = useState<number>(60)
   const [isCustomDuration, setIsCustomDuration] = useState<boolean>(false)
+  const [customHours, setCustomHours] = useState<string>("1")
+  const [customMinutes, setCustomMinutes] = useState<string>("0")
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"))
   const [time, setTime] = useState<string>("09:00")
   const [title, setTitle] = useState<string>("")
@@ -97,13 +99,18 @@ export function RoomDialog({ room, booking, open, onOpenChange }: RoomDialogProp
         setTime(format(booking.start, "HH:mm"))
         const diff = Math.max(1, differenceInMinutes(booking.end, booking.start))
         setDurationMinutes(diff)
-        setIsCustomDuration(![30, 60, 90, 120].includes(diff))
+        const isCustom = ![30, 60, 90, 120].includes(diff)
+        setIsCustomDuration(isCustom)
+        setCustomHours(String(Math.floor(diff / 60)))
+        setCustomMinutes(String(diff % 60))
       } else {
         setTitle("")
         setDate(format(new Date(), "yyyy-MM-dd"))
         setTime("09:00")
         setDurationMinutes(60)
         setIsCustomDuration(false)
+        setCustomHours("1")
+        setCustomMinutes("0")
       }
     }
   }, [open, booking, room?.id])
@@ -400,6 +407,8 @@ export function RoomDialog({ room, booking, open, onOpenChange }: RoomDialogProp
                     onClick={() => {
                       setIsCustomDuration(false)
                       setDurationMinutes(preset.value)
+                      setCustomHours(String(Math.floor(preset.value / 60)))
+                      setCustomMinutes(String(preset.value % 60))
                     }}
                   >
                     {preset.label}
@@ -416,9 +425,10 @@ export function RoomDialog({ room, booking, open, onOpenChange }: RoomDialogProp
                 )}
                 onClick={() => {
                   setIsCustomDuration(true)
-                  if ([30, 60, 90, 120].includes(durationMinutes)) {
-                    setDurationMinutes(45)
-                  }
+                  const h = Math.floor(durationMinutes / 60)
+                  const m = durationMinutes % 60
+                  setCustomHours(String(h))
+                  setCustomMinutes(String(m))
                 }}
               >
                 Outro
@@ -426,28 +436,76 @@ export function RoomDialog({ room, booking, open, onOpenChange }: RoomDialogProp
             </div>
 
             {isCustomDuration && (
-              <div className="flex items-center gap-2 pt-1">
-                <div className="relative flex-1">
-                  <Input
-                    id="custom-duration"
-                    type="number"
-                    min={5}
-                    max={480}
-                    step={5}
-                    value={durationMinutes || ""}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10)
-                      setDurationMinutes(isNaN(val) ? 0 : Math.max(1, Math.min(val, 1440)))
-                    }}
-                    placeholder="Ex: 45"
-                    className="h-8 text-base sm:text-xs pr-14 rounded-xl"
-                    autoFocus
-                  />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none font-medium">
-                    minutos
-                  </span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pt-1">
+                <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex-1">
+                  <div className="relative">
+                    <Input
+                      id="custom-duration-hours"
+                      type="number"
+                      min={0}
+                      max={24}
+                      value={customHours}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setCustomHours(val)
+                        const h = parseInt(val, 10) || 0
+                        const m = parseInt(customMinutes, 10) || 0
+                        setDurationMinutes(Math.max(0, Math.min(1440, h * 60 + m)))
+                      }}
+                      onBlur={() => {
+                        const h = parseInt(customHours, 10)
+                        if (isNaN(h) || h < 0) {
+                          setCustomHours("0")
+                        } else if (h > 24) {
+                          setCustomHours("24")
+                          const m = parseInt(customMinutes, 10) || 0
+                          setDurationMinutes(Math.max(0, Math.min(1440, 24 * 60 + m)))
+                        }
+                      }}
+                      placeholder="0"
+                      className="h-8 text-base sm:text-xs pr-12 rounded-xl"
+                      autoFocus
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none font-medium">
+                      h
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <Input
+                      id="custom-duration-minutes"
+                      type="number"
+                      min={0}
+                      max={59}
+                      step={5}
+                      value={customMinutes}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setCustomMinutes(val)
+                        const h = parseInt(customHours, 10) || 0
+                        const m = parseInt(val, 10) || 0
+                        setDurationMinutes(Math.max(0, Math.min(1440, h * 60 + m)))
+                      }}
+                      onBlur={() => {
+                        const m = parseInt(customMinutes, 10)
+                        if (isNaN(m) || m < 0) {
+                          setCustomMinutes("0")
+                        } else if (m > 59) {
+                          setCustomMinutes("59")
+                          const h = parseInt(customHours, 10) || 0
+                          setDurationMinutes(Math.max(0, Math.min(1440, h * 60 + 59)))
+                        }
+                      }}
+                      placeholder="0"
+                      className="h-8 text-base sm:text-xs pr-12 rounded-xl"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none font-medium">
+                      min
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+
+                <span className="text-xs text-muted-foreground font-mono whitespace-nowrap self-center sm:self-auto">
                   ({formatMinutes(durationMinutes || 0)})
                 </span>
               </div>
