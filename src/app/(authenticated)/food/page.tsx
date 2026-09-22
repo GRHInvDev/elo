@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { addDays, startOfDay } from "date-fns"
+import { formatOrderDate } from "@/lib/date-utils"
 
 const FOOD_ORDER_DEADLINE_HOUR = Number(process.env.NEXT_PUBLIC_FOOD_ORDER_DEADLINE_HOUR ?? 9)
 
@@ -138,11 +139,10 @@ export default function FoodPage() {
   const restaurants = api.restaurant.listActive.useQuery()
 
   // Buscar itens do menu do restaurante selecionado
-  // Definir a data do pedido conforme a regra de horário (UTC-3)
+  // Definir a data do pedido conforme a regra de horário
   const now = new Date()
-  const brasiliaTime = new Date(now.getTime() - 3 * 60 * 60 * 1000) // UTC-3
-  const today = startOfDay(brasiliaTime)
-  const tomorrow = startOfDay(addDays(brasiliaTime, 1))
+  const today = startOfDay(now)
+  const tomorrow = startOfDay(addDays(now, 1))
   const menuDate = now.getHours() < FOOD_ORDER_DEADLINE_HOUR ? today : tomorrow;
   const menuItems = api.menuItem.byRestaurant.useQuery(
     { restaurantId: selectedRestaurant, date: menuDate },
@@ -607,7 +607,7 @@ export default function FoodPage() {
                           <p className="font-semibold text-sm md:text-base text-foreground">{order.restaurant?.name}</p>
                           <p className="text-xs md:text-sm text-foreground">{order.menuItem.name}</p>
                           <p className="text-xs text-muted-foreground font-medium">
-                            {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })}
+                            {formatOrderDate(order.orderDate)}
                           </p>
                           {order.observations && (
                             <p className="text-xs text-muted-foreground italic">Obs: {order.observations}</p>

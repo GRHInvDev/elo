@@ -23,6 +23,7 @@ import { CheckCircle, Loader2 } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
 import { type UserMinimal } from "@/trpc/react"
 import { cn } from "@/lib/utils"
+import { formatOrderDate } from "@/lib/date-utils"
 
 interface OrdersTabProps {
   selectedDate: Date
@@ -916,7 +917,7 @@ export default function OrdersTab({
                         </div>
                         <p className="text-sm">{order.menuItem.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          Pedido do dia {format(new Date(order.orderDate), "dd/MM/yyyy", { locale: ptBR })} - feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })}
+                          Pedido do dia {formatOrderDate(order.orderDate)} - feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })}
                         </p>
                         {order.observations && (
                           <p className="text-xs text-muted-foreground">

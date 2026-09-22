@@ -1,6 +1,6 @@
 "use client"
-
-import { useState } from "react"
+ 
+import { useState, useMemo, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -25,6 +25,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { matchesSearch } from "@/lib/search-utils"
 import type { Field } from "@/lib/form-types"
 
 interface CreateManualResponseDialogProps {
@@ -47,8 +48,17 @@ export function CreateManualResponseDialog({
     const [userSearchOpen, setUserSearchOpen] = useState(false)
     const [userSearchValue, setUserSearchValue] = useState("")
 
-    // Buscar todos os usuários
-    const { data: allUsers = [], isLoading: isLoadingUsers } = api.user.listAll.useQuery()
+    // Buscar todos os usuários ativos com revalidação garantida
+    const { data: allUsers = [], isLoading: isLoadingUsers, refetch: refetchUsers } = api.user.listAll.useQuery(undefined, {
+        staleTime: 0,
+        refetchOnWindowFocus: true,
+    })
+
+    useEffect(() => {
+        if (open) {
+            void refetchUsers()
+        }
+    }, [open, refetchUsers])
 
     // Criar schema dinâmico baseado nos campos do formulário
     const createSchema = () => {
@@ -174,17 +184,29 @@ export function CreateManualResponseDialog({
         }
     }
 
-    // Filtrar usuários baseado na busca
-    const filteredUsers = allUsers.filter((user) => {
-        if (!userSearchValue.trim()) return true
-        const search = userSearchValue.toLowerCase()
-        const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim().toLowerCase()
-        return (
-            fullName.includes(search) ||
-            user.email.toLowerCase().includes(search) ||
-            (user.setor?.toLowerCase().includes(search))
-        )
-    })
+    // Filtrar usuários baseado na busca normalizada (sem acento, case-insensitive, sem caracteres especiais)
+    const filteredUsers = useMemo(() => {
+        if (!userSearchValue.trim()) return allUsers
+
+        return allUsers.filter((user) => {
+            const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
+            const filialName = user.filial?.name ?? ""
+            const filialCode = user.filial?.code ?? ""
+            const matricula = user.matricula ?? ""
+            const email = user.email ?? ""
+            const setor = user.setor ?? ""
+
+            return matchesSearch(
+                userSearchValue,
+                fullName,
+                email,
+                setor,
+                matricula,
+                filialName,
+                filialCode
+            )
+        })
+    }, [allUsers, userSearchValue])
 
     const selectedUser = allUsers.find((u) => u.id === selectedUserId)
 
@@ -220,47 +242,61 @@ export function CreateManualResponseDialog({
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-full p-0" align="start">
-                                <Command>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[320px] p-0" align="start">
+                                <Command shouldFilter={false} className="w-full">
                                     <CommandInput
-                                        placeholder="Buscar usuário por nome, email ou setor..."
+                                        placeholder="Buscar usuário por nome, email, setor ou filial..."
                                         value={userSearchValue}
                                         onValueChange={setUserSearchValue}
                                     />
-                                    <CommandList>
-                                        <CommandEmpty>
-                                            {isLoadingUsers ? "Carregando..." : "Nenhum usuário encontrado."}
-                                        </CommandEmpty>
-                                        <CommandGroup>
-                                            {filteredUsers.map((user) => (
-                                                <CommandItem
-                                                    key={user.id}
-                                                    value={user.id}
-                                                    onSelect={() => {
-                                                        setSelectedUserId(user.id)
-                                                        setUserSearchOpen(false)
-                                                        setUserSearchValue("")
-                                                    }}
-                                                >
-                                                    <Check
-                                                        className={cn(
-                                                            "mr-2 h-4 w-4",
-                                                            selectedUserId === user.id ? "opacity-100" : "opacity-0"
-                                                        )}
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <span>
-                                                            {user.firstName || user.lastName
-                                                                ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
-                                                                : user.email}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {user.email} {user.setor && `• ${user.setor}`}
-                                                        </span>
-                                                    </div>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
+                                    <CommandList className="max-h-[300px] overflow-y-auto">
+                                        {isLoadingUsers ? (
+                                            <div className="p-4 text-sm text-center text-muted-foreground flex items-center justify-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Carregando usuários ativos...
+                                            </div>
+                                        ) : filteredUsers.length === 0 ? (
+                                            <CommandEmpty className="p-4 text-sm text-center text-muted-foreground">
+                                                Nenhum usuário ativo encontrado.
+                                            </CommandEmpty>
+                                        ) : (
+                                            <CommandGroup heading={`Usuários Ativos (${filteredUsers.length})`}>
+                                                {filteredUsers.map((user) => {
+                                                    const displayName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email
+                                                    const isSelected = selectedUserId === user.id
+                                                    return (
+                                                        <CommandItem
+                                                            key={user.id}
+                                                            value={user.id}
+                                                            onSelect={() => {
+                                                                setSelectedUserId(user.id)
+                                                                setUserSearchOpen(false)
+                                                                setUserSearchValue("")
+                                                            }}
+                                                            className="cursor-pointer flex items-center py-2 px-3 hover:bg-muted/80"
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4 shrink-0 text-primary",
+                                                                    isSelected ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className="font-medium text-sm text-foreground truncate">
+                                                                    {displayName}
+                                                                </span>
+                                                                <span className="text-xs text-muted-foreground truncate">
+                                                                    {user.email}
+                                                                    {user.setor ? ` • ${user.setor}` : ""}
+                                                                    {user.filial?.code ? ` • ${user.filial.code}` : ""}
+                                                                    {user.matricula ? ` • Matrícula: ${user.matricula}` : ""}
+                                                                </span>
+                                                            </div>
+                                                        </CommandItem>
+                                                    )
+                                                })}
+                                            </CommandGroup>
+                                        )}
                                     </CommandList>
                                 </Command>
                             </PopoverContent>
