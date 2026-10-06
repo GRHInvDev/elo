@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { InputMask } from "@/components/forms/input-mask"
+import { PhoneInput } from "@/components/forms/phone-input"
+import { createPhoneFieldSchema } from "@/lib/form-schema"
 import { MultiSelect } from "@/components/forms/multi-select"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -40,6 +42,7 @@ function buildEmptyFormValues(fields: Field[]): Record<string, unknown> {
       case "text":
       case "textarea":
       case "formatted":
+      case "phone":
         values[field.name] = ""
         break
       case "number":
@@ -109,6 +112,9 @@ export function FormResponseComponent({
         schema = field.required
           ? z.boolean().refine((val) => val === true, "Este campo é obrigatório")
           : z.boolean().optional()
+        break
+      case "phone":
+        schema = createPhoneFieldSchema(field)
         break
       case "formatted": {
         let s = z.string()
@@ -450,6 +456,18 @@ export function FormResponseComponent({
               maxLength={field.maxLength}
               className="rounded-xl border-border/70 bg-background text-sm"
               {...register(field.name)}
+            />
+          )}
+
+          {field.type === "phone" && (
+            <PhoneInput
+              id={field.name}
+              name={field.name}
+              placeholder={field.placeholder}
+              value={watch(field.name) as unknown}
+              onChange={(value) => setValue(field.name, value, { shouldValidate: true })}
+              askPhoneType={field.askPhoneType}
+              required={field.required}
             />
           )}
 

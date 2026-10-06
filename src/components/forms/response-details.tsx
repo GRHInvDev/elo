@@ -2,9 +2,11 @@
 
 import React, { useState } from "react"
 import type { Field } from "@/lib/form-types"
-import { Download, ExternalLink, FileIcon, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Eye } from "lucide-react"
+import { Download, ExternalLink, FileIcon, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive, Eye, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { formatBrazilianPhone, normalizePhoneDigits, parsePhoneFieldValue, getWhatsAppLink } from "@/lib/phone-validation"
+import { cn } from "@/lib/utils"
 
 interface ResponseDetailsProps {
   responseData: Record<string, unknown>[]
@@ -207,12 +209,61 @@ export function ResponseDetails({ responseData, formFields }: ResponseDetailsPro
     )
   }
 
-  const renderValue = (fieldName: string, fieldType: string, value: unknown) => {
+  const renderValue = (field: Field, value: unknown) => {
     if (value === undefined || value === null || value === "") {
       return <span className="text-muted-foreground italic">Não respondido</span>
     }
 
+    const fieldType = field.type
+
     switch (fieldType) {
+      case "phone": {
+        const { phone: phoneStr, phoneType } = parsePhoneFieldValue(value)
+
+        const digits = normalizePhoneDigits(phoneStr)
+        if (!digits) {
+          return <span className="text-muted-foreground italic">Não respondido</span>
+        }
+
+        const formattedPhone = formatBrazilianPhone(phoneStr)
+        const isWhatsapp = field.isWhatsapp ?? true
+        const whatsappUrl = getWhatsAppLink(phoneStr)
+
+        return (
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            <span className="font-semibold text-foreground text-sm tracking-wide">
+              {formattedPhone}
+            </span>
+
+            {phoneType && (
+              <span
+                className={cn(
+                  "inline-flex items-center text-[10.5px] font-semibold px-2 py-0.5 rounded-full capitalize",
+                  phoneType === "empresarial"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60"
+                    : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60"
+                )}
+              >
+                {phoneType}
+              </span>
+            )}
+
+            {isWhatsapp && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 px-2.5 py-1 rounded-lg transition-all shadow-2xs cursor-pointer active:scale-95"
+                title={`Conversar com +55 ${formattedPhone} no WhatsApp`}
+              >
+                <MessageCircle className="h-3.5 w-3.5 fill-emerald-600 dark:fill-emerald-400 text-transparent" />
+                <span>WhatsApp</span>
+                <ExternalLink className="h-3 w-3 opacity-60" />
+              </a>
+            )}
+          </div>
+        )
+      }
       case "checkbox": {
         if (
           value === true ||
@@ -310,7 +361,7 @@ export function ResponseDetails({ responseData, formFields }: ResponseDetailsPro
               {field.label}
             </span>
             <div className="text-xs sm:text-sm text-foreground font-medium break-words leading-relaxed">
-              {renderValue(field.name, field.type, value)}
+              {renderValue(field, value)}
             </div>
           </div>
         )

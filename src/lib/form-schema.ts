@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { Field, FieldType } from "./form-types"
+import { isValidBrazilianCellPhone, parsePhoneFieldValue } from "./phone-validation"
 
 // Tipo para representar o schema de um campo específico
 export type FieldSchema<T extends FieldType> = 
@@ -10,10 +11,28 @@ export type FieldSchema<T extends FieldType> =
   T extends "combobox" ? (z.ZodString | z.ZodArray<z.ZodString>) :
   T extends "file" ? z.ZodType<File | FileList> :
   T extends "textarea" ? z.ZodString :
+  T extends "phone" ? z.ZodTypeAny :
   never;
 
 // Tipo para representar o schema completo do formulário
 export type FormSchema = z.ZodObject<Record<string, z.ZodTypeAny>>;
+
+export function createPhoneFieldSchema(field: { required?: boolean; askPhoneType?: boolean }) {
+  return z.unknown().refine(
+    (val) => {
+      const { phone, phoneType } = parsePhoneFieldValue(val)
+      if (!phone.replace(/\D/g, "")) return !field.required
+      if (!isValidBrazilianCellPhone(phone)) return false
+      if (field.askPhoneType && field.required && !phoneType) return false
+      return true
+    },
+    {
+      message: field.askPhoneType && field.required
+        ? "Informe um número de celular válido e selecione se é empresarial ou pessoal"
+        : "Número de celular inválido (DDD oficial + 9 dígitos iniciando com 9)",
+    },
+  )
+}
 
 export function generateFormSchema(fields: Field[]): FormSchema {
   const schemaFields: Record<string, z.ZodTypeAny> = {}
@@ -56,6 +75,10 @@ export function generateFormSchema(fields: Field[]): FormSchema {
 
       case "checkbox":
         fieldSchema = z.boolean().optional()
+        break
+
+      case "phone":
+        fieldSchema = createPhoneFieldSchema(field)
         break
 
       case "formatted":

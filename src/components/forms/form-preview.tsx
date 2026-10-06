@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { InputMask } from "@/components/forms/input-mask"
+import { PhoneInput } from "@/components/forms/phone-input"
+import { createPhoneFieldSchema } from "@/lib/form-schema"
 import { MultiSelect } from "@/components/forms/multi-select"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -54,6 +56,9 @@ export function FormPreview({ title, fields, readOnly = false, showTitle }: Form
       case "checkbox":
         schema = z.boolean().optional()
         if (field.required) schema = z.boolean().refine((val) => val === true, "Este campo é obrigatório")
+        break
+      case "phone":
+        schema = createPhoneFieldSchema(field)
         break
       case "formatted":
         schema = z.string()
@@ -203,6 +208,19 @@ export function FormPreview({ title, fields, readOnly = false, showTitle }: Form
                 maxLength={field.maxLength}
                 className="rounded-xl border-border/70 bg-background text-sm"
                 {...register(field.name)}
+                disabled={readOnly}
+              />
+            )}
+
+            {field.type === "phone" && (
+              <PhoneInput
+                id={field.name}
+                name={field.name}
+                placeholder={field.placeholder}
+                value={watch(field.name) as unknown}
+                onChange={(value) => setValue(field.name, value, { shouldValidate: true })}
+                askPhoneType={field.askPhoneType}
+                required={field.required}
                 disabled={readOnly}
               />
             )}
