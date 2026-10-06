@@ -70,6 +70,7 @@ export function ContentFeed({
   const [open, setOpen] = useState(false)
   const [fileUrl] = useState<string | undefined>(undefined)
   const [images, setImages] = useState<string[]>([])
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [loading] = useState(false)
   const [visiblePostsCount, setVisiblePostsCount] = useState(enablePagination ? postsPerPage : postsPerPage)
   const [postContent, setPostContent] = useState("")
@@ -207,12 +208,13 @@ export function ContentFeed({
                     </div>
                     <div className="grid gap-2">
                       <Label>Imagens</Label>
-                        <h3 className="text-sm text-muted-foreground">Tamanho recomendado: 515px x 300px</h3>
+                      <h3 className="text-sm text-muted-foreground">Tamanho recomendado: 515px x 300px</h3>
                       <MultipleImageUpload
+                        value={images}
                         onImagesChange={setImages}
+                        onUploadingChange={setIsUploadingImages}
                         maxImages={10}
                       />
-
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="content">Conteúdo (Markdown)</Label>
@@ -228,8 +230,11 @@ export function ContentFeed({
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit" disabled={createPost.isPending || loading || !postContent.trim()}>
-                      {createPost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button
+                      type="submit"
+                      disabled={createPost.isPending || loading || isUploadingImages || !postContent.trim()}
+                    >
+                      {(createPost.isPending || isUploadingImages) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Publicar
                     </Button>
                   </DialogFooter>
@@ -1011,13 +1016,15 @@ interface UpdatePostDialogProps {
     id: string
     title: string
     content: string
+    imageUrl?: string | null
+    images?: Array<{ imageUrl: string }>
   }
 }
 
 /**
- * Opens a dialog to edit an existing post's title and Markdown content.
+ * Opens a dialog to edit an existing post's title, images, and Markdown content.
  *
- * Submits the edited title and normalized Markdown content to update the post, closes the dialog on success, shows success or error toasts, and refreshes the post list.
+ * Submits the edited title, images, and normalized Markdown content to update the post, closes the dialog on success, shows success or error toasts, and refreshes the post list.
  *
  * @param post - The post to edit; must include `id`, `title`, and `content`
  */
@@ -1025,6 +1032,14 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
   const utils = api.useUtils()
   const [open, setOpen] = useState(false)
   const [editContent, setEditContent] = useState(post.content)
+  const initialPostImages = useMemo(() => {
+    if ((post.images?.length ?? 0) > 0) {
+      return post.images?.map((img: { imageUrl: string }) => img.imageUrl) ?? []
+    }
+    return post.imageUrl ? [post.imageUrl] : []
+  }, [post.images, post.imageUrl])
+  const [editImages, setEditImages] = useState<string[]>(initialPostImages)
+  const [isUploadingEditImages, setIsUploadingEditImages] = useState(false)
   const { toast } = useToast()
 
   const updatePost = api.post.update.useMutation({
@@ -1048,8 +1063,9 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
   useEffect(() => {
     if (open) {
       setEditContent(post.content)
+      setEditImages(initialPostImages)
     }
-  }, [open, post.content])
+  }, [open, post.content, initialPostImages])
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -1059,6 +1075,7 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
       id: post.id,
       title: formData.get("title") as string,
       content: normalizeLineBreaks(editContent || ""),
+      images: editImages,
       published: true,
     })
   }
@@ -1085,6 +1102,16 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
               <Input id="title" name="title" defaultValue={post.title} placeholder="Digite o título do post" required />
             </div>
             <div className="grid gap-2">
+              <Label>Imagens</Label>
+              <h3 className="text-sm text-muted-foreground">Tamanho recomendado: 515px x 300px</h3>
+              <MultipleImageUpload
+                value={editImages}
+                onImagesChange={setEditImages}
+                onUploadingChange={setIsUploadingEditImages}
+                maxImages={10}
+              />
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="content">Conteúdo (Markdown)</Label>
               <MonacoEditor
                 value={editContent}
@@ -1098,9 +1125,12 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={updatePost.isPending || !editContent.trim()}>
-              {updatePost.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Publicar
+            <Button
+              type="submit"
+              disabled={updatePost.isPending || isUploadingEditImages || !editContent.trim()}
+            >
+              {(updatePost.isPending || isUploadingEditImages) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar Alterações
             </Button>
           </DialogFooter>
         </form>
