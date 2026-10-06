@@ -8,6 +8,7 @@ import type { FieldType } from "@/lib/form-types"
 const fieldTypes = [
   { type: "text", label: "Texto" },
   { type: "number", label: "Número" },
+  { type: "phone", label: "Número de Celular" },
   { type: "checkbox", label: "Checkbox" },
   { type: "formatted", label: "Texto Formatado" },
   { type: "combobox", label: "Combobox" },

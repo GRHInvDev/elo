@@ -27,6 +27,8 @@ import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { matchesSearch } from "@/lib/search-utils"
 import type { Field } from "@/lib/form-types"
+import { PhoneInput } from "@/components/forms/phone-input"
+import { createPhoneFieldSchema } from "@/lib/form-schema"
 
 interface CreateManualResponseDialogProps {
     formId: string
@@ -94,6 +96,9 @@ export function CreateManualResponseDialog({
                     if (!field.required) {
                         schema = schema.optional()
                     }
+                    break
+                case "phone":
+                    schema = createPhoneFieldSchema(field)
                     break
                 case "combobox":
                     if (field.multiple) {
@@ -365,6 +370,18 @@ export function CreateManualResponseDialog({
                                             {field.placeholder ?? "Sim"}
                                         </label>
                                     </div>
+                                )}
+
+                                {field.type === "phone" && (
+                                    <PhoneInput
+                                        id={field.name}
+                                        name={field.name}
+                                        placeholder={field.placeholder}
+                                        value={watch(field.name) as unknown}
+                                        onChange={(value) => setValue(field.name, value, { shouldValidate: true })}
+                                        askPhoneType={field.askPhoneType}
+                                        required={field.required}
+                                    />
                                 )}
 
                                 {field.type === "combobox" && (

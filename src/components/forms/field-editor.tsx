@@ -181,22 +181,96 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
         )}
 
         {field.type === "formatted" && (
-          <div className="grid gap-2">
-            <Label htmlFor="formattedType">Tipo de formatação</Label>
-            <Select
-              value={field.formattedType ?? "cpf"}
-              onValueChange={(value) => updateField({ formattedType: value as FormattedType })}
-            >
-              <SelectTrigger id="formattedType">
-                <SelectValue placeholder="Selecione o tipo de formatação" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cpf">CPF</SelectItem>
-                <SelectItem value="cnpj">CNPJ</SelectItem>
-                <SelectItem value="phone">Telefone</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="formattedType">Tipo de formatação</Label>
+              <Select
+                value={field.formattedType ?? "cpf"}
+                onValueChange={(value) => updateField({ formattedType: value as FormattedType })}
+              >
+                <SelectTrigger id="formattedType">
+                  <SelectValue placeholder="Selecione o tipo de formatação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="cnpj">CNPJ</SelectItem>
+                  <SelectItem value="phone">Telefone</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {field.formattedType === "phone" && (
+              <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+                <div className="flex items-start space-x-2.5">
+                  <Checkbox
+                    id="isWhatsapp-formatted"
+                    checked={field.isWhatsapp ?? true}
+                    onCheckedChange={(checked) => updateField({ isWhatsapp: checked === true })}
+                  />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="isWhatsapp-formatted" className="text-sm font-medium cursor-pointer">
+                      Número de WhatsApp
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Exibe um link direto para iniciar conversa no WhatsApp ao visualizar a resposta.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2.5">
+                  <Checkbox
+                    id="askPhoneType-formatted"
+                    checked={field.askPhoneType ?? false}
+                    onCheckedChange={(checked) => updateField({ askPhoneType: checked === true })}
+                  />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="askPhoneType-formatted" className="text-sm font-medium cursor-pointer">
+                      Perguntar se é Empresarial ou Pessoal
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Exibe dois checkboxes alinhados horizontalmente (Empresarial / Pessoal) durante o preenchimento.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {field.type === "phone" && (
+          <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <div className="flex items-start space-x-2.5">
+              <Checkbox
+                id="isWhatsapp"
+                checked={field.isWhatsapp ?? true}
+                onCheckedChange={(checked) => updateField({ isWhatsapp: checked === true })}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="isWhatsapp" className="text-sm font-medium cursor-pointer">
+                  Número de WhatsApp
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Quando marcado, a resposta neste campo exibirá um link/botão para abrir o contato diretamente no WhatsApp (+55).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-2.5">
+              <Checkbox
+                id="askPhoneType"
+                checked={field.askPhoneType ?? false}
+                onCheckedChange={(checked) => updateField({ askPhoneType: checked === true })}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="askPhoneType" className="text-sm font-medium cursor-pointer">
+                  Perguntar se é Empresarial ou Pessoal
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Exibe dois checkboxes alinhados horizontalmente (Empresarial e Pessoal) para o respondente classificar o número.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

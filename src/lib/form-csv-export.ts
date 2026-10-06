@@ -1,4 +1,5 @@
 import type { Field } from "@/lib/form-types"
+import { formatBrazilianPhone, parsePhoneFieldValue } from "@/lib/phone-validation"
 
 /** Formata valor de resposta para célula de CSV/planilha, traduzindo opções e booleanos conforme o campo. */
 export function formatSpreadsheetCell(value: unknown, field?: Field): string {
@@ -73,6 +74,17 @@ export function formatSpreadsheetCell(value: unknown, field?: Field): string {
       if (typeof value === "string" && (value.startsWith("http") || value.startsWith("/"))) {
         return value.split("/").pop() ?? value
       }
+    }
+
+    if (field.type === "phone") {
+      const { phone: phoneStr, phoneType } = parsePhoneFieldValue(value)
+
+      if (!phoneStr) return ""
+      const formatted = formatBrazilianPhone(phoneStr)
+      if (phoneType) {
+        return `${formatted} (${phoneType.charAt(0).toUpperCase() + phoneType.slice(1)})`
+      }
+      return formatted
     }
   }
 

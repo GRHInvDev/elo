@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid"
 
-export type FieldType = "text" | "number" | "checkbox" | "formatted" | "combobox" | "file" | "textarea" | "dynamic"
+export type FieldType = "text" | "number" | "checkbox" | "formatted" | "combobox" | "file" | "textarea" | "dynamic" | "phone"
 
 export type DynamicType = "user_name" | "user_sector"
 
@@ -42,6 +42,8 @@ export interface CheckboxField extends BaseField {
 export interface FormattedField extends BaseField {
   type: "formatted"
   formattedType?: FormattedType
+  isWhatsapp?: boolean
+  askPhoneType?: boolean
 }
 
 export interface ComboboxField extends BaseField {
@@ -69,7 +71,13 @@ export interface DynamicField extends BaseField {
   dynamicType: DynamicType
 }
 
-export type Field = TextField | NumberField | CheckboxField | FormattedField | ComboboxField | FileField | TextareaField | DynamicField
+export interface PhoneField extends BaseField {
+  type: "phone"
+  isWhatsapp?: boolean
+  askPhoneType?: boolean
+}
+
+export type Field = TextField | NumberField | CheckboxField | FormattedField | ComboboxField | FileField | TextareaField | DynamicField | PhoneField
 
 export function getFieldTypeLabel(type: FieldType): string {
   switch (type) {
@@ -89,6 +97,8 @@ export function getFieldTypeLabel(type: FieldType): string {
       return "Texto Longo"
     case "dynamic":
       return "Dado Dinâmico"
+    case "phone":
+      return "Número de Celular"
     default:
       return type
   }
@@ -126,6 +136,15 @@ export function createDefaultField(type: FieldType): Field {
         ...baseField,
         type: "formatted",
         formattedType: "cpf",
+      }
+    case "phone":
+      return {
+        ...baseField,
+        type: "phone",
+        label: "Número de Celular",
+        placeholder: "(99) 99999-9999",
+        isWhatsapp: true,
+        askPhoneType: false,
       }
     case "combobox":
       return {

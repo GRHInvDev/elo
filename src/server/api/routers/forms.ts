@@ -22,6 +22,10 @@ export const formsRouter = createTRPCRouter({
             spreadsheetExportEnabled: z.boolean().default(false),
         }))
         .mutation(async ({ ctx, input }) => {
+            const cleanAllowedUsers = (input.allowedUsers ?? []).filter((id): id is string => Boolean(id && typeof id === "string" && id.trim().length > 0));
+            const cleanAllowedSectors = (input.allowedSectors ?? []).filter((s): s is string => Boolean(s && typeof s === "string" && s.trim().length > 0));
+            const cleanOwnerIds = (input.ownerIds ?? []).filter((id): id is string => Boolean(id && typeof id === "string" && id.trim().length > 0));
+
             const form = await ctx.db.form.create({
                 data: {
                     title: input.title,
@@ -29,9 +33,9 @@ export const formsRouter = createTRPCRouter({
                     fields: input.fields as unknown as InputJsonValue[],
                     userId: ctx.auth.userId,
                     isPrivate: input.isPrivate,
-                    allowedUsers: input.allowedUsers,
-                    allowedSectors: input.allowedSectors,
-                    ownerIds: input.ownerIds,
+                    allowedUsers: cleanAllowedUsers,
+                    allowedSectors: cleanAllowedSectors,
+                    ownerIds: cleanOwnerIds,
                     spreadsheetExportEnabled: input.spreadsheetExportEnabled,
                 }
             });
@@ -169,6 +173,16 @@ export const formsRouter = createTRPCRouter({
                 });
             }
 
+            const cleanAllowedUsers = input.allowedUsers !== undefined
+                ? input.allowedUsers.filter((id): id is string => Boolean(id && typeof id === "string" && id.trim().length > 0))
+                : undefined;
+            const cleanAllowedSectors = input.allowedSectors !== undefined
+                ? input.allowedSectors.filter((s): s is string => Boolean(s && typeof s === "string" && s.trim().length > 0))
+                : undefined;
+            const cleanOwnerIds = input.ownerIds !== undefined
+                ? input.ownerIds.filter((id): id is string => Boolean(id && typeof id === "string" && id.trim().length > 0))
+                : undefined;
+
             const form = await ctx.db.form.update({
                 data: {
                     title: input.title,
@@ -176,9 +190,9 @@ export const formsRouter = createTRPCRouter({
                     fields: input.fields as unknown as InputJsonValue[],
                     // Não alterar userId - o criador do formulário não deve mudar
                     ...(input.isPrivate !== undefined ? { isPrivate: input.isPrivate } : {}),
-                    ...(input.allowedUsers !== undefined ? { allowedUsers: input.allowedUsers } : {}),
-                    ...(input.allowedSectors !== undefined ? { allowedSectors: input.allowedSectors } : {}),
-                    ...(input.ownerIds !== undefined ? { ownerIds: input.ownerIds } : {}),
+                    ...(cleanAllowedUsers !== undefined ? { allowedUsers: cleanAllowedUsers } : {}),
+                    ...(cleanAllowedSectors !== undefined ? { allowedSectors: cleanAllowedSectors } : {}),
+                    ...(cleanOwnerIds !== undefined ? { ownerIds: cleanOwnerIds } : {}),
                     ...(input.spreadsheetExportEnabled !== undefined
                         ? { spreadsheetExportEnabled: input.spreadsheetExportEnabled }
                         : {}),
@@ -387,12 +401,20 @@ export const formsRouter = createTRPCRouter({
                 return [];
             }
 
-            // Filtrar formulários baseado na visibilidade e permissões do role efetivo
             const roleConfig = getEffectiveRoleConfig(currentUser);
+            const isSuperAdmin = (roleConfig?.sudo ?? false) || (roleConfig?.admin_pages?.includes("/admin") ?? false);
 
-            // Buscar todos os formulários
             const allForms = await ctx.db.form.findMany({
-                include: {
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    fields: true,
+                    isPrivate: true,
+                    spreadsheetExportEnabled: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    userId: true,
                     user: {
                         select: {
                             id: true,
@@ -411,8 +433,8 @@ export const formsRouter = createTRPCRouter({
                     return false;
                 }
 
-                // Se é o criador do formulário, sempre pode ver
-                if (form.userId === currentUser.id) {
+                // Se é o criador do formulário ou administrador global, sempre pode ver
+                if (form.userId === currentUser.id || isSuperAdmin) {
                     return true;
                 }
 
@@ -477,11 +499,15 @@ export const formsRouter = createTRPCRouter({
             if (!form) return null;
 
             const userId = ctx.auth.userId;
+            const allowedUsersList = form.allowedUsers ?? [];
+            const allowedSectorsList = form.allowedSectors ?? [];
+            const ownerIdsList = form.ownerIds ?? [];
+
             // Enforce visibility rules
             if (form.isPrivate) {
-                if (form.userId !== userId && !form.ownerIds.includes(userId)) {
+                if (form.userId !== userId && !ownerIdsList.includes(userId)) {
                     // Check specific access
-                    if (!form.allowedUsers.includes(userId)) {
+                    if (!allowedUsersList.includes(userId)) {
                         // Check sector access (desativado = role efetivo TOTEM)
                         const user = await ctx.db.user.findUnique({
                             where: { id: userId },
@@ -495,11 +521,11 @@ export const formsRouter = createTRPCRouter({
                         if (!isVisible && isHidden) return null;
 
                         // Se não tem acesso explícito
-                        if (!user?.role_config && !form.allowedSectors.includes(user?.setor ?? "")) {
+                        if (!user?.role_config && !allowedSectorsList.includes(user?.setor ?? "")) {
                             const canView =
                                 (roleConfig?.visible_forms?.includes(form.id) ?? false) ||
                                 (!(roleConfig?.hidden_forms?.includes(form.id) ?? false) && !(roleConfig?.isTotem ?? false) &&
-                                    (form.allowedSectors.includes(user?.setor ?? "") || form.allowedUsers.includes(userId)));
+                                    (allowedSectorsList.includes(user?.setor ?? "") || allowedUsersList.includes(userId)));
 
                             if (!canView && !(roleConfig?.sudo ?? false) && !(roleConfig?.can_create_form ?? false)) { // Admins podem ver
                                 return null;
