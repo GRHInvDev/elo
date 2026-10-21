@@ -19,11 +19,12 @@ import * as XLSX from "xlsx"
 import { useEffect } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle, Loader2 } from "lucide-react"
+import { CheckCircle, Loader2, FileSpreadsheet } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
 import { type UserMinimal } from "@/trpc/react"
 import { cn } from "@/lib/utils"
 import { formatOrderDate } from "@/lib/date-utils"
+import { OrdersReportModal } from "./orders-report-modal"
 
 interface OrdersTabProps {
   selectedDate: Date
@@ -57,8 +58,6 @@ export default function OrdersTab({
   const [selectedFilial, setSelectedFilial] = useState<string>(FILIAL_ALL)
   const [page, setPage] = useState(1)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
-  const [exportStartDate, setExportStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-  const [exportEndDate, setExportEndDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0))
   const [signatureExportDialogOpen, setSignatureExportDialogOpen] = useState(false)
   const [signatureExportDate, setSignatureExportDate] = useState<Date>(new Date())
   const [signatureExportRestaurant, setSignatureExportRestaurant] = useState<string>("")
@@ -203,74 +202,7 @@ export default function OrdersTab({
     })
   }
 
-  const {mutate: listToExcel} = api.foodOrder.listToExcel.useMutation({
-    onSuccess: (data) => {
-      if (!data || data.length === 0) {
-        toast.error("Nenhum pedido encontrado para o mês selecionado.")
-        return
-      }
 
-      // Agrupar pedidos por usuário
-      const resumoPorUsuario: Record<string, {
-        matricula: string
-        nome: string
-        email: string
-        empresa?: string
-        setor?: string | null
-        totalPedidos: number
-        valorTotal: number
-      }> = {}
-
-      data.forEach((order) => {
-        const user = order.user
-        const matricula = user && "matricula" in user ? (user.matricula as string | null | undefined) ?? "" : ""
-        const email = user?.email ?? "(sem email)"
-        const nome = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
-        const empresa = user?.enterprise ?? undefined
-        const setor = user?.setor ?? null
-        const valor = order.unitPrice ?? order.menuItem?.price ?? 0
-        let resumo = resumoPorUsuario[email]
-        if (!resumo) {
-          resumo = {
-            matricula,
-            nome,
-            email,
-            empresa,
-            setor,
-            totalPedidos: 0,
-            valorTotal: 0,
-          }
-          resumoPorUsuario[email] = resumo
-        }
-        resumo.totalPedidos += 1
-        resumo.valorTotal += valor
-      })
-
-      // Montar os dados para exportação
-      const dataToExport = Object.values(resumoPorUsuario).map((usuario) => ({
-        "Matrícula": usuario.matricula,
-        "Nome do Usuário": usuario.nome,
-        "Email do Usuário": usuario.email,
-        "Empresa": usuario.empresa ?? "",
-        "Setor": usuario.setor ?? "",
-        "Total de Pedidos": usuario.totalPedidos,
-        "Valor Total (R$)": usuario.valorTotal.toFixed(2).replace('.', ','),
-      }))
-      // Gerar a planilha
-      const ws = XLSX.utils.json_to_sheet(dataToExport)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, "Resumo Usuários")
-      // Gerar arquivo e baixar
-      const fileStart = format(exportStartDate, "yyyy-MM-dd")
-      const fileEnd = format(exportEndDate, "yyyy-MM-dd")
-      XLSX.writeFile(wb, `resumo_pedidos_usuarios_${fileStart}_a_${fileEnd}.xlsx`)
-      toast.success("Arquivo Excel gerado com sucesso!")
-      setExportDialogOpen(false)
-    },
-    onError: (error) => {
-      toast.error(`Erro ao exportar pedidos: ${error.message}`)
-    },
-  })
 
   // Exportação de pedidos por restaurante para assinatura
   const {mutate: exportForSignature} = api.foodOrder.exportOrdersByRestaurantAndDate.useMutation({
@@ -512,49 +444,23 @@ export default function OrdersTab({
           </DialogContent>
         </Dialog>
 
-        <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              Exportar pedidos do mês para Excel
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Exportar pedidos para Excel</DialogTitle>
-              <DialogDescription>
-                Selecione o período desejado para exportar a relação de usuários e seus pedidos.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-4">
-              <div>
-                <Label>Data de início</Label>
-                <DatePicker
-                  date={exportStartDate}
-                  onDateChange={(date: Date) => setExportStartDate(date)}
-                />
-              </div>
-              <div>
-                <Label>Data de fim</Label>
-                <DatePicker
-                  date={exportEndDate}
-                  onDateChange={(date: Date) => setExportEndDate(date)}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Período selecionado: {format(exportStartDate, "dd/MM/yyyy", { locale: ptBR })} até {format(exportEndDate, "dd/MM/yyyy", { locale: ptBR })}
-              </p>
-            </div>
-            <DialogFooter>
-              <Button
-                onClick={() => {
-                  listToExcel({ startDate: exportStartDate, endDate: exportEndDate })
-                }}
-              >
-                Exportar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button
+          variant="outline"
+          onClick={() => setExportDialogOpen(true)}
+          className="gap-2 border-emerald-600/30 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30 font-medium"
+        >
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+          Relatório Geral e Exportação
+        </Button>
+
+        <OrdersReportModal
+          isOpen={exportDialogOpen}
+          onClose={() => setExportDialogOpen(false)}
+          initialDate={selectedDate}
+          initialRestaurant={selectedRestaurant}
+          initialFilial={selectedFilial}
+          initialUserSearch={userName || userEmail || ""}
+        />
 
         {canAddManualOrder && (
           <Dialog
@@ -791,7 +697,7 @@ export default function OrdersTab({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-2">
+            <div className="space-y-2">
               <Label>Data</Label>
               <DatePicker
                 date={selectedDate}

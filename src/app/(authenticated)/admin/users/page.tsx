@@ -67,10 +67,17 @@ import { SetoresDialog } from "./_components/setores-dialog"
 // Setor agora é uma lista gerenciável (tabela Setor), carregada via api.setores.list.
 export type SetorItem = { id: string; name: string; value: string; active: boolean }
 
-/** Rótulo de um setor a partir do seu `value`, com fallback para o próprio valor. */
+/** Rótulo de um setor a partir do seu `value`, com fallback para o próprio valor normalizado. */
 function setorLabelFrom(setores: SetorItem[], value: string | null | undefined): string {
   if (!value) return "Não informado"
-  return setores.find((s) => s.value === value)?.name ?? value
+  const normalized = value.replace(/_/g, " ").trim().toUpperCase()
+  const found = setores.find(
+    (s) =>
+      s.value === value ||
+      s.value.replace(/_/g, " ").trim().toUpperCase() === normalized ||
+      s.name.replace(/_/g, " ").trim().toUpperCase() === normalized,
+  )
+  return found?.name ?? value.replace(/_/g, " ")
 }
 
 const ENTERPRISE_OPTIONS: { value: Enterprise | "all"; label: string }[] = [

@@ -19,16 +19,18 @@ function checkPermission(roleConfig: RolesConfig | null | undefined): void {
 
 /**
  * Deriva o `value` (código persistido em User.setor) a partir do rótulo:
- * remove acentos, coloca em maiúsculas e troca separadores por "_".
- * Ex.: "Recursos Humanos" -> "RECURSOS_HUMANOS".
+ * remove acentos, coloca em maiúsculas e preserva espaços únicos (sem _).
+ * Ex.: "Recursos Humanos" -> "RECURSOS HUMANOS".
  */
 function toSetorValue(name: string): string {
   return name
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // remove acentos (marcas diacriticas)
     .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "_") // separadores -> _
-    .replace(/^_+|_+$/g, "") // trim de "_"
+    .trim()
+    .replace(/[^A-Z0-9\s]+/g, " ") // não converte para _, mantém espaços
+    .replace(/\s+/g, " ") // múltiplos espaços -> 1 espaço
+    .trim()
 }
 
 const nameSchema = z
@@ -64,6 +66,10 @@ export const setoresRouter = createTRPCRouter({
         result[s.name] = entry
         result[s.value] = entry
         result[s.id] = entry
+        result[s.name.replace(/_/g, " ")] = entry
+        result[s.value.replace(/_/g, " ")] = entry
+        result[s.name.replace(/\s+/g, "_")] = entry
+        result[s.value.replace(/\s+/g, "_")] = entry
       }
     }
     return result
@@ -132,10 +138,16 @@ export const setoresRouter = createTRPCRouter({
       checkPermission(user?.role_config as RolesConfig | null)
 
       const { id, ...data } = input
+      const existing = await ctx.db.setor.findUnique({ where: { id } })
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Setor não encontrado" })
+      }
 
+      let newValue = existing.value
       if (data.name) {
+        const trimmedName = data.name.trim()
         const clash = await ctx.db.setor.findFirst({
-          where: { name: data.name, NOT: { id } },
+          where: { name: trimmedName, NOT: { id } },
           select: { id: true },
         })
         if (clash) {
@@ -144,17 +156,28 @@ export const setoresRouter = createTRPCRouter({
             message: "Já existe um setor com este nome",
           })
         }
+        newValue = toSetorValue(trimmedName)
       }
 
-      return ctx.db.setor.update({
+      const updated = await ctx.db.setor.update({
         where: { id },
         data: {
-          ...(data.name ? { name: data.name } : {}),
+          ...(data.name ? { name: data.name.trim(), value: newValue } : {}),
           ...(data.active !== undefined ? { active: data.active } : {}),
           ...(data.icon !== undefined ? { icon: data.icon } : {}),
           ...(data.color !== undefined ? { color: data.color } : {}),
         },
       })
+
+      // Se o valor do setor mudou, propaga para os usuários vinculados para manter a consistência
+      if (data.name && newValue !== existing.value) {
+        await ctx.db.user.updateMany({
+          where: { setor: existing.value },
+          data: { setor: newValue },
+        })
+      }
+
+      return updated
     }),
 
   delete: protectedProcedure

@@ -27,18 +27,6 @@ interface CompleteProfileModalProps {
   onClose?: () => void
 }
 
-const setores = [
-  { value: "ADMINISTRATIVO", label: "Administrativo" },
-  { value: "COMERCIAL", label: "Comercial" },
-  { value: "FINANCEIRO", label: "Financeiro" },
-  { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
-  { value: "TI", label: "Tecnologia da Informação" },
-  { value: "MARKETING", label: "Marketing" },
-  { value: "VENDAS", label: "Vendas" },
-  { value: "LOGISTICA", label: "Logística" },
-  { value: "INOVACAO", label: "Inovação" },
-]
-
 export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: CompleteProfileModalProps) {
   const [accountType, setAccountType] = useState<"INDIVIDUAL" | "CORPORATE">("INDIVIDUAL")
   const [cpf, setCpf] = useState("")
@@ -53,6 +41,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
 
   const { data: empresas = [] } = api.empresas.list.useQuery(undefined, { enabled: isOpen })
   const { data: filiaisData } = api.filiais.list.useQuery(undefined, { enabled: isOpen })
+  const { data: setoresData = [] } = api.setores.list.useQuery({ onlyActive: true }, { enabled: isOpen })
 
   // Verifica se o usuário já completou os dados básicos (matrícula, empresa, filial, setor)
   // e falta unicamente o documento (CPF ou CNPJ)
@@ -77,7 +66,8 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       setCpf(user.cpf ? formatCpf(user.cpf) : "")
       setCnpj(user.cnpj ? formatCnpj(user.cnpj) : "")
       setMatricula(user.matricula ?? "")
-      setSetor(user.setor ?? "")
+      const rawSetor = user.setor ?? ""
+      setSetor(rawSetor.replace(/_/g, " ").trim())
       setFilialId(user.filialId ?? "")
       const currentFilial = user.filialId && filiaisData
         ? filiaisData.find((f) => f.id === user.filialId)
@@ -193,7 +183,7 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
       cpf: accountType === "INDIVIDUAL" ? getDigits(cpf) : null,
       cnpj: accountType === "CORPORATE" ? getDigits(cnpj) : null,
       matricula: (hasCompletedBasicInfo ? (user?.matricula ?? matricula) : matricula).trim(),
-      setor: (hasCompletedBasicInfo ? (user?.setor ?? setor) : setor).trim(),
+      setor: (hasCompletedBasicInfo ? (user?.setor ?? setor) : setor).trim().replace(/_/g, " "),
       filialId: (hasCompletedBasicInfo ? (user?.filialId ?? filialId) : filialId).trim(),
     })
   }
@@ -324,9 +314,9 @@ export function CompleteProfileModal({ isOpen, user, onSuccess, onClose }: Compl
                     <SelectValue placeholder="Selecione seu setor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {setores.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
+                    {setoresData.map((s) => (
+                      <SelectItem key={s.id} value={s.value}>
+                        {s.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

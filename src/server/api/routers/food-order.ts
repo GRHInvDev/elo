@@ -559,6 +559,121 @@ export const foodOrderRouter = createTRPCRouter({
       return { orders, total, statusCounts }
     }),
 
+    // Relatório detalhado de pedidos com suporte a filtros avançados e exportação
+    listDetailedReport: protectedProcedure
+      .input(
+        z.object({
+          startDate: z.date().optional(),
+          endDate: z.date().optional(),
+          status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
+          restaurantId: z.string().optional(),
+          userId: z.string().optional(),
+          userName: z.string().optional(),
+          filialId: z.string().optional(),
+          setor: z.string().optional(),
+        }).optional(),
+      )
+      .query(async ({ ctx, input }) => {
+        const whereClause: Prisma.FoodOrderWhereInput = {
+          ...(input?.status && { status: input.status }),
+          ...(input?.restaurantId && input.restaurantId !== "__all__" && { restaurantId: input.restaurantId }),
+          ...(input?.userId && { userId: input.userId }),
+        }
+
+        if (input?.startDate && input?.endDate) {
+          const start = new Date(input.startDate)
+          start.setHours(0, 0, 0, 0)
+          const end = new Date(input.endDate)
+          end.setHours(23, 59, 59, 999)
+          whereClause.orderDate = { gte: start, lte: end }
+        } else if (input?.startDate) {
+          const start = new Date(input.startDate)
+          start.setHours(0, 0, 0, 0)
+          whereClause.orderDate = { gte: start }
+        } else if (input?.endDate) {
+          const end = new Date(input.endDate)
+          end.setHours(23, 59, 59, 999)
+          whereClause.orderDate = { lte: end }
+        }
+
+        const userConditions: Prisma.UserWhereInput[] = []
+
+        if (input?.userName && input.userName.trim().length > 0) {
+          const term = input.userName.trim()
+          userConditions.push({
+            OR: [
+              { firstName: { contains: term, mode: "insensitive" } },
+              { lastName: { contains: term, mode: "insensitive" } },
+              { email: { contains: term, mode: "insensitive" } },
+              { matricula: { contains: term, mode: "insensitive" } },
+            ],
+          })
+        }
+
+        if (input?.filialId && input.filialId !== "__all__") {
+          userConditions.push({ filialId: input.filialId })
+        }
+
+        if (input?.setor && input.setor !== "__all__" && input.setor !== "ALL") {
+          const rawSetor = input.setor.trim()
+          const withSpaces = rawSetor.replace(/_/g, " ")
+          const withUnderscores = rawSetor.replace(/\s+/g, "_")
+          userConditions.push({
+            OR: [
+              { setor: { equals: rawSetor, mode: "insensitive" } },
+              { setor: { equals: withSpaces, mode: "insensitive" } },
+              { setor: { equals: withUnderscores, mode: "insensitive" } },
+            ],
+          })
+        }
+
+        if (userConditions.length > 0) {
+          whereClause.user = userConditions.length === 1 ? userConditions[0] : { AND: userConditions }
+        }
+
+        return ctx.db.foodOrder.findMany({
+          where: whereClause,
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                enterprise: true,
+                setor: true,
+                matricula: true,
+                filial: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    empresa: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            restaurant: true,
+            menuItem: true,
+            optionSelections: {
+              include: {
+                choice: {
+                  include: {
+                    option: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: [{ orderDate: "desc" }, { createdAt: "desc" }],
+        })
+      }),
+
     listToExcel: protectedProcedure
     .input(
       z.object({
@@ -569,39 +684,65 @@ export const foodOrderRouter = createTRPCRouter({
         userId: z.string().optional(),
         userName: z.string().optional(),
         filialId: z.string().optional(),
+        setor: z.string().optional(),
       }).optional(),
     )
     .mutation(async ({ ctx, input }) => {
       const whereClause: Prisma.FoodOrderWhereInput = {
         ...(input?.status && { status: input.status }),
-        ...(input?.restaurantId && { restaurantId: input.restaurantId }),
+        ...(input?.restaurantId && input.restaurantId !== "__all__" && { restaurantId: input.restaurantId }),
         ...(input?.userId && { userId: input.userId }),
       }
 
       if (input?.startDate && input?.endDate) {
-        whereClause.orderDate = { gte: input.startDate, lte: input.endDate }
+        const start = new Date(input.startDate)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(input.endDate)
+        end.setHours(23, 59, 59, 999)
+        whereClause.orderDate = { gte: start, lte: end }
       } else if (input?.startDate) {
-        whereClause.orderDate = { gte: input.startDate }
+        const start = new Date(input.startDate)
+        start.setHours(0, 0, 0, 0)
+        whereClause.orderDate = { gte: start }
       } else if (input?.endDate) {
-        whereClause.orderDate = { lte: input.endDate }
+        const end = new Date(input.endDate)
+        end.setHours(23, 59, 59, 999)
+        whereClause.orderDate = { lte: end }
       }
 
-      const userFilter: Prisma.UserWhereInput = {}
+      const userConditions: Prisma.UserWhereInput[] = []
 
-      if (input?.userName) {
-        userFilter.OR = [
-          { firstName: { contains: input.userName, mode: "insensitive" } },
-          { lastName: { contains: input.userName, mode: "insensitive" } },
-          { email: { contains: input.userName, mode: "insensitive" } },
-        ]
+      if (input?.userName && input.userName.trim().length > 0) {
+        const term = input.userName.trim()
+        userConditions.push({
+          OR: [
+            { firstName: { contains: term, mode: "insensitive" } },
+            { lastName: { contains: term, mode: "insensitive" } },
+            { email: { contains: term, mode: "insensitive" } },
+            { matricula: { contains: term, mode: "insensitive" } },
+          ],
+        })
       }
 
-      if (input?.filialId) {
-        userFilter.filialId = input.filialId
+      if (input?.filialId && input.filialId !== "__all__") {
+        userConditions.push({ filialId: input.filialId })
       }
 
-      if (Object.keys(userFilter).length > 0) {
-        whereClause.user = userFilter
+      if (input?.setor && input.setor !== "__all__" && input.setor !== "ALL") {
+        const rawSetor = input.setor.trim()
+        const withSpaces = rawSetor.replace(/_/g, " ")
+        const withUnderscores = rawSetor.replace(/\s+/g, "_")
+        userConditions.push({
+          OR: [
+            { setor: { equals: rawSetor, mode: "insensitive" } },
+            { setor: { equals: withSpaces, mode: "insensitive" } },
+            { setor: { equals: withUnderscores, mode: "insensitive" } },
+          ],
+        })
+      }
+
+      if (userConditions.length > 0) {
+        whereClause.user = userConditions.length === 1 ? userConditions[0] : { AND: userConditions }
       }
 
       return ctx.db.foodOrder.findMany({
@@ -616,12 +757,34 @@ export const foodOrderRouter = createTRPCRouter({
               enterprise: true,
               setor: true,
               matricula: true,
+              filial: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  empresa: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
             },
           },
           restaurant: true,
           menuItem: true,
+          optionSelections: {
+            include: {
+              choice: {
+                include: {
+                  option: true,
+                },
+              },
+            },
+          },
         },
-        orderBy: { orderDate: "desc" },
+        orderBy: [{ orderDate: "desc" }, { createdAt: "desc" }],
       })
     }),
 
@@ -1176,6 +1339,23 @@ export const foodOrderRouter = createTRPCRouter({
         },
       })
 
+      const allSetores = await ctx.db.setor.findMany()
+      const normalizeSectorKey = (s: string | null | undefined): string => {
+        if (!s) return "sem-setor"
+        return s
+          .replace(/_/g, " ")
+          .trim()
+          .toUpperCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/\s+/g, " ")
+      }
+      const sectorNameMap = new Map<string, string>()
+      for (const s of allSetores) {
+        sectorNameMap.set(normalizeSectorKey(s.value), s.name)
+        sectorNameMap.set(normalizeSectorKey(s.name), s.name)
+      }
+
       const dreDataMap = new Map<string, DreAggRow>()
 
       orders.forEach((order) => {
@@ -1185,7 +1365,7 @@ export const foodOrderRouter = createTRPCRouter({
         const empresa = order.user.filial?.empresa ?? null
         // Enum efetivo: empresa.enterprise quando há filial; senão o enum legado do usuário.
         const effectiveEnterprise = empresa?.enterprise ?? order.user.enterprise
-        const sector = order.user.setor ?? null
+        const rawSector = order.user.setor ?? null
 
         let key: string
         let base: Omit<DreAggRow, "totalOrders" | "totalValue" | "valueFromHeadquartersOrders" | "valueFromBranchOrders">
@@ -1199,11 +1379,13 @@ export const foodOrderRouter = createTRPCRouter({
           // colaboradores ligados à Empresa e os legados (só enum) com o mesmo nome
           // caem na MESMA empresa — sem linhas duplicadas para a mesma empresa.
           const empresaGroupLabel = (empresa?.name ?? String(effectiveEnterprise)).trim().toUpperCase()
-          // Setor normalizado (sem acento, caixa e espaços) para unificar variações
-          // do mesmo setor (ex.: "LOGÍSTICA"/"LOGISTICA"/"logistica ").
-          const sectorKey = sector
-            ? sector.trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-            : "sem-setor"
+          // Setor normalizado (sem acento, caixa, espaços e sem underscore) para unificar
+          // variações do mesmo setor (ex.: "RECURSOS_HUMANOS" vs "RECURSOS HUMANOS").
+          const sectorKey = normalizeSectorKey(rawSector)
+          const canonicalSector = rawSector
+            ? (sectorNameMap.get(sectorKey) ?? rawSector.replace(/_/g, " ").trim())
+            : null
+
           // Agrupa pela Empresa (rótulo) + setor normalizado.
           key = `${empresaGroupLabel}-${sectorKey}`
           base = {
@@ -1211,7 +1393,7 @@ export const foodOrderRouter = createTRPCRouter({
             enterprise: effectiveEnterprise,
             empresaId,
             empresaName: empresa?.name ?? null,
-            sector,
+            sector: canonicalSector,
             restaurantId: null,
             restaurantName: null,
             filialId: null,
@@ -1336,11 +1518,19 @@ export const foodOrderRouter = createTRPCRouter({
       })
 
       // Reproduz EXATAMENTE a chave de agrupamento do getDREData (rótulo da empresa
-      // + setor normalizado). Aplica os filtros amplos no banco (período, restaurante
+      // + setor normalizado sem underscore). Aplica os filtros amplos no banco (período, restaurante
       // e filial do relatório) e faz o casamento fino do grupo em memória — assim os
       // pedidos listados batem com os totais da linha unificada.
-      const normalizeSector = (s: string | null) =>
-        s ? s.trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : "sem-setor"
+      const normalizeSector = (s: string | null | undefined): string => {
+        if (!s) return "sem-setor"
+        return s
+          .replace(/_/g, " ")
+          .trim()
+          .toUpperCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/\s+/g, " ")
+      }
       const targetLabel = (input.empresaName ?? input.enterprise).trim().toUpperCase()
       const targetSectorKey = normalizeSector(input.sector)
 
@@ -1390,20 +1580,33 @@ export const foodOrderRouter = createTRPCRouter({
         return label === targetLabel && sectorKey === targetSectorKey
       })
 
-      return orders.map((order) => ({
-        id: order.id,
-        userId: order.user.id,
-        userName: `${order.user.firstName ?? ""} ${order.user.lastName ?? ""}`.trim(),
-        email: order.user.email,
-        enterprise: order.user.enterprise,
-        empresaName: order.user.filial?.empresa.name ?? null,
-        sector: order.user.setor ?? null,
-        orderDate: order.orderDate,
-        restaurantName: (order.restaurant ?? order.menuItem.restaurant)?.name ?? null,
-        menuItemName: order.menuItem.name,
-        price: order.unitPrice ?? order.menuItem.price,
-        status: order.status,
-      }))
+      const allSetores = await ctx.db.setor.findMany()
+      const sectorNameMap = new Map<string, string>()
+      for (const s of allSetores) {
+        sectorNameMap.set(normalizeSector(s.value), s.name)
+        sectorNameMap.set(normalizeSector(s.name), s.name)
+      }
+
+      return orders.map((order) => {
+        const sKey = normalizeSector(order.user.setor ?? null)
+        const canonicalSector = order.user.setor
+          ? (sectorNameMap.get(sKey) ?? order.user.setor.replace(/_/g, " ").trim())
+          : null
+        return {
+          id: order.id,
+          userId: order.user.id,
+          userName: `${order.user.firstName ?? ""} ${order.user.lastName ?? ""}`.trim(),
+          email: order.user.email,
+          enterprise: order.user.enterprise,
+          empresaName: order.user.filial?.empresa.name ?? null,
+          sector: canonicalSector,
+          orderDate: order.orderDate,
+          restaurantName: (order.restaurant ?? order.menuItem.restaurant)?.name ?? null,
+          menuItemName: order.menuItem.name,
+          price: order.unitPrice ?? order.menuItem.price,
+          status: order.status,
+        }
+      })
     }),
 
   // Listar políticas de vigência de preço de refeição
