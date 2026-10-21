@@ -32,6 +32,7 @@ const ADMIN_HOME_SECTIONS: {
     subtitle: "Conteúdo para colaboradores e engajamento",
     routeIds: [
       "/admin/banners",
+      "/admin/videos",
       "/admin/birthday",
       "/admin/hall-entrada",
       "/admin/news",

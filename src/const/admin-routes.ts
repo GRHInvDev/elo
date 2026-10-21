@@ -13,6 +13,7 @@ import {
   DoorOpen,
   Building2,
   GalleryHorizontal,
+  Video,
 } from "lucide-react"
 
 export interface AdminRoute {
@@ -87,6 +88,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     description: "Banners do carrossel principal do dashboard",
     icon: GalleryHorizontal,
     path: "/admin/banners",
+    requiresBasicAdmin: true,
+  },
+  {
+    id: "/admin/videos",
+    title: "Gerenciar Vídeos",
+    description: "Vídeos do YouTube exibidos na página inicial",
+    icon: Video,
+    path: "/admin/videos",
     requiresBasicAdmin: true,
   },
   {

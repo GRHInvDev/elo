@@ -39,6 +39,7 @@ import { filiaisRouter } from "./routers/filiais";
 import { empresasRouter } from "./routers/empresas";
 import { setoresRouter } from "./routers/setores";
 import { bannerRouter } from "./routers/banner";
+import { dashboardVideoRouter } from "./routers/dashboard-video";
 import { campaignRouter } from "./routers/campaign";
 import { fileRouter } from "./routers/file";
 
@@ -88,6 +89,7 @@ export const appRouter = createTRPCRouter({
   empresas: empresasRouter,
   setores: setoresRouter,
   banner: bannerRouter,
+  dashboardVideo: dashboardVideoRouter,
   file: fileRouter,
 });
 

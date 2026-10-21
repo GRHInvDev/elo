@@ -143,23 +143,16 @@ export default function DashboardPage() {
     [banners],
   );
 
-  const videos: {
-    imageRef: string;
-    title: string;
-  }[] = [
-    {
-      imageRef: "https://www.youtube.com/embed/AIlQ-EM35UQ?si=RomGdNhQLn6CuzCw",
-      title: "Institucional Cristallux",
-    },
-    {
-      imageRef: "https://www.youtube.com/embed/nW-_4kfXE4U?si=tFAOWTij0oSkdcCm",
-      title: "Apresentação Box Distribuidor",
-    },
-    {
-      imageRef: "https://www.youtube.com/embed/iSdz3gxUpAI",
-      title: "Valores Grupo RHenz",
-    },
-  ];
+  // Vídeos do dashboard, gerenciáveis em /admin/videos
+  const { data: dbVideos } = api.dashboardVideo.list.useQuery();
+  const videos = useMemo(
+    () =>
+      (dbVideos ?? []).map((video) => ({
+        imageRef: video.youtubeUrl,
+        title: video.title,
+      })),
+    [dbVideos],
+  );
 
   return (
     <div className="min-h-screen">

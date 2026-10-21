@@ -272,6 +272,19 @@ model Banner {
   @@map("banners")
 }
 
+/// Vídeos do dashboard (YouTube). Gerenciados em /admin/videos.
+model DashboardVideo {
+  id         String   @id @default(cuid())
+  title      String
+  youtubeUrl String
+  published  Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("dashboard_videos")
+}
+
 model Birthday {
   id       String   @id @default(cuid())
   userId   String?  @unique
