@@ -14,7 +14,7 @@ function checkPermission(roleConfig: RolesConfig | null | undefined): void {
   if (roleConfig?.admin_pages?.includes("/admin/videos")) return
   if (roleConfig?.admin_pages?.includes("/admin/banners")) return
   if (roleConfig?.admin_pages?.includes("/admin")) return
-  if (roleConfig?.admin_pages && roleConfig.admin_pages.some((p) => p.startsWith("/admin"))) return
+  if (roleConfig?.admin_pages?.some((p) => p.startsWith("/admin"))) return
   throw new TRPCError({
     code: "FORBIDDEN",
     message: "Você não tem permissão para gerenciar os vídeos do dashboard",

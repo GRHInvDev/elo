@@ -78,11 +78,7 @@ export default function VideosManagementPage() {
   const [form, setForm] = useState<VideoForm>(emptyForm)
 
   const { isSudo, hasAdminAccess, isLoading: isLoadingAccess } = useAccessControl()
-  const hasAccess =
-    isSudo ||
-    hasAdminAccess("/admin/videos") ||
-    hasAdminAccess("/admin/banners") ||
-    hasAdminAccess("/admin")
+  const hasAccess = isSudo || hasAdminAccess("/admin/videos") || hasAdminAccess("/admin/banners") || hasAdminAccess("/admin")
 
   const { toast } = useToast()
   const utils = api.useUtils()
@@ -248,8 +244,7 @@ export default function VideosManagementPage() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Gerenciar Vídeos</h2>
             <p className="text-muted-foreground">
-              Vídeos do YouTube exibidos na página inicial da intranet. Cole qualquer link (watch,
-              share, shorts ou embed) que o sistema normaliza automaticamente.
+              Vídeos do YouTube exibidos na página inicial da intranet.
             </p>
           </div>
           <Button onClick={openCreate} className="self-start sm:self-auto">
@@ -298,7 +293,7 @@ export default function VideosManagementPage() {
                       )}
 
                       {!video.published && (
-                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-xs">
+                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-sm">
                           <Badge variant="secondary" className="gap-1 shadow-sm">
                             <EyeOff className="h-3 w-3" />
                             Desativado
