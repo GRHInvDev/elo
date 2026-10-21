@@ -3,11 +3,13 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { deleteFiles } from "@/server/upltActions"
 import type { RolesConfig } from "@/types/role-config"
+import { normalizeYouTubeEmbedUrl, extractYouTubeVideoId } from "@/lib/youtube"
 
 const createPostSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
   content: z.string().min(1, "Conteúdo é obrigatório"),
   imageUrl: z.string().optional(), // Mantido para compatibilidade
+  videoUrl: z.string().nullish(), // Vídeo do YouTube embutido
   images: z.array(z.string()).optional(), // Novas imagens múltiplas
   published: z.boolean().default(false),
 })
@@ -20,9 +22,19 @@ export const postRouter = createTRPCRouter({
 
     const { images, ...postData } = input
 
+    // Se informou videoUrl, normaliza. Senão, tenta auto-detectar link do YouTube no conteúdo
+    let finalVideoUrl = postData.videoUrl ? normalizeYouTubeEmbedUrl(postData.videoUrl) : null
+    if (!finalVideoUrl && postData.content) {
+      const extractedId = extractYouTubeVideoId(postData.content)
+      if (extractedId) {
+        finalVideoUrl = `https://www.youtube.com/embed/${extractedId}`
+      }
+    }
+
     const post = await ctx.db.post.create({
       data: {
         ...postData,
+        videoUrl: finalVideoUrl,
         authorId: ctx.auth.userId,
       },
       include: {
@@ -108,6 +120,15 @@ export const postRouter = createTRPCRouter({
       }
 
       const { images, ...postData } = input
+
+      if (postData.videoUrl !== undefined) {
+        postData.videoUrl = postData.videoUrl ? normalizeYouTubeEmbedUrl(postData.videoUrl) : null
+      } else if (postData.content) {
+        const extractedId = extractYouTubeVideoId(postData.content)
+        if (extractedId) {
+          postData.videoUrl = `https://www.youtube.com/embed/${extractedId}`
+        }
+      }
 
       // Atualizar o post
       const updatedPost = await ctx.db.post.update({

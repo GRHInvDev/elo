@@ -181,6 +181,7 @@ model Post {
   viewCount     Int         @default(0)
   lastViewedAt  DateTime?
   imageUrl      String? // Mantido para compatibilidade com posts existentes
+  videoUrl      String? // Link do vídeo do YouTube embutido
   images        PostImage[] // Novas imagens múltiplas
   comments      Coment[]
   reactions     Reaction[]

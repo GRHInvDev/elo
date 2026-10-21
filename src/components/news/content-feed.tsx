@@ -15,9 +15,11 @@ import {
   MessageSquare,
   Smile,
   Send,
+  Youtube,
 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { api } from "@/trpc/react"
+import { extractYouTubeVideoId, normalizeYouTubeEmbedUrl } from "@/lib/youtube"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import {
@@ -78,6 +80,13 @@ export function ContentFeed({
   const utils = api.useUtils()
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const hasScrolledToHashRef = useRef<string | null>(null)
+
+  // Auto-detectar vídeo do YouTube no texto do post
+  const detectedVideoId = useMemo(() => {
+    return extractYouTubeVideoId(postContent)
+  }, [postContent])
+
+  const previewEmbedUrl = detectedVideoId ? `https://www.youtube.com/embed/${detectedVideoId}` : null
 
   const { data: posts, isLoading: isLoadingPosts } = api.post.list.useQuery()
 
@@ -172,6 +181,7 @@ export function ContentFeed({
       content: normalizeLineBreaks(postContent || ""),
       published: true,
       imageUrl: fileUrl, // Mantido para compatibilidade
+      videoUrl: previewEmbedUrl ?? undefined,
       images: images.length > 0 ? images : undefined, // Novas imagens múltiplas
     })
 
@@ -207,6 +217,26 @@ export function ContentFeed({
                       <Input id="title" name="title" placeholder="Digite o título do post" required />
                     </div>
                     <div className="grid gap-2">
+                      {previewEmbedUrl && (
+                        <div className="mt-2 space-y-2 rounded-xl border border-red-500/20 bg-muted/40 p-3">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-semibold flex items-center gap-1.5 text-foreground">
+                              Vídeo detectado (Pré-visualização)
+                            </span>
+                          </div>
+                          <div className="relative aspect-video w-full rounded-lg overflow-hidden border bg-black shadow-sm">
+                            <iframe
+                              src={previewEmbedUrl}
+                              title="Pré-visualização do vídeo"
+                              className="w-full h-full border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowFullScreen
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid gap-2">
                       <Label>Imagens</Label>
                       <h3 className="text-sm text-muted-foreground">Tamanho recomendado: 515px x 300px</h3>
                       <MultipleImageUpload
@@ -225,7 +255,7 @@ export function ContentFeed({
                         language="markdown"
                       />
                       <p className="text-xs text-muted-foreground">
-                          Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
+                        Use Markdown para formatar seu texto. Exemplos: **negrito**, *itálico*, # Título, etc.
                       </p>
                     </div>
                   </div>
@@ -338,6 +368,7 @@ interface PostItemProps {
     content: string
     authorId: string
     imageUrl: string | null
+    videoUrl?: string | null
     images?: Array<{ imageUrl: string }>
     author: {
       firstName: string | null
@@ -419,6 +450,22 @@ function PostItem({ post }: PostItemProps) {
     }
     return post.imageUrl ? [post.imageUrl] : []
   }, [post.images, post.imageUrl])
+
+  // Se o conteúdo do Markdown já possui link do YouTube, o MarkdownRenderer já renderiza o player embutido.
+  // Só exibimos o player externo caso o post tenha videoUrl e o link NÃO esteja no corpo do texto do Markdown.
+  const hasVideoInMarkdown = useMemo(() => {
+    return Boolean(extractYouTubeVideoId(post.content))
+  }, [post.content])
+
+  const videoEmbedUrl = useMemo(() => {
+    if (hasVideoInMarkdown) {
+      return null
+    }
+    if (post.videoUrl) {
+      return normalizeYouTubeEmbedUrl(post.videoUrl)
+    }
+    return null
+  }, [post.videoUrl, hasVideoInMarkdown])
 
   useEffect(() => {
     setCarouselIndex(0)
@@ -671,6 +718,20 @@ function PostItem({ post }: PostItemProps) {
             )}
           </div>
         )}
+        {videoEmbedUrl && (
+          <div className="px-6 md:px-0 mt-3">
+            <div className="relative aspect-video w-full rounded-xl overflow-hidden border bg-black shadow-md">
+              <iframe
+                src={videoEmbedUrl}
+                title={post.title}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+
         {(post.imageUrl ?? (post.images?.length ?? 0) > 0) && (
           <div className="mt-2">
           <ImageViewer
@@ -1017,6 +1078,7 @@ interface UpdatePostDialogProps {
     title: string
     content: string
     imageUrl?: string | null
+    videoUrl?: string | null
     images?: Array<{ imageUrl: string }>
   }
 }
@@ -1041,6 +1103,13 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
   const [editImages, setEditImages] = useState<string[]>(initialPostImages)
   const [isUploadingEditImages, setIsUploadingEditImages] = useState(false)
   const { toast } = useToast()
+
+  // Auto-detectar vídeo na edição a partir do Markdown
+  const detectedEditVideoId = useMemo(() => {
+    return extractYouTubeVideoId(editContent)
+  }, [editContent])
+
+  const editPreviewEmbedUrl = detectedEditVideoId ? `https://www.youtube.com/embed/${detectedEditVideoId}` : null
 
   const updatePost = api.post.update.useMutation({
     onSuccess: async () => {
@@ -1075,6 +1144,7 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
       id: post.id,
       title: formData.get("title") as string,
       content: normalizeLineBreaks(editContent || ""),
+      videoUrl: editPreviewEmbedUrl ?? null,
       images: editImages,
       published: true,
     })
@@ -1100,6 +1170,28 @@ function UpdatePostDialog({ post }: UpdatePostDialogProps) {
             <div className="grid gap-2">
               <Label htmlFor="title">Título</Label>
               <Input id="title" name="title" defaultValue={post.title} placeholder="Digite o título do post" required />
+            </div>
+            <div className="grid gap-2">
+              {/* Pré-visualização do vídeo na edição */}
+              {editPreviewEmbedUrl && (
+                <div className="mt-2 space-y-2 rounded-xl border border-red-500/20 bg-muted/40 p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1.5 text-foreground">
+                      <Youtube className="h-4 w-4 text-red-500" />
+                      Vídeo detectado (Pré-visualização)
+                    </span>
+                  </div>
+                  <div className="relative aspect-video w-full rounded-lg overflow-hidden border bg-black shadow-sm">
+                    <iframe
+                      src={editPreviewEmbedUrl}
+                      title="Pré-visualização do vídeo"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label>Imagens</Label>

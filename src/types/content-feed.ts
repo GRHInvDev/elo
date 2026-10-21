@@ -15,6 +15,7 @@ export interface PostWithAuthor {
     content: string
     authorId: string
     imageUrl: string | null
+    videoUrl?: string | null
     images?: Array<{ imageUrl: string }>
     createdAt: Date
     author: AuthorWithRoleConfig

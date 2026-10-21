@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { extractYouTubeVideoId } from "@/lib/youtube"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 
@@ -70,14 +71,34 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           pre: ({ node: _node, ...props }) => (
             <pre className="bg-muted p-4 rounded-md overflow-x-auto mb-4" {...props} />
           ),
-          a: ({ node: _node, ...props }) => (
-            <a
-              className="text-primary hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
-              {...props}
-            />
-          ),
+          a: ({ node: _node, href, children, ...props }) => {
+            const videoId = href ? extractYouTubeVideoId(href) : null
+            if (videoId) {
+              return (
+                <div className="not-prose relative my-4 aspect-video w-full overflow-hidden rounded-xl bg-black shadow-md">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    title={typeof children === "string" ? children : "YouTube video"}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    className="h-full w-full"
+                    allowFullScreen
+                    loading="lazy"
+                  />
+                </div>
+              )
+            }
+            return (
+              <a
+                href={href}
+                className="text-primary hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                {...props}
+              >
+                {children}
+              </a>
+            )
+          },
           img: ({ node: _node, src, alt }) => {
             if (!src || typeof src !== "string") return null
             return (
