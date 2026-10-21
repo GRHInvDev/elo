@@ -1,7 +1,5 @@
-
 const IFRAME_SRC_REGEX = /src=["']([^"']+)["']/i
-const YOUTUBE_ID_REGEX =
-  /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i
+const YOUTUBE_ID_REGEX = /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i
 
 /**
  * Extrai o ID do vídeo do YouTube a partir de qualquer formato de link.
