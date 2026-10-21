@@ -568,6 +568,7 @@ export const foodOrderRouter = createTRPCRouter({
           status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
           restaurantId: z.string().optional(),
           userId: z.string().optional(),
+          userIds: z.array(z.string()).optional(),
           userName: z.string().optional(),
           filialId: z.string().optional(),
           setor: z.string().optional(),
@@ -597,6 +598,10 @@ export const foodOrderRouter = createTRPCRouter({
         }
 
         const userConditions: Prisma.UserWhereInput[] = []
+
+        if (input?.userIds && input.userIds.length > 0) {
+          userConditions.push({ id: { in: input.userIds } })
+        }
 
         if (input?.userName && input.userName.trim().length > 0) {
           const term = input.userName.trim()
