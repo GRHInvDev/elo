@@ -233,7 +233,15 @@ export function hasAccessToAdminRoute(
     if (routeId === "/admin/filiais" && canManageFilial === true) {
       return true
     }
+    if (routeId === "/admin/videos" && (adminPages.includes("/admin/videos") || adminPages.includes("/admin/banners"))) {
+      return true
+    }
     return false
+  }
+
+  // Para /admin/videos, permite se tiver /admin/videos, /admin/banners ou /admin
+  if (routeId === "/admin/videos" && (adminPages.includes("/admin/videos") || adminPages.includes("/admin/banners") || adminPages.includes("/admin"))) {
+    return true
   }
 
   // Verificar se tem acesso à rota específica

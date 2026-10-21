@@ -78,7 +78,11 @@ export default function VideosManagementPage() {
   const [form, setForm] = useState<VideoForm>(emptyForm)
 
   const { isSudo, hasAdminAccess, isLoading: isLoadingAccess } = useAccessControl()
-  const hasAccess = isSudo || hasAdminAccess("/admin/videos")
+  const hasAccess =
+    isSudo ||
+    hasAdminAccess("/admin/videos") ||
+    hasAdminAccess("/admin/banners") ||
+    hasAdminAccess("/admin")
 
   const { toast } = useToast()
   const utils = api.useUtils()
