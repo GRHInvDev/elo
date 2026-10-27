@@ -131,6 +131,34 @@ export const foodOrderRouter = createTRPCRouter({
         fallbackPrice: menuItem.price,
       })
 
+      // Validar se todas as opções obrigatórias do prato foram selecionadas
+      const requiredOptions = await ctx.db.menuItemOption.findMany({
+        where: {
+          menuItemId: input.menuItemId,
+          required: true,
+        },
+        include: {
+          choices: {
+            where: { available: true },
+            select: { id: true },
+          },
+        },
+      })
+
+      if (requiredOptions.length > 0) {
+        const providedChoiceIds = new Set(input.optionChoices ?? [])
+        for (const reqOpt of requiredOptions) {
+          const validChoiceIds = reqOpt.choices.map((c) => c.id)
+          const hasSelected = validChoiceIds.some((id) => providedChoiceIds.has(id))
+          if (!hasSelected) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `A opção "${reqOpt.name}" é obrigatória para este prato. Por favor, selecione uma opção.`,
+            })
+          }
+        }
+      }
+
       // Criação do pedido
       const createdOrder = await ctx.db.foodOrder.create({
         data: {
@@ -260,6 +288,34 @@ export const foodOrderRouter = createTRPCRouter({
         fallbackPrice: menuItem.price,
       })
 
+      // Validar se todas as opções obrigatórias do prato foram selecionadas
+      const manualRequiredOptions = await ctx.db.menuItemOption.findMany({
+        where: {
+          menuItemId: input.menuItemId,
+          required: true,
+        },
+        include: {
+          choices: {
+            where: { available: true },
+            select: { id: true },
+          },
+        },
+      })
+
+      if (manualRequiredOptions.length > 0) {
+        const providedChoiceIds = new Set(input.optionChoices ?? [])
+        for (const reqOpt of manualRequiredOptions) {
+          const validChoiceIds = reqOpt.choices.map((c) => c.id)
+          const hasSelected = validChoiceIds.some((id) => providedChoiceIds.has(id))
+          if (!hasSelected) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `A opção "${reqOpt.name}" é obrigatória para este prato.`,
+            })
+          }
+        }
+      }
+
       const createdOrder = await ctx.db.foodOrder.create({
         data: {
           userId: input.userId,
@@ -312,11 +368,26 @@ export const foodOrderRouter = createTRPCRouter({
       })
     }),
 
-  // Atualizar status do pedido (apenas admin)
+  // Atualizar status e/ou opções do pedido (apenas admin)
   updateStatus: protectedProcedure
     .input(updateFoodOrderSchema)
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input
+      const { id, optionChoices, ...data } = input
+
+      if (optionChoices !== undefined) {
+        await ctx.db.orderOptionSelection.deleteMany({
+          where: { orderId: id },
+        })
+        if (optionChoices.length > 0) {
+          await ctx.db.orderOptionSelection.createMany({
+            data: optionChoices.map((choiceId: string) => ({
+              orderId: id,
+              choiceId,
+            })),
+          })
+        }
+      }
+
       return ctx.db.foodOrder.update({
         where: { id },
         data,
@@ -331,6 +402,15 @@ export const foodOrderRouter = createTRPCRouter({
           },
           restaurant: true,
           menuItem: true,
+          optionSelections: {
+            include: {
+              choice: {
+                include: {
+                  option: true,
+                },
+              },
+            },
+          },
         },
       })
     }),
@@ -535,6 +615,15 @@ export const foodOrderRouter = createTRPCRouter({
             },
             restaurant: true,
             menuItem: true,
+            optionSelections: {
+              include: {
+                choice: {
+                  include: {
+                    option: true,
+                  },
+                },
+              },
+            },
           },
           orderBy: { orderDate: "desc" },
           skip,

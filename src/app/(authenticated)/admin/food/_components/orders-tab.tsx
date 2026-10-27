@@ -19,12 +19,14 @@ import * as XLSX from "xlsx"
 import { useEffect } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle, Loader2, FileSpreadsheet } from "lucide-react"
+import { CheckCircle, Loader2, FileSpreadsheet, SlidersHorizontal } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
-import { type UserMinimal } from "@/trpc/react"
+import { type UserMinimal, type RouterOutputs } from "@/trpc/react"
 import { cn } from "@/lib/utils"
 import { formatOrderDate } from "@/lib/date-utils"
 import { OrdersReportModal } from "./orders-report-modal"
+
+type FoodOrderListItem = RouterOutputs["foodOrder"]["list"]["orders"][number]
 
 interface OrdersTabProps {
   selectedDate: Date
@@ -59,6 +61,7 @@ export default function OrdersTab({
   const [page, setPage] = useState(1)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [signatureExportDialogOpen, setSignatureExportDialogOpen] = useState(false)
+  const [editingOrder, setEditingOrder] = useState<FoodOrderListItem | null>(null)
   const [signatureExportDate, setSignatureExportDate] = useState<Date>(new Date())
   const [signatureExportRestaurant, setSignatureExportRestaurant] = useState<string>("")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -223,8 +226,8 @@ export default function OrdersTab({
           
           if (Array.isArray(selections)) {
             selections.forEach((selection) => {
-              const optionName = selection?.choice?.option?.name
-              if (optionName && typeof optionName === "string") {
+              const optionName = selection?.choice?.option?.name?.trim()
+              if (optionName) {
                 allOptions.add(optionName)
               }
             })
@@ -240,27 +243,32 @@ export default function OrdersTab({
             const selections = order.optionSelections
             
             if (!Array.isArray(selections) || selections.length === 0) {
-              return ""
+              return "-"
             }
 
             // Normalizar nome da opção para comparação
             const normalizedOptionName = optionName.trim().toLowerCase()
 
-            // Procurar a seleção correspondente à opção
-            const matchingSelection = selections.find((selection) => {
+            // Procurar todas as seleções correspondentes à opção
+            const matchingSelections = selections.filter((selection) => {
               const optionNameValue = selection?.choice?.option?.name
               if (!optionNameValue || typeof optionNameValue !== "string") {
                 return false
               }
-              const normalizedOption = optionNameValue.trim().toLowerCase()
-              return normalizedOption === normalizedOptionName
+              return optionNameValue.trim().toLowerCase() === normalizedOptionName
             })
 
-            // Retornar o nome da escolha (choice.name) ou string vazia
-            return matchingSelection?.choice?.name?.trim() ?? ""
+            if (matchingSelections.length === 0) {
+              return "-"
+            }
+
+            return matchingSelections
+              .map((s) => s.choice?.name?.trim())
+              .filter(Boolean)
+              .join(", ") || "-"
           } catch (error) {
             console.error(`[getOptionChoice] Erro ao obter escolha da opção "${optionName}":`, error)
-            return ""
+            return "-"
           }
         }
 
@@ -821,7 +829,23 @@ export default function OrdersTab({
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm">{order.menuItem.name}</p>
+                        <p className="text-sm font-medium">{order.menuItem.name}</p>
+                        {/* Exibição das opções / tamanho */}
+                        {order.optionSelections && order.optionSelections.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {order.optionSelections.map((sel) => (
+                              <Badge key={sel.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                                {sel.choice?.option?.name?.trim()}: {sel.choice?.name?.trim()}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="pt-0.5">
+                            <Badge variant="destructive" className="text-xs font-normal">
+                              Sem tamanho / opções
+                            </Badge>
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground">
                           Pedido do dia {formatOrderDate(order.orderDate)} - feito às {format(new Date(order.orderTime), "HH:mm", { locale: ptBR })}
                         </p>
@@ -836,12 +860,22 @@ export default function OrdersTab({
                         <Badge className={getStatusColor(order.status)}>
                           {getStatusText(order.status)}
                         </Badge>
-                        <div className="flex space-x-1">
+                        <div className="flex items-center space-x-1 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 px-2.5 text-xs flex items-center gap-1"
+                            title="Ajustar opções / tamanho"
+                            onClick={() => setEditingOrder(order)}
+                          >
+                            <SlidersHorizontal className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Opções</span>
+                          </Button>
                           <Select
                             value={order.status}
                             onValueChange={(value) => handleStatusUpdate(order.id, value)}
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-28 sm:w-32">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -895,6 +929,182 @@ export default function OrdersTab({
           )}
         </CardContent>
       </Card>
+
+      {/* Modal para Ajustar Opções/Tamanho do Pedido */}
+      <EditOrderOptionsModal
+        order={editingOrder}
+        isOpen={!!editingOrder}
+        onClose={() => setEditingOrder(null)}
+        onSuccess={() => void filteredOrders.refetch()}
+      />
     </div>
+  )
+}
+
+interface EditOrderOptionsModalProps {
+  order: FoodOrderListItem | null
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: () => void
+}
+
+function EditOrderOptionsModal({
+  order,
+  isOpen,
+  onClose,
+  onSuccess,
+}: EditOrderOptionsModalProps) {
+  const [selectedChoices, setSelectedChoices] = useState<Record<string, string[]>>({})
+
+  // Carregar opções do prato
+  const optionsQuery = api.menuItemOption.byMenuItem.useQuery(
+    { menuItemId: order?.menuItem?.id ?? "" },
+    { enabled: isOpen && !!order?.menuItem?.id }
+  )
+
+  const updateMutation = api.foodOrder.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Opções do pedido atualizadas com sucesso!")
+      onSuccess()
+      onClose()
+    },
+    onError: (err) => {
+      toast.error(`Erro ao atualizar opções: ${err.message}`)
+    },
+  })
+
+  // Sincronizar escolhas atuais do pedido quando abrir
+  useEffect(() => {
+    if (order && isOpen) {
+      const initial: Record<string, string[]> = {}
+      if (Array.isArray(order.optionSelections)) {
+        order.optionSelections.forEach((sel) => {
+          const optId = sel.choice?.optionId
+          const choiceId = sel.choiceId
+          if (optId && choiceId) {
+            initial[optId] ??= []
+            if (!initial[optId].includes(choiceId)) {
+              initial[optId].push(choiceId)
+            }
+          }
+        })
+      }
+      setSelectedChoices(initial)
+    }
+  }, [order, isOpen])
+
+  const handleSave = () => {
+    if (!order) return
+
+    // Validar se todas as opções obrigatórias foram selecionadas
+    const options = optionsQuery.data ?? []
+    for (const opt of options) {
+      if (opt.required && (!selectedChoices[opt.id] || selectedChoices[opt.id]!.length === 0)) {
+        toast.error(`A opção "${opt.name.trim()}" é obrigatória.`)
+        return
+      }
+    }
+
+    const allChoices = Object.values(selectedChoices).flat()
+    updateMutation.mutate({
+      id: order.id,
+      optionChoices: allChoices,
+    })
+  }
+
+  if (!order) return null
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Ajustar Opções do Pedido</DialogTitle>
+          <DialogDescription>
+            {order.user?.firstName} {order.user?.lastName} - {order.menuItem?.name}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
+          {optionsQuery.isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !optionsQuery.data || optionsQuery.data.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Este prato não possui opções cadastradas (tamanho, acompanhamentos, etc.).
+            </p>
+          ) : (
+            optionsQuery.data.map((option) => {
+              const isMultiple = option.multiple
+              const currentSelected = selectedChoices[option.id] ?? []
+
+              return (
+                <div key={option.id} className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">
+                      {option.name.trim()}
+                      {option.required && <span className="text-destructive ml-1">*</span>}
+                    </Label>
+                    <span className="text-xs text-muted-foreground">
+                      {isMultiple ? "Múltipla escolha" : "Escolha 1"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {option.choices.map((choice) => {
+                      const isChecked = currentSelected.includes(choice.id)
+
+                      const handleChange = (checked: boolean) => {
+                        setSelectedChoices((prev) => {
+                          const next = { ...prev }
+                          const cur = next[option.id] ?? []
+                          if (isMultiple) {
+                            next[option.id] = checked
+                              ? [...cur, choice.id]
+                              : cur.filter((id) => id !== choice.id)
+                          } else {
+                            next[option.id] = checked ? [choice.id] : []
+                          }
+                          return next
+                        })
+                      }
+
+                      return (
+                        <label
+                          key={choice.id}
+                          className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer text-sm border border-transparent hover:border-border"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={(checked) => handleChange(Boolean(checked))}
+                            />
+                            <span>{choice.name.trim()}</span>
+                          </div>
+                          {choice.priceModifier > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              +R$ {choice.priceModifier.toFixed(2)}
+                            </span>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        <DialogFooter className="border-t pt-3 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={updateMutation.isPending}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={updateMutation.isPending || optionsQuery.isLoading}>
+            {updateMutation.isPending ? "Salvando..." : "Salvar Opções"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

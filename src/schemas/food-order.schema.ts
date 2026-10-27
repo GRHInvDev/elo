@@ -15,8 +15,9 @@ export const createManualFoodOrderSchema = createFoodOrderSchema.extend({
 
 export const updateFoodOrderSchema = z.object({
   id: z.string(),
-  status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]),
+  status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
   observations: z.string().optional(),
+  optionChoices: z.array(z.string()).optional(),
 })
 
 export const foodOrderIdSchema = z.object({
