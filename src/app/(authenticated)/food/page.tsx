@@ -21,11 +21,16 @@ type MenuItemOptionsSelectorProps = {
   value: Record<string, string[]>;
   onChange: (choices: Record<string, string[]>) => void;
   onValidationChange?: (isValid: boolean) => void;
+  onLoadingChange?: (loading: boolean) => void;
 };
 
-function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChange }: MenuItemOptionsSelectorProps) {
+function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChange, onLoadingChange }: MenuItemOptionsSelectorProps) {
   const options = api.menuItemOption.byMenuItem.useQuery({ menuItemId }, { enabled: !!menuItemId })
   const [selectedChoices, setSelectedChoices] = useState<Record<string, string[]>>(value ?? {})
+
+  useEffect(() => {
+    onLoadingChange?.(options.isLoading)
+  }, [options.isLoading, onLoadingChange])
 
   useEffect(() => {
     onChange(selectedChoices)
@@ -38,6 +43,11 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
   
   // Validação: verificar obrigatórias e exigir ao menos uma se só houver opcionais
   useEffect(() => {
+    if (options.isLoading) {
+      onValidationChange?.(false)
+      return
+    }
+
     if (options.data) {
       // Se não há opcionais para o prato, considera válido automaticamente
       if (options.data.length === 0) {
@@ -57,7 +67,7 @@ function MenuItemOptionsSelector({ menuItemId, value, onChange, onValidationChan
 
       onValidationChange?.(isValid)
     }
-  }, [options.data, selectedChoices, onValidationChange])
+  }, [options.data, options.isLoading, selectedChoices, onValidationChange])
 
   if (options.isLoading) return <div className="text-sm text-muted-foreground">Carregando opcionais...</div>
 
@@ -125,11 +135,12 @@ export default function FoodPage() {
   const [step, setStep] = useState<number>(1)
   const [showHistory, setShowHistory] = useState<boolean>(false)
   const [optionChoices, setOptionChoices] = useState<Record<string, string[]>>({})
-  const [optionsValid, setOptionsValid] = useState<boolean>(true)
+  const [optionsValid, setOptionsValid] = useState<boolean>(false)
+  const [optionsLoading, setOptionsLoading] = useState<boolean>(false)
 
   // Resetar validação quando o prato muda
   useEffect(() => {
-    setOptionsValid(true)
+    setOptionsValid(false)
     setOptionChoices({})
   }, [selectedMenuItem])
 
@@ -197,6 +208,12 @@ export default function FoodPage() {
   const handleCreateOrder = () => {
     if (!selectedRestaurant || !selectedMenuItem) {
       toast.error("Selecione um restaurante e um prato")
+      return
+    }
+
+    if (!optionsValid) {
+      toast.error("Por favor, selecione as opções obrigatórias do prato (como o tamanho da marmita).")
+      setStep(2)
       return
     }
 
@@ -508,9 +525,10 @@ export default function FoodPage() {
                     value={optionChoices}
                     onChange={setOptionChoices}
                     onValidationChange={setOptionsValid}
+                    onLoadingChange={setOptionsLoading}
                   />
                 )}
-                {!optionsValid && selectedMenuItem && (
+                {!optionsValid && selectedMenuItem && !optionsLoading && (
                   <Alert className="border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-red-50/50 dark:from-red-900/20 dark:to-red-900/10 shadow-sm">
                     <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                     <AlertDescription className="text-xs md:text-sm text-red-900 dark:text-red-200 font-medium">
@@ -521,11 +539,11 @@ export default function FoodPage() {
                 <div className="flex flex-col-reverse md:flex-row justify-between gap-3 md:gap-2 mt-6 pt-4 border-t border-border">
                   <Button variant="outline" className="w-full md:w-auto border-2 hover:bg-muted/50 transition-colors" onClick={() => { setSelectedMenuItem(""); setStep(1); }}>Voltar</Button>
                   <Button
-                    disabled={!selectedMenuItem || !optionsValid}
+                    disabled={!selectedMenuItem || !optionsValid || optionsLoading}
                     onClick={() => setStep(3)}
                     className="w-full md:w-auto bg-gradient-to-r from-primary to-primary/90 hover:shadow-lg hover:scale-105 transition-all duration-200 focus-visible:ring-2 ring-offset-2"
                   >
-                    Próximo
+                    {optionsLoading ? "Carregando opções..." : "Próximo"}
                   </Button>
                 </div>
               </div>
