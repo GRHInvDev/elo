@@ -655,6 +655,7 @@ export const foodOrderRouter = createTRPCRouter({
           startDate: z.date().optional(),
           endDate: z.date().optional(),
           status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
+          excludeCancelled: z.boolean().optional(),
           restaurantId: z.string().optional(),
           userId: z.string().optional(),
           userIds: z.array(z.string()).optional(),
@@ -665,7 +666,11 @@ export const foodOrderRouter = createTRPCRouter({
       )
       .query(async ({ ctx, input }) => {
         const whereClause: Prisma.FoodOrderWhereInput = {
-          ...(input?.status && { status: input.status }),
+          ...(input?.status
+            ? { status: input.status }
+            : input?.excludeCancelled
+              ? { status: { not: "CANCELLED" } }
+              : {}),
           ...(input?.restaurantId && input.restaurantId !== "__all__" && { restaurantId: input.restaurantId }),
           ...(input?.userId && { userId: input.userId }),
         }
@@ -774,6 +779,7 @@ export const foodOrderRouter = createTRPCRouter({
         startDate: z.date().optional(),
         endDate: z.date().optional(),
         status: z.enum(["PENDING", "CONFIRMED", "DELIVERED", "CANCELLED"]).optional(),
+        excludeCancelled: z.boolean().optional(),
         restaurantId: z.string().optional(),
         userId: z.string().optional(),
         userName: z.string().optional(),
@@ -783,7 +789,11 @@ export const foodOrderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const whereClause: Prisma.FoodOrderWhereInput = {
-        ...(input?.status && { status: input.status }),
+        ...(input?.status
+          ? { status: input.status }
+          : input?.excludeCancelled
+            ? { status: { not: "CANCELLED" } }
+            : {}),
         ...(input?.restaurantId && input.restaurantId !== "__all__" && { restaurantId: input.restaurantId }),
         ...(input?.userId && { userId: input.userId }),
       }
@@ -915,6 +925,9 @@ export const foodOrderRouter = createTRPCRouter({
           orderDate: {
             gte: start,
             lte: end,
+          },
+          status: {
+            not: "CANCELLED", // Excluir pedidos cancelados da lista de entrega/assinatura
           },
           ...(input.restaurantId && { restaurantId: input.restaurantId }),
         },

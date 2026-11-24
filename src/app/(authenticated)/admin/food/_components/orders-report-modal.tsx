@@ -92,6 +92,7 @@ export function OrdersReportModal({
 
   const [startDate, setStartDate] = useState<Date>(defaultStart)
   const [endDate, setEndDate] = useState<Date>(defaultEnd)
+  const [selectedStatus, setSelectedStatus] = useState<string>("ACTIVE")
   const [selectedSetor, setSelectedSetor] = useState(ALL_FILTER)
   const [selectedRestaurant, setSelectedRestaurant] = useState(ALL_FILTER)
   const [selectedFilial, setSelectedFilial] = useState(ALL_FILTER)
@@ -157,6 +158,7 @@ export function OrdersReportModal({
         initialFilial && initialFilial !== "" && initialFilial !== "__all__" ? initialFilial : ALL_FILTER,
       )
       setSelectedSetor(ALL_FILTER)
+      setSelectedStatus("ACTIVE")
       setSelectedUserIds([])
       setUserSearchText(initialUserSearch ? initialUserSearch.trim() : "")
       setDeselectedOrderIds(new Set())
@@ -175,6 +177,11 @@ export function OrdersReportModal({
       filialId: selectedFilial !== ALL_FILTER ? selectedFilial : undefined,
       setor: selectedSetor !== ALL_FILTER ? selectedSetor : undefined,
       userIds: selectedUserIds.length > 0 ? selectedUserIds : undefined,
+      excludeCancelled: selectedStatus === "ACTIVE",
+      status:
+        selectedStatus !== "ACTIVE" && selectedStatus !== ALL_FILTER
+          ? (selectedStatus as "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED")
+          : undefined,
     },
     {
       enabled: isOpen,
@@ -192,7 +199,11 @@ export function OrdersReportModal({
 
   const selectedTotalValue = useMemo(() => {
     return selectedOrders.reduce(
-      (acc, o) => acc + (o.unitPrice ?? o.menuItem?.price ?? 0),
+      (acc, o) => {
+        // Pedidos cancelados não devem ser somados no valor a cobrar
+        if (o.status === "CANCELLED") return acc
+        return acc + (o.unitPrice ?? o.menuItem?.price ?? 0)
+      },
       0,
     )
   }, [selectedOrders])
@@ -249,11 +260,14 @@ export function OrdersReportModal({
     return Array.from(map.values())
       .map((item) => {
         const selectedOrdersOfUser = item.orders.filter((o) => !deselectedOrderIds.has(o.id))
-        const totalValue = item.orders.reduce(
+        const billableOrders = item.orders.filter((o) => o.status !== "CANCELLED")
+        const selectedBillableOrders = selectedOrdersOfUser.filter((o) => o.status !== "CANCELLED")
+
+        const totalValue = billableOrders.reduce(
           (acc, o) => acc + (o.unitPrice ?? o.menuItem?.price ?? 0),
           0,
         )
-        const selectedTotalValue = selectedOrdersOfUser.reduce(
+        const selectedTotalValue = selectedBillableOrders.reduce(
           (acc, o) => acc + (o.unitPrice ?? o.menuItem?.price ?? 0),
           0,
         )
@@ -265,7 +279,9 @@ export function OrdersReportModal({
         return {
           ...item,
           selectedOrders: selectedOrdersOfUser,
-          ordersCount: item.orders.length,
+          ordersCount: billableOrders.length,
+          totalOrdersCount: item.orders.length,
+          cancelledOrdersCount: item.orders.length - billableOrders.length,
           totalValue,
           selectedTotalValue,
           isAllSelected: isUserAllSelected,
@@ -330,6 +346,7 @@ export function OrdersReportModal({
     setEndDate(defaultEnd)
     setSelectedUserIds([])
     setUserSearchText("")
+    setSelectedStatus("ACTIVE")
     setSelectedSetor(ALL_FILTER)
     setSelectedRestaurant(ALL_FILTER)
     setSelectedFilial(ALL_FILTER)
@@ -340,6 +357,7 @@ export function OrdersReportModal({
 
   const isFiltered =
     selectedUserIds.length > 0 ||
+    selectedStatus !== "ACTIVE" ||
     selectedSetor !== ALL_FILTER ||
     selectedRestaurant !== ALL_FILTER ||
     selectedFilial !== ALL_FILTER ||
@@ -383,6 +401,7 @@ export function OrdersReportModal({
 
       if (groupByUser) {
         // Agrupar por usuário somando os gastos totais do período
+        // Pedidos cancelados NÃO são cobrados nem somados no total do colaborador
         const userGroupsMap = new Map<
           string,
           {
@@ -398,6 +417,9 @@ export function OrdersReportModal({
         >()
 
         for (const order of ordersToExport) {
+          // Excluir pedidos cancelados da cobrança do colaborador
+          if (order.status === "CANCELLED") continue
+
           const user = order.user
           const key = user?.id ?? order.userId ?? "unknown"
           const val = order.unitPrice ?? order.menuItem?.price ?? 0
@@ -462,6 +484,7 @@ export function OrdersReportModal({
           const restaurante = order.restaurant?.name ?? "Restaurante excluído"
           const prato = order.menuItem?.name ?? ""
           const valor = order.unitPrice ?? order.menuItem?.price ?? 0
+          const isCancelled = order.status === "CANCELLED"
 
           const statusLabel =
             order.status === "DELIVERED"
@@ -487,7 +510,8 @@ export function OrdersReportModal({
             "Filial": filial,
             "Restaurante": restaurante,
             "Prato": prato,
-            "Valor (R$)": valor,
+            "Valor Unitário (R$)": valor,
+            "Valor Cobrado (R$)": isCancelled ? 0 : valor,
             "Status": statusLabel,
           }
         })
@@ -533,7 +557,7 @@ export function OrdersReportModal({
 
         {/* Barra de Filtros */}
         <div className="shrink-0 p-4 border-b bg-card">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {/* Data Início */}
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Data Início</Label>
@@ -562,6 +586,30 @@ export function OrdersReportModal({
                 }}
                 className="h-9 w-full"
               />
+            </div>
+
+            {/* Status */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <Select
+                value={selectedStatus}
+                onValueChange={(val) => {
+                  setSelectedStatus(val)
+                  handleFilterChange()
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm truncate">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="max-h-56">
+                  <SelectItem value="ACTIVE">Não cancelados (Padrão)</SelectItem>
+                  <SelectItem value={ALL_FILTER}>Todos os status</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmados</SelectItem>
+                  <SelectItem value="DELIVERED">Entregues</SelectItem>
+                  <SelectItem value="PENDING">Pendentes</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelados</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Colaborador */}
@@ -830,6 +878,7 @@ export function OrdersReportModal({
                   <TableHead className="w-[110px]">Matrícula</TableHead>
                   <TableHead className="min-w-[140px]">Setor</TableHead>
                   <TableHead className="min-w-[160px]">Empresa / Filial</TableHead>
+                  <TableHead className="w-[110px]">Status</TableHead>
                   <TableHead className="w-[110px] text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
@@ -844,6 +893,7 @@ export function OrdersReportModal({
                   const filial = user?.filial ? `${user.filial.name} (${user.filial.code})` : null
                   const price = order.unitPrice ?? order.menuItem?.price ?? 0
                   const isSelected = !deselectedOrderIds.has(order.id)
+                  const isCancelled = order.status === "CANCELLED"
 
                   return (
                     <TableRow key={order.id} className="hover:bg-muted/40">
@@ -888,8 +938,35 @@ export function OrdersReportModal({
                           </div>
                         )}
                       </TableCell>
+                      <TableCell className="py-2.5">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[11px] font-medium py-0 px-2",
+                            order.status === "CANCELLED" && "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300",
+                            order.status === "DELIVERED" && "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300",
+                            order.status === "CONFIRMED" && "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300",
+                            order.status === "PENDING" && "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300",
+                          )}
+                        >
+                          {order.status === "CANCELLED"
+                            ? "Cancelado"
+                            : order.status === "DELIVERED"
+                              ? "Entregue"
+                              : order.status === "CONFIRMED"
+                                ? "Confirmado"
+                                : "Pendente"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right text-xs font-medium py-2.5 whitespace-nowrap">
-                        {formatCurrency(price)}
+                        {isCancelled ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-muted-foreground line-through text-[11px]">{formatCurrency(price)}</span>
+                            <span className="text-[10px] text-red-600 font-semibold">Não cobrado</span>
+                          </div>
+                        ) : (
+                          formatCurrency(price)
+                        )}
                       </TableCell>
                     </TableRow>
                   )
